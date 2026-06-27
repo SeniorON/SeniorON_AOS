@@ -1,0 +1,44 @@
+name: 버그 제보
+description: 사용자에게 보이는 버그나 회귀를 제보합니다.
+title: "[버그] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 요약
+      description: 어떤 문제가 발생했나요?
+      placeholder: 예시: 올바른 가족코드를 입력해도 버튼이 비활성화 상태로 유지됩니다.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1. 앱을 실행합니다.
+        2. 자녀 모드를 선택합니다.
+        3. 가족코드를 입력합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 결과
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 결과
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: 기기 / OS
+      placeholder: Galaxy S24, Android 15
+  - type: textarea
+    id: media
+    attributes:
+      label: 스크린샷 또는 화면 녹화

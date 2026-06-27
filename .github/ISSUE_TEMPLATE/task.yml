@@ -1,0 +1,23 @@
+name: 작업
+description: 구현, 리팩터링, 문서, 설정 작업을 관리합니다.
+title: "[작업] "
+labels: ["task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 무엇을 완료해야 하나요?
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 체크리스트
+      placeholder: |
+        - [ ] 
+        - [ ] 
+  - type: textarea
+    id: notes
+    attributes:
+      label: 참고 사항

@@ -1,0 +1,43 @@
+name: 기능 제안
+description: 새로운 제품 기능이나 화면 흐름을 제안합니다.
+title: "[기능] "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제
+      description: 어떤 사용자 문제를 해결하나요?
+    validations:
+      required: true
+  - type: dropdown
+    id: user_mode
+    attributes:
+      label: 사용자 모드
+      options:
+        - 자녀 모드
+        - 부모님 런처 모드
+        - 둘 다
+        - 아직 모름
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안 내용
+      description: 의도한 동작을 설명해주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 기준
+      placeholder: |
+        - 주어진 상황 ...
+        - 사용자가 ...
+        - 그러면 ...
+  - type: textarea
+    id: risks
+    attributes:
+      label: 위험 요소 / 기기 고려사항
+      placeholder: 접근성, 런처 동작, 시스템 UI, 권한, 작은 화면, 큰 글씨 크기 등
