@@ -17,7 +17,7 @@ object SeniorOnColors {
     val Gray500 = Color(0xFF7F7F7F)
     val Gray400 = Color(0xFF9B9B9B)
     val Gray300 = Color(0xFFAAAAAA)
-    val Gray200 = Color(0xFFD1D1D1)
+    val Gray200 = Color(0xFFD9D9D9)
     val Gray100 = Color(0xFFF2F2F2)
 
     val DangerSOS = Color(0xFFFF0000)
@@ -37,6 +37,7 @@ object SeniorOnColors {
     val Background1 = Color(0xFFF8F8F5)
     val Background2 = Color(0xFFF6F9F2)
     val Background3 = Color(0xFFF5F6F2)
+    val Background4 = Color(0xFFEFEFE9)
 
     val White = Color(0xFFFFFFFF)
     val Black = Color(0xFF000000)

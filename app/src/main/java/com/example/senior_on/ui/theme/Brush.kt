@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Color
 object SeniorOnBrushes {
     val Gradient01 = Brush.linearGradient(
         colorStops = arrayOf(
-            0.1944f to Color(0xFF648B3B),
+            0.1374f to Color(0xFF406916),
             1f to Color(0xFF82AC57)
         ),
         start = Offset.Zero,
@@ -18,6 +18,15 @@ object SeniorOnBrushes {
         colorStops = arrayOf(
             0.1244f to Color(0xFFF5FBED),
             1f to Color(0xFFE1ECC4)
+        ),
+        start = Offset.Zero,
+        end = Offset.Infinite
+    )
+
+    val Gradient03 = Brush.linearGradient(
+        colorStops = arrayOf(
+            0f to Color(0xFF486B79),
+            0.5562f to Color(0xFF769B66)
         ),
         start = Offset.Zero,
         end = Offset.Infinite
