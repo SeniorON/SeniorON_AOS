@@ -301,7 +301,7 @@ private fun AddressSearchField(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(start = 16.dp, end = 16.dp),
+                    .padding(start = 12.dp, end = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -310,7 +310,7 @@ private fun AddressSearchField(
                     modifier = Modifier.size(24.dp),
                     tint = SeniorOnColors.Gray400
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Box(modifier = Modifier.weight(1f)) {
                     if (value.isEmpty()) {
                         Text(
@@ -330,9 +330,9 @@ private fun AddressSearchField(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_close),
+                            painter = painterResource(id = R.drawable.ic_sm_close),
                             contentDescription = "검색어 지우기",
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = SeniorOnColors.Gray400
                         )
                     }
@@ -476,9 +476,9 @@ private fun CurrentLocationAction(
             painter = painterResource(id = R.drawable.ic_my_location),
             contentDescription = null,
             modifier = Modifier.size(18.dp),
-            tint = Color.Unspecified
+            tint = SeniorOnColors.Gray700
         )
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "현위치로 설정하기",
             style = SeniorOnTextStyles.BodySMedium,
@@ -494,7 +494,7 @@ private fun AddressSearchGuide(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 26.dp, top = 34.dp, end = 24.dp)
+            .padding(start = 16.dp, top = 24.dp, end = 24.dp)
     ) {
         Text(
             text = "이렇게 검색해보세요",
@@ -536,7 +536,7 @@ private fun AddressSearchGuideItem(
         )
         Text(
             text = example,
-            modifier = Modifier.padding(start = 17.dp, top = 4.dp),
+            modifier = Modifier.padding(start = 17.dp, top = 1.dp),
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500
         )
