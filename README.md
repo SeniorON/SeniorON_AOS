@@ -25,8 +25,8 @@
 | Language | Kotlin |
 | UI | Jetpack Compose, Material3 |
 | Architecture | MVVM 예정 |
-| 주요 라이브러리 | AndroidX Core KTX, Lifecycle Runtime KTX, Activity Compose, Compose BOM, Compose UI, Compose Material3 |
-| 도입 예정 | Kotlin Coroutines, Retrofit/OkHttp, Room DB |
+| 주요 라이브러리 | AndroidX Lifecycle, Jetpack Compose, Kotlin Coroutines, Retrofit, OkHttp, Gson |
+| 도입 예정 | Room DB |
 
 ## 프로젝트 폴더 구조
 
