@@ -27,13 +27,14 @@ object SeniorOnTextStyles {
         letterSpacing = 0.sp
     )
 
+    val HeadingXXXL = pretendardStyle(FontWeight.Bold, 34, 47.6f)
     val HeadingXXL = pretendardStyle(FontWeight.Bold, 32, 44.8f)
-    val HeadingXL = pretendardStyle(FontWeight.Bold, 30, 42f)
+    val HeadingXL = pretendardStyle(FontWeight.Bold, 28, 42f)
     val HeadingL = pretendardStyle(FontWeight.Bold, 26, 36.4f)
     val HeadingM = pretendardStyle(FontWeight.Bold, 24, 33.6f)
     val HeadingS = pretendardStyle(FontWeight.Bold, 20, 28f)
     val HeadingXS = pretendardStyle(FontWeight.SemiBold, 20, 28f)
-    val OnboardingHeading = HeadingXS
+    val OnboardingHeading = pretendardStyle(FontWeight.Bold, 22, 32f)
 
     val BodyLBold = pretendardStyle(FontWeight.Bold, 18, 25.2f)
     val BodyLSemiBold = pretendardStyle(FontWeight.SemiBold, 18, 25.2f)
@@ -52,7 +53,10 @@ object SeniorOnTextStyles {
     val CaptionMedium = pretendardStyle(FontWeight.Medium, 12, 16.8f)
     val CaptionRegular = pretendardStyle(FontWeight.Normal, 12, 16.8f)
 
-    val ButtonL = pretendardStyle(FontWeight.SemiBold, 20, 28f)
     val ButtonM = pretendardStyle(FontWeight.SemiBold, 16, 22.4f)
     val ButtonS = pretendardStyle(FontWeight.Medium, 14, 19.6f)
+
+    val PasswordDot = pretendardStyle(FontWeight.SemiBold, 12, 16.8f).copy(
+        letterSpacing = 4.sp
+    )
 }
