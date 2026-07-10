@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.example.senior_on.ui.app.AppUserMode
 import com.example.senior_on.ui.login.LoginScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
@@ -34,6 +35,7 @@ private val InitialRoute = SeniorOnRoute.Splash
 @Composable
 fun SeniorOnApp() {
     var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
+    var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
 
     if (currentRoute == SeniorOnRoute.Splash) {
         LaunchedEffect(Unit) {
@@ -45,10 +47,18 @@ fun SeniorOnApp() {
     when (currentRoute) {
         SeniorOnRoute.Splash -> SplashScreen()
         SeniorOnRoute.ModeSelection -> ModeSelectionScreen(
-            onChildClick = { currentRoute = SeniorOnRoute.Login },
-            onSeniorClick = { currentRoute = SeniorOnRoute.Login }
+            onChildClick = {
+                selectedUserMode = AppUserMode.Child
+                currentRoute = SeniorOnRoute.Login
+            },
+            onSeniorClick = {
+                selectedUserMode = AppUserMode.Senior
+                currentRoute = SeniorOnRoute.Login
+            }
         )
         SeniorOnRoute.Login -> LoginScreen(
+            selectedMode = selectedUserMode,
+            onGoToModeSelection = { currentRoute = SeniorOnRoute.ModeSelection },
             onSignUpClick = { currentRoute = SeniorOnRoute.Signup }
         )
         SeniorOnRoute.Signup -> SignupScreen(

@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.data.auth.MockLoginAuthRepository
+import com.example.senior_on.ui.app.AppUserMode
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -58,7 +60,9 @@ private enum class LoginFieldError {
 
 @Composable
 fun LoginScreen(
+    selectedMode: AppUserMode,
     onLoginClick: () -> Unit = {},
+    onGoToModeSelection: () -> Unit = {},
     onFindIdClick: () -> Unit = {},
     onFindPasswordClick: () -> Unit = {},
     onSignUpClick: () -> Unit = {},
@@ -71,6 +75,7 @@ fun LoginScreen(
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var keepLoggedIn by rememberSaveable { mutableStateOf(false) }
     var loginError by rememberSaveable { mutableStateOf(LoginFieldError.None) }
+    var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
 
     val userIdError = loginError == LoginFieldError.InvalidCredentials
     val passwordError = loginError != LoginFieldError.None
@@ -81,13 +86,17 @@ fun LoginScreen(
         LoginFieldError.None -> null
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .systemBarsPadding()
-            .padding(horizontal = 24.dp)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(horizontal = 24.dp)
+        ) {
         Spacer(modifier = Modifier.height(133.dp)) //맨위와 간격
 
         Image(
@@ -173,9 +182,21 @@ fun LoginScreen(
                         userId.isBlank() -> LoginFieldError.InvalidCredentials
                         else -> LoginFieldError.None
                     }
-                    if (loginError == LoginFieldError.None) {
-                        onLoginClick()
+                    if (loginError != LoginFieldError.None) return@clickable
+
+                    val accountMode = MockLoginAuthRepository.accountModeFor(userId)
+                    if (accountMode == null) {
+                        loginError = LoginFieldError.InvalidCredentials
+                        return@clickable
                     }
+                    if (accountMode != selectedMode) {
+                        wrongModeDialogType = when (accountMode) {
+                            AppUserMode.Senior -> LoginWrongModeDialogType.SeniorAccount
+                            AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
+                        }
+                        return@clickable
+                    }
+                    onLoginClick()
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -234,6 +255,17 @@ fun LoginScreen(
                     tint = Color.Unspecified
                 )
             }
+        }
+        }
+
+        wrongModeDialogType?.let { dialogType ->
+            LoginWrongModeDialogOverlay(
+                type = dialogType,
+                onConfirmClick = {
+                    wrongModeDialogType = null
+                    onGoToModeSelection()
+                }
+            )
         }
     }
 }
@@ -490,7 +522,7 @@ private fun SocialLoginButton(
 @Composable
 private fun LoginScreenDefaultPreview() {
     SENIOR_ONTheme {
-        LoginScreen()
+        LoginScreen(selectedMode = AppUserMode.Child)
     }
 }
 
@@ -503,7 +535,7 @@ private fun LoginScreenDefaultPreview() {
 @Composable
 private fun LoginScreenCompactPreview() {
     SENIOR_ONTheme {
-        LoginScreen()
+        LoginScreen(selectedMode = AppUserMode.Child)
     }
 }
 
