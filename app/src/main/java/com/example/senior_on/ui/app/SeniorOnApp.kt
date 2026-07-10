@@ -101,9 +101,7 @@ fun SeniorOnApp() {
                 onBackClick = {
                     currentRoute = SeniorOnRoute.SignupAccountInfo
                 },
-                onCompleteClick = {
-                    currentRoute = SeniorOnRoute.ParentInfoInput
-                }
+                onCompleteClick = {}
             )
             SeniorOnRoute.ParentInfoInput -> ParentInfoInputScreen(
                 selectedAddress = selectedHomeAddress,
