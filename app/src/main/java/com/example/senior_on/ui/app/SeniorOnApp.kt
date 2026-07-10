@@ -1,11 +1,13 @@
 package com.example.senior_on.ui.app
 
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.example.senior_on.ui.app.AppUserMode
+import com.example.senior_on.ui.login.LoginScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.signup.SignupAccountInfoScreen
@@ -19,6 +21,7 @@ import kotlinx.coroutines.delay
 private enum class SeniorOnRoute {
     Splash,
     ModeSelection,
+    Login,
     Signup,
     SignupModeGuide,
     SignupNameBirth,
@@ -27,11 +30,12 @@ private enum class SeniorOnRoute {
     SignupTermsAgreement
 }
 
-private val InitialRoute = SeniorOnRoute.SignupTermsAgreement
+private val InitialRoute = SeniorOnRoute.Splash
 
 @Composable
 fun SeniorOnApp() {
     var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
+    var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
 
     if (currentRoute == SeniorOnRoute.Splash) {
         LaunchedEffect(Unit) {
@@ -44,66 +48,45 @@ fun SeniorOnApp() {
         SeniorOnRoute.Splash -> SplashScreen()
         SeniorOnRoute.ModeSelection -> ModeSelectionScreen(
             onChildClick = {
-                currentRoute = SeniorOnRoute.Signup
+                selectedUserMode = AppUserMode.Child
+                currentRoute = SeniorOnRoute.Login
             },
             onSeniorClick = {
-                currentRoute = SeniorOnRoute.Signup
+                selectedUserMode = AppUserMode.Senior
+                currentRoute = SeniorOnRoute.Login
             }
+        )
+        SeniorOnRoute.Login -> LoginScreen(
+            selectedMode = selectedUserMode,
+            onGoToModeSelection = { currentRoute = SeniorOnRoute.ModeSelection },
+            onSignUpClick = { currentRoute = SeniorOnRoute.Signup }
         )
         SeniorOnRoute.Signup -> SignupScreen(
-            onBackClick = {
-                currentRoute = SeniorOnRoute.ModeSelection
-            },
-            onKakaoClick = {
-                currentRoute = SeniorOnRoute.SignupModeGuide
-            },
-            onGoogleClick = {
-                currentRoute = SeniorOnRoute.SignupModeGuide
-            },
-            onEmailClick = {
-                currentRoute = SeniorOnRoute.SignupModeGuide
-            },
-            onLoginClick = {}
+            onBackClick = { currentRoute = SeniorOnRoute.Login },
+            onKakaoClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
+            onGoogleClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
+            onEmailClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
+            onLoginClick = { currentRoute = SeniorOnRoute.Login }
         )
         SeniorOnRoute.SignupModeGuide -> SignupModeGuideScreen(
-            onBackClick = {
-                currentRoute = SeniorOnRoute.Signup
-            },
-            onReselectClick = {
-                currentRoute = SeniorOnRoute.ModeSelection
-            },
-            onContinueClick = {
-                currentRoute = SeniorOnRoute.SignupNameBirth
-            }
+            onBackClick = { currentRoute = SeniorOnRoute.Signup },
+            onReselectClick = { currentRoute = SeniorOnRoute.ModeSelection },
+            onContinueClick = { currentRoute = SeniorOnRoute.SignupNameBirth }
         )
         SeniorOnRoute.SignupNameBirth -> SignupNameBirthScreen(
-            onBackClick = {
-                currentRoute = SeniorOnRoute.SignupModeGuide
-            },
-            onNextClick = {
-                currentRoute = SeniorOnRoute.SignupEmailVerification
-            }
+            onBackClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
+            onNextClick = { currentRoute = SeniorOnRoute.SignupEmailVerification }
         )
         SeniorOnRoute.SignupEmailVerification -> SignupEmailVerificationScreen(
-            onBackClick = {
-                currentRoute = SeniorOnRoute.SignupNameBirth
-            },
-            onNextClick = {
-                currentRoute = SeniorOnRoute.SignupAccountInfo
-            }
+            onBackClick = { currentRoute = SeniorOnRoute.SignupNameBirth },
+            onNextClick = { currentRoute = SeniorOnRoute.SignupAccountInfo }
         )
         SeniorOnRoute.SignupAccountInfo -> SignupAccountInfoScreen(
-            onBackClick = {
-                currentRoute = SeniorOnRoute.SignupEmailVerification
-            },
-            onNextClick = {
-                currentRoute = SeniorOnRoute.SignupTermsAgreement
-            }
+            onBackClick = { currentRoute = SeniorOnRoute.SignupEmailVerification },
+            onNextClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement }
         )
         SeniorOnRoute.SignupTermsAgreement -> SignupTermsAgreementScreen(
-            onBackClick = {
-                currentRoute = SeniorOnRoute.SignupAccountInfo
-            },
+            onBackClick = { currentRoute = SeniorOnRoute.SignupAccountInfo },
             onCompleteClick = {}
         )
     }

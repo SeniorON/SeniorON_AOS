@@ -103,9 +103,7 @@ fun ModeSelectionScreen(
                     iconResId = R.drawable.ic_big_dependent,
                     selected = selectedMode == ModeType.Child,
                     dimmed = selectedMode != null && selectedMode != ModeType.Child,
-                    onClick = {
-                        selectedMode = ModeType.Child
-                    },
+                    onClick = { selectedMode = ModeType.Child },
                     modifier = Modifier.weight(1f)
                 )
                 ModeCard(
@@ -113,9 +111,7 @@ fun ModeSelectionScreen(
                     iconResId = R.drawable.ic_senior,
                     selected = selectedMode == ModeType.Senior,
                     dimmed = selectedMode != null && selectedMode != ModeType.Senior,
-                    onClick = {
-                        selectedMode = ModeType.Senior
-                    },
+                    onClick = { selectedMode = ModeType.Senior },
                     modifier = Modifier.weight(1f)
                 )
             }
