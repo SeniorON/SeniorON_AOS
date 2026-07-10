@@ -46,8 +46,9 @@ import kotlinx.coroutines.launch
 
 private const val MinBirthYear = 1900
 private const val DefaultBirthAge = 70
-private val DateWheelItemHeight = 44.dp
-private val DateWheelHeight = 132.dp
+private val DateWheelItemHeight = 33.dp
+private val DateWheelHeight = 123.dp
+private val DateWheelContentPadding = 45.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,8 +63,8 @@ internal fun BirthDateBottomSheet(
         scrimColor = SeniorOnColors.Black.copy(alpha = 0.45f),
         dragHandle = null,
         shape = RoundedCornerShape(
-            topStart = SeniorOnRadius.XLarge,
-            topEnd = SeniorOnRadius.XLarge
+            topStart = 28.dp,
+            topEnd = 28.dp
         )
     ) {
         BirthDateSheetContent(
@@ -132,6 +133,7 @@ internal fun BirthDateSheetContent(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
+            .height(296.dp)
             .padding(horizontal = 24.dp)
             .padding(top = 10.dp, bottom = 26.dp)
     ) {
@@ -158,7 +160,7 @@ internal fun BirthDateSheetContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(26.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,9 +169,9 @@ internal fun BirthDateSheetContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(DateWheelItemHeight)
+                    .height(37.dp)
                     .align(Alignment.Center)
-                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .clip(RoundedCornerShape(SeniorOnRadius.Medium))
                     .background(SeniorOnColors.Background3)
             )
 
@@ -202,7 +204,7 @@ internal fun BirthDateSheetContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         SeniorInfoActionButton(
             text = "확인",
             onClick = {
@@ -215,7 +217,9 @@ internal fun BirthDateSheetContent(
                 )
             },
             style = SeniorInfoButtonStyle.Filled,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
         )
     }
 }
@@ -264,7 +268,7 @@ private fun DateWheelPicker(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(vertical = DateWheelItemHeight),
+            contentPadding = PaddingValues(vertical = DateWheelContentPadding),
             flingBehavior = flingBehavior
         ) {
             itemsIndexed(

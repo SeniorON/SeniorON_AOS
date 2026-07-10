@@ -282,7 +282,7 @@ internal fun BirthDateSelector(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(43.dp)
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -299,7 +299,7 @@ internal fun BirthDateSelector(
             Icon(
                 painter = painterResource(id = R.drawable.ic_sm_chevron_down_2),
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(24.dp),
                 tint = SeniorOnColors.Gray500
             )
         }
@@ -464,7 +464,11 @@ internal fun SeniorInfoActionButton(
     val backgroundColor = when (style) {
         SeniorInfoButtonStyle.Outlined -> SeniorOnColors.White
         SeniorInfoButtonStyle.Filled -> {
-            if (enabled) SeniorOnColors.Primary600 else SeniorOnColors.Primary300
+            if (enabled) {
+                SeniorOnColors.Primary600
+            } else {
+                SeniorOnColors.Primary600.copy(alpha = 0.5f)
+            }
         }
     }
     val contentColor = when (style) {

@@ -59,8 +59,8 @@ internal fun CustomRelationshipBottomSheet(
         scrimColor = SeniorOnColors.Black.copy(alpha = 0.2f),
         dragHandle = null,
         shape = RoundedCornerShape(
-            topStart = SeniorOnRadius.XLarge,
-            topEnd = SeniorOnRadius.XLarge
+            topStart = 20.dp,
+            topEnd = 20.dp
         )
     ) {
         CustomRelationshipSheetContent(
@@ -86,13 +86,14 @@ internal fun CustomRelationshipSheetContent(
             .fillMaxWidth()
             .imePadding()
             .navigationBarsPadding()
+            .height(154.dp)
             .padding(horizontal = 24.dp)
-            .padding(top = 20.dp, bottom = 24.dp)
+            .padding(top = 20.dp, bottom = 30.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp),
+                .height(45.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -104,7 +105,7 @@ internal fun CustomRelationshipSheetContent(
                     modifier = Modifier
                         .clip(RoundedCornerShape(SeniorOnRadius.Small))
                         .clickable(onClick = onCancel)
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp),
                     style = SeniorOnTextStyles.BodyMSemiBold,
                     color = SeniorOnColors.Primary600
                 )
@@ -130,14 +131,14 @@ internal fun CustomRelationshipSheetContent(
                     modifier = Modifier
                         .clip(RoundedCornerShape(SeniorOnRadius.Small))
                         .clickable(onClick = onConfirm)
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp),
                     style = SeniorOnTextStyles.BodyMSemiBold,
                     color = SeniorOnColors.Primary600
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         CustomRelationshipInputField(
             value = value,
             onValueChange = onValueChange,
@@ -159,7 +160,7 @@ private fun CustomRelationshipInputField(
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .height(43.dp),
         singleLine = true,
         textStyle = SeniorOnTextStyles.BodyMRegular.copy(color = SeniorOnColors.Gray800),
         keyboardOptions = KeyboardOptions(

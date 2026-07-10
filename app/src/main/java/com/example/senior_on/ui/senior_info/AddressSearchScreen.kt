@@ -185,6 +185,7 @@ private fun AddressSearchScreenContent(
             .navigationBarsPadding()
     ) {
         AddressSearchTopBar(onBackClick = onBackClick)
+        Spacer(modifier = Modifier.height(8.dp))
 
         AddressSearchContent(
             uiState = uiState,

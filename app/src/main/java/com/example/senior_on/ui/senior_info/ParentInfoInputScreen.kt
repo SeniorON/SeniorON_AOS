@@ -32,11 +32,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
-import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 enum class SeniorRelationship(val label: String) {
@@ -309,7 +309,7 @@ private fun SeniorInfoFormContent(
                 )
             }
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         SeniorInfoTextField(
             value = addressDetail,
             onValueChange = onAddressDetailChange,
@@ -352,7 +352,10 @@ private fun ParentInfoInputScreenPreview() {
 @Composable
 private fun CustomRelationshipBottomSheetPreview() {
     SENIOR_ONTheme {
-        SeniorInfoBottomSheetPreviewFrame(scrimAlpha = 0.2f) {
+        SeniorInfoBottomSheetPreviewFrame(
+            scrimAlpha = 0.2f,
+            cornerRadius = 20.dp
+        ) {
             CustomRelationshipSheetContent(
                 value = "배우자",
                 onValueChange = {},
@@ -373,7 +376,10 @@ private fun CustomRelationshipBottomSheetPreview() {
 @Composable
 private fun BirthDateBottomSheetPreview() {
     SENIOR_ONTheme {
-        SeniorInfoBottomSheetPreviewFrame(scrimAlpha = 0.45f) {
+        SeniorInfoBottomSheetPreviewFrame(
+            scrimAlpha = 0.45f,
+            cornerRadius = 28.dp
+        ) {
             BirthDateSheetContent(
                 initialBirthDate = "1956.01.01",
                 onDismiss = {},
@@ -410,6 +416,7 @@ private fun SeniorInfoSkipNoticeDialogPreview() {
 @Composable
 private fun SeniorInfoBottomSheetPreviewFrame(
     scrimAlpha: Float,
+    cornerRadius: Dp,
     content: @Composable () -> Unit
 ) {
     Box(
@@ -423,8 +430,8 @@ private fun SeniorInfoBottomSheetPreviewFrame(
                 .fillMaxWidth()
                 .clip(
                     RoundedCornerShape(
-                        topStart = SeniorOnRadius.XLarge,
-                        topEnd = SeniorOnRadius.XLarge
+                        topStart = cornerRadius,
+                        topEnd = cornerRadius
                     )
                 )
                 .background(SeniorOnColors.White)
