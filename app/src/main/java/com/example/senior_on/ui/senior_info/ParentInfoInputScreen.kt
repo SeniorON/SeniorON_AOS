@@ -1,7 +1,7 @@
 package com.example.senior_on.ui.senior_info
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -84,6 +86,7 @@ fun ParentInfoInputScreen(
     var showCustomRelationshipSheet by rememberSaveable { mutableStateOf(false) }
     var showBirthDateSheet by rememberSaveable { mutableStateOf(false) }
     var showSkipNotice by rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(
         selectedAddress,
@@ -149,6 +152,11 @@ fun ParentInfoInputScreen(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
             .statusBarsPadding()
     ) {
         SeniorInfoTopBar(onBackClick = onBackClick)
@@ -249,20 +257,7 @@ private fun SeniorInfoFormContent(
             onValueChange = onNameChange,
             placeholder = "이름 입력",
             keyboardType = KeyboardType.Text,
-            trailingContent = if (name.isNotEmpty()) {
-                {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_sm_close),
-                        contentDescription = "이름 지우기",
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable { onNameChange("") },
-                        tint = SeniorOnColors.Gray400
-                    )
-                }
-            } else {
-                null
-            }
+            onClearClick = { onNameChange("") }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -288,7 +283,8 @@ private fun SeniorInfoFormContent(
         SeniorInfoPhoneTextField(
             value = phoneNumber,
             onValueChange = onPhoneNumberChange,
-            placeholder = "010-0000-0000"
+            placeholder = "010-0000-0000",
+            onClearClick = { onPhoneNumberChange(TextFieldValue("")) }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -315,7 +311,8 @@ private fun SeniorInfoFormContent(
             onValueChange = onAddressDetailChange,
             placeholder = "상세 주소 입력",
             keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Done
+            imeAction = ImeAction.Done,
+            onClearClick = { onAddressDetailChange("") }
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -59,8 +60,9 @@ internal fun SeniorInfoTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(54.dp)
+            .zIndex(1f)
             .shadow(
-                elevation = 4.dp,
+                elevation = 12.dp,
                 ambientColor = Color.Black.copy(alpha = 0.06f),
                 spotColor = Color.Black.copy(alpha = 0.06f)
             )
@@ -147,12 +149,18 @@ internal fun SeniorInfoTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next,
     onClick: (() -> Unit)? = null,
+    onClearClick: (() -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val borderColor = if (isFocused) SeniorOnColors.Primary600 else SeniorOnColors.Gray200
+    val clearButtonClick = if (!isFocused && value.isNotEmpty()) {
+        onClearClick
+    } else {
+        null
+    }
 
     Box(
         modifier = modifier
@@ -182,7 +190,7 @@ internal fun SeniorInfoTextField(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(start = 14.dp, end = 14.dp),
+                        .padding(start = 12.dp, end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -196,9 +204,15 @@ internal fun SeniorInfoTextField(
                         innerTextField()
                     }
 
-                    trailingContent?.let {
-                        Spacer(modifier = Modifier.width(10.dp))
-                        it()
+                    when {
+                        clearButtonClick != null -> {
+                            Spacer(modifier = Modifier.width(10.dp))
+                            SeniorInfoClearButton(onClick = clearButtonClick)
+                        }
+                        trailingContent != null -> {
+                            Spacer(modifier = Modifier.width(10.dp))
+                            trailingContent()
+                        }
                     }
                 }
             }
@@ -219,12 +233,18 @@ internal fun SeniorInfoPhoneTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     placeholder: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClearClick: (() -> Unit)? = null
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val borderColor = if (isFocused) SeniorOnColors.Primary600 else SeniorOnColors.Gray200
+    val clearButtonClick = if (!isFocused && value.text.isNotEmpty()) {
+        onClearClick
+    } else {
+        null
+    }
 
     BasicTextField(
         value = value,
@@ -250,7 +270,7 @@ internal fun SeniorInfoPhoneTextField(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(start = 14.dp, end = 14.dp),
+                    .padding(start = 12.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.weight(1f)) {
@@ -263,9 +283,37 @@ internal fun SeniorInfoPhoneTextField(
                     }
                     innerTextField()
                 }
+
+                if (clearButtonClick != null) {
+                    Spacer(modifier = Modifier.width(10.dp))
+                    SeniorInfoClearButton(onClick = clearButtonClick)
+                }
             }
         }
     )
+}
+
+@Composable
+private fun SeniorInfoClearButton(
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_sm_close),
+            contentDescription = "입력 내용 지우기",
+            modifier = Modifier.size(24.dp),
+            tint = SeniorOnColors.Gray400
+        )
+    }
 }
 
 @Composable
@@ -283,7 +331,7 @@ internal fun BirthDateSelector(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(43.dp)
-                .padding(horizontal = 10.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -390,6 +438,12 @@ internal fun SeniorInfoBottomActions(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .zIndex(1f)
+            .shadow(
+                elevation = 12.dp,
+                ambientColor = Color.Black.copy(alpha = 0.06f),
+                spotColor = Color.Black.copy(alpha = 0.06f)
+            )
             .background(SeniorOnColors.White)
             .navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
