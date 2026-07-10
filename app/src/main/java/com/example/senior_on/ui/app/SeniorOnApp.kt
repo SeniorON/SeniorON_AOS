@@ -10,6 +10,7 @@ import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.signup.SignupAccountInfoScreen
 import com.example.senior_on.ui.signup.SignupEmailVerificationScreen
+import com.example.senior_on.ui.signup.SignupModeGuideScreen
 import com.example.senior_on.ui.signup.SignupNameBirthScreen
 import com.example.senior_on.ui.signup.SignupScreen
 import com.example.senior_on.ui.signup.SignupTermsAgreementScreen
@@ -19,13 +20,14 @@ private enum class SeniorOnRoute {
     Splash,
     ModeSelection,
     Signup,
+    SignupModeGuide,
     SignupNameBirth,
     SignupEmailVerification,
     SignupAccountInfo,
     SignupTermsAgreement
 }
 
-private val InitialRoute = SeniorOnRoute.Splash
+private val InitialRoute = SeniorOnRoute.SignupTermsAgreement
 
 @Composable
 fun SeniorOnApp() {
@@ -53,19 +55,30 @@ fun SeniorOnApp() {
                 currentRoute = SeniorOnRoute.ModeSelection
             },
             onKakaoClick = {
-                currentRoute = SeniorOnRoute.SignupNameBirth
+                currentRoute = SeniorOnRoute.SignupModeGuide
             },
             onGoogleClick = {
-                currentRoute = SeniorOnRoute.SignupNameBirth
+                currentRoute = SeniorOnRoute.SignupModeGuide
             },
             onEmailClick = {
-                currentRoute = SeniorOnRoute.SignupNameBirth
+                currentRoute = SeniorOnRoute.SignupModeGuide
             },
             onLoginClick = {}
         )
-        SeniorOnRoute.SignupNameBirth -> SignupNameBirthScreen(
+        SeniorOnRoute.SignupModeGuide -> SignupModeGuideScreen(
             onBackClick = {
                 currentRoute = SeniorOnRoute.Signup
+            },
+            onReselectClick = {
+                currentRoute = SeniorOnRoute.ModeSelection
+            },
+            onContinueClick = {
+                currentRoute = SeniorOnRoute.SignupNameBirth
+            }
+        )
+        SeniorOnRoute.SignupNameBirth -> SignupNameBirthScreen(
+            onBackClick = {
+                currentRoute = SeniorOnRoute.SignupModeGuide
             },
             onNextClick = {
                 currentRoute = SeniorOnRoute.SignupEmailVerification
