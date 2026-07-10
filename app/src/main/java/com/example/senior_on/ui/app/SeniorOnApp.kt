@@ -7,10 +7,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.example.senior_on.data.auth.MockFindIdRepository
+import com.example.senior_on.data.auth.MockFindPasswordRepository
 import com.example.senior_on.ui.app.AppUserMode
 import com.example.senior_on.ui.findaccount.FindAccountScreen
 import com.example.senior_on.ui.findaccount.FindAccountTab
 import com.example.senior_on.ui.findaccount.FindIdResultScreen
+import com.example.senior_on.ui.findaccount.FindPasswordResetScreen
+import com.example.senior_on.ui.findaccount.FindPasswordVerifyScreen
 import com.example.senior_on.ui.login.LoginScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
@@ -33,7 +36,9 @@ private enum class SeniorOnRoute {
     SignupAccountInfo,
     SignupTermsAgreement,
     FindAccount,
-    FindIdResult
+    FindIdResult,
+    FindPasswordVerify,
+    FindPasswordReset
 }
 
 private val InitialRoute = SeniorOnRoute.Splash
@@ -47,6 +52,7 @@ fun SeniorOnApp() {
     var findIdResultName by rememberSaveable { mutableStateOf("") }
     var findIdResultUserId by rememberSaveable { mutableStateOf("") }
     var findIdResultJoinDate by rememberSaveable { mutableStateOf("") }
+    var findPasswordMaskedEmail by rememberSaveable { mutableStateOf("") }
 
     if (currentRoute == SeniorOnRoute.Splash) {
         LaunchedEffect(Unit) {
@@ -96,6 +102,16 @@ fun SeniorOnApp() {
                     findIdResultJoinDate = ""
                 }
                 currentRoute = SeniorOnRoute.FindIdResult
+            },
+            onFindPasswordNextClick = { name, userId ->
+                val account = MockFindPasswordRepository.findAccount(name, userId)
+                if (account != null) {
+                    findPasswordMaskedEmail = account.maskedEmail
+                    currentRoute = SeniorOnRoute.FindPasswordVerify
+                    true
+                } else {
+                    false
+                }
             }
         )
         SeniorOnRoute.FindIdResult -> FindIdResultScreen(
@@ -109,6 +125,25 @@ fun SeniorOnApp() {
                 findAccountInitialTab = FindAccountTab.Password
                 currentRoute = SeniorOnRoute.FindAccount
             }
+        )
+        SeniorOnRoute.FindPasswordVerify -> FindPasswordVerifyScreen(
+            maskedEmail = findPasswordMaskedEmail,
+            onBackClick = {
+                findAccountInitialTab = FindAccountTab.Password
+                currentRoute = SeniorOnRoute.FindAccount
+            },
+            onVerifySuccess = { currentRoute = SeniorOnRoute.FindPasswordReset },
+            onVerifyCode = MockFindPasswordRepository::verifyCode,
+            onResendCode = {},
+            onTabSelected = { tab ->
+                findAccountInitialTab = tab
+                currentRoute = SeniorOnRoute.FindAccount
+            }
+        )
+        SeniorOnRoute.FindPasswordReset -> FindPasswordResetScreen(
+            onBackClick = { currentRoute = SeniorOnRoute.FindPasswordVerify },
+            onComplete = {},
+            onLoginClick = { currentRoute = SeniorOnRoute.Login }
         )
         SeniorOnRoute.Signup -> SignupScreen(
             onBackClick = { currentRoute = SeniorOnRoute.Login },

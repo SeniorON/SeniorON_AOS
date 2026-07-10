@@ -6,38 +6,40 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
-import com.example.senior_on.ui.theme.SeniorOnColors
-import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 @Composable
 fun FindAccountScreen(
     initialTab: FindAccountTab,
     onBackClick: () -> Unit,
     onFindIdNextClick: (name: String, email: String) -> Unit,
-    modifier: Modifier = Modifier
+    onFindPasswordNextClick: (name: String, userId: String) -> Boolean,
+    modifier: Modifier = Modifier,
+    initialName: String = "",
+    initialEmail: String = "",
+    initialUserId: String = ""
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
-    var name by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    var email by rememberSaveable { mutableStateOf(initialEmail) }
+    var userId by rememberSaveable { mutableStateOf(initialUserId) }
+    var isUserIdError by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialTab) {
         selectedTab = initialTab
     }
 
-    val isNextEnabled = name.isNotBlank() && email.isNotBlank()
+    val isFindIdNextEnabled = name.isNotBlank() && email.isNotBlank()
+    val isFindPasswordNextEnabled = name.isNotBlank() && userId.isNotBlank()
 
     FindAccountScaffold(
         modifier = modifier.systemBarsPadding(),
@@ -45,12 +47,32 @@ fun FindAccountScreen(
         selectedTab = selectedTab,
         onTabSelected = { selectedTab = it },
         bottomBar = {
-            if (selectedTab == FindAccountTab.Id) {
-                FindAccountPrimaryButton(
-                    text = "다음",
-                    enabled = isNextEnabled,
-                    onClick = { onFindIdNextClick(name.trim(), email.trim()) }
-                )
+            when (selectedTab) {
+                FindAccountTab.Id -> {
+                    FindAccountPrimaryButton(
+                        text = "다음",
+                        enabled = isFindIdNextEnabled,
+                        onClick = { onFindIdNextClick(name.trim(), email.trim()) }
+                    )
+                }
+                FindAccountTab.Password -> {
+                    Column {
+                        FindAccountInfoBanner(
+                            text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        FindAccountPrimaryButton(
+                            text = "다음",
+                            enabled = isFindPasswordNextEnabled,
+                            onClick = {
+                                val found = onFindPasswordNextClick(name.trim(), userId.trim())
+                                isUserIdError = !found
+                            }
+                        )
+                    }
+                }
             }
         }
     ) {
@@ -61,7 +83,19 @@ fun FindAccountScreen(
                 email = email,
                 onEmailChange = { email = it }
             )
-            FindAccountTab.Password -> FindPasswordPlaceholderContent()
+            FindAccountTab.Password -> FindPasswordInputContent(
+                name = name,
+                onNameChange = {
+                    name = it
+                    isUserIdError = false
+                },
+                userId = userId,
+                onUserIdChange = {
+                    userId = it
+                    isUserIdError = false
+                },
+                isUserIdError = isUserIdError
+            )
         }
     }
 }
@@ -95,67 +129,127 @@ private fun FindIdInputContent(
             onValueChange = onEmailChange,
             placeholder = "이메일 입력",
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = KeyboardType.Email
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
             )
         )
     }
 }
 
 @Composable
-private fun FindPasswordPlaceholderContent(
+private fun FindPasswordInputContent(
+    name: String,
+    onNameChange: (String) -> Unit,
+    userId: String,
+    onUserIdChange: (String) -> Unit,
+    isUserIdError: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 24.dp)
+            .padding(top = 32.dp)
     ) {
-        Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = "비밀번호 찾기는\n준비 중입니다",
-            style = SeniorOnTextStyles.BodyMRegular,
-            color = SeniorOnColors.Gray400,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        FindAccountTextField(
+            label = "이름",
+            value = name,
+            onValueChange = onNameChange,
+            placeholder = "이름 입력"
         )
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        FindAccountTextField(
+            label = "아이디",
+            value = userId,
+            onValueChange = onUserIdChange,
+            placeholder = "아이디 입력",
+            isError = isUserIdError,
+            errorMessage = if (isUserIdError) {
+                "일치하는 계정 정보를 찾을 수 없어요."
+            } else {
+                null
+            }
+        )
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "FindAccountTab - Id",
+    group = "FindAccountTab"
+)
 @Composable
-private fun FindAccountScreenEmptyPreview() {
+internal fun FindAccountScreenEmptyPreview() {
     SENIOR_ONTheme {
         FindAccountScreen(
             initialTab = FindAccountTab.Id,
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> }
+            onFindIdNextClick = { _, _ -> },
+            onFindPasswordNextClick = { _, _ -> true }
         )
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "FindAccountTab - Id (Filled)",
+    group = "FindAccountTab"
+)
 @Composable
-private fun FindAccountScreenFilledPreview() {
+internal fun FindAccountScreenFilledPreview() {
     SENIOR_ONTheme {
         FindAccountScreen(
             initialTab = FindAccountTab.Id,
+            initialName = "홍길동",
+            initialEmail = "test@naver.com",
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> }
+            onFindIdNextClick = { _, _ -> },
+            onFindPasswordNextClick = { _, _ -> true }
         )
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "FindAccountTab - Password",
+    group = "FindAccountTab"
+)
 @Composable
-private fun FindAccountPasswordTabPreview() {
+internal fun FindAccountPasswordTabPreview() {
     SENIOR_ONTheme {
         FindAccountScreen(
             initialTab = FindAccountTab.Password,
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> }
+            onFindIdNextClick = { _, _ -> },
+            onFindPasswordNextClick = { _, _ -> true }
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "FindAccountTab - Password (Filled)",
+    group = "FindAccountTab"
+)
+@Composable
+internal fun FindAccountPasswordTabFilledPreview() {
+    SENIOR_ONTheme {
+        FindAccountScreen(
+            initialTab = FindAccountTab.Password,
+            initialName = "홍길동",
+            initialUserId = "User_Id",
+            onBackClick = {},
+            onFindIdNextClick = { _, _ -> },
+            onFindPasswordNextClick = { _, _ -> true }
         )
     }
 }
