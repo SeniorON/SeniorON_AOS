@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,14 +29,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -159,32 +164,43 @@ private fun FindAccountTabItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun FindAccountTextField(
-    label: String,
+    label: String? = null,
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    textStyle: androidx.compose.ui.text.TextStyle = SeniorOnTextStyles.BodyMMedium.copy(
+        color = SeniorOnColors.Gray800
+    ),
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    supportMessage: String? = null,
+    showClearIcon: Boolean = true,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = SeniorOnColors.Primary600,
-        unfocusedBorderColor = SeniorOnColors.Gray200,
+        focusedBorderColor = if (isError) SeniorOnColors.Red300 else SeniorOnColors.Primary600,
+        unfocusedBorderColor = if (isError) SeniorOnColors.Red300 else SeniorOnColors.Gray200,
+        errorBorderColor = SeniorOnColors.Red300,
         focusedContainerColor = SeniorOnColors.SupportWhite100,
         unfocusedContainerColor = SeniorOnColors.SupportWhite100,
         cursorColor = SeniorOnColors.Primary600
     )
     val fieldShape = RoundedCornerShape(SeniorOnRadius.Small)
-    val fieldTextStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800)
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = SeniorOnTextStyles.BodyMMedium,
-            color = SeniorOnColors.Gray800
-        )
+        if (label != null) {
+            Text(
+                text = label,
+                style = SeniorOnTextStyles.BodyMSemiBold,
+                color = SeniorOnColors.Gray800
+            )
 
-        Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+        }
 
         BasicTextField(
             value = value,
@@ -192,14 +208,15 @@ internal fun FindAccountTextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(43.dp),
-            textStyle = fieldTextStyle,
+            textStyle = textStyle,
             singleLine = true,
             keyboardOptions = keyboardOptions,
+            visualTransformation = visualTransformation,
             interactionSource = interactionSource,
             decorationBox = { innerTextField ->
                 OutlinedTextFieldDefaults.DecorationBox(
                     value = value,
-                    visualTransformation = VisualTransformation.None,
+                    visualTransformation = visualTransformation,
                     innerTextField = innerTextField,
                     placeholder = {
                         Text(
@@ -208,24 +225,29 @@ internal fun FindAccountTextField(
                             color = SeniorOnColors.Gray300
                         )
                     },
-                    trailingIcon = if (value.isNotEmpty()) {
+                    trailingIcon = if (trailingContent != null || (showClearIcon && value.isNotEmpty())) {
                         {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = { onValueChange("") }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_close_filled),
-                                    contentDescription = "입력값 지우기",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = Color.Unspecified
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                trailingContent?.invoke()
+                                if (showClearIcon && value.isNotEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = { onValueChange("") }
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_close_filled),
+                                            contentDescription = "입력값 지우기",
+                                            modifier = Modifier.size(18.dp),
+                                            tint = Color.Unspecified
+                                        )
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -233,7 +255,7 @@ internal fun FindAccountTextField(
                     },
                     singleLine = true,
                     enabled = true,
-                    isError = false,
+                    isError = isError,
                     interactionSource = interactionSource,
                     colors = textFieldColors,
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -243,7 +265,7 @@ internal fun FindAccountTextField(
                     container = {
                         OutlinedTextFieldDefaults.ContainerBox(
                             enabled = true,
-                            isError = false,
+                            isError = isError,
                             interactionSource = interactionSource,
                             colors = textFieldColors,
                             shape = fieldShape
@@ -252,6 +274,212 @@ internal fun FindAccountTextField(
                 )
             }
         )
+
+        when {
+            isError && errorMessage != null -> {
+                Text(
+                    text = errorMessage,
+                    modifier = Modifier.padding(top = 6.dp),
+                    style = SeniorOnTextStyles.CaptionRegular,
+                    color = SeniorOnColors.Red300
+                )
+            }
+            supportMessage != null -> {
+                Text(
+                    text = supportMessage,
+                    modifier = Modifier.padding(top = 6.dp),
+                    style = SeniorOnTextStyles.CaptionRegular,
+                    color = SeniorOnColors.Gray400
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun FindAccountPasswordTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    isVisible: Boolean,
+    onVisibilityToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    supportMessage: String? = null
+) {
+    FindAccountTextField(
+        label = label,
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        modifier = modifier,
+        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+        visualTransformation = if (isVisible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation(mask = '●')
+        },
+        textStyle = if (isVisible) {
+            SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800)
+        } else {
+            SeniorOnTextStyles.PasswordDot.copy(color = SeniorOnColors.Gray800)
+        },
+        isError = isError,
+        errorMessage = errorMessage,
+        supportMessage = supportMessage,
+        showClearIcon = false,
+        trailingContent = {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onVisibilityToggle
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(
+                        id = if (isVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                    ),
+                    contentDescription = if (isVisible) "비밀번호 숨기기" else "비밀번호 보기",
+                    modifier = Modifier.size(24.dp),
+                    tint = SeniorOnColors.Gray400
+                )
+            }
+        }
+    )
+}
+
+@Composable
+internal fun FindAccountInfoBanner(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_information),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = SeniorOnColors.Gray400
+        )
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            style = SeniorOnTextStyles.BodySMedium,
+            color = SeniorOnColors.Gray400
+        )
+    }
+}
+
+@Composable
+internal fun FindAccountSmallPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    width: Dp = 53.dp,
+    enabled: Boolean = true
+) {
+    val backgroundColor = if (enabled) {
+        SeniorOnColors.Primary600
+    } else {
+        SeniorOnColors.Primary600.copy(alpha = 0.5f)
+    }
+
+    Box(
+        modifier = modifier
+            .width(width)
+            .height(43.dp)
+            .background(backgroundColor, RoundedCornerShape(SeniorOnRadius.Small))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = SeniorOnTextStyles.ButtonS,
+            color = SeniorOnColors.SupportWhite100
+        )
+    }
+}
+
+@Composable
+internal fun FindPasswordSuccessDialogContent(
+    onLoginClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(249.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Large))
+            .background(SeniorOnColors.White)
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_modal_check),
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = Color.Unspecified
+            )
+
+            Text(
+                text = "비밀번호 변경 완료!",
+                modifier = Modifier.padding(top = 16.dp),
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800,
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = "새로운 비밀번호로 변경되었습니다.",
+                modifier = Modifier.padding(top = 18.dp),
+                style = SeniorOnTextStyles.BodySMedium,
+                color = SeniorOnColors.Gray500,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(26.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
+                    .background(SeniorOnColors.Primary600, RoundedCornerShape(SeniorOnRadius.Medium))
+                    .clickable(onClick = onLoginClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "로그인 화면으로",
+                    style = SeniorOnTextStyles.ButtonS,
+                    color = SeniorOnColors.SupportWhite100
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun FindPasswordSuccessDialogOverlay(
+    onLoginClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.Black.copy(alpha = 0.4f)),
+        contentAlignment = Alignment.Center
+    ) {
+        FindPasswordSuccessDialogContent(onLoginClick = onLoginClick)
     }
 }
 
@@ -350,9 +578,15 @@ internal fun FindAccountScaffold(
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Find Account - Input")
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "FindAccountTab - Id Input",
+    group = "FindAccountTab"
+)
 @Composable
-private fun FindAccountComponentsInputPreview() {
+internal fun FindAccountComponentsInputPreview() {
     SENIOR_ONTheme {
         var name by remember { mutableStateOf("") }
         var email by remember { mutableStateOf("") }
@@ -393,9 +627,15 @@ private fun FindAccountComponentsInputPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 200, name = "Find Account - Tabs")
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 140,
+    name = "FindAccountTab - Tab Row (Id)",
+    group = "FindAccountTab"
+)
 @Composable
-private fun FindAccountTabRowPreview() {
+internal fun FindAccountTabRowPreview() {
     SENIOR_ONTheme {
         Column(modifier = Modifier.background(SeniorOnColors.White)) {
             FindAccountTopBar(onBackClick = {})
@@ -403,6 +643,81 @@ private fun FindAccountTabRowPreview() {
                 selectedTab = FindAccountTab.Id,
                 onTabSelected = {}
             )
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 140,
+    name = "FindAccountTab - Tab Row (Password)",
+    group = "FindAccountTab"
+)
+@Composable
+internal fun FindAccountTabRowPasswordPreview() {
+    SENIOR_ONTheme {
+        Column(modifier = Modifier.background(SeniorOnColors.White)) {
+            FindAccountTopBar(onBackClick = {})
+            FindAccountTabRow(
+                selectedTab = FindAccountTab.Password,
+                onTabSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+    name = "FindAccountTab - Password Input",
+    group = "FindAccountTab"
+)
+@Composable
+internal fun FindAccountPasswordInputPreview() {
+    SENIOR_ONTheme {
+        var name by remember { mutableStateOf("홍길동") }
+        var userId by remember { mutableStateOf("User_Id") }
+
+        FindAccountScaffold(
+            onBackClick = {},
+            selectedTab = FindAccountTab.Password,
+            onTabSelected = {},
+            bottomBar = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    FindAccountInfoBanner(
+                        text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FindAccountPrimaryButton(
+                        text = "다음",
+                        enabled = name.isNotBlank() && userId.isNotBlank(),
+                        onClick = {}
+                    )
+                }
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 24.dp)
+            ) {
+                FindAccountTextField(
+                    label = "이름",
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = "이름 입력"
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                FindAccountTextField(
+                    label = "아이디",
+                    value = userId,
+                    onValueChange = { userId = it },
+                    placeholder = "아이디 입력"
+                )
+            }
         }
     }
 }
