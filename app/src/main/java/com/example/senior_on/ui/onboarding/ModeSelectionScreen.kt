@@ -20,8 +20,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -31,7 +36,13 @@ import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+
+private enum class ModeType {
+    Child,
+    Senior
+}
 
 @Composable
 fun ModeSelectionScreen(
@@ -39,6 +50,8 @@ fun ModeSelectionScreen(
     onSeniorClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedMode by rememberSaveable { mutableStateOf<ModeType?>(null) }
+
     Box(modifier = modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.bg_splash),
@@ -66,7 +79,7 @@ fun ModeSelectionScreen(
             Text(
                 text = "누구로 시작할까요?",
                 modifier = Modifier.padding(top = 20.dp),
-                style = SeniorOnTextStyles.HeadingM ,
+                style = SeniorOnTextStyles.HeadingM,
                 color = SeniorOnColors.Gray800,
                 textAlign = TextAlign.Center
             )
@@ -88,17 +101,64 @@ fun ModeSelectionScreen(
                 ModeCard(
                     label = "자녀",
                     iconResId = R.drawable.ic_big_dependent,
-                    onClick = onChildClick,
+                    selected = selectedMode == ModeType.Child,
+                    dimmed = selectedMode != null && selectedMode != ModeType.Child,
+                    onClick = {
+                        selectedMode = ModeType.Child
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 ModeCard(
                     label = "시니어",
                     iconResId = R.drawable.ic_senior,
-                    onClick = onSeniorClick,
+                    selected = selectedMode == ModeType.Senior,
+                    dimmed = selectedMode != null && selectedMode != ModeType.Senior,
+                    onClick = {
+                        selectedMode = ModeType.Senior
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            val selected = selectedMode
+            if (selected != null) {
+                ModeSelectionNextButton(
+                    onClick = {
+                        when (selected) {
+                            ModeType.Child -> onChildClick()
+                            ModeType.Senior -> onSeniorClick()
+                        }
+                    }
+                )
+            } else {
+                Spacer(modifier = Modifier.height(50.dp))
+            }
+
+            Spacer(modifier = Modifier.height(70.5.dp))
         }
+    }
+}
+
+@Composable
+private fun ModeSelectionNextButton(
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .background(SeniorOnColors.Primary600)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "다음",
+            style = SeniorOnTextStyles.ButtonM,
+            color = SeniorOnColors.SupportWhite100
+        )
     }
 }
 
@@ -106,18 +166,27 @@ fun ModeSelectionScreen(
 private fun ModeCard(
     label: String,
     iconResId: Int,
+    selected: Boolean,
+    dimmed: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
+    val borderWidth = if (selected) 2.dp else 1.dp
+    val borderColor = if (selected) SeniorOnColors.Primary400 else SeniorOnColors.Primary600
+    val backgroundColor = if (selected) SeniorOnColors.Primary100 else SeniorOnColors.SupportWhite100
+    val contentAlpha = if (dimmed) 0.5f else 1f
+
     Column(
         modifier = modifier
             .height(215.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(SeniorOnColors.White)
+            .alpha(contentAlpha)
+            .clip(shape)
+            .background(backgroundColor)
             .border(
-                width = 1.dp,
-                color = SeniorOnColors.Primary600,
-                shape = RoundedCornerShape(12.dp)
+                width = borderWidth,
+                color = borderColor,
+                shape = shape
             )
             .clickable(onClick = onClick)
             .padding(top = 40.dp),
@@ -154,6 +223,7 @@ private fun ModeCard(
             Icon(
                 painter = painterResource(id = R.drawable.ic_arrow_vector_right),
                 contentDescription = null,
+                modifier = Modifier.size(width = 15.dp, height = 12.dp),
                 tint = SeniorOnColors.Primary600
             )
         }
