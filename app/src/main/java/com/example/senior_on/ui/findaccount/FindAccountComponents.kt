@@ -88,7 +88,7 @@ internal fun FindAccountTopBar(
         Text(
             text = "아이디/비밀번호 찾기",
             modifier = Modifier.align(Alignment.Center),
-            style = SeniorOnTextStyles.HeadingS,
+            style = SeniorOnTextStyles.BodyLBold,
             color = SeniorOnColors.Gray800,
             textAlign = TextAlign.Center
         )
@@ -135,16 +135,16 @@ private fun FindAccountTabItem(
     Column(
         modifier = modifier
             .clickable(onClick = onClick)
-            .padding(top = 24.dp),
+            .padding(top = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = text,
-            style = SeniorOnTextStyles.BodyMSemiBold,
+            style = SeniorOnTextStyles.BodyLMedium,
             color = textColor
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Box(
             modifier = Modifier
@@ -175,7 +175,7 @@ internal fun FindAccountTextField(
         cursorColor = SeniorOnColors.Primary600
     )
     val fieldShape = RoundedCornerShape(SeniorOnRadius.Small)
-    val fieldTextStyle = SeniorOnTextStyles.BodyMRegular.copy(color = SeniorOnColors.Gray800)
+    val fieldTextStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -342,8 +342,8 @@ internal fun FindAccountScaffold(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 23.5.dp)
         ) {
             bottomBar()
         }

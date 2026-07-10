@@ -38,18 +38,20 @@ fun FindIdResultScreen(
         onBackClick = onBackClick,
         showTabs = false,
         bottomBar = {
-            FindAccountPrimaryButton(
-                text = "로그인",
-                enabled = true,
-                onClick = onLoginClick
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                FindAccountPrimaryButton(
+                    text = "로그인",
+                    enabled = true,
+                    onClick = onLoginClick
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            FindAccountSecondaryButton(
-                text = "비밀번호 찾기",
-                onClick = onFindPasswordClick
-            )
+                FindAccountSecondaryButton(
+                    text = "비밀번호 찾기",
+                    onClick = onFindPasswordClick
+                )
+            }
         }
     ) {
         if (isSuccess) {
@@ -74,34 +76,37 @@ private fun FindIdSuccessContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(top = 32.dp)
+            .padding(top = 34.dp)
     ) {
         Text(
             text = "${name}님의 아이디",
-            style = SeniorOnTextStyles.HeadingS,
+            modifier = Modifier.padding(horizontal = 24.dp),
+            style = SeniorOnTextStyles.OnboardingHeading,
             color = SeniorOnColors.Gray800
         )
 
         Text(
             text = "가입일: $joinDate",
-            modifier = Modifier.padding(top = 8.dp),
-            style = SeniorOnTextStyles.BodySRegular,
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .padding(top = 12.dp),
+            style = SeniorOnTextStyles.BodyMMedium,
             color = SeniorOnColors.Gray500
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(67.dp)
+                .padding(horizontal = 16.dp)
+                .height(68.dp)
                 .background(SeniorOnColors.Gray100),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = userId,
-                style = SeniorOnTextStyles.BodyMRegular,
+                style = SeniorOnTextStyles.HeadingXS,
                 color = SeniorOnColors.Gray800
             )
         }
@@ -115,25 +120,28 @@ private fun FindIdFailureContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(top = 32.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 34.dp)
     ) {
         Text(
             text = buildAnnotatedString {
                 withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                    append("일치하는 아이디를\n")
+                    append("일치하는 아이디")
+                }
+                withStyle(SpanStyle(color = SeniorOnColors.Gray800)) {
+                    append("를\n")
                 }
                 withStyle(SpanStyle(color = SeniorOnColors.Gray800)) {
                     append("찾지 못했어요")
                 }
             },
-            style = SeniorOnTextStyles.HeadingS
+            style = SeniorOnTextStyles.OnboardingHeading
         )
 
         Text(
             text = "이름과 이메일을 다시 확인해 주세요.",
             modifier = Modifier.padding(top = 12.dp),
-            style = SeniorOnTextStyles.BodyMRegular,
+            style = SeniorOnTextStyles.BodyMMedium,
             color = SeniorOnColors.Gray500
         )
     }
