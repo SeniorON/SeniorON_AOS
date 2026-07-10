@@ -6,13 +6,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.example.senior_on.ui.login.LoginScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import kotlinx.coroutines.delay
 
 private enum class SeniorOnRoute {
     Splash,
-    ModeSelection
+    ModeSelection,
+    Login
 }
 
 private val InitialRoute = SeniorOnRoute.Splash
@@ -31,8 +33,9 @@ fun SeniorOnApp() {
     when (currentRoute) {
         SeniorOnRoute.Splash -> SplashScreen()
         SeniorOnRoute.ModeSelection -> ModeSelectionScreen(
-            onChildClick = {},
-            onSeniorClick = {}
+            onChildClick = { currentRoute = SeniorOnRoute.Login },
+            onSeniorClick = { currentRoute = SeniorOnRoute.Login }
         )
+        SeniorOnRoute.Login -> LoginScreen()
     }
 }
