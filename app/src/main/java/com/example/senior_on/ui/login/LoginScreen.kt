@@ -240,33 +240,23 @@ fun LoginScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SocialLoginButton(
-                backgroundColor = SeniorOnColors.Yellow,
-                borderColor = null,
-                onClick = onKakaoClick
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_kakao),
-                    contentDescription = "카카오 로그인",
-                    modifier = Modifier.size(23.dp),//원 안 아이콘 크기 23px
-                    tint = SeniorOnColors.Black
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.ic_sociallogin_kakao),
+                contentDescription = "카카오 로그인",
+                modifier = Modifier
+                    .size(width = 55.dp, height = 54.dp)
+                    .clickable(onClick = onKakaoClick)
+            )
 
-            Spacer(modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.size(10.dp))
 
-            SocialLoginButton(
-                backgroundColor = SeniorOnColors.White,
-                borderColor = SeniorOnColors.Gray200,
-                onClick = onGoogleClick
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_google),
-                    contentDescription = "구글 로그인",
-                    modifier = Modifier.size(27.dp), //원 안 아이콘 크기 27px
-                    tint = Color.Unspecified
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.ic_sociallogin_google),
+                contentDescription = "구글 로그인",
+                modifier = Modifier
+                    .size(54.dp)
+                    .clickable(onClick = onGoogleClick)
+            )
         }
         }
 
@@ -530,32 +520,6 @@ private fun SnsLoginDivider() {
     }
 }
 
-@Composable
-private fun SocialLoginButton(
-    backgroundColor: Color,
-    borderColor: Color?,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(54.dp) //아이콘 들어갈 원 크기
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .then(
-                if (borderColor != null) {
-                    Modifier.border(1.dp, borderColor, CircleShape)
-                } else {
-                    Modifier
-                }
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        content()
-    }
-}
-
 @Preview(
     name = "Login - Default",
     showBackground = true,
@@ -617,7 +581,7 @@ private fun LoginTextFieldEmptyPasswordErrorPreview() {
                         painter = painterResource(id = R.drawable.ic_visibility_off),
                         contentDescription = null,
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             )
@@ -660,7 +624,7 @@ private fun LoginTextFieldInvalidCredentialsPreview() {
                         painter = painterResource(id = R.drawable.ic_visibility_off),
                         contentDescription = null,
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             )
