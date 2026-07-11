@@ -113,9 +113,7 @@ fun ModeSelectionScreen(
                     iconResId = R.drawable.ic_senior,
                     selected = selectedMode == ModeType.Senior,
                     dimmed = selectedMode != null && selectedMode != ModeType.Senior,
-                    onClick = {
-                        selectedMode = ModeType.Senior
-                    },
+                    onClick = { selectedMode = ModeType.Senior },
                     modifier = Modifier.weight(1f)
                 )
             }
