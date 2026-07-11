@@ -40,9 +40,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.senior_on.R
 import com.example.senior_on.data.auth.MockLoginAuthRepository
 import com.example.senior_on.ui.app.AppUserMode
@@ -57,6 +59,14 @@ private enum class LoginFieldError {
     InvalidCredentials,
     PasswordMismatch
 }
+
+private val LoginLinkTextStyle = SeniorOnTextStyles.BodySMedium.copy(
+    lineHeight = 14.sp,
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both
+    )
+)
 
 @Composable
 fun LoginScreen(
@@ -95,9 +105,11 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 16.dp)
         ) {
-        Spacer(modifier = Modifier.height(133.dp)) //맨위와 간격
+        LoginTopBar(onBackClick = onGoToModeSelection)
+
+        Spacer(modifier = Modifier.height(44.dp))
 
         Image(
             painter = painterResource(id = R.drawable.ic_splash_on),
@@ -112,7 +124,7 @@ fun LoginScreen(
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(42.dp))
+        Spacer(modifier = Modifier.height(34.dp))
 
         LoginTextField(
             value = userId,
@@ -155,7 +167,7 @@ fun LoginScreen(
                         ),
                         contentDescription = if (passwordVisible) "비밀번호 숨기기" else "비밀번호 보기",
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -168,7 +180,7 @@ fun LoginScreen(
             onCheckedChange = { keepLoggedIn = it }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))// 로그인 상태 유지 - 로그인 박스 간격
+        Spacer(modifier = Modifier.height(16.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
 
         Box(
             modifier = Modifier
@@ -202,12 +214,12 @@ fun LoginScreen(
         ) {
             Text(
                 text = "로그인",
-                style = SeniorOnTextStyles.ButtonL,
+                style = SeniorOnTextStyles.ButtonM,
                 color = SeniorOnColors.White
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp)) // 로그인 버튼 - 아이디 찾기 row 간격
 
         LoginLinkRow(
             onFindIdClick = onFindIdClick,
@@ -215,7 +227,7 @@ fun LoginScreen(
             onSignUpClick = onSignUpClick
         )
 
-        Spacer(modifier = Modifier.height(34.dp))//로그인 박스 - 아이디 찾기~ 사이 간격 34px
+        Spacer(modifier = Modifier.height(34.dp)) // 아이디 찾기 row - SNS 계정으로 로그인 간격
 
         SnsLoginDivider()
 
@@ -271,6 +283,33 @@ fun LoginScreen(
 }
 
 @Composable
+private fun LoginTopBar(
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(54.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clickable(onClick = onBackClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier.size(16.dp),
+                tint = SeniorOnColors.Gray800
+            )
+        }
+    }
+}
+
+@Composable
 private fun LoginStayLoggedInRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -280,21 +319,19 @@ private fun LoginStayLoggedInRow(
         modifier = modifier.clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(18.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(
-                    if (checked) SeniorOnColors.Primary600 else SeniorOnColors.White
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (checked) SeniorOnColors.Primary600 else SeniorOnColors.Gray200,
-                    shape = RoundedCornerShape(4.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (checked) {
+        if (checked) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(SeniorOnColors.Primary600)
+                    .border(
+                        width = 1.dp,
+                        color = SeniorOnColors.Primary600,
+                        shape = RoundedCornerShape(4.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_check),
                     contentDescription = null,
@@ -302,11 +339,18 @@ private fun LoginStayLoggedInRow(
                     tint = SeniorOnColors.White
                 )
             }
+        } else {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_check_unfilled),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = Color.Unspecified
+            )
         }
 
         Text(
             text = "로그인 상태 유지",
-            modifier = Modifier.padding(start = 8.dp),
+            modifier = Modifier.padding(start = 4.dp),
             style = SeniorOnTextStyles.BodySRegular,
             color = SeniorOnColors.Gray800
         )
@@ -331,7 +375,7 @@ private fun LoginTextField(
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = SeniorOnColors.Primary600,
         unfocusedBorderColor = SeniorOnColors.Gray200,
-        errorBorderColor = SeniorOnColors.Red500,
+        errorBorderColor = SeniorOnColors.Red200,
         focusedContainerColor = SeniorOnColors.SupportWhite100,
         unfocusedContainerColor = SeniorOnColors.SupportWhite100,
         errorContainerColor = SeniorOnColors.SupportWhite100,
@@ -437,14 +481,14 @@ private fun LoginLinkRow(
 private fun LoginLink(
     text: String,
     onClick: () -> Unit,
-    color: Color = SeniorOnColors.Gray500
+    color: Color = SeniorOnColors.Gray700
 ) {
     Text(
         text = text,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 24.dp), //로그인 박스와의 거리 20px, 글자 사이 간격 24px
-        style = SeniorOnTextStyles.BodySMedium, //글씨체
+            .padding(horizontal = 20.dp), // 글자 사이 간격
+        style = LoginLinkTextStyle,
         color = color
     )
 }
@@ -453,7 +497,7 @@ private fun LoginLink(
 private fun LoginLinkDivider() {
     Box(
         modifier = Modifier
-            .size(width = 1.dp, height = 12.dp)
+            .size(width = 1.dp, height = 20.dp)
             .background(SeniorOnColors.Gray300) //세로선 색
     )
 }
