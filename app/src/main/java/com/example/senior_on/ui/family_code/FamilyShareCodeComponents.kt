@@ -82,7 +82,7 @@ internal fun FamilyShareCodeBottomButton(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(bottom = 24.dp)
+            .padding(bottom = 22.5f.dp)
     ) {
         Box(
             modifier = Modifier

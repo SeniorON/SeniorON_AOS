@@ -146,7 +146,7 @@ private fun FamilyShareCodeTextField(
     focusManager: FocusManager = LocalFocusManager.current
 ) {
     val underlineColor = if (errorMessage != null) {
-        SeniorOnColors.Red400
+        SeniorOnColors.Red200
     } else {
         SeniorOnColors.Gray200
     }
@@ -211,7 +211,7 @@ private fun FamilyShareCodeTextField(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_close_filled),
                                 contentDescription = "입력 내용 지우기",
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(24.dp),
                                 tint = Color.Unspecified
                             )
                         }
@@ -233,7 +233,7 @@ private fun FamilyShareCodeTextField(
         Text(
             text = it,
             style = SeniorOnTextStyles.CaptionRegular,
-            color = SeniorOnColors.Red400
+            color = SeniorOnColors.Red300
         )
     }
 }

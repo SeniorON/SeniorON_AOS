@@ -148,7 +148,7 @@ private fun FamilyShareCodeBox(
                 color = SeniorOnColors.Gray200,
                 shape = RoundedCornerShape(SeniorOnRadius.Medium)
             )
-            .padding(start = 12.dp, end = 22.dp),
+            .padding(start = 12.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -169,7 +169,7 @@ private fun FamilyShareCodeBox(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_copy),
+                painter = painterResource(id = R.drawable.ic_family_code_copy),
                 contentDescription = "가족공유코드 복사",
                 modifier = Modifier.size(26.dp),
                 tint = SeniorOnColors.Gray300
