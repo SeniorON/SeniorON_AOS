@@ -79,7 +79,7 @@ fun FamilyShareCodeInputScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(150.dp))
+            Spacer(modifier = Modifier.height(151.dp))
             FamilyShareCodeInputTitle()
             Spacer(modifier = Modifier.height(45.dp))
             FamilyShareCodeTextField(
@@ -171,7 +171,7 @@ private fun FamilyShareCodeTextField(
                         if (value.isEmpty()) {
                             Text(
                                 text = "가족 공유 코드 입력",
-                                style = SeniorOnTextStyles.BodySRegular,
+                                style = SeniorOnTextStyles.BodyMMedium,
                                 color = SeniorOnColors.Gray300
                             )
                         }
@@ -182,8 +182,6 @@ private fun FamilyShareCodeTextField(
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .clip(CircleShape)
-                                .background(SeniorOnColors.Gray200)
                                 .clickable(
                                     interactionSource = remember {
                                         MutableInteractionSource()
@@ -194,10 +192,10 @@ private fun FamilyShareCodeTextField(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_sm_close),
+                                painter = painterResource(id = R.drawable.ic_close_filled),
                                 contentDescription = "입력 내용 지우기",
                                 modifier = Modifier.size(18.dp),
-                                tint = SeniorOnColors.White
+                                tint = SeniorOnColors.Gray200
                             )
                         }
                     }

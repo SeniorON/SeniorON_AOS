@@ -37,8 +37,8 @@ internal fun FamilyShareCodeTopBar(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 5.dp)
-                .size(48.dp)
+                .padding(start = 16.dp)
+                .size(26.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -47,9 +47,9 @@ internal fun FamilyShareCodeTopBar(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
+                painter = painterResource(id = R.drawable.ic_big_back),
                 contentDescription = "뒤로가기",
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(24.dp),
                 tint = SeniorOnColors.Gray800
             )
         }
@@ -58,8 +58,8 @@ internal fun FamilyShareCodeTopBar(
             text = "로그인",
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 60.dp),
-            style = SeniorOnTextStyles.BodyLBold,
+                .padding(start = 58.dp),
+            style = SeniorOnTextStyles.HeadingS,
             color = SeniorOnColors.Gray800
         )
     }

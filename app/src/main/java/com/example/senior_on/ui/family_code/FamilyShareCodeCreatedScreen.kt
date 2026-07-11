@@ -126,8 +126,8 @@ private fun FamilyShareCodeCreatedTitle(
         Text(
             text = "가족 구성원에게 아래 코드를 공유해 주세요.",
             modifier = Modifier.fillMaxWidth(),
-            style = SeniorOnTextStyles.CaptionMedium,
-            color = SeniorOnColors.Gray500,
+            style = SeniorOnTextStyles.BodySMedium,
+            color = SeniorOnColors.Gray400,
             textAlign = TextAlign.Center
         )
     }
@@ -142,13 +142,13 @@ private fun FamilyShareCodeBox(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(71.dp)
             .border(
                 width = 1.dp,
                 color = SeniorOnColors.Gray200,
                 shape = RoundedCornerShape(SeniorOnRadius.Medium)
             )
-            .padding(start = 12.dp, end = 4.dp),
+            .padding(start = 12.dp, end = 22.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -160,7 +160,7 @@ private fun FamilyShareCodeBox(
 
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(26.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -172,7 +172,7 @@ private fun FamilyShareCodeBox(
                 painter = painterResource(id = R.drawable.ic_copy),
                 contentDescription = "가족공유코드 복사",
                 modifier = Modifier.size(26.dp),
-                tint = SeniorOnColors.Gray400
+                tint = SeniorOnColors.Gray300
             )
         }
     }
