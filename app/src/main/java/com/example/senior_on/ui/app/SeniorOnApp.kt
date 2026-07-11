@@ -7,6 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import com.example.senior_on.ui.family_code.FamilyShareCodeCreatedScreen
+import com.example.senior_on.ui.family_code.FamilyShareCodeInputScreen
+import com.example.senior_on.ui.family_code.FamilyShareCodeOption
+import com.example.senior_on.ui.family_code.FamilyShareCodeScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.senior_info.AddressSearchScreen
@@ -26,6 +30,9 @@ private enum class SeniorOnRoute {
     SignupEmailVerification,
     SignupAccountInfo,
     SignupTermsAgreement,
+    FamilyShareCode,
+    FamilyShareCodeInput,
+    FamilyShareCodeCreated,
     ParentInfoInput,
     AddressSearch
 }
@@ -43,7 +50,7 @@ fun SeniorOnApp() {
     if (currentRoute == SeniorOnRoute.Splash) {
         LaunchedEffect(Unit) {
             delay(1200)
-            currentRoute = SeniorOnRoute.ModeSelection
+            currentRoute = SeniorOnRoute.FamilyShareCode
         }
     }
 
@@ -101,14 +108,41 @@ fun SeniorOnApp() {
                 onBackClick = {
                     currentRoute = SeniorOnRoute.SignupAccountInfo
                 },
-                onCompleteClick = {}
+                onCompleteClick = {
+                    currentRoute = SeniorOnRoute.FamilyShareCode
+                }
+            )
+            SeniorOnRoute.FamilyShareCode -> FamilyShareCodeScreen(
+                onBackClick = {
+                    currentRoute = SeniorOnRoute.SignupTermsAgreement
+                },
+                onNextClick = { selectedOption ->
+                    currentRoute = when (selectedOption) {
+                        FamilyShareCodeOption.HasCode -> SeniorOnRoute.FamilyShareCodeInput
+                        FamilyShareCodeOption.NoCode -> SeniorOnRoute.FamilyShareCodeCreated
+                    }
+                }
+            )
+            SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputScreen(
+                onBackClick = {
+                    currentRoute = SeniorOnRoute.FamilyShareCode
+                },
+                onLoginClick = {}
+            )
+            SeniorOnRoute.FamilyShareCodeCreated -> FamilyShareCodeCreatedScreen(
+                onBackClick = {
+                    currentRoute = SeniorOnRoute.FamilyShareCode
+                },
+                onNextClick = {
+                    currentRoute = SeniorOnRoute.ParentInfoInput
+                }
             )
             SeniorOnRoute.ParentInfoInput -> ParentInfoInputScreen(
                 selectedAddress = selectedHomeAddress,
                 selectedAddressLatitude = selectedHomeLatitude,
                 selectedAddressLongitude = selectedHomeLongitude,
                 onBackClick = {
-                    currentRoute = SeniorOnRoute.SignupTermsAgreement
+                    currentRoute = SeniorOnRoute.FamilyShareCodeCreated
                 },
                 onSearchAddressClick = {
                     currentRoute = SeniorOnRoute.AddressSearch

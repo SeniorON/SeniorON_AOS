@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -211,7 +212,7 @@ private fun FamilyShareCodeTextField(
                                 painter = painterResource(id = R.drawable.ic_close_filled),
                                 contentDescription = "입력 내용 지우기",
                                 modifier = Modifier.size(18.dp),
-                                tint = SeniorOnColors.Gray200
+                                tint = Color.Unspecified
                             )
                         }
                     }
