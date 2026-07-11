@@ -19,14 +19,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -44,15 +39,6 @@ internal fun CustomRelationshipBottomSheet(
     onCancel: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    val focusRequester = remember { FocusRequester() }
-    val isInPreview = LocalInspectionMode.current
-
-    LaunchedEffect(isInPreview) {
-        if (!isInPreview) {
-            focusRequester.requestFocus()
-        }
-    }
-
     ModalBottomSheet(
         onDismissRequest = onCancel,
         containerColor = SeniorOnColors.White,
@@ -67,8 +53,7 @@ internal fun CustomRelationshipBottomSheet(
             value = value,
             onValueChange = onValueChange,
             onCancel = onCancel,
-            onConfirm = onConfirm,
-            inputModifier = Modifier.focusRequester(focusRequester)
+            onConfirm = onConfirm
         )
     }
 }
@@ -78,8 +63,7 @@ internal fun CustomRelationshipSheetContent(
     value: String,
     onValueChange: (String) -> Unit,
     onCancel: () -> Unit,
-    onConfirm: () -> Unit,
-    inputModifier: Modifier = Modifier
+    onConfirm: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -142,8 +126,7 @@ internal fun CustomRelationshipSheetContent(
         CustomRelationshipInputField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = "관계(기타)",
-            modifier = inputModifier
+            placeholder = "관계(기타)"
         )
     }
 }

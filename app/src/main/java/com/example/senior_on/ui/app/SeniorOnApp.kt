@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.app
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +69,14 @@ fun SeniorOnApp() {
     var selectedHomeLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     val saveableStateHolder = rememberSaveableStateHolder()
+
+    fun navigateBackFromAddressSearch() {
+        currentRoute = SeniorOnRoute.ParentInfoInput
+    }
+
+    BackHandler(enabled = currentRoute == SeniorOnRoute.AddressSearch) {
+        navigateBackFromAddressSearch()
+    }
 
     if (currentRoute == SeniorOnRoute.Splash) {
         LaunchedEffect(Unit) {
@@ -214,7 +223,7 @@ fun SeniorOnApp() {
                 onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch }
             )
             SeniorOnRoute.AddressSearch -> AddressSearchScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.ParentInfoInput },
+                onBackClick = ::navigateBackFromAddressSearch,
                 onAddressSelected = { result ->
                     selectedHomeAddress = result.selectedAddress
                     selectedHomeLatitude = result.latitude
