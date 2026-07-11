@@ -331,7 +331,7 @@ internal fun BirthDateSelector(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(43.dp)
-                .padding(horizontal = 8.dp),
+                .padding(start = 6.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
