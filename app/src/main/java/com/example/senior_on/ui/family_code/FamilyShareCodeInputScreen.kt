@@ -53,6 +53,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.util.Locale
 
 private const val FamilyShareCodeLength = 8
+private const val InvalidFamilyShareCodeMessage = "가족 공유 코드를 다시 확인해 주세요."
 
 @Composable
 fun FamilyShareCodeInputScreen(
@@ -61,8 +62,16 @@ fun FamilyShareCodeInputScreen(
     modifier: Modifier = Modifier
 ) {
     var familyShareCode by rememberSaveable { mutableStateOf("") }
+    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val isLoginEnabled = familyShareCode.length == FamilyShareCodeLength
     val focusManager = LocalFocusManager.current
+
+    fun submitFamilyShareCode() {
+        if (isLoginEnabled) {
+            errorMessage = InvalidFamilyShareCodeMessage
+            onLoginClick(familyShareCode)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -86,12 +95,12 @@ fun FamilyShareCodeInputScreen(
                 value = familyShareCode,
                 onValueChange = {
                     familyShareCode = normalizeFamilyShareCode(it)
+                    errorMessage = null
                 },
+                errorMessage = errorMessage,
                 onDone = {
                     focusManager.clearFocus()
-                    if (isLoginEnabled) {
-                        onLoginClick(familyShareCode)
-                    }
+                    submitFamilyShareCode()
                 }
             )
         }
@@ -101,7 +110,7 @@ fun FamilyShareCodeInputScreen(
             enabled = isLoginEnabled,
             onClick = {
                 focusManager.clearFocus()
-                onLoginClick(familyShareCode)
+                submitFamilyShareCode()
             },
             modifier = Modifier.padding(horizontal = 16.dp)
         )
@@ -130,10 +139,17 @@ private fun FamilyShareCodeInputTitle(
 private fun FamilyShareCodeTextField(
     value: String,
     onValueChange: (String) -> Unit,
+    errorMessage: String?,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
     focusManager: FocusManager = LocalFocusManager.current
 ) {
+    val underlineColor = if (errorMessage != null) {
+        SeniorOnColors.Red400
+    } else {
+        SeniorOnColors.Gray200
+    }
+
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -205,11 +221,20 @@ private fun FamilyShareCodeTextField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(1.dp)
-                        .background(SeniorOnColors.Gray200)
+                        .background(underlineColor)
                 )
             }
         }
     )
+
+    errorMessage?.let {
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = it,
+            style = SeniorOnTextStyles.CaptionRegular,
+            color = SeniorOnColors.Red400
+        )
+    }
 }
 
 private fun normalizeFamilyShareCode(value: String): String {
