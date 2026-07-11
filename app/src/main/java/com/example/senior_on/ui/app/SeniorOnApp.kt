@@ -37,7 +37,7 @@ private enum class SeniorOnRoute {
     AddressSearch
 }
 
-private val InitialRoute = SeniorOnRoute.Splash
+private val InitialRoute = SeniorOnRoute.FamilyShareCode
 
 @Composable
 fun SeniorOnApp() {
