@@ -41,7 +41,7 @@
 | Language | Kotlin |
 | UI | Jetpack Compose, Material3 |
 | Architecture | MVVM 예정 |
-| Network | REST API 연동 예정 |
+| Network | Retrofit/OkHttp, Kakao Local REST API |
 | Backend 연동 | Spring Boot REST API 예정 |
 | Design | Figma, Design Token, Pretendard |
 | Collaboration | GitHub Issues, Pull Requests, Projects |

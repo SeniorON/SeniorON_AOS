@@ -103,7 +103,9 @@ fun ModeSelectionScreen(
                     iconResId = R.drawable.ic_big_dependent,
                     selected = selectedMode == ModeType.Child,
                     dimmed = selectedMode != null && selectedMode != ModeType.Child,
-                    onClick = { selectedMode = ModeType.Child },
+                    onClick = {
+                        selectedMode = ModeType.Child
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 ModeCard(
@@ -145,7 +147,7 @@ private fun ModeSelectionNextButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .background(SeniorOnColors.Primary600)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
