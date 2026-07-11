@@ -53,6 +53,7 @@ object SeniorOnTextStyles {
     val CaptionMedium = pretendardStyle(FontWeight.Medium, 12, 16.8f)
     val CaptionRegular = pretendardStyle(FontWeight.Normal, 12, 16.8f)
 
+    val ButtonL = pretendardStyle(FontWeight.SemiBold, 20, 28f)
     val ButtonM = pretendardStyle(FontWeight.SemiBold, 16, 22.4f)
     val ButtonS = pretendardStyle(FontWeight.Medium, 14, 19.6f)
 
