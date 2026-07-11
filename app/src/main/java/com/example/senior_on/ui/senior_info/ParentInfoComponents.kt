@@ -584,12 +584,12 @@ internal fun SeniorInfoSkipNoticeContent(
             .requiredSize(width = 238.dp, height = 241.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(SeniorOnColors.White)
-            .padding(start = 25.dp, end = 25.dp, top = 31.dp, bottom = 20.dp),
+            .padding(start = 33.5.dp, end = 33.5.dp, top = 24.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(38.dp)
                 .clip(CircleShape)
                 .background(SeniorOnColors.Gray100),
             contentAlignment = Alignment.Center
