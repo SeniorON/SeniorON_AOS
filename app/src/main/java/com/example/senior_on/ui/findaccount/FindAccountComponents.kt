@@ -74,29 +74,36 @@ internal fun FindAccountTopBar(
             },
         contentAlignment = Alignment.Center
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 16.dp)
-                .size(24.dp)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로가기",
-                modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.Gray800
-            )
-        }
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable(onClick = onBackClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier.size(24.dp),
+                    tint = SeniorOnColors.Gray800
+                )
+            }
 
-        Text(
-            text = "아이디/비밀번호 찾기",
-            modifier = Modifier.align(Alignment.Center),
-            style = SeniorOnTextStyles.BodyLBold,
-            color = SeniorOnColors.Gray800,
-            textAlign = TextAlign.Center
-        )
+            Text(
+                text = "아이디/비밀번호 찾기",
+                modifier = Modifier.weight(1f),
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.size(24.dp))
+        }
     }
 }
 
@@ -140,12 +147,12 @@ private fun FindAccountTabItem(
     Column(
         modifier = modifier
             .clickable(onClick = onClick)
-            .padding(top = 40.dp),
+            .padding(top = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = text,
-            style = SeniorOnTextStyles.BodyLMedium,
+            style = SeniorOnTextStyles.BodyLBold,
             color = textColor
         )
 
@@ -499,15 +506,18 @@ internal fun FindAccountPrimaryButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp)
             .background(backgroundColor, RoundedCornerShape(SeniorOnRadius.Small))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 14.dp),
             style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.SupportWhite100
+            color = SeniorOnColors.SupportWhite100,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -521,7 +531,6 @@ internal fun FindAccountSecondaryButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp)
             .border(1.dp, SeniorOnColors.Gray200, RoundedCornerShape(SeniorOnRadius.Small))
             .background(SeniorOnColors.White, RoundedCornerShape(SeniorOnRadius.Small))
             .clickable(onClick = onClick),
@@ -529,8 +538,12 @@ internal fun FindAccountSecondaryButton(
     ) {
         Text(
             text = text,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 14.dp),
             style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.Gray500
+            color = SeniorOnColors.Gray400,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -571,7 +584,7 @@ internal fun FindAccountScaffold(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 23.5.dp)
+                .padding(bottom = 24.dp)
         ) {
             bottomBar()
         }

@@ -80,7 +80,7 @@ private fun FindIdSuccessContent(
     ) {
         Text(
             text = "${name}님의 아이디",
-            modifier = Modifier.padding(horizontal = 24.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
             style = SeniorOnTextStyles.OnboardingHeading,
             color = SeniorOnColors.Gray800
         )
@@ -88,7 +88,7 @@ private fun FindIdSuccessContent(
         Text(
             text = "가입일: $joinDate",
             modifier = Modifier
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 16.dp)
                 .padding(top = 12.dp),
             style = SeniorOnTextStyles.BodyMMedium,
             color = SeniorOnColors.Gray500
