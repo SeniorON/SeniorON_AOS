@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.signup.SignupBirthDateModalBottomSheet
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -60,6 +62,7 @@ data class ParentInfoInputState(
     val customRelationship: String = ""
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParentInfoInputScreen(
     modifier: Modifier = Modifier,
@@ -128,11 +131,11 @@ fun ParentInfoInputScreen(
     }
 
     if (showBirthDateSheet) {
-        BirthDateBottomSheet(
+        SignupBirthDateModalBottomSheet(
             initialBirthDate = birthDate,
             onDismiss = { showBirthDateSheet = false },
-            onConfirm = { selectedDate ->
-                birthDate = selectedDate.toBirthDateString()
+            onConfirm = { selectedBirthDate ->
+                birthDate = selectedBirthDate
                 showBirthDateSheet = false
             }
         )
@@ -370,6 +373,7 @@ private fun CustomRelationshipBottomSheetPreview() {
     widthDp = 360,
     heightDp = 640
 )
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BirthDateBottomSheetPreview() {
     SENIOR_ONTheme {
@@ -377,7 +381,7 @@ private fun BirthDateBottomSheetPreview() {
             scrimAlpha = 0.45f,
             cornerRadius = 28.dp
         ) {
-            BirthDateSheetContent(
+            SignupBirthDateModalBottomSheet(
                 initialBirthDate = "1956.01.01",
                 onDismiss = {},
                 onConfirm = {}
