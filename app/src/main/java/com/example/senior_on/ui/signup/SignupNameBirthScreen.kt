@@ -41,6 +41,7 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,30 +96,55 @@ fun SignupNameBirthScreen(
     }
 
     if (isBirthSheetVisible) {
-        ModalBottomSheet(
-            onDismissRequest = { isBirthSheetVisible = false },
-            sheetState = sheetState,
-            containerColor = SeniorOnColors.SupportWhite100,
-            scrimColor = Color(0x80000000),
-            dragHandle = null,
-            shape = RoundedCornerShape(
-                topStart = 24.dp,
-                topEnd = 24.dp,
-                bottomStart = 0.dp,
-                bottomEnd = 0.dp
-            )
-        ) {
-            SignupBirthDateBottomSheet(
-                selectedYear = 1933,
-                selectedMonth = 5,
-                selectedDay = 12,
-                onCloseClick = { isBirthSheetVisible = false },
-                onConfirmClick = { year, month, day ->
-                    birthDate = "%04d.%02d.%02d".format(year, month, day)
-                    isBirthSheetVisible = false
-                }
-            )
-        }
+        SignupBirthDateModalBottomSheet(
+            initialBirthDate = birthDate,
+            onDismiss = { isBirthSheetVisible = false },
+            onConfirm = { selectedBirthDate ->
+                birthDate = selectedBirthDate
+                isBirthSheetVisible = false
+            },
+            sheetState = sheetState
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SignupBirthDateModalBottomSheet(
+    initialBirthDate: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    sheetState: androidx.compose.material3.SheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+) {
+    val initialDate = remember(initialBirthDate) {
+        initialBirthDate.toSignupBirthDateOrNull()
+            ?: LocalDate.of(1933, 5, 12)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = SeniorOnColors.SupportWhite100,
+        scrimColor = Color(0x80000000),
+        dragHandle = null,
+        shape = RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+            bottomStart = 0.dp,
+            bottomEnd = 0.dp
+        )
+    ) {
+        SignupBirthDateBottomSheet(
+            selectedYear = initialDate.year,
+            selectedMonth = initialDate.monthValue,
+            selectedDay = initialDate.dayOfMonth,
+            onCloseClick = onDismiss,
+            onConfirmClick = { year, month, day ->
+                onConfirm("%04d.%02d.%02d".format(year, month, day))
+            }
+        )
     }
 }
 
@@ -342,6 +368,19 @@ private fun SignupBirthPickerColumn(
                 .background(SeniorOnColors.Primary600)
         )
     }
+}
+
+private fun String.toSignupBirthDateOrNull(): LocalDate? {
+    val parts = split(".")
+    if (parts.size != 3) return null
+
+    return runCatching {
+        LocalDate.of(
+            parts[0].toInt(),
+            parts[1].toInt(),
+            parts[2].toInt()
+        )
+    }.getOrNull()
 }
 
 @Preview(

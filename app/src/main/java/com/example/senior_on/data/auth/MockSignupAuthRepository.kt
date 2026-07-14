@@ -5,12 +5,15 @@ import kotlinx.coroutines.delay
 class MockSignupAuthRepository : SignupAuthRepository {
     override suspend fun isUserIdAvailable(userId: String): Boolean {
         delay(MOCK_NETWORK_DELAY_MILLIS)
-        return userId.isNotBlank() && userId.lowercase() !in DUPLICATED_USER_IDS
+        return userId.isNotBlank() &&
+            userId.trim().lowercase() !in MockAuthFixtures.duplicatedUserIds
     }
 
     override suspend fun requestEmailVerification(email: String): Boolean {
         delay(MOCK_NETWORK_DELAY_MILLIS)
-        return email.isNotBlank()
+        val normalizedEmail = email.trim().lowercase()
+        return normalizedEmail.isNotBlank() &&
+            normalizedEmail !in MockAuthFixtures.registeredEmails
     }
 
     override suspend fun verifyEmailCode(
@@ -18,12 +21,10 @@ class MockSignupAuthRepository : SignupAuthRepository {
         code: String
     ): Boolean {
         delay(MOCK_NETWORK_DELAY_MILLIS)
-        return email.isNotBlank() && code == VALID_VERIFICATION_CODE
+        return email.isNotBlank() && code == MockAuthFixtures.SIGNUP_VALID_VERIFICATION_CODE
     }
 
     private companion object {
-        const val VALID_VERIFICATION_CODE = "111111"
         const val MOCK_NETWORK_DELAY_MILLIS = 300L
-        val DUPLICATED_USER_IDS = setOf("senioron", "user01", "test1234")
     }
 }

@@ -10,6 +10,8 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import com.example.senior_on.data.auth.MockFindIdRepository
 import com.example.senior_on.data.auth.MockFindPasswordRepository
+import com.example.senior_on.data.auth.MockSessionRepository
+import com.example.senior_on.ui.child.ChildMainScreen
 import com.example.senior_on.ui.family_code.FamilyShareCodeCreatedScreen
 import com.example.senior_on.ui.family_code.FamilyShareCodeInputScreen
 import com.example.senior_on.ui.family_code.FamilyShareCodeOption
@@ -46,6 +48,7 @@ private enum class SeniorOnRoute {
     FindIdResult,
     FindPasswordVerify,
     FindPasswordReset,
+    ChildMain,
     FamilyShareCode,
     FamilyShareCodeInput,
     FamilyShareCodeCreated,
@@ -70,6 +73,17 @@ fun SeniorOnApp() {
     var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     val saveableStateHolder = rememberSaveableStateHolder()
 
+    fun routeAfterAuthenticated(role: AppUserMode): SeniorOnRoute {
+        return when (role) {
+            AppUserMode.Child -> SeniorOnRoute.ChildMain
+            AppUserMode.Senior -> SeniorOnRoute.ModeSelection
+        }
+    }
+
+    fun navigateAfterFamilyConnected() {
+        currentRoute = routeAfterAuthenticated(selectedUserMode)
+    }
+
     fun navigateBackFromAddressSearch() {
         currentRoute = SeniorOnRoute.ParentInfoInput
     }
@@ -80,8 +94,11 @@ fun SeniorOnApp() {
 
     if (currentRoute == SeniorOnRoute.Splash) {
         LaunchedEffect(Unit) {
-            delay(1200)
-            currentRoute = SeniorOnRoute.ModeSelection
+            delay(900)
+            val savedSession = MockSessionRepository.validateSavedSession()
+            currentRoute = savedSession
+                ?.let { routeAfterAuthenticated(it.role) }
+                ?: SeniorOnRoute.ModeSelection
         }
     }
 
@@ -100,6 +117,9 @@ fun SeniorOnApp() {
             )
             SeniorOnRoute.Login -> LoginScreen(
                 selectedMode = selectedUserMode,
+                onLoginClick = {
+                    currentRoute = routeAfterAuthenticated(selectedUserMode)
+                },
                 onGoToModeSelection = { currentRoute = SeniorOnRoute.ModeSelection },
                 onFindIdClick = {
                     findAccountInitialTab = FindAccountTab.Id
@@ -170,6 +190,7 @@ fun SeniorOnApp() {
                 onComplete = {},
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
+            SeniorOnRoute.ChildMain -> ChildMainScreen()
             SeniorOnRoute.Signup -> SignupScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.Login },
                 onKakaoClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
@@ -203,13 +224,16 @@ fun SeniorOnApp() {
                 onNextClick = { selectedOption ->
                     currentRoute = when (selectedOption) {
                         FamilyShareCodeOption.HasCode -> SeniorOnRoute.FamilyShareCodeInput
-                        FamilyShareCodeOption.NoCode -> SeniorOnRoute.FamilyShareCodeCreated
+                        FamilyShareCodeOption.NoCode -> when (selectedUserMode) {
+                            AppUserMode.Child -> SeniorOnRoute.FamilyShareCodeCreated
+                            AppUserMode.Senior -> SeniorOnRoute.FamilyShareCodeInput
+                        }
                     }
                 }
             )
             SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
-                onLoginClick = {}
+                onLoginClick = { navigateAfterFamilyConnected() }
             )
             SeniorOnRoute.FamilyShareCodeCreated -> FamilyShareCodeCreatedScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
@@ -220,7 +244,9 @@ fun SeniorOnApp() {
                 selectedAddressLatitude = selectedHomeLatitude,
                 selectedAddressLongitude = selectedHomeLongitude,
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCodeCreated },
-                onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch }
+                onSkipClick = { navigateAfterFamilyConnected() },
+                onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch },
+                onSaveClick = { navigateAfterFamilyConnected() }
             )
             SeniorOnRoute.AddressSearch -> AddressSearchScreen(
                 onBackClick = ::navigateBackFromAddressSearch,

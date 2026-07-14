@@ -208,6 +208,10 @@ fun LoginScreen(
                         }
                         return@clickable
                     }
+                    if (MockLoginAuthRepository.login(userId, password) == null) {
+                        loginError = LoginFieldError.InvalidCredentials
+                        return@clickable
+                    }
                     onLoginClick()
                 },
             contentAlignment = Alignment.Center
