@@ -12,6 +12,14 @@ object MockFindIdRepository {
 
         if (trimmedName.isBlank() || trimmedEmail.isBlank()) return null
 
+        MockAuthFixtures.loginAccounts
+            .firstOrNull {
+                it.name == trimmedName && it.email.equals(trimmedEmail, ignoreCase = true)
+            }
+            ?.let {
+                return FindIdAccount(userId = it.userId, joinDate = "2026.01.05")
+            }
+
         return when {
             trimmedName == "홍길동" && trimmedEmail == "sdflsielfek@naver.com" ->
                 FindIdAccount(userId = "User_Id", joinDate = "2026.01.05")
