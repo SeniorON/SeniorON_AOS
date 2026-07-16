@@ -23,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -51,7 +53,7 @@ internal fun ChildBottomNavigation(
             .fillMaxWidth()
             .background(SeniorOnColors.White)
             .navigationBarsPadding()
-            .padding(top = 9.dp, bottom = 8.dp),
+            .padding(top = 2.dp, bottom = 6.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -73,32 +75,49 @@ private fun ChildBottomNavigationItem(
     modifier: Modifier = Modifier
 ) {
     val contentColor = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray300
+    val textStyle = if (selected) {
+        SeniorOnTextStyles.BodySSemiBold
+    } else {
+        SeniorOnTextStyles.BodySMedium
+    }
 
     Column(
         modifier = modifier
-            .width(48.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .width(72.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
-            )
-            .padding(vertical = 2.dp),
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             painter = painterResource(id = tab.iconResId),
             contentDescription = tab.label,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(28.dp),
             tint = contentColor
         )
 
-        Spacer(modifier = Modifier.height(3.dp))
-
         Text(
             text = tab.label,
-            style = SeniorOnTextStyles.CaptionMedium,
+            style = textStyle,
             color = contentColor
+        )
+    }
+}
+
+@Preview(
+    name = "Child Bottom Navigation",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 80
+)
+@Composable
+private fun ChildBottomNavigationPreview() {
+    SENIOR_ONTheme {
+        ChildBottomNavigation(
+            selectedTab = ChildMainTab.Notification,
+            onTabClick = {}
         )
     }
 }

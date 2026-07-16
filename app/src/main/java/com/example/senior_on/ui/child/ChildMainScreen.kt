@@ -21,6 +21,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.senior_on.data.notification.MockNotificationRepository
+import com.example.senior_on.data.notification.MockNotificationScenario
+import com.example.senior_on.ui.notification.NotificationDetectionTimeSettingScreen
+import com.example.senior_on.ui.notification.NotificationScreen
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -30,26 +34,31 @@ fun ChildMainScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
+    var showDetectionTimeSetting by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
-        Box(
+        ChildMainTabContent(
+            selectedTab = selectedTab,
+            showDetectionTimeSetting = showDetectionTimeSetting,
+            onOpenDetectionTimeSetting = { showDetectionTimeSetting = true },
+            onCloseDetectionTimeSetting = { showDetectionTimeSetting = false },
             modifier = Modifier
                 .weight(1f)
                 .fillMaxSize()
-        ) {
-            ChildMainTabContent(
-                selectedTab = selectedTab,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        )
 
         ChildBottomNavigation(
             selectedTab = selectedTab,
-            onTabClick = { selectedTab = it }
+            onTabClick = { tab ->
+                selectedTab = tab
+                if (tab != ChildMainTab.Notification) {
+                    showDetectionTimeSetting = false
+                }
+            }
         )
     }
 }
@@ -57,12 +66,37 @@ fun ChildMainScreen(
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
+    showDetectionTimeSetting: Boolean,
+    onOpenDetectionTimeSetting: () -> Unit,
+    onCloseDetectionTimeSetting: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (selectedTab == ChildMainTab.Notification) {
+        if (showDetectionTimeSetting) {
+            NotificationDetectionTimeSettingScreen(
+                modifier = modifier,
+                onBackClick = onCloseDetectionTimeSetting,
+                onSaveClick = { onCloseDetectionTimeSetting() }
+            )
+            return
+        }
+
+        val notificationState = MockNotificationRepository.getNotificationState(
+            scenario = MockNotificationScenario.RecentAlarms
+        )
+
+        NotificationScreen(
+            uiState = notificationState,
+            modifier = modifier,
+            onDetectionTimeClick = onOpenDetectionTimeSetting
+        )
+        return
+    }
+
     Box(
         modifier = modifier
             .statusBarsPadding()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

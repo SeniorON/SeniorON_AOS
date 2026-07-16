@@ -1,7 +1,10 @@
 package com.example.senior_on.ui.notification
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -20,143 +27,261 @@ import com.example.senior_on.ui.theme.SeniorOnColors
 fun NotificationScreen(
     sections: List<NotificationSectionUiState>,
     modifier: Modifier = Modifier,
-    onTabClick: (SeniorOnMainTab) -> Unit = {},
-    onSectionClick: (NotificationCategory) -> Unit = {}
+    onSectionClick: (NotificationCategory) -> Unit = {},
+    onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
+    onDetectionTimeClick: () -> Unit = {}
 ) {
-    val messageCount = sections.sumOf { it.messages.size }
+    NotificationScreen(
+        uiState = NotificationScreenUiState(
+            sections = sections,
+            footerPanel = if (sections.none { it.enabled }) {
+                NotificationFooterPanelUiState(tone = NotificationFooterTone.Recommendation)
+            } else {
+                null
+            }
+        ),
+        modifier = modifier,
+        onSectionClick = onSectionClick,
+        onNotificationToggle = onNotificationToggle,
+        onDetectionTimeClick = onDetectionTimeClick
+    )
+}
+
+@Composable
+fun NotificationScreen(
+    uiState: NotificationScreenUiState,
+    modifier: Modifier = Modifier,
+    onSectionClick: (NotificationCategory) -> Unit = {},
+    onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
+    onDetectionTimeClick: () -> Unit = {}
+) {
+    var sections by remember(uiState.sections) {
+        mutableStateOf(uiState.sections)
+    }
+    var showHomeAddressMissingDialog by remember { mutableStateOf(false) }
+    var showParentPhoneInternetRequiredDialog by remember { mutableStateOf(false) }
+    val enabledSections = sections.filter { section -> section.enabled }
+    val recentMessages = enabledSections.flatMap { section ->
+        section.messages.filter { message -> message.isRecentAlarm() }
+    }
     val severity = when {
-        sections.any { section ->
-            section.messages.any { it.severity == NotificationSeverity.Danger }
+        recentMessages.any { message ->
+            message.severity == NotificationSeverity.Danger
         } -> NotificationSeverity.Danger
-        messageCount > 0 -> NotificationSeverity.Normal
+
+        enabledSections.isNotEmpty() -> NotificationSeverity.Normal
         else -> NotificationSeverity.Empty
+    }
+    val notificationCount = when (severity) {
+        NotificationSeverity.Danger -> recentMessages.size
+        NotificationSeverity.Normal -> enabledSections.size
+        NotificationSeverity.Empty -> 0
+    }
+    val footerPanel = when {
+        uiState.footerPanel?.tone == NotificationFooterTone.Warning -> uiState.footerPanel
+        sections.none { section -> section.enabled } -> {
+            NotificationFooterPanelUiState(tone = NotificationFooterTone.Recommendation)
+        }
+
+        else -> null
+    }
+    var latestFooterPanel by remember {
+        mutableStateOf(footerPanel)
+    }
+    if (footerPanel != null) {
+        latestFooterPanel = footerPanel
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background2)
+            .background(SeniorOnColors.SupportWhite100)
             .statusBarsPadding()
     ) {
         NotificationTopBar(
             severity = severity,
-            count = messageCount
+            count = notificationCount
         )
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            sections.forEach { section ->
+            sections.forEachIndexed { index, section ->
                 NotificationSectionCard(
                     section = section,
-                    showDetailArrow = severity != NotificationSeverity.Empty,
-                    onClick = { onSectionClick(section.category) }
+                    showDetailArrow = section.enabled,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    textMuted = footerPanel?.tone == NotificationFooterTone.Warning,
+                    onClick = { onSectionClick(section.category) },
+                    onToggleClick = {
+                        when {
+                            !uiState.isParentPhoneInternetConnected -> {
+                                showParentPhoneInternetRequiredDialog = true
+                            }
+
+                            section.category == NotificationCategory.Outing &&
+                                !uiState.hasHomeAddress -> {
+                                showHomeAddressMissingDialog = true
+                            }
+
+                            else -> {
+                                val toggledEnabled = !section.enabled
+                                sections = sections.map { item ->
+                                    if (item.category == section.category) {
+                                        item.copy(enabled = toggledEnabled)
+                                    } else {
+                                        item
+                                    }
+                                }
+                                onNotificationToggle(section.category, toggledEnabled)
+                            }
+                        }
+                    },
+                    onDetectionTimeClick = onDetectionTimeClick
                 )
+
+                val nextSection = sections.getOrNull(index + 1)
+                when {
+                    section.category == NotificationCategory.Sos &&
+                        nextSection?.category == NotificationCategory.Inactivity -> {
+                        NotificationSectionDivider()
+                    }
+
+                    section.category == NotificationCategory.Inactivity &&
+                        nextSection?.category == NotificationCategory.RiskLink -> {
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
+                    section.category == NotificationCategory.RiskLink &&
+                        nextSection?.category == NotificationCategory.Outing -> {
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
+                    nextSection != null -> {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
             }
 
-            if (severity == NotificationSeverity.Empty) {
-                Spacer(modifier = Modifier.height(38.dp))
-                NotificationEmptyState()
+            AnimatedVisibility(
+                visible = footerPanel != null,
+                enter = fadeIn(animationSpec = tween(180)),
+                exit = fadeOut(animationSpec = tween(180))
+            ) {
+                latestFooterPanel?.let { panel ->
+                    Column {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        NotificationFooterPanel(
+                            uiState = panel,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .height(200.dp)
+                        )
+                    }
+                }
             }
         }
+    }
 
-        SeniorOnBottomNavigation(
-            selectedItem = SeniorOnMainTab.Notification,
-            onItemClick = onTabClick
+    if (showHomeAddressMissingDialog) {
+        HomeAddressMissingDialog(
+            onConfirmClick = { showHomeAddressMissingDialog = false }
+        )
+    }
+
+    if (showParentPhoneInternetRequiredDialog) {
+        ParentPhoneInternetRequiredDialog(
+            onConfirmClick = { showParentPhoneInternetRequiredDialog = false }
         )
     }
 }
 
-internal fun emptyNotificationSections(): List<NotificationSectionUiState> = listOf(
-    NotificationSectionUiState(
-        category = NotificationCategory.Sos,
-        title = "SOS 알림",
-        description = "부모님의 긴급 도움 요청을 알려드려요.",
-        enabled = false
-    ),
-    NotificationSectionUiState(
-        category = NotificationCategory.Inactivity,
-        title = "무활동 감지",
-        description = "부모님의 활동 상태를 확인할 수 있어요.",
-        enabled = false
-    ),
-    NotificationSectionUiState(
-        category = NotificationCategory.RiskLink,
-        title = "위험 링크 감지",
-        description = "의심되는 링크 접근을 알려드려요.",
-        enabled = false
-    ),
-    NotificationSectionUiState(
-        category = NotificationCategory.Outing,
-        title = "외출·귀가 알림",
-        description = "부모님의 외출 및 귀가를 확인할 수 있어요.",
-        enabled = false
+private fun NotificationMessageUiState.isRecentAlarm(
+    nowMillis: Long = System.currentTimeMillis()
+): Boolean {
+    val occurredAt = occurredAtMillis ?: return true
+    val ageMillis = nowMillis - occurredAt
+    return ageMillis in 0..RECENT_ALARM_WINDOW_MILLIS
+}
+
+private const val RECENT_ALARM_WINDOW_MILLIS = 48L * 60L * 60L * 1000L
+
+@Composable
+private fun NotificationSectionDivider() {
+    Spacer(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(SeniorOnColors.Gray100)
     )
-)
+}
+
+internal fun emptyNotificationSections(): List<NotificationSectionUiState> =
+    NotificationCategory.entries.map { category ->
+        NotificationSectionUiState(
+            category = category,
+            enabled = false
+        )
+    }
 
 private fun normalNotificationSections(): List<NotificationSectionUiState> =
-    emptyNotificationSections().map { section ->
-        section.copy(
+    NotificationCategory.entries.map { category ->
+        NotificationSectionUiState(
+            category = category,
             enabled = true,
-            messages = emptyList()
+            detectionStandardTime = if (category == NotificationCategory.Inactivity) "4시간" else null
         )
     }
 
 private fun dangerNotificationSections(): List<NotificationSectionUiState> = listOf(
     NotificationSectionUiState(
         category = NotificationCategory.Sos,
-        title = "SOS 알림",
-        description = "부모님의 긴급 도움 요청을 알려드려요.",
         enabled = true,
         messages = listOf(
             NotificationMessageUiState(
                 time = "오늘 오전 10:00",
                 title = "어머니 · 경기도 하남시 창우동",
-                severity = NotificationSeverity.Danger
+                severity = NotificationSeverity.Danger,
+                occurredAtMillis = System.currentTimeMillis()
             )
         )
     ),
     NotificationSectionUiState(
         category = NotificationCategory.Inactivity,
-        title = "무활동 감지",
-        description = "부모님의 활동 상태를 확인할 수 있어요.",
         enabled = true,
         messages = listOf(
             NotificationMessageUiState(
-                time = "오전 10:00부터",
+                time = "어제 오전 10:00부터",
                 title = "4시간 미사용 감지됨",
-                severity = NotificationSeverity.Danger
+                severity = NotificationSeverity.Danger,
+                occurredAtMillis = System.currentTimeMillis()
             )
         )
     ),
     NotificationSectionUiState(
         category = NotificationCategory.RiskLink,
-        title = "위험 링크 감지",
-        description = "의심되는 링크 접근을 알려드려요.",
         enabled = true,
         messages = listOf(
             NotificationMessageUiState(
-                time = "오전 10:00",
+                time = "오늘 오전 10:00",
                 title = "http://fake-bank.xyz",
-                severity = NotificationSeverity.Danger
+                severity = NotificationSeverity.Danger,
+                occurredAtMillis = System.currentTimeMillis()
             )
         )
     ),
     NotificationSectionUiState(
         category = NotificationCategory.Outing,
-        title = "외출·귀가 알림",
-        description = "부모님의 외출 및 귀가를 확인할 수 있어요.",
         enabled = true,
         messages = listOf(
             NotificationMessageUiState(
-                time = "오전 10:00",
+                time = "오늘 오전 10:00",
                 title = "외출 나가셨어요",
                 severity = NotificationSeverity.Empty,
-                tintBackground = false
+                tintBackground = false,
+                occurredAtMillis = System.currentTimeMillis()
             )
         )
     )
@@ -172,7 +297,32 @@ private fun dangerNotificationSections(): List<NotificationSectionUiState> = lis
 private fun NotificationEmptyPreview() {
     SENIOR_ONTheme {
         NotificationScreen(
-            sections = emptyNotificationSections()
+            uiState = NotificationScreenUiState(
+                sections = emptyNotificationSections(),
+                footerPanel = NotificationFooterPanelUiState(
+                    tone = NotificationFooterTone.Recommendation
+                )
+            )
+        )
+    }
+}
+
+@Preview(
+    name = "Notification Disconnected",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800
+)
+@Composable
+private fun NotificationDisconnectedPreview() {
+    SENIOR_ONTheme {
+        NotificationScreen(
+            uiState = NotificationScreenUiState(
+                sections = emptyNotificationSections(),
+                footerPanel = NotificationFooterPanelUiState(
+                    tone = NotificationFooterTone.Warning
+                )
+            )
         )
     }
 }
