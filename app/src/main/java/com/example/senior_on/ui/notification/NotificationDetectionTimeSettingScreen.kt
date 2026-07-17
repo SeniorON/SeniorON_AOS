@@ -1,7 +1,9 @@
 package com.example.senior_on.ui.notification
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -14,12 +16,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,13 +35,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.sp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -53,6 +62,8 @@ fun NotificationDetectionTimeSettingScreen(
     onBackClick: () -> Unit = {},
     onSaveClick: (Int) -> Unit = {}
 ) {
+    BackHandler(onBack = onBackClick)
+
     var selectedHours by rememberSaveable { mutableFloatStateOf(initialHours.toFloat()) }
     val hours = selectedHours.toInt()
 
@@ -219,34 +230,87 @@ private fun DetectionTimeDescriptionChip(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun DetectionTimeSliderCard(
     selectedHours: Float,
     onHoursChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
+
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(SeniorOnRadius.Medium),
+        modifier = modifier
+            .fillMaxWidth()
+            .dropShadow(
+                shape = shape,
+                shadow = Shadow(
+                    radius = 12.dp,
+                    spread = 0.dp,
+                    color = Color.Black.copy(alpha = 0.08f),
+                    offset = DpOffset(x = 0.dp, y = 2.dp)
+                )
+            ),
+        shape = shape,
         color = SeniorOnColors.SupportWhite100,
-        shadowElevation = 8.dp
+        shadowElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 13.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 18.dp)
         ) {
             Slider(
                 value = selectedHours,
                 onValueChange = { value -> onHoursChange(value.coerceIn(1f, 24f)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(30.dp),
                 valueRange = 1f..24f,
                 steps = 22,
-                colors = SliderDefaults.colors(
-                    thumbColor = SeniorOnColors.Primary600,
-                    activeTrackColor = SeniorOnColors.Primary600,
-                    inactiveTrackColor = SeniorOnColors.Gray200,
-                    activeTickColor = Color.Transparent,
-                    inactiveTickColor = Color.Transparent
-                )
+                thumb = {
+                    Box(
+                        modifier = Modifier.size(width = 0.dp, height = 29.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .requiredSize(29.dp)
+                                .background(
+                                    color = SeniorOnColors.Primary500,
+                                    shape = CircleShape
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = SeniorOnColors.SupportWhite100,
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                },
+                track = {
+                    val progress = ((selectedHours - 1f) / 23f).coerceIn(0f, 1f)
+
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                    ) {
+                        val cornerRadius = CornerRadius(4.dp.toPx())
+
+                        drawRoundRect(
+                            color = SeniorOnColors.Gray200,
+                            cornerRadius = cornerRadius
+                        )
+                        if (progress > 0f) {
+                            drawRoundRect(
+                                color = SeniorOnColors.Primary500,
+                                size = Size(width = size.width * progress, height = size.height),
+                                cornerRadius = cornerRadius
+                            )
+                        }
+                    }
+                }
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -267,8 +331,8 @@ private fun DetectionTimeSliderLabel(
 ) {
     Text(
         text = text,
-        style = SeniorOnTextStyles.CaptionMedium,
-        color = SeniorOnColors.Gray500
+        style = SeniorOnTextStyles.CaptionRegular,
+        color = SeniorOnColors.Gray800
     )
 }
 

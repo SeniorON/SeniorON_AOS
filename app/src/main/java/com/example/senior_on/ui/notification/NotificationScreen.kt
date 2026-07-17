@@ -28,6 +28,7 @@ fun NotificationScreen(
     sections: List<NotificationSectionUiState>,
     modifier: Modifier = Modifier,
     onSectionClick: (NotificationCategory) -> Unit = {},
+    onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
     onDetectionTimeClick: () -> Unit = {}
 ) {
@@ -42,6 +43,7 @@ fun NotificationScreen(
         ),
         modifier = modifier,
         onSectionClick = onSectionClick,
+        onNotificationClick = onNotificationClick,
         onNotificationToggle = onNotificationToggle,
         onDetectionTimeClick = onDetectionTimeClick
     )
@@ -52,11 +54,20 @@ fun NotificationScreen(
     uiState: NotificationScreenUiState,
     modifier: Modifier = Modifier,
     onSectionClick: (NotificationCategory) -> Unit = {},
+    onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
     onDetectionTimeClick: () -> Unit = {}
 ) {
-    var sections by remember(uiState.sections) {
-        mutableStateOf(uiState.sections)
+    var sections by remember(uiState.sections, uiState.isParentPhoneRegistered) {
+        mutableStateOf(
+            uiState.sections.map { section ->
+                when {
+                    !uiState.isParentPhoneRegistered -> section.copy(enabled = false)
+                    section.category == NotificationCategory.Sos -> section.copy(enabled = true)
+                    else -> section
+                }
+            }
+        )
     }
     var showHomeAddressMissingDialog by remember { mutableStateOf(false) }
     var showParentPhoneInternetRequiredDialog by remember { mutableStateOf(false) }
@@ -78,8 +89,12 @@ fun NotificationScreen(
         NotificationSeverity.Empty -> 0
     }
     val footerPanel = when {
+        !uiState.isParentPhoneRegistered -> uiState.footerPanel
+            ?: NotificationFooterPanelUiState(tone = NotificationFooterTone.Warning)
         uiState.footerPanel?.tone == NotificationFooterTone.Warning -> uiState.footerPanel
-        sections.none { section -> section.enabled } -> {
+        sections.none { section ->
+            section.category != NotificationCategory.Sos && section.enabled
+        } -> {
             NotificationFooterPanelUiState(tone = NotificationFooterTone.Recommendation)
         }
 
@@ -111,13 +126,18 @@ fun NotificationScreen(
             sections.forEachIndexed { index, section ->
                 NotificationSectionCard(
                     section = section,
-                    showDetailArrow = section.enabled,
+                    showDetailArrow = uiState.isParentPhoneRegistered && section.enabled,
+                    showToggle = section.category != NotificationCategory.Sos,
                     modifier = Modifier.padding(horizontal = 16.dp),
                     textMuted = footerPanel?.tone == NotificationFooterTone.Warning,
                     onClick = { onSectionClick(section.category) },
+                    onMessageClick = { message ->
+                        onNotificationClick(section.category, message)
+                    },
                     onToggleClick = {
                         when {
-                            !uiState.isParentPhoneInternetConnected -> {
+                            !uiState.isParentPhoneRegistered ||
+                                !uiState.isParentPhoneInternetConnected -> {
                                 showParentPhoneInternetRequiredDialog = true
                             }
 
@@ -321,7 +341,8 @@ private fun NotificationDisconnectedPreview() {
                 sections = emptyNotificationSections(),
                 footerPanel = NotificationFooterPanelUiState(
                     tone = NotificationFooterTone.Warning
-                )
+                ),
+                isParentPhoneRegistered = false
             )
         )
     }

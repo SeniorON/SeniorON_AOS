@@ -93,12 +93,19 @@ data class NotificationMessageUiState(
     val detail: String? = null,
     val severity: NotificationSeverity,
     val tintBackground: Boolean = true,
-    val occurredAtMillis: Long? = null
+    val occurredAtMillis: Long? = null,
+    val movementType: NotificationMovementType? = null
 )
+
+enum class NotificationMovementType {
+    LeftHome,
+    ReturnedHome
+}
 
 data class NotificationScreenUiState(
     val sections: List<NotificationSectionUiState>,
     val footerPanel: NotificationFooterPanelUiState? = null,
+    val isParentPhoneRegistered: Boolean = true,
     val hasHomeAddress: Boolean = true,
     val isParentPhoneInternetConnected: Boolean = true
 )
@@ -111,11 +118,11 @@ enum class NotificationFooterTone {
 data class NotificationFooterPanelUiState(
     val tone: NotificationFooterTone,
     val title: String = when (tone) {
-        NotificationFooterTone.Recommendation -> "모든 알림이 꺼져 있어요."
+        NotificationFooterTone.Recommendation -> "무활동 감지 등"
         NotificationFooterTone.Warning -> "어머니 폰이 연결되지 않았어요."
     },
     val highlightedTitle: String? = when (tone) {
-        NotificationFooterTone.Recommendation -> "SOS 등 중요 알림 설정"
+        NotificationFooterTone.Recommendation -> "중요한 알림 설정"
         NotificationFooterTone.Warning -> null
     },
     val titleSuffix: String = when (tone) {
@@ -220,9 +227,11 @@ private fun NotificationMoodButton(
 internal fun NotificationSectionCard(
     section: NotificationSectionUiState,
     showDetailArrow: Boolean,
+    showToggle: Boolean = true,
     modifier: Modifier = Modifier,
     textMuted: Boolean = false,
     onClick: () -> Unit = {},
+    onMessageClick: (NotificationMessageUiState) -> Unit = {},
     onToggleClick: () -> Unit = {},
     onDetectionTimeClick: () -> Unit = {}
 ) {
@@ -251,11 +260,6 @@ internal fun NotificationSectionCard(
             .animateContentSize(animationSpec = tween(durationMillis = 220))
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(SeniorOnColors.White)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
             .padding(
                 top = 10.dp,
                 bottom = if (hasDetectionStandardTime) 0.dp else 10.dp
@@ -265,7 +269,12 @@ internal fun NotificationSectionCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(end = 60.dp),
+                    .padding(end = 60.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -315,7 +324,8 @@ internal fun NotificationSectionCard(
                     visibleMessages.forEach { message ->
                         NotificationMessageRow(
                             category = section.category,
-                            message = message
+                            message = message,
+                            onClick = { onMessageClick(message) }
                         )
                     }
                 }
@@ -327,16 +337,18 @@ internal fun NotificationSectionCard(
             )
         }
 
-        NotificationSwitch(
-            checked = section.enabled,
-            severity = if (section.category == NotificationCategory.Sos) {
-                NotificationSeverity.Danger
-            } else {
-                NotificationSeverity.Normal
-            },
-            onClick = onToggleClick,
-            modifier = Modifier.align(Alignment.TopEnd)
-        )
+        if (showToggle) {
+            NotificationSwitch(
+                checked = section.enabled,
+                severity = if (section.category == NotificationCategory.Sos) {
+                    NotificationSeverity.Danger
+                } else {
+                    NotificationSeverity.Normal
+                },
+                onClick = onToggleClick,
+                modifier = Modifier.align(Alignment.TopEnd)
+            )
+        }
     }
 }
 
@@ -476,7 +488,8 @@ private fun NotificationEmptyMessage(
 private fun NotificationMessageRow(
     category: NotificationCategory,
     message: NotificationMessageUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     val isSosDanger = category == NotificationCategory.Sos &&
         message.severity == NotificationSeverity.Danger
@@ -516,6 +529,8 @@ private fun NotificationMessageRow(
         else -> SeniorOnColors.Gray700
     }
     val iconResId = when {
+        category == NotificationCategory.Outing &&
+            message.movementType == NotificationMovementType.ReturnedHome -> R.drawable.ic_in
         category == NotificationCategory.Outing -> R.drawable.ic_out
         else -> R.drawable.ic_alert_filled
     }
@@ -528,9 +543,20 @@ private fun NotificationMessageRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .height(70.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(containerColor)
-            .padding(start = 10.dp, end = 10.dp, top = 14.dp, bottom = 14.dp),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(
+                start = 10.dp,
+                end = 10.dp,
+                top = if (isSosDanger) 12.5.dp else 14.dp,
+                bottom = if (isSosDanger) 12.5.dp else 14.dp
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -547,7 +573,11 @@ private fun NotificationMessageRow(
         ) {
             Text(
                 text = message.time,
-                style = SeniorOnTextStyles.BodyMBold,
+                style = if (isSosDanger) {
+                    SeniorOnTextStyles.BodyLBold
+                } else {
+                    SeniorOnTextStyles.BodyMBold
+                },
                 color = timeColor
             )
             Text(
@@ -593,9 +623,9 @@ internal fun NotificationEmptyState(
 
         Text(
             text = buildAnnotatedString {
-                append("모든 알림이 꺼져 있어요.\n")
                 withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                    append("SOS 등 중요 알림 설정")
+                    append("무활동 감지 등\n")
+                    append("중요한 알림 설정")
                 }
                 append("을 권장해요.")
             },
@@ -625,7 +655,7 @@ internal fun NotificationFooterPanel(
         NotificationFooterTone.Warning -> SeniorOnColors.Red100
     }
     val titleColor = when (uiState.tone) {
-        NotificationFooterTone.Recommendation -> SeniorOnColors.Gray800
+        NotificationFooterTone.Recommendation -> SeniorOnColors.Primary600
         NotificationFooterTone.Warning -> SeniorOnColors.Red300
     }
     val highlightColor = when (uiState.tone) {
@@ -674,7 +704,17 @@ internal fun NotificationFooterPanel(
                     withStyle(SpanStyle(color = highlightColor)) {
                         append(highlightedTitle)
                     }
-                    append(uiState.titleSuffix)
+                    withStyle(
+                        SpanStyle(
+                            color = if (uiState.tone == NotificationFooterTone.Recommendation) {
+                                SeniorOnColors.Gray800
+                            } else {
+                                titleColor
+                            }
+                        )
+                    ) {
+                        append(uiState.titleSuffix)
+                    }
                 }
             },
             style = SeniorOnTextStyles.BodyMSemiBold,

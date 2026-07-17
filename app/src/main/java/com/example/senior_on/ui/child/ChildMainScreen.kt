@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -24,6 +25,10 @@ import androidx.compose.ui.unit.dp
 import com.example.senior_on.data.notification.MockNotificationRepository
 import com.example.senior_on.data.notification.MockNotificationScenario
 import com.example.senior_on.ui.notification.NotificationDetectionTimeSettingScreen
+import com.example.senior_on.ui.notification.NotificationCategory
+import com.example.senior_on.ui.notification.NotificationDetailScreen
+import com.example.senior_on.ui.notification.NotificationHistoryScreen
+import com.example.senior_on.ui.notification.NotificationMessageUiState
 import com.example.senior_on.ui.notification.NotificationScreen
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -35,6 +40,10 @@ fun ChildMainScreen(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
     var showDetectionTimeSetting by rememberSaveable { mutableStateOf(false) }
+    var historyCategory by rememberSaveable { mutableStateOf<NotificationCategory?>(null) }
+    var notificationDetail by remember {
+        mutableStateOf<Pair<NotificationCategory, NotificationMessageUiState>?>(null)
+    }
 
     Column(
         modifier = modifier
@@ -44,8 +53,16 @@ fun ChildMainScreen(
         ChildMainTabContent(
             selectedTab = selectedTab,
             showDetectionTimeSetting = showDetectionTimeSetting,
+            historyCategory = historyCategory,
+            notificationDetail = notificationDetail,
             onOpenDetectionTimeSetting = { showDetectionTimeSetting = true },
             onCloseDetectionTimeSetting = { showDetectionTimeSetting = false },
+            onOpenHistory = { category -> historyCategory = category },
+            onCloseHistory = { historyCategory = null },
+            onOpenNotificationDetail = { category, message ->
+                notificationDetail = category to message
+            },
+            onCloseNotificationDetail = { notificationDetail = null },
             modifier = Modifier
                 .weight(1f)
                 .fillMaxSize()
@@ -57,6 +74,8 @@ fun ChildMainScreen(
                 selectedTab = tab
                 if (tab != ChildMainTab.Notification) {
                     showDetectionTimeSetting = false
+                    historyCategory = null
+                    notificationDetail = null
                 }
             }
         )
@@ -67,11 +86,40 @@ fun ChildMainScreen(
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
     showDetectionTimeSetting: Boolean,
+    historyCategory: NotificationCategory?,
+    notificationDetail: Pair<NotificationCategory, NotificationMessageUiState>?,
     onOpenDetectionTimeSetting: () -> Unit,
     onCloseDetectionTimeSetting: () -> Unit,
+    onOpenHistory: (NotificationCategory) -> Unit,
+    onCloseHistory: () -> Unit,
+    onOpenNotificationDetail: (NotificationCategory, NotificationMessageUiState) -> Unit,
+    onCloseNotificationDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (selectedTab == ChildMainTab.Notification) {
+        notificationDetail?.let { (category, message) ->
+            NotificationDetailScreen(
+                category = category,
+                message = message,
+                modifier = modifier,
+                onBackClick = onCloseNotificationDetail
+            )
+            return
+        }
+
+        historyCategory?.let { category ->
+            NotificationHistoryScreen(
+                category = category,
+                messages = MockNotificationRepository.getNotificationHistory(category),
+                modifier = modifier,
+                onBackClick = onCloseHistory,
+                onMessageClick = { message ->
+                    onOpenNotificationDetail(category, message)
+                }
+            )
+            return
+        }
+
         if (showDetectionTimeSetting) {
             NotificationDetectionTimeSettingScreen(
                 modifier = modifier,
@@ -88,6 +136,8 @@ private fun ChildMainTabContent(
         NotificationScreen(
             uiState = notificationState,
             modifier = modifier,
+            onSectionClick = onOpenHistory,
+            onNotificationClick = onOpenNotificationDetail,
             onDetectionTimeClick = onOpenDetectionTimeSetting
         )
         return
