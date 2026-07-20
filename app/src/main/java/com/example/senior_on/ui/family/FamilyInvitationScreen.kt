@@ -192,7 +192,7 @@ private fun FamilyInvitationHero(memberCount: Int) {
                 tint = SeniorOnColors.Primary600
             )
 
-            Spacer(modifier = Modifier.width(52.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Text(
                 text = buildAnnotatedString {

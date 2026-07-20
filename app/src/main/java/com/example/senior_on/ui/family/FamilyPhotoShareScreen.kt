@@ -342,9 +342,11 @@ private fun FamilyPhotoMessageInput(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "💌",
-                style = SeniorOnTextStyles.BodyMRegular,
+            Icon(
+                painter = painterResource(id = R.drawable.ic_family_photo_message),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = SeniorOnColors.Gray800,
             )
 
             Spacer(modifier = Modifier.width(6.dp))
