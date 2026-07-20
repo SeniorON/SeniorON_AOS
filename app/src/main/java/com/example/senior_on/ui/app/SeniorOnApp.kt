@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import com.example.senior_on.data.auth.MockFindIdRepository
 import com.example.senior_on.data.auth.MockFindPasswordRepository
 import com.example.senior_on.data.auth.MockSessionRepository
+import com.example.senior_on.data.di.AppContainer
 import com.example.senior_on.ui.child.ChildMainScreen
 import com.example.senior_on.ui.family_code.FamilyShareCodeCreatedScreen
 import com.example.senior_on.ui.family_code.FamilyShareCodeInputScreen
@@ -59,7 +60,7 @@ private enum class SeniorOnRoute {
 private val InitialRoute = SeniorOnRoute.Splash
 
 @Composable
-fun SeniorOnApp() {
+fun SeniorOnApp(appContainer: AppContainer) {
     var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
     var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
     var findAccountInitialTab by rememberSaveable { mutableStateOf(FindAccountTab.Id) }
@@ -190,7 +191,10 @@ fun SeniorOnApp() {
                 onComplete = {},
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
-            SeniorOnRoute.ChildMain -> ChildMainScreen()
+            SeniorOnRoute.ChildMain -> ChildMainScreen(
+                familyRepository = appContainer.familyRepository,
+                familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
+            )
             SeniorOnRoute.Signup -> SignupScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.Login },
                 onKakaoClick = { currentRoute = SeniorOnRoute.SignupModeGuide },

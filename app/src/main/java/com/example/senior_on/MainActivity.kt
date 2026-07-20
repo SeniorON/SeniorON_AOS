@@ -13,7 +13,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SENIOR_ONTheme {
-                SeniorOnApp()
+                SeniorOnApp(
+                    appContainer = (application as SeniorOnApplication).appContainer,
+                )
             }
         }
     }
