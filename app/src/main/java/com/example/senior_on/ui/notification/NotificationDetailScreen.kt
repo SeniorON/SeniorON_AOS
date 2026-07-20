@@ -31,8 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -42,12 +44,14 @@ import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -61,6 +65,8 @@ import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 @Composable
@@ -79,7 +85,7 @@ fun NotificationDetailScreen(
         NotificationDetailUiState.from(category, message)
     }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(detail.heroBrush)
@@ -87,7 +93,9 @@ fun NotificationDetailScreen(
         NotificationDetailHero(
             detail = detail,
             onBackClick = onBackClick,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
         )
 
         if (category == NotificationCategory.RiskLink) {
@@ -95,7 +103,7 @@ fun NotificationDetailScreen(
                 detail = detail,
                 onRefreshClick = onRefreshClick,
                 onCallClick = onCallClick,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier
             )
         } else {
             LocationDetailSheet(
@@ -103,7 +111,7 @@ fun NotificationDetailScreen(
                 onRefreshClick = onRefreshClick,
                 onCallClick = onCallClick,
                 onDirectionsClick = onDirectionsClick,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier
             )
         }
     }
@@ -115,68 +123,97 @@ private fun NotificationDetailHero(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val contentTopPadding = when (detail.category) {
-        NotificationCategory.Sos,
-        NotificationCategory.Inactivity -> 84.dp
-        NotificationCategory.Outing -> 90.dp
-        NotificationCategory.RiskLink -> 154.dp
-    }
+    Layout(
+        modifier = modifier.statusBarsPadding(),
+        content = {
+            if (detail.showRipple) {
+                NotificationRippleBackground(category = detail.category)
+            }
 
-    Box(modifier = modifier.statusBarsPadding()) {
-        if (detail.showRipple) {
-            NotificationRippleBackground(
-                category = detail.category,
-                modifier = Modifier.fillMaxSize()
-            )
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onBackClick
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "뒤로가기",
+                    tint = detail.backIconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier.height(DETAIL_HERO_CONTENT_HEIGHT),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    painter = painterResource(id = detail.heroIconResId),
+                    contentDescription = null,
+                    tint = detail.heroContentColor,
+                    modifier = Modifier.size(34.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = detail.heroTitle,
+                    style = SeniorOnTextStyles.HeadingM,
+                    color = detail.heroContentColor
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = detail.heroTime,
+                    style = SeniorOnTextStyles.BodySMedium,
+                    color = detail.heroContentColor
+                )
+            }
         }
+    ) { measurables, constraints ->
+        val layoutWidth = constraints.maxWidth
+        val layoutHeight = constraints.maxHeight
+        val headerHeight = DETAIL_HEADER_HEIGHT.roundToPx()
+        val contentHeight = DETAIL_HERO_CONTENT_HEIGHT.roundToPx()
+        val flexibleHeight = (layoutHeight - headerHeight - contentHeight).coerceAtLeast(0)
+        val spacingRatio = detail.category.heroSpacingRatio
+        val contentTop = headerHeight + (
+            flexibleHeight * spacingRatio.first / (spacingRatio.first + spacingRatio.second)
+        ).roundToInt()
+        var measurableIndex = 0
 
-        Box(
-            modifier = Modifier
-                .padding(start = 16.dp, top = 14.dp)
-                .size(26.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onBackClick
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로가기",
-                tint = detail.backIconColor,
-                modifier = Modifier.size(24.dp)
+        val ripplePlaceable = if (detail.showRipple) {
+            val rippleCanvasHeight = max(layoutHeight, MAX_RIPPLE_CANVAS_HEIGHT.roundToPx())
+            measurables[measurableIndex++].measure(
+                androidx.compose.ui.unit.Constraints.fixed(layoutWidth, rippleCanvasHeight)
             )
+        } else {
+            null
         }
+        val backPlaceable = measurables[measurableIndex++].measure(
+            androidx.compose.ui.unit.Constraints.fixed(26.dp.roundToPx(), 26.dp.roundToPx())
+        )
+        val contentPlaceable = measurables[measurableIndex].measure(
+            androidx.compose.ui.unit.Constraints.fixed(layoutWidth, contentHeight)
+        )
+        val contentCenterY = contentTop + contentHeight / 2
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = contentTopPadding),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                painter = painterResource(id = detail.heroIconResId),
-                contentDescription = null,
-                tint = detail.heroContentColor,
-                modifier = Modifier.size(34.dp)
+        layout(layoutWidth, layoutHeight) {
+            ripplePlaceable?.place(
+                x = 0,
+                y = contentCenterY - ripplePlaceable.height / 2
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = detail.heroTitle,
-                style = SeniorOnTextStyles.HeadingM,
-                color = detail.heroContentColor
+            backPlaceable.place(
+                x = 16.dp.roundToPx(),
+                y = 14.dp.roundToPx()
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = detail.heroTime,
-                style = SeniorOnTextStyles.BodySMedium,
-                color = detail.heroContentColor
-            )
+            contentPlaceable.place(x = 0, y = contentTop)
         }
     }
 }
@@ -202,19 +239,19 @@ private fun NotificationRippleBackground(
     val rippleOvals = remember(category) {
         when (category) {
             NotificationCategory.Sos -> listOf(
-                centeredRippleOval(177.60f, 174.00f, SOS_RIPPLE_CENTER_Y, Color(0x33FFFFFF)),
-                centeredRippleOval(235.03f, 230.27f, SOS_RIPPLE_CENTER_Y, Color(0x1FFFFFFF)),
-                centeredRippleOval(296f, 290f, SOS_RIPPLE_CENTER_Y, Color(0x0FFFFFFF))
+                NotificationRippleOval(177.60f, 174.00f, Color(0x33FFFFFF)),
+                NotificationRippleOval(235.03f, 230.27f, Color(0x1FFFFFFF)),
+                NotificationRippleOval(296f, 290f, Color(0x0FFFFFFF))
             )
             NotificationCategory.Inactivity -> listOf(
-                centeredRippleOval(191.40f, 191.40f, INACTIVITY_RIPPLE_CENTER_Y, Color(0xFFFFD1D1)),
-                centeredRippleOval(253.30f, 253.30f, INACTIVITY_RIPPLE_CENTER_Y, Color(0xFFFFDDDD)),
-                centeredRippleOval(319f, 319f, INACTIVITY_RIPPLE_CENTER_Y, Color(0xFFFFE5E5))
+                NotificationRippleOval(191.40f, 191.40f, Color(0xFFFFD1D1)),
+                NotificationRippleOval(253.30f, 253.30f, Color(0xFFFFDDDD)),
+                NotificationRippleOval(319f, 319f, Color(0xFFFFE5E5))
             )
             NotificationCategory.RiskLink -> listOf(
-                centeredRippleOval(191.40f, 191.40f, RISK_LINK_RIPPLE_CENTER_Y, Color(0xFFFFD1D1)),
-                centeredRippleOval(253.30f, 253.30f, RISK_LINK_RIPPLE_CENTER_Y, Color(0xFFFFDDDD)),
-                centeredRippleOval(319f, 319f, RISK_LINK_RIPPLE_CENTER_Y, Color(0xFFFFE5E5))
+                NotificationRippleOval(191.40f, 191.40f, Color(0xFFFFD1D1)),
+                NotificationRippleOval(253.30f, 253.30f, Color(0xFFFFDDDD)),
+                NotificationRippleOval(319f, 319f, Color(0xFFFFE5E5))
             )
             NotificationCategory.Outing -> emptyList()
         }
@@ -222,6 +259,7 @@ private fun NotificationRippleBackground(
 
     Canvas(modifier = modifier) {
         val scale = size.width / RIPPLE_REFERENCE_WIDTH
+        val rippleCenter = center
         val elapsedMillis = phase * RIPPLE_CYCLE_DURATION_MILLIS
         rippleOvals.forEachIndexed { index, oval ->
             val localProgress = (
@@ -233,15 +271,11 @@ private fun NotificationRippleBackground(
             val expansion = 1f + RIPPLE_EXPANSION_RATIO * progress
             val animatedWidth = oval.width * expansion * scale
             val animatedHeight = oval.height * expansion * scale
-            val center = Offset(
-                x = (oval.left + oval.width / 2f) * scale,
-                y = (oval.top + oval.height / 2f) * scale
-            )
             drawOval(
                 color = oval.color.copy(alpha = oval.color.alpha * (1f - localProgress)),
                 topLeft = Offset(
-                    x = center.x - animatedWidth / 2f,
-                    y = center.y - animatedHeight / 2f
+                    x = rippleCenter.x - animatedWidth / 2f,
+                    y = rippleCenter.y - animatedHeight / 2f
                 ),
                 size = Size(animatedWidth, animatedHeight),
                 style = Stroke(width = 2.dp.toPx())
@@ -251,24 +285,9 @@ private fun NotificationRippleBackground(
 }
 
 private data class NotificationRippleOval(
-    val left: Float,
-    val top: Float,
     val width: Float,
     val height: Float,
     val color: Color
-)
-
-private fun centeredRippleOval(
-    width: Float,
-    height: Float,
-    centerY: Float,
-    color: Color
-) = NotificationRippleOval(
-    left = (RIPPLE_REFERENCE_WIDTH - width) / 2f,
-    top = centerY - height / 2f,
-    width = width,
-    height = height,
-    color = color
 )
 
 private const val RIPPLE_REFERENCE_WIDTH = 360f
@@ -276,10 +295,28 @@ private const val RIPPLE_EXPANSION_RATIO = 0.08f
 private const val RIPPLE_CYCLE_DURATION_MILLIS = 2400
 private const val RIPPLE_WAVE_DURATION_MILLIS = 1600f
 private const val RIPPLE_STAGGER_MILLIS = 400f
-private const val HERO_CONTENT_CENTER_OFFSET = 51.6f
-private const val SOS_RIPPLE_CENTER_Y = 84f + HERO_CONTENT_CENTER_OFFSET
-private const val INACTIVITY_RIPPLE_CENTER_Y = 84f + HERO_CONTENT_CENTER_OFFSET
-private const val RISK_LINK_RIPPLE_CENTER_Y = 154f + HERO_CONTENT_CENTER_OFFSET
+private val MAX_RIPPLE_CANVAS_HEIGHT = 350.dp
+private val LOCATION_SHEET_HEIGHT = 395.dp
+private val RISK_LINK_SHEET_HEIGHT = 271.dp
+private val DETAIL_HEADER_HEIGHT = 54.dp
+private val DETAIL_HERO_CONTENT_HEIGHT = 104.dp
+private val SOS_INACTIVITY_SHEET_SHADOW_COLOR = Color(0xFFFF1414).copy(alpha = 0x1A / 255f)
+private val RISK_LINK_SHEET_SHADOW_COLOR = Color(0xFFFF1414).copy(alpha = 0x0D / 255f)
+
+private fun notificationDetailSheetShadow(color: Color) = Shadow(
+    radius = 58.7.dp,
+    spread = 0.dp,
+    color = color,
+    offset = DpOffset(x = 0.dp, y = (-3).dp)
+)
+
+private val NotificationCategory.heroSpacingRatio: Pair<Float, Float>
+    get() = when (this) {
+        NotificationCategory.Sos,
+        NotificationCategory.Inactivity -> 30f to 68f
+        NotificationCategory.RiskLink -> 100f to 122f
+        NotificationCategory.Outing -> 32f to 66f
+    }
 
 @Composable
 private fun LocationDetailSheet(
@@ -289,11 +326,32 @@ private fun LocationDetailSheet(
     onDirectionsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sheetShape = RoundedCornerShape(
+        topStart = SeniorOnRadius.XLarge,
+        topEnd = SeniorOnRadius.XLarge
+    )
+    val shadowColor = when (detail.category) {
+        NotificationCategory.Sos,
+        NotificationCategory.Inactivity -> SOS_INACTIVITY_SHEET_SHADOW_COLOR
+        NotificationCategory.RiskLink,
+        NotificationCategory.Outing -> null
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(395.dp)
-            .clip(RoundedCornerShape(topStart = SeniorOnRadius.XLarge, topEnd = SeniorOnRadius.XLarge))
+            .height(LOCATION_SHEET_HEIGHT)
+            .then(
+                if (shadowColor != null) {
+                    Modifier.dropShadow(
+                        shape = sheetShape,
+                        shadow = notificationDetailSheetShadow(shadowColor)
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .clip(sheetShape)
             .background(SeniorOnColors.SupportWhite100)
             .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 18.dp)
     ) {
@@ -375,11 +433,20 @@ private fun RiskLinkDetailSheet(
     onCallClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sheetShape = RoundedCornerShape(
+        topStart = SeniorOnRadius.XLarge,
+        topEnd = SeniorOnRadius.XLarge
+    )
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(271.dp)
-            .clip(RoundedCornerShape(topStart = SeniorOnRadius.XLarge, topEnd = SeniorOnRadius.XLarge))
+            .height(RISK_LINK_SHEET_HEIGHT)
+            .dropShadow(
+                shape = sheetShape,
+                shadow = notificationDetailSheetShadow(RISK_LINK_SHEET_SHADOW_COLOR)
+            )
+            .clip(sheetShape)
             .background(SeniorOnColors.SupportWhite100)
             .padding(16.dp)
     ) {
