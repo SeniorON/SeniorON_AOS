@@ -11,7 +11,8 @@ val SeniorOnFontFamily = FontFamily(
     Font(R.font.pretendard_regular, FontWeight.Normal),
     Font(R.font.pretendard_medium, FontWeight.Medium),
     Font(R.font.pretendard_semi_bold, FontWeight.SemiBold),
-    Font(R.font.pretendard_bold, FontWeight.Bold)
+    Font(R.font.pretendard_bold, FontWeight.Bold),
+    Font(R.font.pretendard_extra_bold, FontWeight.ExtraBold)
 )
 
 object SeniorOnTextStyles {
@@ -26,6 +27,8 @@ object SeniorOnTextStyles {
         lineHeight = lineHeight.sp,
         letterSpacing = 0.sp
     )
+
+    val Display = pretendardStyle(FontWeight.ExtraBold, 36, 50.4f)
 
     val HeadingXXXL = pretendardStyle(FontWeight.Bold, 34, 47.6f)
     val HeadingXXL = pretendardStyle(FontWeight.Bold, 32, 44.8f)

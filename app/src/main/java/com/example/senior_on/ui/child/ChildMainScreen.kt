@@ -35,9 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
+import com.example.senior_on.data.notification.MockNotificationRepository
+import com.example.senior_on.data.notification.MockNotificationScenario
 import com.example.senior_on.data.repository.FamilyRepository
 import com.example.senior_on.data.repository.MockFamilyRepository
-import com.example.senior_on.ui.family.FamilyTabRoute
 import com.example.senior_on.ui.family.FamilyInvitationRoute
 import com.example.senior_on.ui.family.FamilyMemberSettingsRoute
 import com.example.senior_on.ui.family.FamilyPhotoDetailRoute
@@ -45,7 +46,14 @@ import com.example.senior_on.ui.family.FamilyPhotoDetailViewModel
 import com.example.senior_on.ui.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.family.FamilyPhotoUploadViewModel
+import com.example.senior_on.ui.family.FamilyTabRoute
 import com.example.senior_on.ui.family.FamilyViewModel
+import com.example.senior_on.ui.notification.NotificationCategory
+import com.example.senior_on.ui.notification.NotificationDetectionTimeSettingScreen
+import com.example.senior_on.ui.notification.NotificationDetailScreen
+import com.example.senior_on.ui.notification.NotificationHistoryScreen
+import com.example.senior_on.ui.notification.NotificationMessageUiState
+import com.example.senior_on.ui.notification.NotificationScreen
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -156,42 +164,55 @@ fun ChildMainScreen(
         onBack = navigateBackInFamily
     )
 
+    var showDetectionTimeSetting by rememberSaveable { mutableStateOf(false) }
+    var historyCategory by rememberSaveable { mutableStateOf<NotificationCategory?>(null) }
+    var notificationDetail by remember {
+        mutableStateOf<Pair<NotificationCategory, NotificationMessageUiState>?>(null)
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
-        Box(
+        ChildMainTabContent(
+            selectedTab = selectedTab,
+            familyDestination = familyDestination,
+            selectedPhotoId = selectedPhotoId,
+            selectedPhotoUri = selectedPhotoUri,
+            familyViewModel = familyViewModel,
+            familyPhotoDetailViewModel = familyPhotoDetailViewModel,
+            familyPhotoUploadViewModel = familyPhotoUploadViewModel,
+            onMemberSettingsClick = {
+                familyDestination = ChildFamilyDestination.MemberSettings
+            },
+            onAddFamilyClick = navigateToFamilyInvitation,
+            onMorePhotosClick = {
+                familyDestination = ChildFamilyDestination.PhotoGallery
+            },
+            onGalleryClick = launchGallery,
+            onCameraClick = launchCamera,
+            onPhotoShared = {
+                selectedPhotoUri = null
+                familyDestination = ChildFamilyDestination.PhotoGallery
+            },
+            onPhotoClick = navigateToPhotoDetail,
+            onFamilyBackClick = navigateBackInFamily,
+            showDetectionTimeSetting = showDetectionTimeSetting,
+            historyCategory = historyCategory,
+            notificationDetail = notificationDetail,
+            onOpenDetectionTimeSetting = { showDetectionTimeSetting = true },
+            onCloseDetectionTimeSetting = { showDetectionTimeSetting = false },
+            onOpenHistory = { category -> historyCategory = category },
+            onCloseHistory = { historyCategory = null },
+            onOpenNotificationDetail = { category, message ->
+                notificationDetail = category to message
+            },
+            onCloseNotificationDetail = { notificationDetail = null },
             modifier = Modifier
                 .weight(1f)
                 .fillMaxSize()
-        ) {
-            ChildMainTabContent(
-                selectedTab = selectedTab,
-                familyDestination = familyDestination,
-                selectedPhotoId = selectedPhotoId,
-                selectedPhotoUri = selectedPhotoUri,
-                familyViewModel = familyViewModel,
-                familyPhotoDetailViewModel = familyPhotoDetailViewModel,
-                familyPhotoUploadViewModel = familyPhotoUploadViewModel,
-                onMemberSettingsClick = {
-                    familyDestination = ChildFamilyDestination.MemberSettings
-                },
-                onAddFamilyClick = navigateToFamilyInvitation,
-                onMorePhotosClick = {
-                    familyDestination = ChildFamilyDestination.PhotoGallery
-                },
-                onGalleryClick = launchGallery,
-                onCameraClick = launchCamera,
-                onPhotoShared = {
-                    selectedPhotoUri = null
-                    familyDestination = ChildFamilyDestination.PhotoGallery
-                },
-                onPhotoClick = navigateToPhotoDetail,
-                onFamilyBackClick = navigateBackInFamily,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        )
 
         if (
             (
@@ -210,6 +231,11 @@ fun ChildMainScreen(
                     selectedPhotoId = null
                     selectedPhotoUri = null
                     familyDestination = ChildFamilyDestination.Overview
+                    if (tab != ChildMainTab.Notification) {
+                        showDetectionTimeSetting = false
+                        historyCategory = null
+                        notificationDetail = null
+                    }
                 }
             )
         }
@@ -233,6 +259,15 @@ private fun ChildMainTabContent(
     onPhotoShared: () -> Unit,
     onPhotoClick: (String) -> Unit,
     onFamilyBackClick: () -> Unit,
+    showDetectionTimeSetting: Boolean,
+    historyCategory: NotificationCategory?,
+    notificationDetail: Pair<NotificationCategory, NotificationMessageUiState>?,
+    onOpenDetectionTimeSetting: () -> Unit,
+    onCloseDetectionTimeSetting: () -> Unit,
+    onOpenHistory: (NotificationCategory) -> Unit,
+    onCloseHistory: () -> Unit,
+    onOpenNotificationDetail: (NotificationCategory, NotificationMessageUiState) -> Unit,
+    onCloseNotificationDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (selectedTab == ChildMainTab.Family) {
@@ -299,10 +334,57 @@ private fun ChildMainTabContent(
         return
     }
 
+    if (selectedTab == ChildMainTab.Notification) {
+        notificationDetail?.let { (category, message) ->
+            NotificationDetailScreen(
+                category = category,
+                message = message,
+                modifier = modifier,
+                onBackClick = onCloseNotificationDetail
+            )
+            return
+        }
+
+        historyCategory?.let { category ->
+            NotificationHistoryScreen(
+                category = category,
+                messages = MockNotificationRepository.getNotificationHistory(category),
+                modifier = modifier,
+                onBackClick = onCloseHistory,
+                onMessageClick = { message ->
+                    onOpenNotificationDetail(category, message)
+                }
+            )
+            return
+        }
+
+        if (showDetectionTimeSetting) {
+            NotificationDetectionTimeSettingScreen(
+                modifier = modifier,
+                onBackClick = onCloseDetectionTimeSetting,
+                onSaveClick = { onCloseDetectionTimeSetting() }
+            )
+            return
+        }
+
+        val notificationState = MockNotificationRepository.getNotificationState(
+            scenario = MockNotificationScenario.RecentAlarms
+        )
+
+        NotificationScreen(
+            uiState = notificationState,
+            modifier = modifier,
+            onSectionClick = onOpenHistory,
+            onNotificationClick = onOpenNotificationDetail,
+            onDetectionTimeClick = onOpenDetectionTimeSetting
+        )
+        return
+    }
+
     Box(
         modifier = modifier
             .statusBarsPadding()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
