@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.data.auth.MockLoginAuthRepository
@@ -95,9 +96,11 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 16.dp)
         ) {
-        Spacer(modifier = Modifier.height(133.dp)) //맨위와 간격
+        LoginTopBar(onBackClick = onGoToModeSelection)
+
+        Spacer(modifier = Modifier.height(30.dp))
 
         Image(
             painter = painterResource(id = R.drawable.ic_splash_on),
@@ -112,7 +115,7 @@ fun LoginScreen(
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(42.dp))
+        Spacer(modifier = Modifier.height(34.dp))
 
         LoginTextField(
             value = userId,
@@ -155,7 +158,7 @@ fun LoginScreen(
                         ),
                         contentDescription = if (passwordVisible) "비밀번호 숨기기" else "비밀번호 보기",
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -168,13 +171,13 @@ fun LoginScreen(
             onCheckedChange = { keepLoggedIn = it }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))// 로그인 상태 유지 - 로그인 박스 간격
+        Spacer(modifier = Modifier.height(18.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp) //높이 50px
-                .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                .clip(RoundedCornerShape(SeniorOnRadius.Small))
                 .background(SeniorOnColors.Primary600)
                 .clickable {
                     loginError = when {
@@ -196,18 +199,22 @@ fun LoginScreen(
                         }
                         return@clickable
                     }
+                    if (MockLoginAuthRepository.login(userId, password) == null) {
+                        loginError = LoginFieldError.InvalidCredentials
+                        return@clickable
+                    }
                     onLoginClick()
                 },
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "로그인",
-                style = SeniorOnTextStyles.ButtonL,
+                style = SeniorOnTextStyles.ButtonM,
                 color = SeniorOnColors.White
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp)) // 로그인 버튼 - 아이디 찾기 row 간격
 
         LoginLinkRow(
             onFindIdClick = onFindIdClick,
@@ -215,46 +222,34 @@ fun LoginScreen(
             onSignUpClick = onSignUpClick
         )
 
-        Spacer(modifier = Modifier.height(34.dp))//로그인 박스 - 아이디 찾기~ 사이 간격 34px
+        Spacer(modifier = Modifier.height(34.dp)) // 아이디 찾기 row - SNS 계정으로 로그인 간격
 
         SnsLoginDivider()
-
-        Spacer(modifier = Modifier.height(24.dp)) //sns~ - 아이콘 사이 간격
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 69.dp),
+                .padding(top = 24.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SocialLoginButton(
-                backgroundColor = SeniorOnColors.Yellow,
-                borderColor = null,
-                onClick = onKakaoClick
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_kakao),
-                    contentDescription = "카카오 로그인",
-                    modifier = Modifier.size(23.dp),//원 안 아이콘 크기 23px
-                    tint = SeniorOnColors.Black
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.ic_sociallogin_kakao),
+                contentDescription = "카카오 로그인",
+                modifier = Modifier
+                    .size(width = 55.dp, height = 54.dp)
+                    .clickable(onClick = onKakaoClick)
+            )
 
-            Spacer(modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.size(10.dp))
 
-            SocialLoginButton(
-                backgroundColor = SeniorOnColors.White,
-                borderColor = SeniorOnColors.Gray200,
-                onClick = onGoogleClick
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_google),
-                    contentDescription = "구글 로그인",
-                    modifier = Modifier.size(27.dp), //원 안 아이콘 크기 27px
-                    tint = Color.Unspecified
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.ic_sociallogin_google),
+                contentDescription = "구글 로그인",
+                modifier = Modifier
+                    .size(54.dp)
+                    .clickable(onClick = onGoogleClick)
+            )
         }
         }
 
@@ -271,6 +266,33 @@ fun LoginScreen(
 }
 
 @Composable
+private fun LoginTopBar(
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(54.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clickable(onClick = onBackClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier.size(16.dp),
+                tint = SeniorOnColors.Gray800
+            )
+        }
+    }
+}
+
+@Composable
 private fun LoginStayLoggedInRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -280,21 +302,19 @@ private fun LoginStayLoggedInRow(
         modifier = modifier.clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(18.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(
-                    if (checked) SeniorOnColors.Primary600 else SeniorOnColors.White
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (checked) SeniorOnColors.Primary600 else SeniorOnColors.Gray200,
-                    shape = RoundedCornerShape(4.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (checked) {
+        if (checked) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(SeniorOnColors.Primary600)
+                    .border(
+                        width = 1.dp,
+                        color = SeniorOnColors.Primary600,
+                        shape = RoundedCornerShape(4.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_check),
                     contentDescription = null,
@@ -302,12 +322,19 @@ private fun LoginStayLoggedInRow(
                     tint = SeniorOnColors.White
                 )
             }
+        } else {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_check_unfilled),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = Color.Unspecified
+            )
         }
 
         Text(
             text = "로그인 상태 유지",
-            modifier = Modifier.padding(start = 8.dp),
-            style = SeniorOnTextStyles.BodySRegular,
+            modifier = Modifier.padding(start = 4.dp),
+            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray800
         )
     }
@@ -331,7 +358,7 @@ private fun LoginTextField(
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = SeniorOnColors.Primary600,
         unfocusedBorderColor = SeniorOnColors.Gray200,
-        errorBorderColor = SeniorOnColors.Red500,
+        errorBorderColor = SeniorOnColors.Red200,
         focusedContainerColor = SeniorOnColors.SupportWhite100,
         unfocusedContainerColor = SeniorOnColors.SupportWhite100,
         errorContainerColor = SeniorOnColors.SupportWhite100,
@@ -421,9 +448,17 @@ private fun LoginLinkRow(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LoginLink(text = "아이디 찾기", onClick = onFindIdClick)
+        LoginLink(
+            text = "아이디 찾기",
+            onClick = onFindIdClick,
+            paddingEnd = 19.dp
+        )
         LoginLinkDivider()
-        LoginLink(text = "비밀번호 찾기", onClick = onFindPasswordClick)
+        LoginLink(
+            text = "비밀번호 찾기",
+            onClick = onFindPasswordClick,
+            paddingEnd = 19.dp
+        )
         LoginLinkDivider()
         LoginLink(
             text = "회원가입",
@@ -437,14 +472,16 @@ private fun LoginLinkRow(
 private fun LoginLink(
     text: String,
     onClick: () -> Unit,
-    color: Color = SeniorOnColors.Gray500
+    color: Color = SeniorOnColors.Gray700,
+    paddingStart: Dp = 20.dp,
+    paddingEnd: Dp = 20.dp
 ) {
     Text(
         text = text,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 24.dp), //로그인 박스와의 거리 20px, 글자 사이 간격 24px
-        style = SeniorOnTextStyles.BodySMedium, //글씨체
+            .padding(start = paddingStart, end = paddingEnd),
+        style = SeniorOnTextStyles.BodySMedium,
         color = color
     )
 }
@@ -453,7 +490,7 @@ private fun LoginLink(
 private fun LoginLinkDivider() {
     Box(
         modifier = Modifier
-            .size(width = 1.dp, height = 12.dp)
+            .size(width = 1.dp, height = 20.dp)
             .background(SeniorOnColors.Gray300) //세로선 색
     )
 }
@@ -472,8 +509,8 @@ private fun SnsLoginDivider() {
         )
         Text(
             text = "SNS 계정으로 로그인",
-            modifier = Modifier.padding(horizontal = 21.dp), //가로선 , sns- 사이 간격
-            style = SeniorOnTextStyles.BodySRegular,
+            modifier = Modifier.padding(horizontal = 10.5.dp), // 좌우 각 10.5dp (합 21)
+            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500,
             textAlign = TextAlign.Center
         )
@@ -483,32 +520,6 @@ private fun SnsLoginDivider() {
                 .height(1.dp)
                 .background(SeniorOnColors.Gray200)
         )
-    }
-}
-
-@Composable
-private fun SocialLoginButton(
-    backgroundColor: Color,
-    borderColor: Color?,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(54.dp) //아이콘 들어갈 원 크기
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .then(
-                if (borderColor != null) {
-                    Modifier.border(1.dp, borderColor, CircleShape)
-                } else {
-                    Modifier
-                }
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        content()
     }
 }
 
@@ -573,7 +584,7 @@ private fun LoginTextFieldEmptyPasswordErrorPreview() {
                         painter = painterResource(id = R.drawable.ic_visibility_off),
                         contentDescription = null,
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             )
@@ -616,7 +627,7 @@ private fun LoginTextFieldInvalidCredentialsPreview() {
                         painter = painterResource(id = R.drawable.ic_visibility_off),
                         contentDescription = null,
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             )

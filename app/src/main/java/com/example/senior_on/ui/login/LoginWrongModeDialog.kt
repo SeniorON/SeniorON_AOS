@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -19,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,16 +53,14 @@ fun LoginWrongModeDialogContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(SeniorOnColors.Primary600, CircleShape),
+                modifier = Modifier.size(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_big_alert_filled),
+                    painter = painterResource(id = R.drawable.ic_modal_alert_filled),
                     contentDescription = null,
                     modifier = Modifier.size(20.4.dp),
-                    tint = SeniorOnColors.White
+                    tint = Color.Unspecified
                 )
             }
 
@@ -98,14 +96,14 @@ fun LoginWrongModeDialogContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
-                    .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
                     .background(SeniorOnColors.Primary600)
                     .clickable(onClick = onConfirmClick),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "처음으로",
-                    style = SeniorOnTextStyles.ButtonM,
+                    style = SeniorOnTextStyles.ButtonS,
                     color = SeniorOnColors.SupportWhite100
                 )
             }

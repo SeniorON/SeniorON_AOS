@@ -10,4 +10,12 @@ object MockLoginAuthRepository {
             else -> null
         }
     }
+
+    fun login(
+        userId: String,
+        password: String
+    ): AppUserMode? {
+        if (password.isBlank()) return null
+        return accountModeFor(userId)
+    }
 }

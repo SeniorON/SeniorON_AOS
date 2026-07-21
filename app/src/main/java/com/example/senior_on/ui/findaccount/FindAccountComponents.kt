@@ -30,10 +30,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,21 +53,7 @@ internal fun FindAccountTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(54.dp)
-            .background(SeniorOnColors.White)
-            .drawBehind {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.06f),
-                            Color.Transparent
-                        ),
-                        startY = size.height,
-                        endY = size.height + 12.dp.toPx()
-                    ),
-                    topLeft = Offset(0f, size.height),
-                    size = Size(size.width, 12.dp.toPx())
-                )
-            },
+            .background(SeniorOnColors.White),
         contentAlignment = Alignment.Center
     ) {
         Row(
