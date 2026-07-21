@@ -6,13 +6,24 @@ data class FindPasswordAccount(
 )
 
 object MockFindPasswordRepository {
-    const val VALID_VERIFICATION_CODE = "123456"
+    const val VALID_VERIFICATION_CODE = MockAuthFixtures.FIND_PASSWORD_VALID_VERIFICATION_CODE
 
     fun findAccount(name: String, userId: String): FindPasswordAccount? {
         val trimmedName = name.trim()
         val trimmedUserId = userId.trim()
 
         if (trimmedName.isBlank() || trimmedUserId.isBlank()) return null
+
+        MockAuthFixtures.loginAccounts
+            .firstOrNull {
+                it.name == trimmedName && it.userId.equals(trimmedUserId, ignoreCase = true)
+            }
+            ?.let {
+                return FindPasswordAccount(
+                    email = it.email,
+                    maskedEmail = maskEmail(it.email)
+                )
+            }
 
         return when {
             trimmedName == "홍길동" && trimmedUserId.equals("User_Id", ignoreCase = true) ->

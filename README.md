@@ -25,8 +25,8 @@
 | Language | Kotlin |
 | UI | Jetpack Compose, Material3 |
 | Architecture | MVVM 예정 |
-| 주요 라이브러리 | AndroidX Core KTX, Lifecycle Runtime KTX, Activity Compose, Compose BOM, Compose UI, Compose Material3 |
-| 도입 예정 | Kotlin Coroutines, Retrofit/OkHttp, Room DB |
+| 주요 라이브러리 | AndroidX Lifecycle, Jetpack Compose, Kotlin Coroutines, Retrofit, OkHttp, Gson |
+| 도입 예정 | Room DB |
 
 ## 프로젝트 폴더 구조
 
@@ -106,7 +106,6 @@ SENIOR_ON/
 | 약 추가 화면 | MedicationAddScreen | 복약 관리 > 약 추가 | 린린 |
 | 병원 일정 화면 | HospitalScheduleScreen | 건강 탭 > 병원 | 린린 |
 | 진료 추가 화면 | HospitalScheduleAddScreen | 병원 일정 > 진료 등록 | 린린 |
-| 진료비 공동 관리 화면 | MedicalExpenseManageScreen | 건강 탭 > 진료비 | 린린 |
 | 알림 탭 | NotificationTabScreen | 자녀 메인 > 알림 | 원스톤 |
 | 알림 상세 화면 | AlertDetailScreen | 알림 탭 > 알림 카드 | 원스톤 |
 | 무활동 감지 시간 설정 화면 | InactivityTimeSettingScreen | 알림 탭 > 무활동 감지 | 원스톤 |

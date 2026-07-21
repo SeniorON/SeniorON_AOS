@@ -1,0 +1,160 @@
+language: "ko-KR"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  review_details: false
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_filters:
+    - "!**/.idea/**"
+    - "!**/.gradle/**"
+    - "!**/build/**"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.webp"
+    - "!**/*.gif"
+    - "!**/*.ttf"
+    - "!**/*.otf"
+
+  path_instructions:
+    - path: "app/src/main/java/**/*.kt"
+      instructions: |
+        이 프로젝트는 Kotlin + Jetpack Compose 기반의 Android 앱입니다.
+        리뷰는 한국어로 작성하고, 단순 취향보다 실제 버그, 회귀, Android 기기 대응, 유지보수 위험을 우선해 주세요.
+
+        공통 확인 기준:
+        - 화면 Composable은 상태와 이벤트를 파라미터로 받고, 작은 컴포넌트가 직접 네비게이션을 결정하지 않는지 확인해 주세요.
+        - 화면 전환 후 유지되어야 하는 값은 rememberSaveable 사용을 검토했는지 확인해 주세요.
+        - 상태바와 내비게이션바를 고정 높이로 가정하지 않고 systemBarsPadding, statusBarsPadding, navigationBarsPadding, WindowInsets 등을 고려했는지 확인해 주세요.
+        - 작은 화면, 큰 글씨 설정, 3-button navigation bar에서 텍스트나 버튼이 가려지거나 겹칠 위험을 우선적으로 지적해 주세요.
+        - 터치 대상은 가능한 한 48dp 이상의 터치 영역을 확보했는지 확인해 주세요.
+        - Figma 값을 그대로 하드코딩하기보다 SeniorOnColors, SeniorOnTextStyles, SeniorOnRadius 등 디자인 시스템 토큰을 우선 사용했는지 확인해 주세요.
+        - 같은 디자인 값이 이미 토큰으로 존재하는데 화면 코드에 중복 정의된 경우 지적해 주세요.
+        - 불필요하게 큰 리팩터링 제안은 피하고, 현재 PR의 변경 범위 안에서 해결 가능한 문제를 우선해 주세요.
+        - PR 제목, 커밋 메시지, PR 본문을 보고 변경 의도를 먼저 판단해 주세요.
+        - 제목이나 본문이 design/ui 중심이면 기능 미구현, API 미연동, 실제 데이터 저장 부재는 심각한 크래시나 명백한 회귀가 아닌 이상 지적하지 마세요.
+        - feat/fix 중심 PR이면 사용자 흐름, 상태 관리, 데이터 전달, 예외 처리 누락까지 함께 확인해 주세요.
+        - design/ui PR에서도 클릭 시 앱이 즉시 크래시나거나 시스템 UI에 버튼이 가려지는 문제처럼 사용 확인을 막는 심각한 문제는 지적해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/app/**"
+      instructions: |
+        앱 루트 흐름과 화면 전환을 담당하는 영역입니다.
+        - 임시 InitialRoute 변경이 PR 목적에 맞는지 확인해 주세요.
+        - 로그인, 회원가입, 가족공유코드, 부모님 정보 입력, 자녀 메인, 부모님 런처 화면의 플로우가 docs/SCREEN_FLOW.md와 어긋나지 않는지 확인해 주세요.
+        - 한 화면의 임시 테스트 진입점 변경이 실수로 main에 들어갈 위험이 있으면 지적해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/theme/**"
+      instructions: |
+        디자인 시스템 영역입니다.
+        - 색상, 글꼴, Radius, Brush 토큰 이름이 Figma/문서의 이름과 일관적인지 확인해 주세요.
+        - White/Black 등 공통 토큰을 제외하고 같은 hex 값의 중복 토큰이 불필요하게 늘어나지 않는지 확인해 주세요.
+        - MaterialTheme 기본 typography에 억지로 매핑하기보다 명시적 SeniorOnTextStyles 사용 의도와 충돌하지 않는지 확인해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/signup/**"
+      instructions: |
+        회원가입 플로우 영역입니다.
+        - 회원가입 시작, 모드 재확인, 이름/생년월일, 이메일 인증, 계정 정보, 약관 동의 순서가 유지되는지 확인해 주세요.
+        - 텍스트 필드 포커스/비포커스/오류 상태의 밑줄, clear 아이콘, 안내 문구가 일관적으로 동작하는지 확인해 주세요.
+        - 생년월일 바텀시트나 약관 바텀시트가 시스템 내비게이션바에 가려지지 않는지 확인해 주세요.
+        - 바텀시트 내부 스크롤과 시트 닫힘 제스처가 충돌할 가능성을 확인해 주세요.
+        - 인증번호, 아이디 중복 확인 등 목데이터 기반 로직은 실제 API 연동 전제와 분리되어 있는지 확인해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/family_code/**"
+      instructions: |
+        가족공유코드 플로우 영역입니다.
+        - 가족공유코드라는 용어를 일관되게 사용했는지 확인해 주세요.
+        - 코드 있음/없음 선택 후 입력 또는 생성 화면으로 분기되는 흐름이 명확한지 확인해 주세요.
+        - 가족공유코드는 가족 구성원, 건강 정보, 알림, 가족 사진 공유를 연결하는 기준이므로 상태 전달과 다음 화면 진입이 어색하지 않은지 확인해 주세요.
+        - 코드 입력 제한, 대문자 변환, 하이픈 표시 등 입력 UX가 실제 값과 표시 값을 혼동하지 않는지 확인해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/child/**"
+      instructions: |
+        자녀 모드는 보호자용 일반 앱 화면입니다.
+        바텀 네비게이션은 화면, 건강, 알림, 가족, 설정 5개 탭으로 구성됩니다.
+        - 각 탭이 가족공유코드로 연결된 부모님 또는 가족 단위 데이터를 다루는지 확인해 주세요.
+        - 탭 전환 상태가 불필요하게 초기화되지 않는지 확인해 주세요.
+        - 하단 내비게이션은 navigationBarsPadding 또는 Scaffold insets 등으로 3-button navigation bar에 가려지지 않는지 확인해 주세요.
+        - UI 작업 PR에서는 실제 서버 데이터, 센서 연동, 권한 처리, 저장 로직이 아직 없는 것을 문제 삼지 말고 화면 구조와 사용자 흐름만 확인해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/child/display/**"
+      instructions: |
+        화면 탭은 부모님 런처화면을 보호자 휴대폰에서 편집하는 영역입니다.
+        - 부모님 폰 미리보기, 버튼 편집, 글씨 편집, 연락처 관리 흐름이 명확한지 확인해 주세요.
+        - 부모님 런처 버튼은 최대 개수, 순서 변경, 이름/아이콘 변경, 삭제/추가 같은 편집 상태가 서로 충돌하지 않는지 확인해 주세요.
+        - UI 작업 PR이면 실제 부모님 기기 반영 API가 없는 것을 지적하지 마세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/child/health/**"
+      instructions: |
+        건강 탭은 복약 관리와 병원 일정을 담당합니다.
+        - 복약/병원 일정 화면이 부모님 또는 가족공유코드 기반 데이터라는 전제를 유지하는지 확인해 주세요.
+        - 날짜, 시간, 반복 요일, 알림 설정 UI는 작은 화면과 큰 글씨 설정에서도 조작 가능한지 확인해 주세요.
+        - UI 작업 PR이면 실제 복약 알림 스케줄링, DB 저장, 서버 연동이 없는 것을 지적하지 마세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/child/notification/**"
+      instructions: |
+        알림 탭은 SOS, 무활동 감지, 위험 링크 감지, 외출/귀가 알림을 확인하고 대응하는 영역입니다.
+        - 알림 상세에서 전화 걸기, 길찾기, 닫기 같은 대응 동작이 사용자에게 명확한지 확인해 주세요.
+        - 위험 알림은 색상과 문구가 과하게 혼동되지 않고 접근 가능한지 확인해 주세요.
+        - UI 작업 PR이면 실제 위치 추적, SMS/웹사이트 감지, 무활동 감지 구현이 없는 것을 지적하지 마세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/child/family/**"
+      instructions: |
+        가족 탭은 가족 구성원 관리와 가족 사진 공유를 담당합니다.
+        - 가족 구성원, 주 담당자, 보조 담당자, 가족 추가 흐름이 가족공유코드 기준과 어긋나지 않는지 확인해 주세요.
+        - 사진 공유 UI는 업로드, 갤러리 선택, 카메라 촬영 진입이 구분되는지 확인해 주세요.
+        - UI 작업 PR이면 실제 이미지 업로드, 카메라/갤러리 권한, 서버 저장이 없는 것을 지적하지 마세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/child/settings/**"
+      instructions: |
+        설정 탭은 자녀 계정과 앱 설정을 관리하는 영역입니다.
+        - 내 계정, 프로필 설정, 비밀번호 변경, 연결 기기, 멤버십, 도움말, 로그아웃 흐름이 분리되어 있는지 확인해 주세요.
+        - 계정 정보 화면은 개인정보 노출과 입력 검증 위험을 우선 확인해 주세요.
+        - UI 작업 PR이면 실제 로그아웃 처리, 계정 API, 멤버십 결제 구현이 없는 것을 지적하지 마세요.
+
+    - path: "app/src/main/java/com/example/senior_on/ui/senior_info/**"
+      instructions: |
+        부모님 정보 입력과 주소 검색 영역입니다.
+        - 위치 권한, 위치 서비스 설정, 네트워크 실패, API 키 누락 등 실패 경로가 사용자에게 안전하게 안내되는지 확인해 주세요.
+        - 주소 검색 결과 선택 시 위도/경도와 표시 주소가 올바르게 다음 화면으로 전달되는지 확인해 주세요.
+        - 위치 권한 요청은 런타임 권한과 Android 버전 차이를 고려했는지 확인해 주세요.
+        - Kakao REST API 키가 코드에 직접 하드코딩되지 않고 local.properties/BuildConfig 경로를 통해 주입되는지 확인해 주세요.
+
+    - path: "app/src/main/java/com/example/senior_on/data/**"
+      instructions: |
+        REST API와 Repository 구현 영역입니다.
+        - API 키, 토큰, 민감 정보가 커밋되지 않았는지 확인해 주세요.
+        - Retrofit/OkHttp 호출에서 예외, 타임아웃, 빈 응답을 UI가 처리할 수 있는 형태로 전달하는지 확인해 주세요.
+        - DTO와 domain model의 책임이 섞이지 않는지 확인해 주세요.
+
+    - path: "app/src/main/res/**"
+      instructions: |
+        Android 리소스 영역입니다.
+        - 벡터 drawable은 Android Vector에서 지원하지 않는 SVG mask/filter/blur 등이 남아 있지 않은지 확인해 주세요.
+        - 실제 크기와 여백이 중요한 bitmap asset은 drawable-nodpi 사용 의도가 맞는지 확인해 주세요.
+        - 아이콘 파일명은 의미가 드러나는 snake_case인지 확인해 주세요.
+
+    - path: "docs/**"
+      instructions: |
+        문서는 한국어 기준으로 작성합니다.
+        - README, CODE_CONVENTION, GITHUB_WORKFLOW, SCREEN_FLOW의 용어와 화면 이름이 서로 어긋나지 않는지 확인해 주세요.
+        - 문서가 현재 구현과 다르면 문서 또는 구현 중 무엇을 맞춰야 하는지 명확히 지적해 주세요.
+        - 팀 역할 분배, 브랜치 규칙, PR 규칙은 docs/CODE_CONVENTION.md와 docs/GITHUB_WORKFLOW.md 기준을 따라야 합니다.
+
+    - path: ".github/**"
+      instructions: |
+        GitHub 협업 설정 영역입니다.
+        - 이슈/PR 템플릿은 한국어로 작성되어야 합니다.
+        - PR 템플릿에는 변경 요약, 변경 범위, 확인 사항, 스크린샷, 관련 이슈를 작성할 수 있어야 합니다.
+        - PR에서 Closes #이슈번호를 통해 이슈가 자동 종료될 수 있도록 안내가 충분한지 확인해 주세요.
+
+chat:
+  auto_reply: true

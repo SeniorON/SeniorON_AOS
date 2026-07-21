@@ -45,15 +45,16 @@ fun LoginWrongModeDialogContent(
             .width(249.dp)
             .height(288.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
-            .background(SeniorOnColors.White)
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        contentAlignment = Alignment.Center
+            .background(SeniorOnColors.SupportWhite100)
+            .padding(horizontal = 16.dp, vertical = 32.dp),
+        contentAlignment = Alignment.TopCenter
     ) {
         Column(
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(38.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -96,14 +97,14 @@ fun LoginWrongModeDialogContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
-                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .clip(RoundedCornerShape(SeniorOnRadius.Medium))
                     .background(SeniorOnColors.Primary600)
                     .clickable(onClick = onConfirmClick),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "처음으로",
-                    style = SeniorOnTextStyles.ButtonS,
+                    style = SeniorOnTextStyles.ButtonM,
                     color = SeniorOnColors.SupportWhite100
                 )
             }

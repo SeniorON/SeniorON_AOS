@@ -28,7 +28,7 @@
 | 인증 | 로그인, 회원가입, 아이디/비밀번호 찾기 | 공통 |
 | 가족공유코드 | 코드 확인, 입력, 생성, 부모님 정보 입력 | 공통 |
 | 화면 탭 | 부모님 런처화면 미리보기, 버튼 편집, 글씨 편집 | 데쿠 |
-| 건강 탭 | 복약 관리, 병원 일정, 진료비 공동 관리 | 린린 |
+| 건강 탭 | 복약 관리, 병원 일정 | 린린 |
 | 알림 탭 | SOS, 무활동, 위험 링크, 외출/귀가 알림 | 원스톤 |
 | 가족 탭 | 구성원 설정, 가족 추가, 가족 사진 공유 | 데쿠 |
 | 설정 탭 | 내 계정, 프로필 설정, 연결 기기, 로그아웃 | 린린 |
@@ -41,7 +41,7 @@
 | Language | Kotlin |
 | UI | Jetpack Compose, Material3 |
 | Architecture | MVVM 예정 |
-| Network | REST API 연동 예정 |
+| Network | Retrofit/OkHttp, Kakao Local REST API |
 | Backend 연동 | Spring Boot REST API 예정 |
 | Design | Figma, Design Token, Pretendard |
 | Collaboration | GitHub Issues, Pull Requests, Projects |
