@@ -158,7 +158,7 @@ fun LoginScreen(
                         ),
                         contentDescription = if (passwordVisible) "비밀번호 숨기기" else "비밀번호 보기",
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
