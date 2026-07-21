@@ -43,6 +43,7 @@ object SeniorOnColors {
     val Background5 = Color(0xFFF1F5F9)
 
     val SupportWhite100 = Color(0xFFFFFFFF)
+    val SupportWhite80 = Color(0xCCFFFFFF)
 
     val White = Color(0xFFFFFFFF)
     val Black = Color(0xFF000000)
