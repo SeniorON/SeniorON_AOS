@@ -38,9 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.ContentScale
@@ -50,7 +53,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.data.model.MockFamilyFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
@@ -91,7 +96,6 @@ fun FamilyTabScreen(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
     ) {
         FamilyTopBar()
 
@@ -185,15 +189,32 @@ private fun FamilyTopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
+            .zIndex(1f)
+            .dropShadow(
+                shape = RectangleShape,
+                shadow = Shadow(
+                    radius = 12.dp,
+                    spread = 0.dp,
+                    color = SeniorOnColors.Black.copy(alpha = 0.06f),
+                    offset = DpOffset(x = 0.dp, y = 4.dp)
+                )
+            )
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
     ) {
-        Text(
-            text = "가족",
-            style = SeniorOnTextStyles.HeadingM,
-            color = SeniorOnColors.Gray800
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = "가족",
+                style = SeniorOnTextStyles.HeadingM,
+                color = SeniorOnColors.Gray800
+            )
+        }
     }
 }
 

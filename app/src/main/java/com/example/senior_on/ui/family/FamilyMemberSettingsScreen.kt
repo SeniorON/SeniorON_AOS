@@ -395,7 +395,7 @@ private fun FamilyPermissionGuide(
                 .fillMaxWidth()
                 .height(44.dp)
                 .clickable(onClick = onClick)
-                .padding(start = 12.dp, end = 10.dp),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -432,7 +432,7 @@ private fun FamilyPermissionGuide(
             Column(
                 modifier = Modifier.padding(
                     start = 10.dp,
-                    top = 10.dp,
+                    top = 14.dp,
                     end = 10.dp,
                     bottom = 10.dp
                 )
@@ -500,6 +500,9 @@ private fun PermissionRoleDescription(
                 style = SeniorOnTextStyles.BodySSemiBold,
                 color = SeniorOnColors.Gray800
             )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
                 text = description,
                 style = SeniorOnTextStyles.CaptionRegular,

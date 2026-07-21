@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -192,8 +192,6 @@ private fun FamilyInvitationHero(memberCount: Int) {
                 tint = SeniorOnColors.Primary600
             )
 
-            Spacer(modifier = Modifier.width(14.dp))
-
             Text(
                 text = buildAnnotatedString {
                     append("현재 가족 구성원은 ")
@@ -202,8 +200,10 @@ private fun FamilyInvitationHero(memberCount: Int) {
                     }
                     append("이에요.")
                 },
+                modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.BodySMedium,
-                color = SeniorOnColors.Gray800
+                color = SeniorOnColors.Gray800,
+                textAlign = TextAlign.End
             )
         }
     }
