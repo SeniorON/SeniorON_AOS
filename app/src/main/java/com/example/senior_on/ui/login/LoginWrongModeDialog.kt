@@ -121,8 +121,14 @@ fun LoginWrongModeDialogOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Black.copy(alpha = 0.4f)),
-        contentAlignment = Alignment.Center
+            .background(SeniorOnColors.Black.copy(alpha = 0.4f))
+            .padding(
+                start = 56.dp,
+                top = 255.5.dp,
+                end = 55.dp,
+                bottom = 256.5.dp
+            ),
+        contentAlignment = Alignment.TopStart
     ) {
         LoginWrongModeDialogContent(
             type = type,
