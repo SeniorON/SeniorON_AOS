@@ -167,6 +167,8 @@ internal fun FindAccountTextField(
     errorMessage: String? = null,
     supportMessage: String? = null,
     showClearIcon: Boolean = true,
+    clearIconResId: Int = R.drawable.ic_close_filled,
+    clearIconSize: Dp = 18.dp,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -230,9 +232,9 @@ internal fun FindAccountTextField(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_close_filled),
+                                            painter = painterResource(id = clearIconResId),
                                             contentDescription = "입력값 지우기",
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(clearIconSize),
                                             tint = Color.Unspecified
                                         )
                                     }
@@ -353,7 +355,7 @@ internal fun FindAccountInfoBanner(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_information),
+            painter = painterResource(id = R.drawable.ic_information2),
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             tint = SeniorOnColors.Gray400
