@@ -160,9 +160,9 @@ private fun SeniorPhoneDesign(
             .padding(horizontal = 16.dp),
     ) {
         SeniorPhoneStatusBar()
-        SeniorPhoneWeatherHeader(
-            fontSize = configuration.fontSize,
-        )
+        SeniorPhoneWeatherHeader()
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (hasMusic) {
             SeniorMusicCard()
@@ -234,46 +234,43 @@ private fun SeniorPhoneStatusBar() {
 }
 
 @Composable
-private fun SeniorPhoneWeatherHeader(fontSize: SeniorFontSize) {
-    Column(
+private fun SeniorPhoneWeatherHeader() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(82.dp),
     ) {
         Text(
             text = "5월 20일 (목)",
+            modifier = Modifier.align(Alignment.TopStart),
             style = SeniorOnTextStyles.HeadingM,
             color = SeniorOnColors.Gray700,
             maxLines = 1,
         )
 
+        Text(
+            text = "오전 10:30",
+            modifier = Modifier.align(Alignment.BottomStart),
+            style = SeniorOnTextStyles.HeadingXXXL,
+            color = SeniorOnColors.Gray800,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+        )
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
+            modifier = Modifier.align(Alignment.BottomEnd),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "오전 10:30",
-                style = fontSize.seniorHomeButtonTextStyle,
-                color = SeniorOnColors.Gray800,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-            )
-
-            Spacer(modifier = Modifier.width(73.dp))
-
             Icon(
                 painter = painterResource(id = R.drawable.ic_weather_sun),
                 contentDescription = "맑음",
-                modifier = Modifier
-                    .padding(top = 12.dp)
-                    .size(34.dp),
+                modifier = Modifier.size(34.dp),
                 tint = Color.Unspecified,
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
             Column(
-                modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.End,
             ) {
                 Text(

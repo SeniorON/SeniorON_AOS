@@ -80,6 +80,8 @@ data class SeniorScreenConfiguration(
         SeniorHomeButtonType.Medication,
         SeniorHomeButtonType.YouTube,
         SeniorHomeButtonType.Photo,
+        SeniorHomeButtonType.Camera,
+        SeniorHomeButtonType.NaverMap,
         SeniorHomeButtonType.Naver,
         SeniorHomeButtonType.Emergency,
     ),

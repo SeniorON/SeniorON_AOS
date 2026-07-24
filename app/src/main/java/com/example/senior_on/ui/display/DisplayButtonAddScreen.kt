@@ -45,7 +45,7 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.delay
 
-private const val MinimumButtonSelectionCount = 8
+private const val MinimumButtonSelectionCount = 10
 private const val MaximumButtonCountWithoutMusic = 12
 private const val MaximumButtonCountWithMusic = 11
 
@@ -140,6 +140,9 @@ internal fun buttonAddMaximumCount(hasMusicButton: Boolean): Int =
         MaximumButtonCountWithoutMusic
     }
 
+internal fun buttonAddCanContinue(selectedAppCount: Int): Boolean =
+    buttonAddSelectedCount(selectedAppCount) >= MinimumButtonSelectionCount
+
 @Composable
 fun DisplayButtonAddScreen(
     initialSelectedButtons: List<SeniorHomeButtonType>,
@@ -178,7 +181,7 @@ fun DisplayButtonAddScreen(
     val maximumButtonCount = buttonAddMaximumCount(
         hasMusicButton = selectedMusicName != null
     )
-    val canSave = selectedButtonCount >= MinimumButtonSelectionCount
+    val canSave = buttonAddCanContinue(selectedButtonNames.size)
 
     LaunchedEffect(limitMessageEvent) {
         if (limitMessageEvent > 0) {

@@ -200,7 +200,7 @@ private fun DeviceConnectionBanner(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.XLarge))
+            .clip(RoundedCornerShape(50.dp))
             .background(backgroundBrush)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -217,7 +217,7 @@ private fun DeviceConnectionBanner(
             tint = leadingContentColor,
         )
 
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
         Text(
             text = device?.let {
@@ -236,7 +236,7 @@ private fun DeviceConnectionBanner(
             Icon(
                 painter = painterResource(id = R.drawable.ic_sm_battery),
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(24.dp),
                 tint = SeniorOnColors.Primary600,
             )
 
@@ -248,7 +248,7 @@ private fun DeviceConnectionBanner(
                 color = SeniorOnColors.Primary600,
             )
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
         } else if (device != null) {
             Text(
                 text = "오프라인",
@@ -310,7 +310,7 @@ private fun ParentInformationCard(
                 modifier = Modifier
                     .clip(RoundedCornerShape(17.dp))
                     .background(SeniorOnColors.White.copy(alpha = 0.2f))
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -374,7 +374,7 @@ private fun ParentInformationCard(
                     .background(SeniorOnColors.White.copy(alpha = 0.2f))
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(26.dp))
 
             Icon(
                 painter = painterResource(id = R.drawable.ic_call),
@@ -519,11 +519,11 @@ private fun SeniorScreenPreviewCard(
 
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(SeniorOnRadius.XLarge))
+                    .clip(RoundedCornerShape(31.dp))
                     .border(
                         width = 1.dp,
                         color = SeniorOnColors.Primary600,
-                        shape = RoundedCornerShape(SeniorOnRadius.XLarge),
+                        shape = RoundedCornerShape(31.dp),
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -536,7 +536,7 @@ private fun SeniorScreenPreviewCard(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_sm_preview),
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(18.dp),
                     tint = SeniorOnColors.Primary600,
                 )
 

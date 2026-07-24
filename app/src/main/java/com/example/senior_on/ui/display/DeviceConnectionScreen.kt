@@ -172,7 +172,7 @@ private fun DeviceStatusCard(
 
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(89.dp)
@@ -180,49 +180,50 @@ private fun DeviceStatusCard(
             .clip(shape)
             .background(backgroundBrush)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = device?.name ?: "연결된 기기 없음",
-                modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.HeadingS,
                 color = contentColor,
             )
 
-            Box(
-                modifier = Modifier
-                    .height(25.dp)
-                    .clip(RoundedCornerShape(17.dp))
-                    .background(
-                        if (device == null) {
-                            SeniorOnColors.White
-                        } else {
-                            SeniorOnColors.White.copy(alpha = 0.2f)
-                        }
-                    )
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = relationshipLabel,
-                    style = SeniorOnTextStyles.CaptionMedium,
-                    color = if (device == null) {
-                        SeniorOnColors.Gray600
-                    } else {
-                        SeniorOnColors.White
-                    },
-                )
-            }
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = statusDescription,
+                style = SeniorOnTextStyles.CaptionMedium,
+                color = contentColor,
+            )
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        Text(
-            text = statusDescription,
-            style = SeniorOnTextStyles.CaptionMedium,
-            color = contentColor,
-        )
+        Box(
+            modifier = Modifier
+                .height(25.dp)
+                .clip(RoundedCornerShape(17.dp))
+                .background(
+                    if (device == null) {
+                        SeniorOnColors.White
+                    } else {
+                        SeniorOnColors.White.copy(alpha = 0.2f)
+                    }
+                )
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = relationshipLabel,
+                style = SeniorOnTextStyles.CaptionMedium,
+                color = if (device == null) {
+                    SeniorOnColors.Gray600
+                } else {
+                    SeniorOnColors.White
+                },
+            )
+        }
     }
 }
 
@@ -235,7 +236,7 @@ private fun DeviceInformationCard(
     val isOnline = device?.connectionStatus == DisplayDeviceConnectionStatus.Online
     val unavailableText = "연결 후 확인 가능"
     val valueColor = if (device == null) SeniorOnColors.Gray300 else SeniorOnColors.Gray800
-    val shape = RoundedCornerShape(SeniorOnRadius.Large)
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
 
     Column(
         modifier = Modifier
@@ -258,7 +259,7 @@ private fun DeviceInformationCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(SeniorOnColors.Gray100)
+                .background(SeniorOnColors.Background4)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -317,7 +318,7 @@ private fun DeviceInformationRow(
             tint = SeniorOnColors.Gray500,
         )
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
         Text(
             text = label,
