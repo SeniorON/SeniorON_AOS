@@ -33,12 +33,19 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 @Composable
 fun ParentPhoneInternetRequiredDialog(
-    onConfirmClick: () -> Unit
+    onConfirmClick: () -> Unit,
+    obscureBackgroundContent: Boolean = false,
 ) {
+    val scrimColor = if (obscureBackgroundContent) {
+        SeniorOnColors.Gray500
+    } else {
+        SeniorOnColors.Black.copy(alpha = 0.5f)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Black.copy(alpha = 0.5f)),
+            .background(scrimColor),
         contentAlignment = Alignment.Center
     ) {
         ParentPhoneInternetRequiredDialogContent(onConfirmClick = onConfirmClick)
@@ -53,6 +60,7 @@ private fun ParentPhoneInternetRequiredDialogContent(
     Column(
         modifier = modifier
             .width(249.dp)
+            .height(283.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
             .background(SeniorOnColors.SupportWhite100)
             .padding(horizontal = 16.dp, vertical = 32.dp),
@@ -83,7 +91,7 @@ private fun ParentPhoneInternetRequiredDialogContent(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(26.dp))
 
         Box(
             modifier = Modifier

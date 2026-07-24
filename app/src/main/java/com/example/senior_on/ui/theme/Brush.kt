@@ -5,6 +5,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 object SeniorOnBrushes {
+    val DisplayDeviceConnected = Brush.horizontalGradient(
+        colors = listOf(
+            Color(0xFFECF7DC),
+            Color(0xFFDDE2BF),
+        )
+    )
+
+    val DisplayDeviceNotConnected = Brush.horizontalGradient(
+        colors = listOf(
+            Color(0xFFFFDFDF),
+            SeniorOnColors.Red100,
+        )
+    )
+
     val FamilyPrimaryBorder = Brush.linearGradient(
         colors = listOf(
             SeniorOnColors.Primary600,

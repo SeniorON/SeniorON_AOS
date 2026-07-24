@@ -62,10 +62,17 @@ data class ParentInfoInputState(
     val customRelationship: String = ""
 )
 
+enum class ParentInfoScreenMode {
+    Input,
+    Edit,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParentInfoInputScreen(
     modifier: Modifier = Modifier,
+    initialState: ParentInfoInputState? = null,
+    mode: ParentInfoScreenMode = ParentInfoScreenMode.Input,
     selectedAddress: String = "",
     selectedAddressLatitude: Double? = null,
     selectedAddressLongitude: Double? = null,
@@ -74,18 +81,32 @@ fun ParentInfoInputScreen(
     onSearchAddressClick: () -> Unit = {},
     onSaveClick: (ParentInfoInputState) -> Unit = {}
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
-    var relationship by rememberSaveable { mutableStateOf<SeniorRelationship?>(null) }
-    var customRelationship by rememberSaveable { mutableStateOf("") }
-    var customRelationshipDraft by rememberSaveable { mutableStateOf("") }
-    var birthDate by rememberSaveable { mutableStateOf("") }
-    var phoneNumber by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(""))
+    var name by rememberSaveable { mutableStateOf(initialState?.name.orEmpty()) }
+    var relationship by rememberSaveable {
+        mutableStateOf<SeniorRelationship?>(initialState?.relationship)
     }
-    var address by rememberSaveable { mutableStateOf(selectedAddress) }
-    var addressLatitude by rememberSaveable { mutableStateOf(selectedAddressLatitude) }
-    var addressLongitude by rememberSaveable { mutableStateOf(selectedAddressLongitude) }
-    var addressDetail by rememberSaveable { mutableStateOf("") }
+    var customRelationship by rememberSaveable {
+        mutableStateOf(initialState?.customRelationship.orEmpty())
+    }
+    var customRelationshipDraft by rememberSaveable {
+        mutableStateOf(initialState?.customRelationship.orEmpty())
+    }
+    var birthDate by rememberSaveable { mutableStateOf(initialState?.birthDate.orEmpty()) }
+    var phoneNumber by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(initialState?.phoneNumber.orEmpty()))
+    }
+    var address by rememberSaveable {
+        mutableStateOf(selectedAddress.ifBlank { initialState?.address.orEmpty() })
+    }
+    var addressLatitude by rememberSaveable {
+        mutableStateOf(selectedAddressLatitude ?: initialState?.addressLatitude)
+    }
+    var addressLongitude by rememberSaveable {
+        mutableStateOf(selectedAddressLongitude ?: initialState?.addressLongitude)
+    }
+    var addressDetail by rememberSaveable {
+        mutableStateOf(initialState?.addressDetail.orEmpty())
+    }
     var showCustomRelationshipSheet by rememberSaveable { mutableStateOf(false) }
     var showBirthDateSheet by rememberSaveable { mutableStateOf(false) }
     var showSkipNotice by rememberSaveable { mutableStateOf(false) }
@@ -96,11 +117,13 @@ fun ParentInfoInputScreen(
         selectedAddressLatitude,
         selectedAddressLongitude
     ) {
-        if (selectedAddress.isNotBlank() && selectedAddress != address) {
-            address = selectedAddress
+        if (selectedAddress.isNotBlank()) {
+            if (selectedAddress != address) {
+                address = selectedAddress
+            }
+            addressLatitude = selectedAddressLatitude
+            addressLongitude = selectedAddressLongitude
         }
-        addressLatitude = selectedAddressLatitude
-        addressLongitude = selectedAddressLongitude
     }
 
     val isRelationshipValid = when (relationship) {
@@ -108,10 +131,16 @@ fun ParentInfoInputScreen(
         null -> false
         else -> true
     }
+    val phoneDigitCount = phoneNumber.text.count(Char::isDigit)
+    val isPhoneNumberValid = when (mode) {
+        ParentInfoScreenMode.Input -> phoneDigitCount == RequiredPhoneNumberLength
+        ParentInfoScreenMode.Edit -> phoneDigitCount == 0 ||
+            phoneDigitCount == RequiredPhoneNumberLength
+    }
     val isSaveEnabled = name.isNotBlank() &&
         isRelationshipValid &&
         parseBirthDate(birthDate) != null &&
-        phoneNumber.text.count(Char::isDigit) == RequiredPhoneNumberLength
+        isPhoneNumberValid
 
     if (showCustomRelationshipSheet) {
         CustomRelationshipBottomSheet(
@@ -162,7 +191,10 @@ fun ParentInfoInputScreen(
             }
             .statusBarsPadding()
     ) {
-        SeniorInfoTopBar(onBackClick = onBackClick)
+        SeniorInfoTopBar(
+            onBackClick = onBackClick,
+            title = if (mode == ParentInfoScreenMode.Edit) "정보 수정" else "정보 입력",
+        )
 
         SeniorInfoFormContent(
             name = name,
@@ -191,38 +223,49 @@ fun ParentInfoInputScreen(
             addressDetail = addressDetail,
             onAddressDetailChange = { addressDetail = it },
             onSearchAddressClick = onSearchAddressClick,
+            showIntro = mode == ParentInfoScreenMode.Input,
+            isPhoneNumberRequired = mode == ParentInfoScreenMode.Input,
             modifier = Modifier.weight(1f)
         )
 
-        SeniorInfoBottomActions(
-            onSkipClick = { showSkipNotice = true },
-            onSaveClick = {
-                val selectedRelationship = relationship
+        val saveParentInfo = {
+            val selectedRelationship = relationship
 
-                if (isSaveEnabled && selectedRelationship != null) {
-                    onSaveClick(
-                        ParentInfoInputState(
-                            name = name,
-                            relationship = selectedRelationship,
-                            customRelationship = if (
-                                selectedRelationship == SeniorRelationship.Custom
-                            ) {
-                                customRelationship
-                            } else {
-                                ""
-                            },
-                            birthDate = birthDate,
-                            phoneNumber = phoneNumber.text,
-                            address = address,
-                            addressDetail = addressDetail,
-                            addressLatitude = addressLatitude,
-                            addressLongitude = addressLongitude
-                        )
+            if (isSaveEnabled && selectedRelationship != null) {
+                onSaveClick(
+                    ParentInfoInputState(
+                        name = name,
+                        relationship = selectedRelationship,
+                        customRelationship = if (
+                            selectedRelationship == SeniorRelationship.Custom
+                        ) {
+                            customRelationship
+                        } else {
+                            ""
+                        },
+                        birthDate = birthDate,
+                        phoneNumber = phoneNumber.text,
+                        address = address,
+                        addressDetail = addressDetail,
+                        addressLatitude = addressLatitude,
+                        addressLongitude = addressLongitude
                     )
-                }
-            },
-            isSaveEnabled = isSaveEnabled
-        )
+                )
+            }
+        }
+
+        when (mode) {
+            ParentInfoScreenMode.Input -> SeniorInfoBottomActions(
+                onSkipClick = { showSkipNotice = true },
+                onSaveClick = saveParentInfo,
+                isSaveEnabled = isSaveEnabled,
+            )
+
+            ParentInfoScreenMode.Edit -> SeniorInfoEditBottomAction(
+                onSaveClick = saveParentInfo,
+                isSaveEnabled = isSaveEnabled,
+            )
+        }
     }
 }
 
@@ -242,6 +285,8 @@ private fun SeniorInfoFormContent(
     addressDetail: String,
     onAddressDetailChange: (String) -> Unit,
     onSearchAddressClick: () -> Unit,
+    showIntro: Boolean,
+    isPhoneNumberRequired: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -249,10 +294,11 @@ private fun SeniorInfoFormContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        SeniorInfoTitle()
-
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(if (showIntro) 24.dp else 16.dp))
+        if (showIntro) {
+            SeniorInfoTitle()
+            Spacer(modifier = Modifier.height(24.dp))
+        }
         InputLabel(text = "이름")
         Spacer(modifier = Modifier.height(6.dp))
         SeniorInfoTextField(
@@ -281,7 +327,10 @@ private fun SeniorInfoFormContent(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        InputLabel(text = "전화번호", optionalText = " (필수)")
+        InputLabel(
+            text = "전화번호",
+            optionalText = if (isPhoneNumberRequired) " (필수)" else " (선택)",
+        )
         Spacer(modifier = Modifier.height(6.dp))
         SeniorInfoPhoneTextField(
             value = phoneNumber,
@@ -324,7 +373,7 @@ private fun SeniorInfoFormContent(
             color = SeniorOnColors.Gray400
         )
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(if (showIntro) 30.dp else 0.dp))
     }
 }
 
