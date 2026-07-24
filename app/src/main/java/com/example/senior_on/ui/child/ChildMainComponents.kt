@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,6 +54,15 @@ internal fun ChildBottomNavigation(
         modifier = modifier
             .fillMaxWidth()
             .background(SeniorOnColors.White)
+            .drawBehind {
+                val strokeWidth = 0.5.dp.toPx()
+                drawLine(
+                    color = Color(0xFFD1D1D1),
+                    start = androidx.compose.ui.geometry.Offset(0f, strokeWidth / 2f),
+                    end = androidx.compose.ui.geometry.Offset(size.width, strokeWidth / 2f),
+                    strokeWidth = strokeWidth
+                )
+            }
             .navigationBarsPadding()
             .padding(top = 2.dp, bottom = 6.dp),
         horizontalArrangement = Arrangement.SpaceAround,

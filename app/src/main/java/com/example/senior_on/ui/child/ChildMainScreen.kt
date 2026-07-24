@@ -48,6 +48,7 @@ import com.example.senior_on.ui.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.family.FamilyPhotoUploadViewModel
 import com.example.senior_on.ui.family.FamilyTabRoute
 import com.example.senior_on.ui.family.FamilyViewModel
+import com.example.senior_on.ui.health.HealthMainScreen
 import com.example.senior_on.ui.notification.NotificationCategory
 import com.example.senior_on.ui.notification.NotificationDetectionTimeSettingScreen
 import com.example.senior_on.ui.notification.NotificationDetailScreen
@@ -270,6 +271,11 @@ private fun ChildMainTabContent(
     onCloseNotificationDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (selectedTab == ChildMainTab.Health) {
+        HealthMainScreen(modifier = modifier)
+        return
+    }
+
     if (selectedTab == ChildMainTab.Family) {
         when (familyDestination) {
             ChildFamilyDestination.Overview -> FamilyTabRoute(
