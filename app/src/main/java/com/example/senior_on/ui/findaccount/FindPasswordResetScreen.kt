@@ -84,11 +84,7 @@ fun FindPasswordResetScreen(
                     } else {
                         null
                     },
-                    supportMessage = if (isPasswordValid && password.isEmpty()) {
-                        "영문, 숫자 포함 8자 이상"
-                    } else {
-                        null
-                    }
+                    supportMessage = "영문, 숫자 포함 8자 이상"
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -21,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -41,7 +38,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -57,8 +53,7 @@ internal fun FindAccountTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(54.dp)
-            .zIndex(1f)
-            .background(SeniorOnColors.SupportWhite100),
+            .background(SeniorOnColors.White),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -91,14 +86,6 @@ internal fun FindAccountTopBar(
 
             Spacer(modifier = Modifier.size(24.dp))
         }
-
-        Spacer(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(SeniorOnColors.Gray100)
-        )
     }
 }
 
@@ -180,6 +167,8 @@ internal fun FindAccountTextField(
     errorMessage: String? = null,
     supportMessage: String? = null,
     showClearIcon: Boolean = true,
+    clearIconResId: Int = R.drawable.ic_close_filled,
+    clearIconSize: Dp = 18.dp,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -243,9 +232,9 @@ internal fun FindAccountTextField(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_close_filled),
+                                            painter = painterResource(id = clearIconResId),
                                             contentDescription = "입력값 지우기",
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(clearIconSize),
                                             tint = Color.Unspecified
                                         )
                                     }
@@ -366,7 +355,7 @@ internal fun FindAccountInfoBanner(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_information),
+            painter = painterResource(id = R.drawable.ic_information2),
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             tint = SeniorOnColors.Gray400
@@ -556,18 +545,9 @@ internal fun FindAccountScaffold(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.SupportWhite100)
-            .statusBarsPadding()
+            .background(SeniorOnColors.White)
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .zIndex(1f),
-            shape = RectangleShape,
-            color = SeniorOnColors.SupportWhite100
-        ) {
-            FindAccountTopBar(onBackClick = onBackClick)
-        }
+        FindAccountTopBar(onBackClick = onBackClick)
 
         if (showTabs) {
             FindAccountTabRow(
