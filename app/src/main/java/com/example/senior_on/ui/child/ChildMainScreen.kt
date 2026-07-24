@@ -33,12 +33,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.notification.MockNotificationRepository
 import com.example.senior_on.data.notification.MockNotificationScenario
+import com.example.senior_on.data.repository.DisplayRepository
 import com.example.senior_on.data.repository.FamilyRepository
+import com.example.senior_on.data.repository.MockDisplayRepository
 import com.example.senior_on.data.repository.MockFamilyRepository
+import com.example.senior_on.data.repository.MockParentInfoFixtures
+import com.example.senior_on.data.repository.MockParentInfoRepository
+import com.example.senior_on.data.repository.ParentInfoRepository
+import com.example.senior_on.ui.display.DisplayTabRoute
+import com.example.senior_on.ui.display.DisplayViewModel
 import com.example.senior_on.ui.family.FamilyInvitationRoute
 import com.example.senior_on.ui.family.FamilyMemberSettingsRoute
 import com.example.senior_on.ui.family.FamilyPhotoDetailRoute
@@ -73,6 +81,8 @@ private enum class ChildFamilyDestination {
 fun ChildMainScreen(
     familyRepository: FamilyRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
+    displayRepository: DisplayRepository,
+    parentInfoRepository: ParentInfoRepository,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -94,6 +104,7 @@ fun ChildMainScreen(
     val familyViewModel: FamilyViewModel = viewModel(
         factory = FamilyViewModel.factory(familyRepository),
     )
+    val familyUiState by familyViewModel.uiState.collectAsStateWithLifecycle()
     val familyPhotoDetailViewModel: FamilyPhotoDetailViewModel = viewModel(
         factory = FamilyPhotoDetailViewModel.factory(familyRepository),
     )
@@ -102,6 +113,12 @@ fun ChildMainScreen(
             repository = familyRepository,
             uploadPreparer = familyPhotoUploadPreparer,
         ),
+    )
+    val displayViewModel: DisplayViewModel = viewModel(
+        factory = DisplayViewModel.factory(
+            parentInfoRepository = parentInfoRepository,
+            displayRepository = displayRepository,
+        )
     )
 
     val navigateToFamilyInvitation = {
@@ -184,6 +201,8 @@ fun ChildMainScreen(
             familyViewModel = familyViewModel,
             familyPhotoDetailViewModel = familyPhotoDetailViewModel,
             familyPhotoUploadViewModel = familyPhotoUploadViewModel,
+            displayViewModel = displayViewModel,
+            canEditScreen = familyUiState.canManageMembers,
             onMemberSettingsClick = {
                 familyDestination = ChildFamilyDestination.MemberSettings
             },
@@ -252,6 +271,8 @@ private fun ChildMainTabContent(
     familyViewModel: FamilyViewModel,
     familyPhotoDetailViewModel: FamilyPhotoDetailViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
+    displayViewModel: DisplayViewModel,
+    canEditScreen: Boolean,
     onMemberSettingsClick: () -> Unit,
     onAddFamilyClick: () -> Unit,
     onMorePhotosClick: () -> Unit,
@@ -271,6 +292,15 @@ private fun ChildMainTabContent(
     onCloseNotificationDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (selectedTab == ChildMainTab.Screen) {
+        DisplayTabRoute(
+            viewModel = displayViewModel,
+            canEditScreen = canEditScreen,
+            modifier = modifier,
+        )
+        return
+    }
+
     if (selectedTab == ChildMainTab.Health) {
         HealthMainScreen(modifier = modifier)
         return
@@ -447,12 +477,18 @@ private fun createFamilyPhotoCaptureUri(context: Context): Uri {
 private fun ChildMainScreenPreview() {
     val context = LocalContext.current
     val repository = remember { MockFamilyRepository() }
+    val displayRepository = remember { MockDisplayRepository() }
+    val parentInfoRepository = remember {
+        MockParentInfoRepository(MockParentInfoFixtures.mother)
+    }
     val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }
 
     SENIOR_ONTheme {
         ChildMainScreen(
             familyRepository = repository,
             familyPhotoUploadPreparer = uploadPreparer,
+            displayRepository = displayRepository,
+            parentInfoRepository = parentInfoRepository,
         )
     }
 }

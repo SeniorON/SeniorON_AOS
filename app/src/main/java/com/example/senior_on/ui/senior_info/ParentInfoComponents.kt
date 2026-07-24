@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -54,7 +55,8 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 @Composable
 internal fun SeniorInfoTopBar(
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    title: String = "정보 입력",
 ) {
     Row(
         modifier = modifier
@@ -90,7 +92,7 @@ internal fun SeniorInfoTopBar(
         }
 
         Text(
-            text = "정보 입력",
+            text = title,
             modifier = Modifier.padding(start = 16.dp),
             style = SeniorOnTextStyles.HeadingS,
             color = SeniorOnColors.Gray800
@@ -472,6 +474,29 @@ internal fun SeniorInfoBottomActions(
 }
 
 @Composable
+internal fun SeniorInfoEditBottomAction(
+    onSaveClick: () -> Unit,
+    isSaveEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(SeniorOnColors.White)
+            .padding(horizontal = 16.dp, vertical = 16.dp)
+    ) {
+        SeniorInfoActionButton(
+            text = "수정하기",
+            onClick = onSaveClick,
+            style = SeniorInfoButtonStyle.Filled,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = isSaveEnabled,
+            height = 52.dp,
+        )
+    }
+}
+
+@Composable
 private fun SeniorInfoWarning(
     modifier: Modifier = Modifier
 ) {
@@ -512,7 +537,8 @@ internal fun SeniorInfoActionButton(
     onClick: () -> Unit,
     style: SeniorInfoButtonStyle,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    height: Dp = 60.dp,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
     val backgroundColor = when (style) {
@@ -536,7 +562,7 @@ internal fun SeniorInfoActionButton(
 
     Box(
         modifier = modifier
-            .height(60.dp)
+            .height(height)
             .clip(shape)
             .background(backgroundColor)
             .border(
