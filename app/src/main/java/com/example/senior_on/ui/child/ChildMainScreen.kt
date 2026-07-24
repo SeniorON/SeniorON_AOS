@@ -55,6 +55,7 @@ import com.example.senior_on.ui.notification.NotificationDetailScreen
 import com.example.senior_on.ui.notification.NotificationHistoryScreen
 import com.example.senior_on.ui.notification.NotificationMessageUiState
 import com.example.senior_on.ui.notification.NotificationScreen
+import com.example.senior_on.ui.settings.SettingsTabRoute
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -73,7 +74,9 @@ private enum class ChildFamilyDestination {
 fun ChildMainScreen(
     familyRepository: FamilyRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLogoutClick: () -> Unit = {},
+    onWithdrawClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -210,6 +213,8 @@ fun ChildMainScreen(
                 notificationDetail = category to message
             },
             onCloseNotificationDetail = { notificationDetail = null },
+            onLogoutClick = onLogoutClick,
+            onWithdrawClick = onWithdrawClick,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxSize()
@@ -269,6 +274,8 @@ private fun ChildMainTabContent(
     onCloseHistory: () -> Unit,
     onOpenNotificationDetail: (NotificationCategory, NotificationMessageUiState) -> Unit,
     onCloseNotificationDetail: () -> Unit,
+    onLogoutClick: () -> Unit,
+    onWithdrawClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (selectedTab == ChildMainTab.Health) {
@@ -383,6 +390,15 @@ private fun ChildMainTabContent(
             onSectionClick = onOpenHistory,
             onNotificationClick = onOpenNotificationDetail,
             onDetectionTimeClick = onOpenDetectionTimeSetting
+        )
+        return
+    }
+
+    if (selectedTab == ChildMainTab.Setting) {
+        SettingsTabRoute(
+            modifier = modifier,
+            onLogoutConfirm = onLogoutClick,
+            onWithdrawConfirm = onWithdrawClick
         )
         return
     }
