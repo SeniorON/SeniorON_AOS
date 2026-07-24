@@ -32,8 +32,8 @@ object SeniorOnColors {
     val Health = Color(0xFF6548B8)
     val Schedule = Color(0xFF484FBC)
     val Media = Color(0xFFD85A1F)
-    val Blue = Color(0xFF439BFF)
-    val ActionAdd = Blue
+    val SupportBlue = Color(0xFF439BFF)
+    val ActionAdd = SupportBlue
     val Yellow = Color(0xFFF3E700)
 
     val Background1 = Color(0xFFF8F8F5)

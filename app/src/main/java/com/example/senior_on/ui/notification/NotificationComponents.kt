@@ -213,7 +213,7 @@ private fun NotificationMoodButton(
     val iconResId = when (severity) {
         NotificationSeverity.Empty -> R.drawable.ic_illust_neutral
         NotificationSeverity.Normal -> R.drawable.ic_illust_happy
-        NotificationSeverity.Danger -> R.drawable.ic_illustwarning
+        NotificationSeverity.Danger -> R.drawable.ic_illust_warning
     }
 
     Image(

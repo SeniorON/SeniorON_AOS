@@ -509,7 +509,7 @@ private fun ButtonAddRow(
                 painter = painterResource(id = R.drawable.ic_plus),
                 contentDescription = "${button.displayLabel()} 추가",
                 modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.Blue,
+                tint = SeniorOnColors.SupportBlue,
             )
         }
     }
