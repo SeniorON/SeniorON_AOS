@@ -1,3 +1,4 @@
+
 package com.example.senior_on.ui.app
 
 import androidx.activity.compose.BackHandler
@@ -194,6 +195,8 @@ fun SeniorOnApp(appContainer: AppContainer) {
             SeniorOnRoute.ChildMain -> ChildMainScreen(
                 familyRepository = appContainer.familyRepository,
                 familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
+                onLogoutClick = { currentRoute = SeniorOnRoute.Login },
+                onWithdrawClick = { currentRoute = SeniorOnRoute.Login }
             )
             SeniorOnRoute.Signup -> SignupScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.Login },
