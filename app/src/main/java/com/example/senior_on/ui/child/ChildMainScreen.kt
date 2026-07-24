@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.data.notification.MockNotificationRepository
 import com.example.senior_on.data.notification.MockNotificationScenario
+import com.example.senior_on.ui.health.HealthMainScreen
 import com.example.senior_on.ui.notification.NotificationDetectionTimeSettingScreen
 import com.example.senior_on.ui.notification.NotificationCategory
 import com.example.senior_on.ui.notification.NotificationDetailScreen
@@ -96,6 +97,11 @@ private fun ChildMainTabContent(
     onCloseNotificationDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (selectedTab == ChildMainTab.Health) {
+        HealthMainScreen(modifier = modifier)
+        return
+    }
+
     if (selectedTab == ChildMainTab.Notification) {
         notificationDetail?.let { (category, message) ->
             NotificationDetailScreen(
