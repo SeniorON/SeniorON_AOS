@@ -28,6 +28,7 @@ import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.senior_info.AddressSearchScreen
 import com.example.senior_on.ui.senior_info.ParentInfoInputScreen
+import com.example.senior_on.ui.senior_info.toParentInfo
 import com.example.senior_on.ui.signup.SignupAccountInfoScreen
 import com.example.senior_on.ui.signup.SignupEmailVerificationScreen
 import com.example.senior_on.ui.signup.SignupModeGuideScreen
@@ -192,9 +193,11 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onComplete = {},
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
-            SeniorOnRoute.ChildMain -> ChildMainScreen(
+           SeniorOnRoute.ChildMain -> ChildMainScreen(
                 familyRepository = appContainer.familyRepository,
                 familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
+                displayRepository = appContainer.displayRepository,
+                parentInfoRepository = appContainer.parentInfoRepository,
                 onLogoutClick = { currentRoute = SeniorOnRoute.Login },
                 onWithdrawClick = { currentRoute = SeniorOnRoute.Login }
             )
@@ -253,7 +256,12 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCodeCreated },
                 onSkipClick = { navigateAfterFamilyConnected() },
                 onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch },
-                onSaveClick = { navigateAfterFamilyConnected() }
+                onSaveClick = { inputState ->
+                    appContainer.parentInfoRepository.saveParentInfo(
+                        inputState.toParentInfo()
+                    )
+                    navigateAfterFamilyConnected()
+                }
             )
             SeniorOnRoute.AddressSearch -> AddressSearchScreen(
                 onBackClick = ::navigateBackFromAddressSearch,
