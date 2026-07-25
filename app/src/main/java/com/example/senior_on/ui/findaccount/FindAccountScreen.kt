@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 
 @Composable
@@ -154,7 +155,9 @@ private fun FindPasswordInputContent(
             label = "이름",
             value = name,
             onValueChange = onNameChange,
-            placeholder = "이름 입력"
+            placeholder = "이름 입력",
+            clearIconResId = R.drawable.ic_close,
+            clearIconSize = 24.dp
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -169,7 +172,9 @@ private fun FindPasswordInputContent(
                 "일치하는 계정 정보를 찾을 수 없어요."
             } else {
                 null
-            }
+            },
+            clearIconResId = R.drawable.ic_close,
+            clearIconSize = 24.dp
         )
     }
 }

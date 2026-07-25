@@ -28,6 +28,7 @@ import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.parent.ParentLauncherScreen
 import com.example.senior_on.ui.senior_info.AddressSearchScreen
 import com.example.senior_on.ui.senior_info.ParentInfoInputScreen
+import com.example.senior_on.ui.senior_info.toParentInfo
 import com.example.senior_on.ui.signup.SignupAccountInfoScreen
 import com.example.senior_on.ui.signup.SignupEmailVerificationScreen
 import com.example.senior_on.ui.signup.SignupModeGuideScreen
@@ -196,6 +197,8 @@ fun SeniorOnApp(appContainer: AppContainer) {
             SeniorOnRoute.ChildMain -> ChildMainScreen(
                 familyRepository = appContainer.familyRepository,
                 familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
+                displayRepository = appContainer.displayRepository,
+                parentInfoRepository = appContainer.parentInfoRepository,
             )
             SeniorOnRoute.ParentLauncher -> ParentLauncherScreen(
                 scheduleRepository = appContainer.parentScheduleRepository,
@@ -260,7 +263,12 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCodeCreated },
                 onSkipClick = { navigateAfterFamilyConnected() },
                 onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch },
-                onSaveClick = { navigateAfterFamilyConnected() }
+                onSaveClick = { inputState ->
+                    appContainer.parentInfoRepository.saveParentInfo(
+                        inputState.toParentInfo()
+                    )
+                    navigateAfterFamilyConnected()
+                }
             )
             SeniorOnRoute.AddressSearch -> AddressSearchScreen(
                 onBackClick = ::navigateBackFromAddressSearch,

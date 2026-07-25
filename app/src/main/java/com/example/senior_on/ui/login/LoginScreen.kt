@@ -40,11 +40,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.senior_on.R
 import com.example.senior_on.data.auth.MockLoginAuthRepository
 import com.example.senior_on.ui.app.AppUserMode
@@ -59,14 +58,6 @@ private enum class LoginFieldError {
     InvalidCredentials,
     PasswordMismatch
 }
-
-private val LoginLinkTextStyle = SeniorOnTextStyles.BodySMedium.copy(
-    lineHeight = 14.sp,
-    lineHeightStyle = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.Both
-    )
-)
 
 @Composable
 fun LoginScreen(
@@ -109,7 +100,7 @@ fun LoginScreen(
         ) {
         LoginTopBar(onBackClick = onGoToModeSelection)
 
-        Spacer(modifier = Modifier.height(44.dp))
+        Spacer(modifier = Modifier.height(30.dp))
 
         Image(
             painter = painterResource(id = R.drawable.ic_splash_on),
@@ -155,6 +146,7 @@ fun LoginScreen(
             },
             isError = passwordError,
             errorMessage = passwordErrorMessage,
+            errorSpaceHeight = 26.dp,
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
@@ -167,26 +159,24 @@ fun LoginScreen(
                         ),
                         contentDescription = if (passwordVisible) "비밀번호 숨기기" else "비밀번호 보기",
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
         )
-
-        Spacer(modifier = Modifier.height(26.dp))// 비밀번호 입력 - 로그인 상태 유지 간격
 
         LoginStayLoggedInRow(
             checked = keepLoggedIn,
             onCheckedChange = { keepLoggedIn = it }
         )
 
-        Spacer(modifier = Modifier.height(16.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
+        Spacer(modifier = Modifier.height(18.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp) //높이 50px
-                .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                .clip(RoundedCornerShape(SeniorOnRadius.Small))
                 .background(SeniorOnColors.Primary600)
                 .clickable {
                     loginError = when {
@@ -235,12 +225,10 @@ fun LoginScreen(
 
         SnsLoginDivider()
 
-        Spacer(modifier = Modifier.height(24.dp)) //sns~ - 아이콘 사이 간격
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 69.dp),
+                .padding(top = 24.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -289,14 +277,14 @@ private fun LoginTopBar(
     ) {
         Box(
             modifier = Modifier
-                .size(26.dp)
+                .size(24.dp)
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_arrow_back),
                 contentDescription = "뒤로가기",
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(26.dp),
                 tint = SeniorOnColors.Gray800
             )
         }
@@ -345,7 +333,7 @@ private fun LoginStayLoggedInRow(
         Text(
             text = "로그인 상태 유지",
             modifier = Modifier.padding(start = 4.dp),
-            style = SeniorOnTextStyles.BodySRegular,
+            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray800
         )
     }
@@ -362,6 +350,7 @@ private fun LoginTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     isError: Boolean = false,
     errorMessage: String? = null,
+    errorSpaceHeight: Dp = 0.dp,
     showClearButton: Boolean = false,
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
@@ -430,20 +419,57 @@ private fun LoginTextField(
                             isError = isError,
                             interactionSource = interactionSource,
                             colors = textFieldColors,
-                            shape = fieldShape
+                            shape = fieldShape,
+                            focusedBorderThickness = 1.dp,
+                            unfocusedBorderThickness = 1.dp
                         )
                     }
                 )
             }
         )
 
-        if (isError && !errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                modifier = Modifier.padding(top = 6.dp), //에러메세지 - 비밀번호 입력 박스 사이 간격
-                style = SeniorOnTextStyles.CaptionRegular,
-                color = SeniorOnColors.Red300 //에러 테두리 색깔
-            )
+        if (errorSpaceHeight > 0.dp) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(errorSpaceHeight)
+            ) {
+                if (isError && !errorMessage.isNullOrBlank()) {
+                    Row(
+                        modifier = Modifier.padding(top = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_sm_alertfilled),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.Unspecified
+                        )
+                        Text(
+                            text = errorMessage,
+                            style = SeniorOnTextStyles.CaptionRegular,
+                            color = SeniorOnColors.Red300
+                        )
+                    }
+                }
+            }
+        } else if (isError && !errorMessage.isNullOrBlank()) {
+            Row(
+                modifier = Modifier.padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_sm_alertfilled),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.Unspecified
+                )
+                Text(
+                    text = errorMessage,
+                    style = SeniorOnTextStyles.CaptionRegular,
+                    color = SeniorOnColors.Red300
+                )
+            }
         }
     }
 }
@@ -459,9 +485,17 @@ private fun LoginLinkRow(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LoginLink(text = "아이디 찾기", onClick = onFindIdClick)
+        LoginLink(
+            text = "아이디 찾기",
+            onClick = onFindIdClick,
+            paddingEnd = 19.dp
+        )
         LoginLinkDivider()
-        LoginLink(text = "비밀번호 찾기", onClick = onFindPasswordClick)
+        LoginLink(
+            text = "비밀번호 찾기",
+            onClick = onFindPasswordClick,
+            paddingEnd = 19.dp
+        )
         LoginLinkDivider()
         LoginLink(
             text = "회원가입",
@@ -475,14 +509,16 @@ private fun LoginLinkRow(
 private fun LoginLink(
     text: String,
     onClick: () -> Unit,
-    color: Color = SeniorOnColors.Gray700
+    color: Color = SeniorOnColors.Gray700,
+    paddingStart: Dp = 20.dp,
+    paddingEnd: Dp = 20.dp
 ) {
     Text(
         text = text,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp), // 글자 사이 간격
-        style = LoginLinkTextStyle,
+            .padding(start = paddingStart, end = paddingEnd),
+        style = SeniorOnTextStyles.BodySMedium,
         color = color
     )
 }
@@ -510,8 +546,8 @@ private fun SnsLoginDivider() {
         )
         Text(
             text = "SNS 계정으로 로그인",
-            modifier = Modifier.padding(horizontal = 21.dp), //가로선 , sns- 사이 간격
-            style = SeniorOnTextStyles.BodySRegular,
+            modifier = Modifier.padding(horizontal = 10.5.dp), // 좌우 각 10.5dp (합 21)
+            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500,
             textAlign = TextAlign.Center
         )
@@ -580,12 +616,13 @@ private fun LoginTextFieldEmptyPasswordErrorPreview() {
                 visualTransformation = PasswordVisualTransformation(),
                 isError = true,
                 errorMessage = "비밀번호를 입력해주세요",
+                errorSpaceHeight = 26.dp,
                 trailingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_visibility_off),
                         contentDescription = null,
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             )
@@ -623,12 +660,13 @@ private fun LoginTextFieldInvalidCredentialsPreview() {
                 visualTransformation = PasswordVisualTransformation(),
                 isError = true,
                 errorMessage = "아이디 또는 비밀번호를 다시 확인해 주세요.",
+                errorSpaceHeight = 26.dp,
                 trailingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_visibility_off),
                         contentDescription = null,
                         tint = SeniorOnColors.Gray400,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             )
@@ -665,6 +703,7 @@ private fun LoginTextFieldPasswordMismatchPreview() {
                 visualTransformation = PasswordVisualTransformation(),
                 isError = true,
                 errorMessage = "비밀번호가 일치하지 않아요",
+                errorSpaceHeight = 26.dp,
                 trailingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_visibility_off),
