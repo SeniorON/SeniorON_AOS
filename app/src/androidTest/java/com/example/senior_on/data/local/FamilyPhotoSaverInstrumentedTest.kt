@@ -6,7 +6,7 @@ import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.senior_on.R
-import com.example.senior_on.domain.model.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyImageSource
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

@@ -1,5 +1,13 @@
 package com.example.senior_on.ui.child
 
+import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoUploadViewModel
+
+import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoDetailViewModel
+
+import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
+
+import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
+
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -36,34 +44,30 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.data.notification.MockNotificationRepository
-import com.example.senior_on.data.notification.MockNotificationScenario
-import com.example.senior_on.data.repository.DisplayRepository
-import com.example.senior_on.data.repository.FamilyRepository
-import com.example.senior_on.data.repository.MockDisplayRepository
-import com.example.senior_on.data.repository.MockFamilyRepository
-import com.example.senior_on.data.repository.MockParentInfoFixtures
-import com.example.senior_on.data.repository.MockParentInfoRepository
-import com.example.senior_on.data.repository.ParentInfoRepository
-import com.example.senior_on.ui.display.DisplayTabRoute
-import com.example.senior_on.ui.display.DisplayViewModel
-import com.example.senior_on.ui.family.FamilyInvitationRoute
-import com.example.senior_on.ui.family.FamilyMemberSettingsRoute
-import com.example.senior_on.ui.family.FamilyPhotoDetailRoute
-import com.example.senior_on.ui.family.FamilyPhotoDetailViewModel
-import com.example.senior_on.ui.family.FamilyPhotoGalleryRoute
-import com.example.senior_on.ui.family.FamilyPhotoShareRoute
-import com.example.senior_on.ui.family.FamilyPhotoUploadViewModel
-import com.example.senior_on.ui.family.FamilyTabRoute
-import com.example.senior_on.ui.family.FamilyViewModel
-import com.example.senior_on.ui.health.HealthMainScreen
-import com.example.senior_on.ui.notification.NotificationCategory
-import com.example.senior_on.ui.notification.NotificationDetectionTimeSettingScreen
-import com.example.senior_on.ui.notification.NotificationDetailScreen
-import com.example.senior_on.ui.notification.NotificationHistoryScreen
-import com.example.senior_on.ui.notification.NotificationMessageUiState
-import com.example.senior_on.ui.notification.NotificationScreen
-import com.example.senior_on.ui.settings.SettingsTabRoute
+import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
+import com.example.senior_on.ui.child.notification.mock.MockNotificationScenario
+import com.example.senior_on.domain.repository.display.DisplayRepository
+import com.example.senior_on.domain.repository.family.FamilyRepository
+import com.example.senior_on.data.repository.mock.display.MockDisplayRepository
+import com.example.senior_on.data.repository.mock.family.MockFamilyRepository
+import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
+import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
+import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.ui.child.display.DisplayTabRoute
+import com.example.senior_on.ui.child.family.FamilyInvitationRoute
+import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
+import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
+import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
+import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
+import com.example.senior_on.ui.child.family.FamilyTabRoute
+import com.example.senior_on.ui.child.health.HealthMainScreen
+import com.example.senior_on.ui.child.notification.NotificationCategory
+import com.example.senior_on.ui.child.notification.NotificationDetectionTimeSettingScreen
+import com.example.senior_on.ui.child.notification.NotificationDetailScreen
+import com.example.senior_on.ui.child.notification.NotificationHistoryScreen
+import com.example.senior_on.ui.child.notification.NotificationMessageUiState
+import com.example.senior_on.ui.child.notification.NotificationScreen
+import com.example.senior_on.ui.child.settings.SettingsTabRoute
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -84,6 +88,8 @@ fun ChildMainScreen(
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
+    notificationScenario: MockNotificationScenario =
+        MockNotificationScenario.MultipleRecentAlarms,
     modifier: Modifier = Modifier,
     onLogoutClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {}
@@ -224,6 +230,7 @@ fun ChildMainScreen(
             showDetectionTimeSetting = showDetectionTimeSetting,
             historyCategory = historyCategory,
             notificationDetail = notificationDetail,
+            notificationScenario = notificationScenario,
             onOpenDetectionTimeSetting = { showDetectionTimeSetting = true },
             onCloseDetectionTimeSetting = { showDetectionTimeSetting = false },
             onOpenHistory = { category -> historyCategory = category },
@@ -289,6 +296,7 @@ private fun ChildMainTabContent(
     showDetectionTimeSetting: Boolean,
     historyCategory: NotificationCategory?,
     notificationDetail: Pair<NotificationCategory, NotificationMessageUiState>?,
+    notificationScenario: MockNotificationScenario,
     onOpenDetectionTimeSetting: () -> Unit,
     onCloseDetectionTimeSetting: () -> Unit,
     onOpenHistory: (NotificationCategory) -> Unit,
@@ -411,7 +419,7 @@ private fun ChildMainTabContent(
         }
 
         val notificationState = MockNotificationRepository.getNotificationState(
-            scenario = MockNotificationScenario.RecentAlarms
+            scenario = notificationScenario
         )
 
         NotificationScreen(

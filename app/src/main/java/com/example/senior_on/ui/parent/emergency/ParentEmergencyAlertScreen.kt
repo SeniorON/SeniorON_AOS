@@ -1,5 +1,9 @@
 package com.example.senior_on.ui.parent.emergency
 
+import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertUiState
+
+import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertStatus
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

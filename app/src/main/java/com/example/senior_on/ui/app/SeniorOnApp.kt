@@ -9,33 +9,35 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import com.example.senior_on.data.auth.MockFindIdRepository
-import com.example.senior_on.data.auth.MockFindPasswordRepository
-import com.example.senior_on.data.auth.MockSessionRepository
-import com.example.senior_on.data.di.AppContainer
+import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.data.repository.mock.auth.MockFindIdRepository
+import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
+import com.example.senior_on.data.repository.mock.auth.MockSessionRepository
+import com.example.senior_on.di.AppContainer
 import com.example.senior_on.ui.child.ChildMainScreen
-import com.example.senior_on.ui.family_code.FamilyShareCodeCreatedScreen
-import com.example.senior_on.ui.family_code.FamilyShareCodeInputScreen
-import com.example.senior_on.ui.family_code.FamilyShareCodeOption
-import com.example.senior_on.ui.family_code.FamilyShareCodeScreen
-import com.example.senior_on.ui.findaccount.FindAccountScreen
-import com.example.senior_on.ui.findaccount.FindAccountTab
-import com.example.senior_on.ui.findaccount.FindIdResultScreen
-import com.example.senior_on.ui.findaccount.FindPasswordResetScreen
-import com.example.senior_on.ui.findaccount.FindPasswordVerifyScreen
-import com.example.senior_on.ui.login.LoginScreen
+import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeCreatedScreen
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeInputScreen
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeOption
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeScreen
+import com.example.senior_on.ui.onboarding.findaccount.FindAccountScreen
+import com.example.senior_on.ui.common.account.FindAccountTab
+import com.example.senior_on.ui.onboarding.findaccount.FindIdResultScreen
+import com.example.senior_on.ui.onboarding.findaccount.FindPasswordResetScreen
+import com.example.senior_on.ui.onboarding.findaccount.FindPasswordVerifyScreen
+import com.example.senior_on.ui.onboarding.login.LoginScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.parent.ParentLauncherScreen
-import com.example.senior_on.ui.senior_info.AddressSearchScreen
-import com.example.senior_on.ui.senior_info.ParentInfoInputScreen
-import com.example.senior_on.ui.senior_info.toParentInfo
-import com.example.senior_on.ui.signup.SignupAccountInfoScreen
-import com.example.senior_on.ui.signup.SignupEmailVerificationScreen
-import com.example.senior_on.ui.signup.SignupModeGuideScreen
-import com.example.senior_on.ui.signup.SignupNameBirthScreen
-import com.example.senior_on.ui.signup.SignupScreen
-import com.example.senior_on.ui.signup.SignupTermsAgreementScreen
+import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
+import com.example.senior_on.ui.common.seniorinfo.ParentInfoInputScreen
+import com.example.senior_on.ui.common.seniorinfo.toParentInfo
+import com.example.senior_on.ui.onboarding.signup.SignupAccountInfoScreen
+import com.example.senior_on.ui.onboarding.signup.SignupEmailVerificationScreen
+import com.example.senior_on.ui.onboarding.signup.SignupModeGuideScreen
+import com.example.senior_on.ui.onboarding.signup.SignupNameBirthScreen
+import com.example.senior_on.ui.onboarding.signup.SignupScreen
+import com.example.senior_on.ui.onboarding.signup.SignupTermsAgreementScreen
 import kotlinx.coroutines.delay
 
 private enum class SeniorOnRoute {
@@ -61,12 +63,13 @@ private enum class SeniorOnRoute {
     AddressSearch
 }
 
-private val InitialRoute = SeniorOnRoute.ParentLauncher
+private val InitialRoute = SeniorOnRoute.Splash
 
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
     var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
     var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
+    var authenticatedUserId by rememberSaveable { mutableStateOf("") }
     var findAccountInitialTab by rememberSaveable { mutableStateOf(FindAccountTab.Id) }
     var findIdResultSuccess by rememberSaveable { mutableStateOf(false) }
     var findIdResultName by rememberSaveable { mutableStateOf("") }
@@ -122,7 +125,8 @@ fun SeniorOnApp(appContainer: AppContainer) {
             )
             SeniorOnRoute.Login -> LoginScreen(
                 selectedMode = selectedUserMode,
-                onLoginClick = {
+                onLoginClick = { userId ->
+                    authenticatedUserId = userId
                     currentRoute = routeAfterAuthenticated(selectedUserMode)
                 },
                 onGoToModeSelection = { currentRoute = SeniorOnRoute.ModeSelection },
@@ -196,10 +200,12 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
            SeniorOnRoute.ChildMain -> ChildMainScreen(
-                familyRepository = appContainer.familyRepository,
+                familyRepository = appContainer.familyRepositoryFor(authenticatedUserId),
                 familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
                 displayRepository = appContainer.displayRepository,
                 parentInfoRepository = appContainer.parentInfoRepository,
+                notificationScenario =
+                    MockNotificationRepository.scenarioForUserId(authenticatedUserId),
                 onLogoutClick = { currentRoute = SeniorOnRoute.Login },
                 onWithdrawClick = { currentRoute = SeniorOnRoute.Login }
             )

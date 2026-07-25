@@ -1,5 +1,27 @@
 package com.example.senior_on.ui.parent
 
+import com.example.senior_on.ui.parent.schedule.viewmodel.toParentDisplayTime
+
+import com.example.senior_on.ui.parent.schedule.viewmodel.ParentScheduleViewModel
+
+import com.example.senior_on.ui.parent.schedule.viewmodel.ParentScheduleUiState
+
+import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoViewModel
+
+import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationViewModel
+
+import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionViewModel
+
+import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionStatus
+
+import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertViewModel
+
+import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertStatus
+
+import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyViewModel
+
+import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyUiState
+
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -41,38 +63,28 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.R
-import com.example.senior_on.data.auth.MockAuthFixtures
-import com.example.senior_on.data.repository.ChatBuddyRepository
-import com.example.senior_on.data.repository.MockChatBuddyRepository
-import com.example.senior_on.data.repository.MockParentEmergencyAlertRepository
-import com.example.senior_on.data.repository.MockParentFamilyPhotoRepository
-import com.example.senior_on.data.repository.MockParentMedicationRepository
-import com.example.senior_on.data.repository.MockParentLinkSafetyRepository
-import com.example.senior_on.data.repository.MockParentScheduleRepository
-import com.example.senior_on.data.repository.ParentFamilyPhotoRepository
-import com.example.senior_on.data.repository.ParentEmergencyAlertRepository
-import com.example.senior_on.data.repository.ParentMedicationRepository
-import com.example.senior_on.data.repository.ParentLinkSafetyRepository
-import com.example.senior_on.data.repository.ParentScheduleRepository
+import com.example.senior_on.data.repository.mock.auth.MockAuthFixtures
+import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
+import com.example.senior_on.data.repository.mock.parent.MockChatBuddyRepository
+import com.example.senior_on.data.repository.mock.parent.MockParentEmergencyAlertRepository
+import com.example.senior_on.data.repository.mock.parent.MockParentFamilyPhotoRepository
+import com.example.senior_on.data.repository.mock.parent.MockParentMedicationRepository
+import com.example.senior_on.data.repository.mock.parent.MockParentLinkSafetyRepository
+import com.example.senior_on.data.repository.mock.parent.MockParentScheduleRepository
+import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
+import com.example.senior_on.domain.repository.parent.ParentEmergencyAlertRepository
+import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
+import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
+import com.example.senior_on.domain.repository.parent.ParentScheduleRepository
 import com.example.senior_on.ui.parent.chat.ChatBuddyScreen
-import com.example.senior_on.ui.parent.chat.ChatBuddyViewModel
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyAlertScreen
-import com.example.senior_on.ui.parent.emergency.ParentEmergencyAlertStatus
-import com.example.senior_on.ui.parent.emergency.ParentEmergencyAlertViewModel
 import com.example.senior_on.ui.parent.medication.ParentMedicationScreen
-import com.example.senior_on.ui.parent.medication.ParentMedicationViewModel
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionScreen
-import com.example.senior_on.ui.parent.link.ParentLinkDetectionStatus
-import com.example.senior_on.ui.parent.link.ParentLinkDetectionViewModel
 import com.example.senior_on.ui.parent.photo.ParentFamilyMembersPhotoScreen
-import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoViewModel
 import com.example.senior_on.ui.parent.photo.ParentMemberPhotoGridScreen
 import com.example.senior_on.ui.parent.photo.ParentPhotoSourceBottomSheet
 import com.example.senior_on.ui.parent.photo.ParentPhotoViewerScreen
 import com.example.senior_on.ui.parent.schedule.ParentScheduleScreen
-import com.example.senior_on.ui.parent.schedule.ParentScheduleUiState
-import com.example.senior_on.ui.parent.schedule.ParentScheduleViewModel
-import com.example.senior_on.ui.parent.schedule.toParentDisplayTime
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
