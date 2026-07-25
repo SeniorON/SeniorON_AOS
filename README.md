@@ -179,7 +179,7 @@ data의 MockRepository 또는 실제 Repository 구현체
 | `ui/theme` | 색상, 글꼴, 그라데이션, 모서리 등 디자인 시스템 |
 
 ## 컨벤션 문서
-
+docs폴더 하위에 배치하였음
 - [CODE_CONVENTION.md](docs/CODE_CONVENTION.md): 브랜치, 커밋, 코드 네이밍, 패키지 구조 규칙
 - [GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md): 이슈, PR, 리뷰, 머지 규칙
 - [MOCK_TEST_DATA.md](docs/MOCK_TEST_DATA.md): 화면 흐름 확인을 위한 목 계정과 입력값
