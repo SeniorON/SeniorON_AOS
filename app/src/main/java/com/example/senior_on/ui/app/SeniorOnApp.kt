@@ -26,6 +26,7 @@ import com.example.senior_on.ui.findaccount.FindPasswordVerifyScreen
 import com.example.senior_on.ui.login.LoginScreen
 import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
+import com.example.senior_on.ui.parent.ParentLauncherScreen
 import com.example.senior_on.ui.senior_info.AddressSearchScreen
 import com.example.senior_on.ui.senior_info.ParentInfoInputScreen
 import com.example.senior_on.ui.senior_info.toParentInfo
@@ -52,6 +53,7 @@ private enum class SeniorOnRoute {
     FindPasswordVerify,
     FindPasswordReset,
     ChildMain,
+    ParentLauncher,
     FamilyShareCode,
     FamilyShareCodeInput,
     FamilyShareCodeCreated,
@@ -59,7 +61,7 @@ private enum class SeniorOnRoute {
     AddressSearch
 }
 
-private val InitialRoute = SeniorOnRoute.ChildMain
+private val InitialRoute = SeniorOnRoute.ParentLauncher
 
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
@@ -79,7 +81,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
     fun routeAfterAuthenticated(role: AppUserMode): SeniorOnRoute {
         return when (role) {
             AppUserMode.Child -> SeniorOnRoute.ChildMain
-            AppUserMode.Senior -> SeniorOnRoute.ModeSelection
+            AppUserMode.Senior -> SeniorOnRoute.ParentLauncher
         }
     }
 
@@ -201,6 +203,14 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onLogoutClick = { currentRoute = SeniorOnRoute.Login },
                 onWithdrawClick = { currentRoute = SeniorOnRoute.Login }
             )
+            SeniorOnRoute.ParentLauncher -> ParentLauncherScreen(
+                scheduleRepository = appContainer.parentScheduleRepository,
+                chatBuddyRepository = appContainer.chatBuddyRepository,
+                familyPhotoRepository = appContainer.parentFamilyPhotoRepository,
+                medicationRepository = appContainer.parentMedicationRepository,
+                emergencyAlertRepository = appContainer.parentEmergencyAlertRepository,
+                linkSafetyRepository = appContainer.parentLinkSafetyRepository
+            )
             SeniorOnRoute.Signup -> SignupScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.Login },
                 onKakaoClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
@@ -227,7 +237,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
             )
             SeniorOnRoute.SignupTermsAgreement -> SignupTermsAgreementScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.SignupAccountInfo },
-                onCompleteClick = { currentRoute = SeniorOnRoute.FamilyShareCode }
+                onCompleteClick = { currentRoute = SeniorOnRoute.Login }
             )
             SeniorOnRoute.FamilyShareCode -> FamilyShareCodeScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement },

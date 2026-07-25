@@ -61,7 +61,7 @@ enum class NotificationCategory(
     val displayDescription: String
 ) {
     Sos(
-        displayTitle = "SOS 알림",
+        displayTitle = "긴급 알림",
         displayDescription = "부모님의 긴급 도움 요청을 알려드려요."
     ),
     Inactivity(
