@@ -4,6 +4,21 @@
 
 26.07.26 - 현재 목데이터를 레포지토리에 연결해둠으로써 다양한 경우의 화면을 테스트 해볼 수 있습니다.
 
+## UI 구현 예정
+
+| 구분 | 화면 | 현재 상태 |
+| --- | --- | --- |
+| 자녀 모드 | 건강 화면 | 미구현 |
+| 자녀 모드 | 복약 추가 화면 | 미구현 |
+| 자녀 모드 | 설정 탭 | UI 구현 중·디자인 미반영 |
+| 부모님 모드 | 부모님 홈 화면 | UI 구현 중·디자인 미확정 |
+| 부모님 모드 | 일정 목록 화면 | UI 구현 중·디자인 미확정 |
+| 부모님 모드 | 말벗 화면 | UI 구현 중·디자인 미확정 |
+| 부모님 모드 | 긴급 알림 화면 | UI 구현 중·디자인 미확정 |
+| 부모님 모드 | 복약 알림 화면 | UI 구현 중·디자인 미확정 |
+
+세부 화면별 구현 상태는 아래의 [화면 목록](#화면-목록)에서 확인할 수 있습니다.
+
 ## 팀 구성
 
 | 이름 | 역할 | 담당 영역 |
@@ -164,7 +179,7 @@ data의 MockRepository 또는 실제 Repository 구현체
 | `ui/theme` | 색상, 글꼴, 그라데이션, 모서리 등 디자인 시스템 |
 
 ## 컨벤션 문서
-
+docs폴더 하위에 배치하였음
 - [CODE_CONVENTION.md](docs/CODE_CONVENTION.md): 브랜치, 커밋, 코드 네이밍, 패키지 구조 규칙
 - [GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md): 이슈, PR, 리뷰, 머지 규칙
 - [MOCK_TEST_DATA.md](docs/MOCK_TEST_DATA.md): 화면 흐름 확인을 위한 목 계정과 입력값
@@ -186,59 +201,64 @@ data의 MockRepository 또는 실제 Repository 구현체
 
 ## 화면 목록
 
-| 화면 이름 | 스크린 ID | 진입 경로 | 담당자       |
-| --- | --- | --- |-----------|
-| 스플래시 화면 | SplashScreen | 앱 실행 | 원스톤       |
-| 모드 선택 화면 | ModeSelectionScreen | 스플래시 이후 | 원스톤       |
-| 로그인 화면 | LoginScreen | 모드 선택 후 | 원스톤       |
-| 회원가입 시작 화면 | SignupScreen | 로그인 > 회원가입 | 공통        |
-| 회원가입 모드 안내 화면 | SignupModeGuideScreen | 회원가입 시작 후 | 공통        |
-| 이름·생년월일 입력 화면 | SignupNameBirthScreen | 회원가입 모드 안내 후 | 공통        |
-| 이메일 인증 화면 | SignupEmailVerificationScreen | 이름·생년월일 입력 후 | 공통        |
-| 계정 정보 입력 화면 | SignupAccountInfoScreen | 이메일 인증 후 | 공통        |
-| 약관 동의 화면 | SignupTermsAgreementScreen | 계정 정보 입력 후 | 공통        |
-| 가족 공유 코드 확인 화면 | FamilyShareCodeScreen | 가족 연결 흐름 | 공통        |
-| 가족 공유 코드 입력 화면 | FamilyShareCodeInputScreen | 가족 공유 코드 있음 선택 후 | 공통        |
-| 가족 공유 코드 생성 화면 | FamilyShareCodeCreatedScreen | 가족 공유 코드 없음 선택 후 | 공통        |
-| 부모님 정보 입력 화면 | ParentInfoInputScreen | 가족 공유 코드 생성 후 | 공통        |
-| 아이디·비밀번호 찾기 화면 | FindAccountScreen | 로그인 > 계정 찾기 | 공통        |
-| 아이디 찾기 결과 화면 | FindIdResultScreen | 아이디 찾기 완료 후 | 공통        |
-| 비밀번호 인증 화면 | FindPasswordVerifyScreen | 비밀번호 찾기 계정 확인 후 | 공통        |
-| 비밀번호 재설정 화면 | FindPasswordResetScreen | 인증번호 확인 후 | 공통        |
-| 자녀 메인 바텀 내비게이션 | ChildMainScreen | 자녀 모드 로그인 성공 후 | 원스톤       |
-| 화면 탭 | DisplayTabScreen | 자녀 메인 > 화면 | 데쿠        |
-| 기기 연결 화면 | DeviceConnectionScreen | 화면 탭 > 기기 연결 | 데쿠        |
-| 버튼 추가 화면 | DisplayButtonAddScreen | 화면 탭 > 버튼 편집 | 데쿠        |
-| 버튼 편집 화면 | DisplayButtonEditScreen | 화면 탭 > 버튼 편집 | 데쿠        |
-| 버튼 순서 편집 화면 | DisplayButtonOrderScreen | 화면 탭 > 버튼 순서 편집 | 데쿠        |
-| 글씨 편집 화면 | DisplayFontEditScreen | 화면 탭 > 글씨 편집 | 데쿠        |
-| 건강·병원 탭 | HealthMainScreen | 자녀 메인 > 건강 | 린린        |
-| 병원 일정 화면 | HospitalScreen | 건강 탭 > 병원 | 린린 -> 원스톤 |
-| 진료 일정 추가·수정 화면 | HospitalAppointmentScreen | 병원 일정 > 진료 일정 | 린린 -> 원스톤 |
-| 알림 탭 | NotificationScreen | 자녀 메인 > 알림 | 원스톤       |
-| 알림 상세 화면 | NotificationDetailScreen | 알림 탭 > 알림 카드 | 원스톤       |
-| 알림 이력 화면 | NotificationHistoryScreen | 알림 탭 > 지난 알림 | 원스톤       |
-| 감지 시간 설정 화면 | NotificationDetectionTimeSettingScreen | 알림 탭 > 감지 시간 설정 | 원스톤       |
-| 가족 탭 | FamilyTabScreen | 자녀 메인 > 가족 | 데쿠        |
-| 가족 구성원 설정 화면 | FamilyMemberSettingsScreen | 가족 탭 > 구성원 설정 | 데쿠        |
-| 가족 초대 화면 | FamilyInvitationScreen | 가족 탭 > 가족 추가 | 데쿠        |
-| 가족 사진 목록 화면 | FamilyPhotoGalleryScreen | 가족 탭 > 사진 더보기 | 데쿠        |
-| 가족 사진 상세 화면 | FamilyPhotoDetailScreen | 가족 사진 선택 | 데쿠        |
-| 가족 사진 공유 화면 | FamilyPhotoShareScreen | 가족 탭 > 사진 올리기 | 데쿠        |
-| 설정 탭 | SettingsScreen | 자녀 메인 > 설정 | 린린        |
-| 내 계정 화면 | MyAccountScreen | 설정 > 내 계정 | 린린        |
-| 연결 기기 화면 | ConnectedDevicesScreen | 설정 > 연결 기기 | 린린        |
-| 도움말·문의 화면 | HelpInquiryScreen | 설정 > 도움말 및 문의 | 린린        |
-| 일대일 문의 화면 | OneOnOneInquiryScreen | 도움말 및 문의 > 일대일 문의 | 린린        |
-| 부모님 홈 화면 | ParentLauncherScreen | 부모님 모드 로그인 성공 후 | 원스톤       |
-| 부모님 일정 화면 | ParentScheduleScreen | 부모님 홈 > 일정 | 원스톤       |
-| 부모님 말벗 화면 | ChatBuddyScreen | 부모님 홈 > 말벗 | 원스톤       |
-| 부모님 복약 화면 | ParentMedicationScreen | 부모님 홈 > 복약 | 원스톤       |
-| 가족 사진 구성원 화면 | ParentFamilyMembersPhotoScreen | 부모님 홈 > 사진 > 가족이 보낸 사진 | 원스톤       |
-| 구성원별 사진 목록 화면 | ParentMemberPhotoGridScreen | 가족 사진 구성원 선택 | 원스톤       |
-| 부모님 사진 뷰어 | ParentPhotoViewerScreen | 사진 선택 | 원스톤       |
-| 부모님 긴급 알림 화면 | ParentEmergencyAlertScreen | 부모님 홈 > 긴급 알림 | 원스톤       |
-| 링크 안전성 검사 화면 | ParentLinkDetectionScreen | 링크 검사 테스트 버튼 | 원스톤       |
+| 화면 이름 | 스크린 ID | 진입 경로 | 담당자 | 구현 상태 |
+| --- | --- | --- | --- | --- |
+| 스플래시 화면 | SplashScreen | 앱 실행 | 원스톤 | 완료 |
+| 모드 선택 화면 | ModeSelectionScreen | 스플래시 이후 | 원스톤 | 완료 |
+| 로그인 화면 | LoginScreen | 모드 선택 후 | 원스톤 | 완료 |
+| 회원가입 시작 화면 | SignupScreen | 로그인 > 회원가입 | 공통 | 완료 |
+| 회원가입 모드 안내 화면 | SignupModeGuideScreen | 회원가입 시작 후 | 공통 | 완료 |
+| 이름·생년월일 입력 화면 | SignupNameBirthScreen | 회원가입 모드 안내 후 | 공통 | 완료 |
+| 이메일 인증 화면 | SignupEmailVerificationScreen | 이름·생년월일 입력 후 | 공통 | 완료 |
+| 계정 정보 입력 화면 | SignupAccountInfoScreen | 이메일 인증 후 | 공통 | 완료 |
+| 약관 동의 화면 | SignupTermsAgreementScreen | 계정 정보 입력 후 | 공통 | 완료 |
+| 가족 공유 코드 확인 화면 | FamilyShareCodeScreen | 가족 연결 흐름 | 공통 | UI 완료·연결 예정 |
+| 가족 공유 코드 입력 화면 | FamilyShareCodeInputScreen | 가족 공유 코드 있음 선택 후 | 공통 | UI 완료·연결 예정 |
+| 가족 공유 코드 생성 화면 | FamilyShareCodeCreatedScreen | 가족 공유 코드 없음 선택 후 | 공통 | UI 완료·연결 예정 |
+| 부모님 정보 입력 화면 | ParentInfoInputScreen | 가족 공유 코드 생성 후 | 공통 | UI 완료·연결 예정 |
+| 아이디·비밀번호 찾기 화면 | FindAccountScreen | 로그인 > 계정 찾기 | 공통 | 완료 |
+| 아이디 찾기 결과 화면 | FindIdResultScreen | 아이디 찾기 완료 후 | 공통 | 완료 |
+| 비밀번호 인증 화면 | FindPasswordVerifyScreen | 비밀번호 찾기 계정 확인 후 | 공통 | 완료 |
+| 비밀번호 재설정 화면 | FindPasswordResetScreen | 인증번호 확인 후 | 공통 | 완료 |
+| 자녀 메인 바텀 내비게이션 | ChildMainScreen | 자녀 모드 로그인 성공 후 | 원스톤 | 완료 |
+| 화면 탭 | DisplayTabScreen | 자녀 메인 > 화면 | 데쿠 | 완료 |
+| 기기 연결 화면 | DeviceConnectionScreen | 화면 탭 > 기기 연결 | 데쿠 | 완료 |
+| 버튼 추가 화면 | DisplayButtonAddScreen | 화면 탭 > 버튼 편집 | 데쿠 | 완료 |
+| 버튼 편집 화면 | DisplayButtonEditScreen | 화면 탭 > 버튼 편집 | 데쿠 | 완료 |
+| 버튼 순서 편집 화면 | DisplayButtonOrderScreen | 화면 탭 > 버튼 순서 편집 | 데쿠 | 완료 |
+| 글씨 편집 화면 | DisplayFontEditScreen | 화면 탭 > 글씨 편집 | 데쿠 | 완료 |
+| 건강·병원 탭 | HealthMainScreen | 자녀 메인 > 건강 | 린린 | 일부 구현 |
+| 건강 화면 | HealthScreen | 건강 탭 > 건강 | 린린 | 미구현 |
+| 복약 추가 화면 | MedicationAddScreen | 건강 탭 > 복약 추가 | 린린 | 미구현 |
+| 병원 일정 화면 | HospitalScreen | 건강 탭 > 병원 | 린린 → 원스톤 | 완료 |
+| 진료 일정 추가·수정 화면 | HospitalAppointmentScreen | 병원 일정 > 진료 일정 | 린린 → 원스톤 | 완료 |
+| 알림 탭 | NotificationScreen | 자녀 메인 > 알림 | 원스톤 | 완료 |
+| 알림 상세 화면 | NotificationDetailScreen | 알림 탭 > 알림 카드 | 원스톤 | 완료 |
+| 알림 이력 화면 | NotificationHistoryScreen | 알림 탭 > 지난 알림 | 원스톤 | 완료 |
+| 감지 시간 설정 화면 | NotificationDetectionTimeSettingScreen | 알림 탭 > 감지 시간 설정 | 원스톤 | 완료 |
+| 가족 탭 | FamilyTabScreen | 자녀 메인 > 가족 | 데쿠 | 완료 |
+| 가족 구성원 설정 화면 | FamilyMemberSettingsScreen | 가족 탭 > 구성원 설정 | 데쿠 | 완료 |
+| 가족 초대 화면 | FamilyInvitationScreen | 가족 탭 > 가족 추가 | 데쿠 | 완료 |
+| 가족 사진 목록 화면 | FamilyPhotoGalleryScreen | 가족 탭 > 사진 더보기 | 데쿠 | 완료 |
+| 가족 사진 상세 화면 | FamilyPhotoDetailScreen | 가족 사진 선택 | 데쿠 | 완료 |
+| 가족 사진 공유 화면 | FamilyPhotoShareScreen | 가족 탭 > 사진 올리기 | 데쿠 | 완료 |
+| 설정 탭 | SettingsScreen | 자녀 메인 > 설정 | 린린 | 구현 중·디자인 미반영 |
+| 내 계정 화면 | MyAccountScreen | 설정 > 내 계정 | 린린 | 완료 |
+| 연결 기기 화면 | ConnectedDevicesScreen | 설정 > 연결 기기 | 린린 | 완료 |
+| 도움말·문의 화면 | HelpInquiryScreen | 설정 > 도움말 및 문의 | 린린 | 완료 |
+| 일대일 문의 화면 | OneOnOneInquiryScreen | 도움말 및 문의 > 일대일 문의 | 린린 | 완료 |
+| 부모님 홈 화면 | ParentLauncherScreen | 부모님 모드 로그인 성공 후 | 원스톤 | 구현 중·디자인 미확정 |
+| 부모님 일정 화면 | ParentScheduleScreen | 부모님 홈 > 일정 | 원스톤 | 구현 중·디자인 미확정 |
+| 부모님 말벗 화면 | ChatBuddyScreen | 부모님 홈 > 말벗 | 원스톤 | 구현 중·디자인 미확정 |
+| 부모님 복약 화면 | ParentMedicationScreen | 부모님 홈 > 복약 | 원스톤 | 구현 중·디자인 미확정 |
+| 복약 알림 모달 | ParentMedicationReminderOverlay | 부모님 홈 > 복약 알림 | 원스톤 | 구현 중·디자인 미확정 |
+| 가족 사진 구성원 화면 | ParentFamilyMembersPhotoScreen | 부모님 홈 > 사진 > 가족이 보낸 사진 | 원스톤 | 완료 |
+| 구성원별 사진 목록 화면 | ParentMemberPhotoGridScreen | 가족 사진 구성원 선택 | 원스톤 | 완료 |
+| 부모님 사진 뷰어 | ParentPhotoViewerScreen | 사진 선택 | 원스톤 | 완료 |
+| 부모님 긴급 알림 화면 | ParentEmergencyAlertScreen | 부모님 홈 > 긴급 알림 | 원스톤 | 구현 중·디자인 미확정 |
+| 링크 안전성 검사 화면 | ParentLinkDetectionScreen | 링크 검사 테스트 버튼 | 원스톤 | 완료 |
+
+구현 상태는 `완료`, `UI 완료·연결 예정`, `일부 구현`, `구현 중`, `미구현`으로 구분합니다.
 
 ## 화면 플로우
 
