@@ -25,9 +25,16 @@ class DisplayButtonAddPolicyTest {
     }
 
     @Test
-    fun continueRequiresAtLeastTenSelectedButtons() {
-        assertFalse(buttonAddCanContinue(selectedAppCount = 6))
-        assertTrue(buttonAddCanContinue(selectedAppCount = 7))
+    fun continueRequiresAtLeastSevenSelectedButtons() {
+        assertFalse(buttonAddCanContinue(selectedAppCount = 3))
+        assertTrue(buttonAddCanContinue(selectedAppCount = 4))
+    }
+
+    @Test
+    fun deleteIsDisabledWhenSevenButtonsRemain() {
+        assertFalse(canDeleteSelectedButton(selectedButtonCount = 6))
+        assertFalse(canDeleteSelectedButton(selectedButtonCount = 7))
+        assertTrue(canDeleteSelectedButton(selectedButtonCount = 8))
     }
 
     @Test

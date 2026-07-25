@@ -117,6 +117,9 @@ internal fun mergeSelectedButtonEdits(
     }
 }
 
+internal fun canDeleteSelectedButton(selectedButtonCount: Int): Boolean =
+    selectedButtonCount > MinimumButtonSelectionCount
+
 @Composable
 fun DisplayButtonEditGuideScreen(
     modifier: Modifier = Modifier,
@@ -126,8 +129,9 @@ fun DisplayButtonEditGuideScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .statusBarsPadding(),
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
+            .background(SeniorOnColors.Background1),
     ) {
         ButtonEditTopBar(onBackClick = onBackClick)
 
@@ -250,8 +254,9 @@ fun DisplayButtonEditSelectedScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .statusBarsPadding(),
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
+            .background(SeniorOnColors.Background1),
     ) {
         ButtonEditTopBar(
             onBackClick = onBackClick,
@@ -446,6 +451,7 @@ private fun SelectedButtonCard(
     modifier: Modifier = Modifier,
 ) {
     val totalButtonCount = ProvidedButtonNames.size + editableButtonNames.size
+    val deleteEnabled = canDeleteSelectedButton(totalButtonCount)
 
     Column(
         modifier = modifier
@@ -473,6 +479,7 @@ private fun SelectedButtonCard(
             EditableButtonRow(
                 name = name,
                 menuExpanded = expandedButtonIndex == index,
+                deleteEnabled = deleteEnabled,
                 onMoreClick = { onMoreClick(index) },
                 onMenuDismiss = onMenuDismiss,
                 onNameEditClick = { onNameEditClick(index) },
@@ -517,6 +524,7 @@ private fun ProvidedButtonRow(
 private fun EditableButtonRow(
     name: String,
     menuExpanded: Boolean,
+    deleteEnabled: Boolean,
     onMoreClick: () -> Unit,
     onMenuDismiss: () -> Unit,
     onNameEditClick: () -> Unit,
@@ -557,6 +565,7 @@ private fun EditableButtonRow(
 
             ButtonEditMoreMenu(
                 expanded = menuExpanded,
+                deleteEnabled = deleteEnabled,
                 onDismiss = onMenuDismiss,
                 onNameEditClick = onNameEditClick,
                 onDeleteClick = onDeleteClick,
@@ -591,6 +600,7 @@ private fun SelectedButtonDivider() {
 @Composable
 private fun ButtonEditMoreMenu(
     expanded: Boolean,
+    deleteEnabled: Boolean,
     onDismiss: () -> Unit,
     onNameEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -613,6 +623,7 @@ private fun ButtonEditMoreMenu(
         properties = PopupProperties(focusable = true),
     ) {
         ButtonEditMoreMenuContent(
+            deleteEnabled = deleteEnabled,
             onNameEditClick = onNameEditClick,
             onDeleteClick = onDeleteClick,
         )
@@ -621,6 +632,7 @@ private fun ButtonEditMoreMenu(
 
 @Composable
 private fun ButtonEditMoreMenuContent(
+    deleteEnabled: Boolean,
     onNameEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -654,7 +666,12 @@ private fun ButtonEditMoreMenuContent(
             ButtonEditMenuItem(
                 text = "삭제",
                 iconResId = R.drawable.ic_trash,
-                contentColor = SeniorOnColors.Red200,
+                contentColor = if (deleteEnabled) {
+                    SeniorOnColors.Red200
+                } else {
+                    SeniorOnColors.Gray300
+                },
+                enabled = deleteEnabled,
                 onClick = onDeleteClick,
             )
 
@@ -695,6 +712,7 @@ private fun ButtonEditMenuItem(
     text: String,
     iconResId: Int,
     contentColor: androidx.compose.ui.graphics.Color,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Row(
@@ -702,6 +720,7 @@ private fun ButtonEditMenuItem(
             .fillMaxWidth()
             .height(40.dp)
             .clickable(
+                enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
@@ -1034,6 +1053,7 @@ private fun ButtonEditMoreMenuPreview() {
             contentAlignment = Alignment.Center,
         ) {
             ButtonEditMoreMenuContent(
+                deleteEnabled = true,
                 onNameEditClick = {},
                 onDeleteClick = {},
             )

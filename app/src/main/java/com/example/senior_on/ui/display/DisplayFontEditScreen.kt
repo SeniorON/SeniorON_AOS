@@ -75,8 +75,9 @@ fun DisplayFontEditScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .statusBarsPadding(),
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
+            .background(SeniorOnColors.Background1),
     ) {
         FontEditTopBar(onBackClick = onBackClick)
 

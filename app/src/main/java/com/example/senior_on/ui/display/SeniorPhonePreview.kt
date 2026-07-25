@@ -128,7 +128,7 @@ private fun SeniorPhoneDesign(
             button.isMusicButton() ||
                 button == SeniorHomeButtonType.Schedule
         }
-        .toEmergencyLastGridSlots()
+        .withEmergencyAtFixedGridSlot()
 
     Column(
         modifier = Modifier
@@ -184,18 +184,14 @@ private fun SeniorPhoneDesign(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     rowButtons.forEach { button ->
-                        if (button == null) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        } else {
-                            SeniorHomeButton(
-                                button = button,
-                                customLabel =
-                                    configuration.customButtonLabels[button],
-                                textStyle =
-                                    configuration.fontSize.seniorHomeButtonTextStyle,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
+                        SeniorHomeButton(
+                            button = button,
+                            customLabel =
+                                configuration.customButtonLabels[button],
+                            textStyle =
+                                configuration.fontSize.seniorHomeButtonTextStyle,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
 
                     if (rowButtons.size == 1) {
@@ -472,25 +468,6 @@ private fun Modifier.seniorPhoneCardShadow(
         offset = DpOffset.Zero,
     ),
 )
-
-private fun List<SeniorHomeButtonType>.toEmergencyLastGridSlots():
-    List<SeniorHomeButtonType?> {
-    val uniqueButtons = distinct()
-    val regularButtons = uniqueButtons.filterNot {
-        it == SeniorHomeButtonType.Emergency
-    }
-    val emergencyButton = uniqueButtons.firstOrNull {
-        it == SeniorHomeButtonType.Emergency
-    } ?: return regularButtons
-
-    return buildList {
-        addAll(regularButtons)
-        if (regularButtons.size % 2 == 0) {
-            add(null)
-        }
-        add(emergencyButton)
-    }
-}
 
 @Composable
 private fun SeniorPhoneStatusIcons(modifier: Modifier = Modifier) {

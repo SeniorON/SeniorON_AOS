@@ -98,6 +98,60 @@ class DisplayButtonOrderTest {
     }
 
     @Test
+    fun emergencyOccupiesTheEighthGridSlot() {
+        val regularButtons = listOf(
+            SeniorHomeButtonType.Call,
+            SeniorHomeButtonType.Message,
+            SeniorHomeButtonType.Camera,
+            SeniorHomeButtonType.ChatBuddy,
+            SeniorHomeButtonType.Medication,
+            SeniorHomeButtonType.YouTube,
+            SeniorHomeButtonType.Photo,
+            SeniorHomeButtonType.NaverMap,
+            SeniorHomeButtonType.Naver,
+        )
+
+        val result = regularButtons.withEmergencyAtFixedGridSlot()
+
+        assertEquals(SeniorHomeButtonType.Emergency, result[7])
+        assertEquals(regularButtons, result.filterNot {
+            it == SeniorHomeButtonType.Emergency
+        })
+    }
+
+    @Test
+    fun emergencyStaysInTheEighthGridSlotWhenOtherButtonsMove() {
+        val movedButtons = listOf(
+            SeniorHomeButtonType.NaverMap,
+            SeniorHomeButtonType.Call,
+            SeniorHomeButtonType.Message,
+            SeniorHomeButtonType.Camera,
+            SeniorHomeButtonType.ChatBuddy,
+            SeniorHomeButtonType.Medication,
+            SeniorHomeButtonType.YouTube,
+            SeniorHomeButtonType.Photo,
+            SeniorHomeButtonType.Naver,
+            SeniorHomeButtonType.Emergency,
+        )
+
+        val result = movedButtons.withEmergencyAtFixedGridSlot()
+
+        assertEquals(SeniorHomeButtonType.Emergency, result[7])
+    }
+
+    @Test
+    fun seniorPhonePreviewAlsoUsesTheEighthEmergencyGridSlot() {
+        val result = SeniorScreenConfiguration().buttons
+            .filterNot { button ->
+                button.isMusicButton() ||
+                    button == SeniorHomeButtonType.Schedule
+            }
+            .withEmergencyAtFixedGridSlot()
+
+        assertEquals(SeniorHomeButtonType.Emergency, result[7])
+    }
+
+    @Test
     fun selectedButtonEditsDeleteOnlyEditableButtons() {
         val result = mergeSelectedButtonEdits(
             initialButtons = listOf(

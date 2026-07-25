@@ -1,5 +1,8 @@
 package com.example.senior_on.ui.display
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -34,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -45,12 +49,27 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.SeniorHomeButtonType
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+
+private const val FixedEmergencyGridIndex = 7
+
+internal fun List<SeniorHomeButtonType>.withEmergencyAtFixedGridSlot():
+    List<SeniorHomeButtonType> {
+    val reorderableButtons = distinct()
+        .filterNot { it == SeniorHomeButtonType.Emergency }
+
+    return buildList {
+        addAll(reorderableButtons.take(FixedEmergencyGridIndex))
+        add(SeniorHomeButtonType.Emergency)
+        addAll(reorderableButtons.drop(FixedEmergencyGridIndex))
+    }
+}
 
 @Composable
 fun DisplayButtonOrderScreen(
@@ -79,8 +98,9 @@ fun DisplayButtonOrderScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .statusBarsPadding(),
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
+            .background(SeniorOnColors.Background1),
     ) {
         ButtonOrderTopBar(
             onBackClick = onBackClick,
@@ -176,6 +196,7 @@ fun DisplayButtonOrderScreen(
                     button = button,
                     customLabel = customButtonLabels[button],
                     featured = true,
+                    isDragging = draggedButtonName == button.name,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned {
@@ -196,6 +217,8 @@ fun DisplayButtonOrderScreen(
                     ],
                     featured = false,
                     showDescription = true,
+                    isDragging =
+                        draggedButtonName == SeniorHomeButtonType.Schedule.name,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned {
@@ -205,9 +228,9 @@ fun DisplayButtonOrderScreen(
                 )
             }
 
-            val gridButtons = orderedButtons.drop(
-                if (showWideSchedule) 2 else 1
-            )
+            val gridButtons = orderedButtons
+                .drop(if (showWideSchedule) 2 else 1)
+                .withEmergencyAtFixedGridSlot()
             if (gridButtons.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Spacer(
@@ -226,17 +249,25 @@ fun DisplayButtonOrderScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         rowButtons.forEach { button ->
-                            ButtonOrderCard(
-                                button = button,
-                                customLabel = customButtonLabels[button],
-                                featured = false,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .onGloballyPositioned {
-                                        buttonBounds[button.name] =
-                                            it.boundsInRoot()
-                                    },
-                            )
+                            if (button == SeniorHomeButtonType.Emergency) {
+                                FixedEmergencyButtonOrderCard(
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                ButtonOrderCard(
+                                    button = button,
+                                    customLabel = customButtonLabels[button],
+                                    featured = false,
+                                    isDragging =
+                                        draggedButtonName == button.name,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .onGloballyPositioned {
+                                            buttonBounds[button.name] =
+                                                it.boundsInRoot()
+                                        },
+                                )
+                            }
                         }
 
                         if (rowButtons.size == 1) {
@@ -248,6 +279,46 @@ fun DisplayButtonOrderScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun FixedEmergencyButtonOrderCard(
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
+
+    Box(
+        modifier = modifier
+            .height(84.dp)
+            .dropShadow(
+                shape = shape,
+                shadow = Shadow(
+                    radius = 18.dp,
+                    color = SeniorOnColors.Black.copy(alpha = 0.08f),
+                    offset = DpOffset(x = 0.dp, y = 4.dp),
+                ),
+            )
+            .clip(shape)
+            .background(SeniorOnColors.White.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_push_pin),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 6.dp, top = 7.dp)
+                .size(24.dp),
+            tint = SeniorOnColors.Gray400,
+        )
+
+        Text(
+            text = SeniorHomeButtonType.Emergency.displayLabel(),
+            style = SeniorOnTextStyles.HeadingS,
+            color = SeniorOnColors.Gray700,
+            maxLines = 1,
+        )
     }
 }
 
@@ -318,6 +389,7 @@ private fun ButtonOrderCard(
     button: SeniorHomeButtonType,
     customLabel: String?,
     featured: Boolean,
+    isDragging: Boolean,
     modifier: Modifier = Modifier,
     showDescription: Boolean = false,
 ) {
@@ -332,16 +404,46 @@ private fun ButtonOrderCard(
     } else {
         SeniorOnColors.Gray700
     }
-
+    val cardScale by animateFloatAsState(
+        targetValue = if (isDragging) 1.03f else 1f,
+        animationSpec = tween(durationMillis = 150),
+        label = "buttonOrderCardScale",
+    )
+    val liftOffsetY by animateDpAsState(
+        targetValue = if (isDragging) (-4).dp else 0.dp,
+        animationSpec = tween(durationMillis = 150),
+        label = "buttonOrderCardLiftOffsetY",
+    )
+    val shadowRadius by animateDpAsState(
+        targetValue = if (isDragging) 24.dp else 18.dp,
+        animationSpec = tween(durationMillis = 150),
+        label = "buttonOrderCardShadowRadius",
+    )
+    val shadowOffsetY by animateDpAsState(
+        targetValue = if (isDragging) 8.dp else 4.dp,
+        animationSpec = tween(durationMillis = 150),
+        label = "buttonOrderCardShadowOffsetY",
+    )
+    val shadowAlpha by animateFloatAsState(
+        targetValue = if (isDragging) 0.12f else 0.08f,
+        animationSpec = tween(durationMillis = 150),
+        label = "buttonOrderCardShadowAlpha",
+    )
     Row(
         modifier = modifier
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+                translationY = liftOffsetY.toPx()
+            }
             .height(84.dp)
             .dropShadow(
                 shape = shape,
                 shadow = Shadow(
-                    radius = 18.dp,
-                    color = SeniorOnColors.Black.copy(alpha = 0.08f),
-                    offset = DpOffset(x = 0.dp, y = 4.dp),
+                    radius = shadowRadius,
+                    color = SeniorOnColors.Black.copy(alpha = shadowAlpha),
+                    offset = DpOffset(x = 0.dp, y = shadowOffsetY),
                 ),
             )
             .clip(shape)

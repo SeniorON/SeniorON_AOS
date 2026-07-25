@@ -45,7 +45,7 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.delay
 
-private const val MinimumButtonSelectionCount = 10
+internal const val MinimumButtonSelectionCount = 7
 private const val MaximumButtonCountWithoutMusic = 12
 private const val MaximumButtonCountWithMusic = 11
 
@@ -236,8 +236,9 @@ fun DisplayButtonAddScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .statusBarsPadding(),
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
+            .background(SeniorOnColors.Background1),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             ButtonAddTopBar(
