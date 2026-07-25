@@ -38,6 +38,7 @@ object SeniorOnTextStyles {
     val HeadingS = pretendardStyle(FontWeight.Bold, 20, 28f)
     val HeadingXS = pretendardStyle(FontWeight.SemiBold, 20, 28f)
     val OnboardingHeading = pretendardStyle(FontWeight.Bold, 22, 32f)
+    val WeatherTemperature = pretendardStyle(FontWeight.Bold, 22, 30.8f)
 
     val BodyLBold = pretendardStyle(FontWeight.Bold, 18, 25.2f)
     val BodyLSemiBold = pretendardStyle(FontWeight.SemiBold, 18, 25.2f)
@@ -58,6 +59,7 @@ object SeniorOnTextStyles {
 
     val ButtonL = pretendardStyle(FontWeight.SemiBold, 20, 28f)
     val ButtonM = pretendardStyle(FontWeight.SemiBold, 16, 22.4f)
+    val ButtonSSemiBold = pretendardStyle(FontWeight.SemiBold, 14, 19.6f)
     val ButtonS = pretendardStyle(FontWeight.Medium, 14, 19.6f)
 
     val PasswordDot = pretendardStyle(FontWeight.SemiBold, 12, 16.8f).copy(
