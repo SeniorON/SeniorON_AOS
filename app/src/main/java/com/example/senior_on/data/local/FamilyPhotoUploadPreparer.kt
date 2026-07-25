@@ -5,7 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
-import com.example.senior_on.data.model.PreparedFamilyPhoto
+import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import java.io.File
 import java.io.IOException
 import java.util.UUID

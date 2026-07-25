@@ -1,5 +1,9 @@
 package com.example.senior_on.ui.parent.chat
 
+import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyUiState
+
+import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyPhase
+
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat

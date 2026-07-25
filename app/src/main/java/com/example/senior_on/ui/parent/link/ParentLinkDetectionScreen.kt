@@ -1,5 +1,9 @@
 package com.example.senior_on.ui.parent.link
 
+import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionUiState
+
+import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionStatus
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat

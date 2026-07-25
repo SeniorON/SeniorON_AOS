@@ -1,5 +1,11 @@
 package com.example.senior_on.ui.parent.photo
 
+import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoUiState
+
+import com.example.senior_on.ui.parent.photo.viewmodel.ParentPhotoMemberUiModel
+
+import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoUiModel
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,7 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.senior_on.R
-import com.example.senior_on.domain.model.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.ui.parent.component.ParentDetailTopBar
 import com.example.senior_on.ui.parent.component.parentCardShadow
 import com.example.senior_on.ui.theme.SENIOR_ONTheme

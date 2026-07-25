@@ -1,5 +1,9 @@
 package com.example.senior_on.ui.parent.schedule
 
+import com.example.senior_on.ui.parent.schedule.viewmodel.toParentDisplayTime
+
+import com.example.senior_on.ui.parent.schedule.viewmodel.ParentScheduleUiState
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.senior_on.domain.model.ParentSchedule
+import com.example.senior_on.domain.model.parent.ParentSchedule
 import com.example.senior_on.ui.parent.component.ParentDetailTopBar
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors

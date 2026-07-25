@@ -1,5 +1,9 @@
 package com.example.senior_on.ui.parent.medication
 
+import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationUiState
+
+import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationContent
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -32,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
-import com.example.senior_on.domain.model.ParentMedication
+import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.ui.parent.component.ParentDetailTopBar
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors

@@ -9,7 +9,7 @@ import android.provider.MediaStore
 import android.util.TypedValue
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
-import com.example.senior_on.domain.model.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyImageSource
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
