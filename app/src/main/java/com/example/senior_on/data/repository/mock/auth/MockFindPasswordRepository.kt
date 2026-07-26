@@ -1,5 +1,7 @@
 package com.example.senior_on.data.repository.mock.auth
 
+import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
+
 data class FindPasswordAccount(
     val email: String,
     val maskedEmail: String

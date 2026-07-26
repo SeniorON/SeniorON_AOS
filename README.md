@@ -112,6 +112,12 @@ SENIOR_ON/
 │       │   │   │   │   └── mapper/
 │       │   │   │   └── repository/
 │       │   │   │       ├── mock/
+│       │   │   │       │   ├── fixtures/
+│       │   │   │       │   ├── auth/
+│       │   │   │       │   ├── display/
+│       │   │   │       │   ├── family/
+│       │   │   │       │   ├── health/
+│       │   │   │       │   └── parent/
 │       │   │   │       └── impl/
 │       │   │   └── ui/
 │       │   │       ├── app/
@@ -165,6 +171,7 @@ data의 MockRepository 또는 실제 Repository 구현체
 | `domain/model` | UI와 데이터 구현에 독립적인 비즈니스 모델 |
 | `domain/repository` | UI와 ViewModel이 의존하는 Repository 인터페이스 |
 | `data/repository/mock` | 화면 시연과 테스트용 Repository 구현체 및 목데이터 |
+| `data/repository/mock/fixtures` | 로그인·가족·시니어·기기에서 함께 사용하는 공통 목 엔티티의 단일 기준 |
 | `data/repository/impl` | 실제 서버·로컬 데이터 소스를 사용하는 Repository 구현체 |
 | `data/remote/api` | Retrofit API 인터페이스 및 네트워크 구성 |
 | `data/remote/dto` | 서버 요청·응답 전용 모델 |
@@ -337,11 +344,11 @@ docs폴더 하위에 배치하였음
 
 로그인:
 
-| 선택 모드 | 아이디 | 비밀번호 | 주요 시나리오 |
-| --- | --- | --- | --- |
-| 자녀 | `child` | `child1234` | 주담당자, 최근 알림이 많은 상태 |
-| 자녀 | `child01` | `senioron1` | 보조담당자, 알림이 없는 상태 |
-| 부모님 | `senior` | `senior1234` | 부모님 화면 진입 |
+| 선택 모드 | 아이디 | 이름 | 비밀번호 | 주요 시나리오 |
+| --- | --- | --- | --- | --- |
+| 자녀 | `child` | 김민지 | `child1234` | 주담당자, 최근 알림이 많은 상태 |
+| 자녀 | `child01` | 김민니 | `senioron1` | 보조담당자, 알림이 없는 상태 |
+| 부모님 | `senior` | 김순자 | `senior1234` | 부모님 화면 진입 |
 
 인증 및 가족 코드:
 

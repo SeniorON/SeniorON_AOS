@@ -1,5 +1,6 @@
 package com.example.senior_on.data.repository.mock.auth
 
+import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
 import com.example.senior_on.domain.repository.auth.SignupAuthRepository
 import kotlinx.coroutines.delay
 

@@ -1,5 +1,6 @@
 package com.example.senior_on.data.repository.mock.parent
 
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import org.junit.Assert.assertEquals
@@ -8,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MockCaregiverRelationshipRepositoryTest {
-    private val seniorId = MockParentInfoFixtures.SENIOR_ID
+    private val seniorId = MockSeniorFixtures.SENIOR_ID
 
     @Test
     fun `보조 담당자의 관계 변경은 주 담당자의 관계를 변경하지 않는다`() {

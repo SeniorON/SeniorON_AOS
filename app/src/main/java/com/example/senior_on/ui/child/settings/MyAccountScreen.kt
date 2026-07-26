@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
+import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.ui.common.account.FindAccountPasswordTextField
 import com.example.senior_on.ui.common.account.FindAccountTextField
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -350,7 +351,7 @@ private fun MyAccountProfileHeader(
 private fun MyAccountScreenPreview() {
     SENIOR_ONTheme {
         MyAccountScreen(
-            profile = SettingsProfileUiState(),
+            profile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
             onBackClick = {},
             onChangeNameClick = {},
             onChangePasswordClick = {}
@@ -363,7 +364,7 @@ private fun MyAccountScreenPreview() {
 private fun ChangeNameScreenPreview() {
     SENIOR_ONTheme {
         ChangeNameScreen(
-            currentName = "김민지",
+            currentName = MockUserFixtures.primaryCaregiver.name,
             onBackClick = {},
             onSaveClick = {}
         )

@@ -15,8 +15,8 @@ import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.data.repository.mock.auth.MockFindIdRepository
 import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
 import com.example.senior_on.data.repository.mock.auth.MockSessionRepository
-import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
-import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.ui.child.ChildMainScreen
@@ -86,7 +86,7 @@ private val InitialRoute = if (
 private val InitialAuthenticatedUserId = if (
     BuildConfig.DEBUG && StartFamilyShareCodeFlowForDebug
 ) {
-    MockFamilyFixtures.ASSISTANT_CAREGIVER_USER_ID
+    MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID
 } else {
     ""
 }
@@ -236,6 +236,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
            SeniorOnRoute.ChildMain -> ChildMainScreen(
+                userProfile = appContainer.userProfileFor(authenticatedUserId),
                 familyRepository = appContainer.familyRepositoryFor(authenticatedUserId),
                 familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
                 displayRepository = appContainer.displayRepository,
@@ -297,9 +298,9 @@ fun SeniorOnApp(appContainer: AppContainer) {
                     if (selectedUserMode == AppUserMode.Child) {
                         authenticatedUserId = when (selectedOption) {
                             FamilyShareCodeOption.HasCode ->
-                                MockFamilyFixtures.ASSISTANT_CAREGIVER_USER_ID
+                                MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID
                             FamilyShareCodeOption.NoCode ->
-                                MockFamilyFixtures.PRIMARY_CAREGIVER_USER_ID
+                                MockUserFixtures.PRIMARY_CAREGIVER_USER_ID
                         }
                     }
                     currentRoute = when (selectedOption) {
@@ -378,7 +379,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onSaveClick = { inputState ->
                     val seniorId = appContainer.parentInfoRepository.parentInfo.value
                         ?.seniorId
-                        ?: MockParentInfoFixtures.SENIOR_ID
+                        ?: MockSeniorFixtures.SENIOR_ID
                     appContainer.parentInfoRepository.saveParentInfo(
                         inputState.toParentInfo(seniorId = seniorId)
                     )

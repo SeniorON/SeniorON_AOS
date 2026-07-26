@@ -94,7 +94,10 @@ com.example.senior_on/
 ├── data/
 │   ├── remote/
 │   ├── repository/
-│   └── model/
+│   │   ├── mock/
+│   │   │   └── fixtures/
+│   │   └── impl/
+│   └── local/
 ├── domain/
 │   ├── model/
 │   └── usecase/
@@ -124,7 +127,10 @@ com.example.senior_on/
 | `ui/component` | 여러 화면에서 재사용하는 공통 컴포넌트 |
 | `ui/theme` | 색상, 글꼴, Material Theme |
 | `data` | REST API, DTO, Repository 구현 |
+| `data/repository/mock/fixtures` | 여러 목 Repository와 화면이 공유하는 사용자·가족·시니어·기기 기준 데이터 |
 | `domain` | 비즈니스 모델, UseCase |
+
+공통 목 엔티티는 `data/repository/mock/fixtures`에 한 번만 정의합니다. 기능별 상태 조합이나 실패 시나리오는 해당 `MockRepository`에 두고, Compose Preview 전용 상태는 UI 파일 가까이에 둘 수 있습니다.
 
 ## Compose 작성 규칙
 

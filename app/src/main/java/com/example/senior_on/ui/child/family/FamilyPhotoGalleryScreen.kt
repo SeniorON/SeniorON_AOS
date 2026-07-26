@@ -36,7 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
 import com.example.senior_on.ui.theme.SENIOR_ONTheme

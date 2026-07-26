@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
+import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.ui.common.seniorinfo.BirthDateBottomSheet
 import com.example.senior_on.ui.common.seniorinfo.CustomRelationshipBottomSheet
 import com.example.senior_on.ui.common.seniorinfo.CustomRelationshipMaxLength
@@ -70,13 +72,13 @@ import java.time.LocalDate
 import java.time.Period
 
 data class ConnectedSeniorDeviceUiState(
-    val deviceName: String = "Galaxy S24",
-    val name: String = "김순자",
-    val relationship: SeniorRelationship = SeniorRelationship.Mother,
+    val deviceName: String,
+    val name: String,
+    val relationship: SeniorRelationship,
     val customRelationship: String = "",
-    val birthDate: String = "1958.04.12",
-    val phoneNumber: String = "010-1234-5678",
-    val address: String = "경기도 하남시 창우동",
+    val birthDate: String,
+    val phoneNumber: String,
+    val address: String,
     val addressDetail: String = ""
 ) {
     val relationshipLabel: String
@@ -677,7 +679,10 @@ fun EditConnectedDeviceInfoScreen(
 private fun ConnectedDevicesScreenPreview() {
     SENIOR_ONTheme {
         ConnectedDevicesScreen(
-            device = ConnectedSeniorDeviceUiState(),
+            device = MockSeniorFixtures.mother.toConnectedSeniorDeviceUiState(
+                deviceName = MockDisplayFixtures.CONNECTED_DEVICE_NAME,
+                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
+            ),
             onBackClick = {},
             onEditInfoClick = {},
             onDisconnectConfirm = {}
@@ -690,7 +695,10 @@ private fun ConnectedDevicesScreenPreview() {
 private fun EditConnectedDeviceInfoScreenPreview() {
     SENIOR_ONTheme {
         EditConnectedDeviceInfoScreen(
-            device = ConnectedSeniorDeviceUiState(
+            device = MockSeniorFixtures.mother.toConnectedSeniorDeviceUiState(
+                deviceName = MockDisplayFixtures.CONNECTED_DEVICE_NAME,
+                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
+            ).copy(
                 birthDate = "1949.04.01",
                 phoneNumber = "",
                 address = "서울특별시 성북구 길음로 33",

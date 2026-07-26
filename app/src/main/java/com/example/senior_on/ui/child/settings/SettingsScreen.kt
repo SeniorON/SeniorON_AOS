@@ -48,16 +48,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
-import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
+import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 data class SettingsProfileUiState(
-    val name: String = "김민지",
-    val accountTypeLabel: String = "자녀 계정",
-    val email: String = "Kim@email.com"
+    val name: String,
+    val accountTypeLabel: String,
+    val email: String,
 )
 
 private enum class SettingsDestination {
@@ -79,8 +81,11 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    initialProfile: SettingsProfileUiState,
+    connectedDevice: ConnectedSeniorDeviceUiState?,
+    onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
+    onDisconnectDeviceConfirm: () -> Unit,
     modifier: Modifier = Modifier,
-    initialProfile: SettingsProfileUiState = SettingsProfileUiState(),
     onLogoutConfirm: () -> Unit = {},
     onWithdrawConfirm: () -> Unit = {}
 ) {
@@ -90,34 +95,6 @@ fun SettingsTabRoute(
         mutableStateOf(initialProfile.accountTypeLabel)
     }
     var profileEmail by rememberSaveable { mutableStateOf(initialProfile.email) }
-    var isDeviceConnected by rememberSaveable { mutableStateOf(true) }
-    var deviceName by rememberSaveable { mutableStateOf("Galaxy S24") }
-    var seniorName by rememberSaveable { mutableStateOf("김순자") }
-    var seniorRelationship by rememberSaveable {
-        mutableStateOf(SeniorRelationship.Mother.name)
-    }
-    var seniorCustomRelationship by rememberSaveable { mutableStateOf("") }
-    var seniorBirthDate by rememberSaveable { mutableStateOf("1958.04.12") }
-    var seniorPhoneNumber by rememberSaveable { mutableStateOf("010-1234-5678") }
-    var seniorAddress by rememberSaveable { mutableStateOf("경기도 하남시 창우동") }
-    var seniorAddressDetail by rememberSaveable { mutableStateOf("") }
-
-    val connectedDevice = if (isDeviceConnected) {
-        ConnectedSeniorDeviceUiState(
-            deviceName = deviceName,
-            name = seniorName,
-            relationship = runCatching {
-                SeniorRelationship.valueOf(seniorRelationship)
-            }.getOrDefault(SeniorRelationship.Mother),
-            customRelationship = seniorCustomRelationship,
-            birthDate = seniorBirthDate,
-            phoneNumber = seniorPhoneNumber,
-            address = seniorAddress,
-            addressDetail = seniorAddressDetail
-        )
-    } else {
-        null
-    }
     val profile = SettingsProfileUiState(
         name = profileName,
         accountTypeLabel = profileAccountType,
@@ -187,7 +164,7 @@ fun SettingsTabRoute(
                     destination = SettingsDestination.EditConnectedDeviceInfo
                 }
             },
-            onDisconnectConfirm = { isDeviceConnected = false },
+            onDisconnectConfirm = onDisconnectDeviceConfirm,
             modifier = modifier
         )
 
@@ -200,15 +177,7 @@ fun SettingsTabRoute(
                     device = device,
                     onBackClick = navigateBack,
                     onSaveClick = { updated ->
-                        deviceName = updated.deviceName
-                        seniorName = updated.name
-                        seniorRelationship = updated.relationship.name
-                        seniorCustomRelationship = updated.customRelationship
-                        seniorBirthDate = updated.birthDate
-                        seniorPhoneNumber = updated.phoneNumber
-                        seniorAddress = updated.address
-                        seniorAddressDetail = updated.addressDetail
-                        isDeviceConnected = true
+                        onConnectedDeviceInfoSave(updated)
                         destination = SettingsDestination.ConnectedDevices
                     },
                     modifier = modifier
@@ -232,7 +201,7 @@ fun SettingsTabRoute(
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    profile: SettingsProfileUiState = SettingsProfileUiState(),
+    profile: SettingsProfileUiState,
     onMyAccountClick: () -> Unit = {},
     onConnectedDevicesClick: () -> Unit = {},
     onMembershipClick: () -> Unit = {},
@@ -946,7 +915,15 @@ internal fun SettingsProfileAvatar(
 @Composable
 private fun SettingsTabRoutePreview() {
     SENIOR_ONTheme {
-        SettingsTabRoute()
+        SettingsTabRoute(
+            initialProfile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
+            connectedDevice = MockSeniorFixtures.mother.toConnectedSeniorDeviceUiState(
+                deviceName = MockDisplayFixtures.CONNECTED_DEVICE_NAME,
+                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
+            ),
+            onConnectedDeviceInfoSave = {},
+            onDisconnectDeviceConfirm = {},
+        )
     }
 }
 
@@ -954,6 +931,9 @@ private fun SettingsTabRoutePreview() {
 @Composable
 private fun SettingsScreenPreview() {
     SENIOR_ONTheme {
-        SettingsScreen(modifier = Modifier.fillMaxWidth())
+        SettingsScreen(
+            profile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

@@ -33,7 +33,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.display.MockDisplayFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.repository.mock.display.MockDisplayScenario
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
