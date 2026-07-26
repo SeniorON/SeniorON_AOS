@@ -3,6 +3,7 @@ package com.example.senior_on.data.repository.mock.family
 import com.example.senior_on.R
 import com.example.senior_on.data.repository.mock.auth.MockAuthFixtures
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyJoinResult
 import com.example.senior_on.domain.model.family.FamilyMember
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.domain.model.family.FamilyOverview
@@ -10,7 +11,17 @@ import com.example.senior_on.domain.model.family.SharedFamilyPhoto
 import java.time.Instant
 
 object MockFamilyFixtures {
+    const val FAMILY_ID = 1L
+    const val PRIMARY_CAREGIVER_USER_ID = "child"
+    const val ASSISTANT_CAREGIVER_USER_ID = "child01"
+
     private val sharedPhotoCreatedAt = Instant.now().minusSeconds(4 * 60L)
+
+    val assistantJoinResult = FamilyJoinResult(
+        familyId = FAMILY_ID,
+        familyCode = MockAuthFixtures.VALID_FAMILY_SHARE_CODE,
+        memberRole = FamilyMemberRole.Assistant,
+    )
 
     val primaryCaregiverOverview = FamilyOverview(
         members = listOf(
@@ -105,7 +116,7 @@ object MockFamilyFixtures {
 
     fun overviewForUserId(userId: String): FamilyOverview {
         return when (userId.trim().lowercase()) {
-            "child01" -> assistantCaregiverOverview
+            ASSISTANT_CAREGIVER_USER_ID -> assistantCaregiverOverview
             else -> primaryCaregiverOverview
         }
     }

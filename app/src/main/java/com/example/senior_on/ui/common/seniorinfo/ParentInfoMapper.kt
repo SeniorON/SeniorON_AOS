@@ -5,7 +5,9 @@ import java.time.format.DateTimeFormatter
 
 private val ParentInfoBirthDateFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
-internal fun ParentInfoInputState.toParentInfo(): ParentInfo {
+internal fun ParentInfoInputState.toParentInfo(
+    seniorId: Long,
+): ParentInfo {
     val parsedBirthDate = requireNotNull(parseBirthDate(birthDate)) {
         "A valid birth date is required before saving parent information"
     }
@@ -15,6 +17,7 @@ internal fun ParentInfoInputState.toParentInfo(): ParentInfo {
     }
 
     return ParentInfo(
+        seniorId = seniorId,
         name = name.trim(),
         relationshipLabel = resolvedRelationship.trim(),
         birthDate = parsedBirthDate,

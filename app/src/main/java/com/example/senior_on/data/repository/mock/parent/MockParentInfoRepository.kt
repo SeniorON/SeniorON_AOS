@@ -19,7 +19,10 @@ class MockParentInfoRepository(
 }
 
 object MockParentInfoFixtures {
+    const val SENIOR_ID = 1L
+
     val mother = ParentInfo(
+        seniorId = SENIOR_ID,
         name = "김순자",
         relationshipLabel = "어머니",
         birthDate = LocalDate.of(1958, 4, 12),

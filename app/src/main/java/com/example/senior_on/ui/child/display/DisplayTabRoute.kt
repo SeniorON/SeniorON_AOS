@@ -165,7 +165,10 @@ fun DisplayTabRoute(
                     destination = DisplayDestination.AddressSearch
                 },
                 onSaveClick = { inputState ->
-                    viewModel.saveParentInfo(inputState.toParentInfo())
+                    val seniorId = requireNotNull(uiState.parentInfo).seniorId
+                    viewModel.saveParentInfo(
+                        inputState.toParentInfo(seniorId = seniorId)
+                    )
                     saveableStateHolder.removeState(DisplayDestination.ParentInfoEdit.name)
                     destination = DisplayDestination.Overview
                 },

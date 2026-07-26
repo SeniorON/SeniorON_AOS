@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
@@ -25,11 +26,12 @@ class DisplayViewModel(
     val uiState = combine(
         parentInfoRepository.parentInfo,
         displayRepository.overview,
-        caregiverRelationshipRepository.relationshipLabel,
-    ) { parentInfo, overview, caregiverRelationshipLabel ->
+        caregiverRelationshipRepository.relationship,
+    ) { parentInfo, overview, caregiverRelationship ->
         DisplayTabUiState(
             parentInfo = parentInfo,
-            relationshipLabel = caregiverRelationshipLabel
+            relationshipLabel = caregiverRelationship
+                ?.displayLabel
                 ?: parentInfo?.relationshipLabel,
             device = overview.device,
             screenConfiguration = overview.screenConfiguration,
@@ -40,7 +42,8 @@ class DisplayViewModel(
         initialValue = DisplayTabUiState(
             parentInfo = parentInfoRepository.parentInfo.value,
             relationshipLabel =
-                caregiverRelationshipRepository.relationshipLabel.value
+                caregiverRelationshipRepository.relationship.value
+                    ?.displayLabel
                     ?: parentInfoRepository.parentInfo.value?.relationshipLabel,
             device = displayRepository.overview.value.device,
             screenConfiguration = displayRepository.overview.value.screenConfiguration,
@@ -48,22 +51,21 @@ class DisplayViewModel(
     )
 
     fun saveParentInfo(parentInfo: ParentInfo) {
-        val caregiverRelationshipLabel =
-            caregiverRelationshipRepository.relationshipLabel.value
         val sharedParentInfo = parentInfoRepository.parentInfo.value
 
-        if (caregiverRelationshipLabel != null && sharedParentInfo != null) {
-            caregiverRelationshipRepository.saveRelationshipLabel(
-                parentInfo.relationshipLabel
+        caregiverRelationshipRepository.saveRelationship(
+            seniorId = parentInfo.seniorId,
+            relationship = CaregiverRelationship.fromDisplayLabel(
+                parentInfo.relationshipLabel,
+            ),
+        )
+        parentInfoRepository.saveParentInfo(
+            parentInfo.copy(
+                relationshipLabel = sharedParentInfo
+                    ?.relationshipLabel
+                    ?: parentInfo.relationshipLabel
             )
-            parentInfoRepository.saveParentInfo(
-                parentInfo.copy(
-                    relationshipLabel = sharedParentInfo.relationshipLabel
-                )
-            )
-        } else {
-            parentInfoRepository.saveParentInfo(parentInfo)
-        }
+        )
     }
 
     fun disconnectDevice() {

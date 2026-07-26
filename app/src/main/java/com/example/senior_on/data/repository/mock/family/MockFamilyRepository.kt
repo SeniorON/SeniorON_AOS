@@ -1,8 +1,10 @@
 package com.example.senior_on.data.repository.mock.family
 
+import com.example.senior_on.data.repository.mock.auth.MockAuthFixtures
 import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyJoinResult
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.domain.model.family.FamilyOverview
 import com.example.senior_on.domain.model.family.SharedFamilyPhoto
@@ -16,6 +18,20 @@ class MockFamilyRepository(
     initialOverview: FamilyOverview = MockFamilyFixtures.primaryCaregiverOverview,
 ) : FamilyRepository {
     private val overview = MutableStateFlow(initialOverview)
+
+    override suspend fun joinFamily(familyCode: String): FamilyJoinResult {
+        require(familyCode == MockAuthFixtures.VALID_FAMILY_SHARE_CODE) {
+            "Invalid family share code"
+        }
+        val currentMemberRole = overview.value.members
+            .firstOrNull { member -> member.isCurrentUser }
+            ?.role
+            ?: FamilyMemberRole.Assistant
+
+        return MockFamilyFixtures.assistantJoinResult.copy(
+            memberRole = currentMemberRole,
+        )
+    }
 
     override fun observeFamilyOverview(): Flow<FamilyOverview> = overview
 

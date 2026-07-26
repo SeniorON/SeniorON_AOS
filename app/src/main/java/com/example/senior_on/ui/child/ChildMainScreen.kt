@@ -510,7 +510,9 @@ private fun ChildMainScreenPreview() {
         MockParentInfoRepository(MockParentInfoFixtures.mother)
     }
     val caregiverRelationshipRepository = remember {
-        MockCaregiverRelationshipRepository()
+        MockCaregiverRelationshipRepository(
+            activeSeniorId = MockParentInfoFixtures.SENIOR_ID,
+        )
     }
     val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }
 

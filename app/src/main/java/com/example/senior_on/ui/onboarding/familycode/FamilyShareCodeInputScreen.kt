@@ -48,34 +48,28 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.auth.MockAuthFixtures
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.util.Locale
 
 private const val FamilyShareCodeLength = 8
-private const val InvalidFamilyShareCodeMessage = "가족 공유 코드를 다시 확인해 주세요."
 
 @Composable
 fun FamilyShareCodeInputScreen(
     onBackClick: () -> Unit,
     onLoginClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+    onFamilyShareCodeChange: () -> Unit = {},
 ) {
     var familyShareCode by rememberSaveable { mutableStateOf("") }
-    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val isLoginEnabled = familyShareCode.length == FamilyShareCodeLength
     val focusManager = LocalFocusManager.current
 
     fun submitFamilyShareCode() {
         if (isLoginEnabled) {
-            if (familyShareCode == MockAuthFixtures.VALID_FAMILY_SHARE_CODE) {
-                errorMessage = null
-                onLoginClick(familyShareCode)
-            } else {
-                errorMessage = InvalidFamilyShareCodeMessage
-            }
+            onLoginClick(familyShareCode)
         }
     }
 
@@ -101,7 +95,7 @@ fun FamilyShareCodeInputScreen(
                 value = familyShareCode,
                 onValueChange = {
                     familyShareCode = normalizeFamilyShareCode(it)
-                    errorMessage = null
+                    onFamilyShareCodeChange()
                 },
                 errorMessage = errorMessage,
                 onDone = {

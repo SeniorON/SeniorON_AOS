@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -14,7 +15,10 @@ import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.data.repository.mock.auth.MockFindIdRepository
 import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
 import com.example.senior_on.data.repository.mock.auth.MockSessionRepository
+import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
+import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
 import com.example.senior_on.di.AppContainer
+import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.ui.child.ChildMainScreen
 import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
 import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeCreatedScreen
@@ -41,6 +45,7 @@ import com.example.senior_on.ui.onboarding.signup.SignupNameBirthScreen
 import com.example.senior_on.ui.onboarding.signup.SignupScreen
 import com.example.senior_on.ui.onboarding.signup.SignupTermsAgreementScreen
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class SeniorOnRoute {
     Splash,
@@ -67,6 +72,8 @@ private enum class SeniorOnRoute {
 }
 
 private const val StartFamilyShareCodeFlowForDebug = true
+private const val InvalidFamilyShareCodeMessage =
+    "가족 공유 코드를 다시 확인해 주세요."
 
 private val InitialRoute = if (
     BuildConfig.DEBUG && StartFamilyShareCodeFlowForDebug
@@ -76,11 +83,21 @@ private val InitialRoute = if (
     SeniorOnRoute.Splash
 }
 
+private val InitialAuthenticatedUserId = if (
+    BuildConfig.DEBUG && StartFamilyShareCodeFlowForDebug
+) {
+    MockFamilyFixtures.ASSISTANT_CAREGIVER_USER_ID
+} else {
+    ""
+}
+
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
     var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
     var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
-    var authenticatedUserId by rememberSaveable { mutableStateOf("") }
+    var authenticatedUserId by rememberSaveable {
+        mutableStateOf(InitialAuthenticatedUserId)
+    }
     var findAccountInitialTab by rememberSaveable { mutableStateOf(FindAccountTab.Id) }
     var findIdResultSuccess by rememberSaveable { mutableStateOf(false) }
     var findIdResultName by rememberSaveable { mutableStateOf("") }
@@ -90,7 +107,11 @@ fun SeniorOnApp(appContainer: AppContainer) {
     var selectedHomeAddress by rememberSaveable { mutableStateOf("") }
     var selectedHomeLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
+    var familyJoinErrorMessage by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
     val saveableStateHolder = rememberSaveableStateHolder()
+    val appScope = rememberCoroutineScope()
 
     fun routeAfterAuthenticated(role: AppUserMode): SeniorOnRoute {
         return when (role) {
@@ -220,11 +241,19 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 displayRepository = appContainer.displayRepository,
                 parentInfoRepository = appContainer.parentInfoRepository,
                 caregiverRelationshipRepository =
-                    appContainer.caregiverRelationshipRepository,
+                    appContainer.caregiverRelationshipRepositoryFor(
+                        authenticatedUserId
+                    ),
                 notificationScenario =
                     MockNotificationRepository.scenarioForUserId(authenticatedUserId),
-                onLogoutClick = { currentRoute = SeniorOnRoute.Login },
-                onWithdrawClick = { currentRoute = SeniorOnRoute.Login }
+                onLogoutClick = {
+                    authenticatedUserId = ""
+                    currentRoute = SeniorOnRoute.Login
+                },
+                onWithdrawClick = {
+                    authenticatedUserId = ""
+                    currentRoute = SeniorOnRoute.Login
+                }
             )
             SeniorOnRoute.ParentLauncher -> ParentLauncherScreen(
                 scheduleRepository = appContainer.parentScheduleRepository,
@@ -265,8 +294,19 @@ fun SeniorOnApp(appContainer: AppContainer) {
             SeniorOnRoute.FamilyShareCode -> FamilyShareCodeScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement },
                 onNextClick = { selectedOption ->
+                    if (selectedUserMode == AppUserMode.Child) {
+                        authenticatedUserId = when (selectedOption) {
+                            FamilyShareCodeOption.HasCode ->
+                                MockFamilyFixtures.ASSISTANT_CAREGIVER_USER_ID
+                            FamilyShareCodeOption.NoCode ->
+                                MockFamilyFixtures.PRIMARY_CAREGIVER_USER_ID
+                        }
+                    }
                     currentRoute = when (selectedOption) {
-                        FamilyShareCodeOption.HasCode -> SeniorOnRoute.FamilyShareCodeInput
+                        FamilyShareCodeOption.HasCode -> {
+                            familyJoinErrorMessage = null
+                            SeniorOnRoute.FamilyShareCodeInput
+                        }
                         FamilyShareCodeOption.NoCode -> when (selectedUserMode) {
                             AppUserMode.Child -> SeniorOnRoute.FamilyShareCodeCreated
                             AppUserMode.Senior -> SeniorOnRoute.FamilyShareCodeInput
@@ -275,13 +315,34 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 }
             )
             SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
-                onLoginClick = {
-                    currentRoute = when (selectedUserMode) {
-                        AppUserMode.Child -> SeniorOnRoute.CaregiverRelationshipInput
-                        AppUserMode.Senior -> routeAfterAuthenticated(selectedUserMode)
+                onBackClick = {
+                    familyJoinErrorMessage = null
+                    currentRoute = SeniorOnRoute.FamilyShareCode
+                },
+                onLoginClick = { familyCode ->
+                    appScope.launch {
+                        try {
+                            val joinResult = appContainer
+                                .familyRepositoryFor(authenticatedUserId)
+                                .joinFamily(familyCode)
+                            familyJoinErrorMessage = null
+                            currentRoute = when {
+                                selectedUserMode == AppUserMode.Child &&
+                                    joinResult.memberRole ==
+                                    FamilyMemberRole.Assistant ->
+                                    SeniorOnRoute.CaregiverRelationshipInput
+                                else -> routeAfterAuthenticated(selectedUserMode)
+                            }
+                        } catch (_: IllegalArgumentException) {
+                            familyJoinErrorMessage =
+                                InvalidFamilyShareCodeMessage
+                        }
                     }
-                }
+                },
+                errorMessage = familyJoinErrorMessage,
+                onFamilyShareCodeChange = {
+                    familyJoinErrorMessage = null
+                },
             )
             SeniorOnRoute.CaregiverRelationshipInput -> CaregiverRelationshipInputScreen(
                 seniorName = appContainer.parentInfoRepository.parentInfo.value
@@ -290,9 +351,16 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onBackClick = {
                     currentRoute = SeniorOnRoute.FamilyShareCodeInput
                 },
-                onNextClick = { relationshipLabel ->
-                    appContainer.caregiverRelationshipRepository
-                        .saveRelationshipLabel(relationshipLabel)
+                onNextClick = { relationship ->
+                    val seniorId = requireNotNull(
+                        appContainer.parentInfoRepository.parentInfo.value
+                    ).seniorId
+                    appContainer
+                        .caregiverRelationshipRepositoryFor(authenticatedUserId)
+                        .saveRelationship(
+                            seniorId = seniorId,
+                            relationship = relationship,
+                        )
                     navigateAfterFamilyConnected()
                 },
             )
@@ -308,8 +376,11 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 onSkipClick = { navigateAfterFamilyConnected() },
                 onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch },
                 onSaveClick = { inputState ->
+                    val seniorId = appContainer.parentInfoRepository.parentInfo.value
+                        ?.seniorId
+                        ?: MockParentInfoFixtures.SENIOR_ID
                     appContainer.parentInfoRepository.saveParentInfo(
-                        inputState.toParentInfo()
+                        inputState.toParentInfo(seniorId = seniorId)
                     )
                     navigateAfterFamilyConnected()
                 }

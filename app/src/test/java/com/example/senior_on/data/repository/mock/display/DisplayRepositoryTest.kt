@@ -107,6 +107,7 @@ class DisplayRepositoryTest {
     fun savedParentInfoIsSharedWithObservers() {
         val repository = MockParentInfoRepository(MockParentInfoFixtures.mother)
         val savedParentInfo = ParentInfo(
+            seniorId = MockParentInfoFixtures.SENIOR_ID,
             name = "김영희",
             relationshipLabel = "아버지",
             birthDate = LocalDate.of(1960, 1, 2),

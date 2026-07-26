@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -39,6 +38,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
+import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -72,7 +73,7 @@ private val CaregiverRelationshipOptions = listOf(
 fun CaregiverRelationshipInputScreen(
     seniorName: String,
     onBackClick: () -> Unit,
-    onNextClick: (relationshipLabel: String) -> Unit,
+    onNextClick: (CaregiverRelationship) -> Unit,
     modifier: Modifier = Modifier,
     initialRelationship: SeniorRelationship? = null,
     initialCustomRelationship: String = "",
@@ -95,12 +96,25 @@ fun CaregiverRelationshipInputScreen(
     } else {
         selectedRelationship
     }
-    val relationshipLabel = when (selectedRelationship) {
-        SeniorRelationship.Custom -> customRelationship.trim()
-        null -> ""
-        else -> selectedRelationship?.label.orEmpty()
+    val caregiverRelationship = when (selectedRelationship) {
+        SeniorRelationship.Mother -> CaregiverRelationship(
+            relation = SeniorRelationType.MOTHER,
+        )
+        SeniorRelationship.Father -> CaregiverRelationship(
+            relation = SeniorRelationType.FATHER,
+        )
+        SeniorRelationship.Grandparent -> CaregiverRelationship(
+            relation = SeniorRelationType.GRANDPARENT,
+        )
+        SeniorRelationship.Custom -> CaregiverRelationship(
+            relation = SeniorRelationType.OTHER,
+            customRelation = customRelationship.trim(),
+        )
+        null -> null
     }
-    val isNextEnabled = relationshipLabel.isNotBlank()
+    val isNextEnabled = caregiverRelationship
+        ?.displayLabel
+        ?.isNotBlank() == true
 
     if (showCustomRelationshipSheet) {
         CustomRelationshipBottomSheet(
@@ -135,6 +149,8 @@ fun CaregiverRelationshipInputScreen(
         SeniorInfoTopBar(
             onBackClick = onBackClick,
             title = "정보 입력",
+            backIconSize = 26.dp,
+            showShadow = false,
         )
 
         Column(
@@ -144,15 +160,15 @@ fun CaregiverRelationshipInputScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(34.dp))
             CaregiverRelationshipTitle()
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(30.dp))
             Text(
                 text = "성함: $seniorName",
-                style = SeniorOnTextStyles.BodySSemiBold,
+                style = SeniorOnTextStyles.BodyMSemiBold,
                 color = SeniorOnColors.Gray800,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -197,7 +213,7 @@ fun CaregiverRelationshipInputScreen(
                 text = "다음",
                 onClick = {
                     if (isNextEnabled) {
-                        onNextClick(relationshipLabel)
+                        caregiverRelationship?.let(onNextClick)
                     }
                 },
                 style = SeniorInfoButtonStyle.Filled,
@@ -241,16 +257,16 @@ private fun CaregiverRelationshipItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(SeniorOnRadius.Small)
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(72.dp)
             .clip(shape)
             .background(
                 if (selected) {
-                    SeniorOnColors.Primary100
+                    SeniorOnColors.Primary200
                 } else {
                     SeniorOnColors.Background3
                 }
@@ -279,47 +295,32 @@ private fun CaregiverRelationshipItem(
         Text(
             text = label,
             modifier = Modifier
-                .padding(start = 12.dp)
+                .padding(start = 10.dp)
                 .weight(1f),
-            style = SeniorOnTextStyles.BodySSemiBold,
+            style = SeniorOnTextStyles.BodyMSemiBold,
             color = SeniorOnColors.Gray800,
         )
         if (showEditLabel) {
             Text(
                 text = "수정하기",
                 modifier = Modifier.padding(end = 12.dp),
-                style = SeniorOnTextStyles.CaptionMedium,
+                style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Primary600,
                 textDecoration = TextDecoration.Underline,
             )
         }
-        RelationshipRadioIndicator(selected = selected)
-    }
-}
-
-@Composable
-private fun RelationshipRadioIndicator(
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .size(14.dp)
-            .border(
-                width = 1.dp,
-                color = SeniorOnColors.Primary600,
-                shape = CircleShape,
+        Icon(
+            painter = painterResource(
+                id = if (selected) {
+                    R.drawable.ic_radio_button_1
+                } else {
+                    R.drawable.ic_radio_button_2
+                }
             ),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(SeniorOnColors.Primary600)
-            )
-        }
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = SeniorOnColors.Primary600,
+        )
     }
 }
 

@@ -57,16 +57,24 @@ internal fun SeniorInfoTopBar(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     title: String = "정보 입력",
+    backIconSize: Dp = 24.dp,
+    showShadow: Boolean = true,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(54.dp)
             .zIndex(1f)
-            .shadow(
-                elevation = 12.dp,
-                ambientColor = Color.Black.copy(alpha = 0.06f),
-                spotColor = Color.Black.copy(alpha = 0.06f)
+            .then(
+                if (showShadow) {
+                    Modifier.shadow(
+                        elevation = 12.dp,
+                        ambientColor = Color.Black.copy(alpha = 0.06f),
+                        spotColor = Color.Black.copy(alpha = 0.06f)
+                    )
+                } else {
+                    Modifier
+                }
             )
             .background(SeniorOnColors.White)
             .padding(start = 16.dp, end = 16.dp),
@@ -86,7 +94,7 @@ internal fun SeniorInfoTopBar(
             Icon(
                 painter = painterResource(id = R.drawable.ic_arrow_back),
                 contentDescription = "뒤로가기",
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(backIconSize),
                 tint = Color.Unspecified
             )
         }

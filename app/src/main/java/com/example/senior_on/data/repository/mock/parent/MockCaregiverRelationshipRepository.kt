@@ -1,18 +1,39 @@
 package com.example.senior_on.data.repository.mock.parent
 
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class MockCaregiverRelationshipRepository(
-    initialRelationshipLabel: String? = null,
+    private val activeSeniorId: Long,
+    initialRelationship: CaregiverRelationship? = null,
 ) : CaregiverRelationshipRepository {
-    private val _relationshipLabel = MutableStateFlow(initialRelationshipLabel)
-    override val relationshipLabel: StateFlow<String?> =
-        _relationshipLabel.asStateFlow()
+    private val relationshipsBySeniorId = mutableMapOf<Long, CaregiverRelationship>()
+        .apply {
+            initialRelationship?.let { relationship ->
+                put(activeSeniorId, relationship)
+            }
+        }
+    private val _relationship = MutableStateFlow(initialRelationship)
+    override val relationship: StateFlow<CaregiverRelationship?> =
+        _relationship.asStateFlow()
 
-    override fun saveRelationshipLabel(relationshipLabel: String) {
-        _relationshipLabel.value = relationshipLabel.trim()
+    override fun saveRelationship(
+        seniorId: Long,
+        relationship: CaregiverRelationship,
+    ) {
+        require(seniorId == activeSeniorId) {
+            "Relationship target does not match the active senior"
+        }
+        val savedRelationship = relationship.copy(
+            customRelation = relationship.customRelation?.trim(),
+        )
+        relationshipsBySeniorId[seniorId] = savedRelationship
+        _relationship.value = savedRelationship
     }
+
+    fun relationshipFor(seniorId: Long): CaregiverRelationship? =
+        relationshipsBySeniorId[seniorId]
 }
