@@ -1,8 +1,11 @@
 package com.example.senior_on.data.repository.mock.family
 
-import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockFamilyPhotoFixtures
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyJoinResult
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.domain.model.family.FamilyOverview
 import com.example.senior_on.domain.model.family.SharedFamilyPhoto
@@ -11,20 +14,46 @@ import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 
 class MockFamilyRepository(
     initialOverview: FamilyOverview = MockFamilyFixtures.primaryCaregiverOverview,
+    private val photoStore: MockFamilyPhotoStore = MockFamilyPhotoStore(
+        MockFamilyPhotoFixtures.initialPhotos()
+    ),
 ) : FamilyRepository {
     private val overview = MutableStateFlow(initialOverview)
 
-    override fun observeFamilyOverview(): Flow<FamilyOverview> = overview
+    override suspend fun joinFamily(familyCode: String): FamilyJoinResult {
+        require(familyCode == MockAuthFixtures.VALID_FAMILY_SHARE_CODE) {
+            "Invalid family share code"
+        }
+        val currentMemberRole = overview.value.members
+            .firstOrNull { member -> member.isCurrentUser }
+            ?.role
+            ?: FamilyMemberRole.Assistant
 
-    override suspend fun getFamilyOverview(): FamilyOverview = overview.value
+        return MockFamilyFixtures.assistantJoinResult.copy(
+            memberRole = currentMemberRole,
+        )
+    }
+
+    override fun observeFamilyOverview(): Flow<FamilyOverview> =
+        combine(overview, photoStore.photos) { current, photos ->
+            current.withSharedPhotos(photos)
+        }
+
+    override suspend fun getFamilyOverview(): FamilyOverview =
+        overview.value.withSharedPhotos(photoStore.photos.value)
 
     override suspend fun refreshFamilyOverview() = Unit
 
-    override suspend fun getSharedPhoto(photoId: String): SharedFamilyPhoto? =
-        overview.value.sharedPhotos.firstOrNull { photo -> photo.id == photoId }
+    override suspend fun getSharedPhoto(photoId: String): SharedFamilyPhoto? {
+        val current = overview.value
+        return photoStore.photos.value
+            .firstOrNull { photo -> photo.id == photoId }
+            ?.toSharedFamilyPhoto(current)
+    }
 
     override suspend fun changePrimaryMember(memberId: String) {
         val current = overview.value
@@ -71,36 +100,34 @@ class MockFamilyRepository(
         message: String,
     ): SharedFamilyPhoto {
         val current = overview.value
-        val authorName = current.members
+        val author = current.members
             .firstOrNull { member -> member.isCurrentUser }
-            ?.name
-            ?: "나"
-        val uploadedPhoto = SharedFamilyPhoto(
+            ?: error("현재 가족 구성원 정보를 찾을 수 없습니다.")
+        val uploadedPhoto = MockFamilyPhotoRecord(
             id = "shared-photo-${UUID.randomUUID()}",
-            authorName = authorName,
+            authorMemberId = author.id,
             createdAt = Instant.now(),
-            isOwnedByCurrentUser = true,
             imageSource = FamilyImageSource.Uri(photo.file.toURI().toString()),
             message = message,
         )
 
-        overview.value = current.copy(
-            sharedPhotos = listOf(uploadedPhoto) + current.sharedPhotos,
-        )
-        return uploadedPhoto
+        photoStore.addPhoto(uploadedPhoto)
+        return uploadedPhoto.toSharedFamilyPhoto(current)
     }
 
     override suspend fun deletePhoto(photoId: String) {
         val current = overview.value
-        val photo = current.sharedPhotos.firstOrNull { item -> item.id == photoId }
+        val currentMemberId = current.members
+            .firstOrNull { member -> member.isCurrentUser }
+            ?.id
+            ?: error("현재 가족 구성원 정보를 찾을 수 없습니다.")
+        val photo = photoStore.photos.value.firstOrNull { item -> item.id == photoId }
             ?: error("Family photo not found: $photoId")
-        require(photo.isOwnedByCurrentUser) {
+        require(photo.authorMemberId == currentMemberId) {
             "Only a photo owned by the current user can be deleted"
         }
 
-        overview.value = current.copy(
-            sharedPhotos = current.sharedPhotos.filterNot { item -> item.id == photoId },
-        )
+        photoStore.removePhoto(photoId)
         val localImageSource = photo.imageSource as? FamilyImageSource.Uri
         localImageSource?.let { source ->
             runCatching { java.io.File(java.net.URI(source.value)).delete() }
@@ -111,4 +138,36 @@ class MockFamilyRepository(
         members.any { member ->
             member.isCurrentUser && member.role == FamilyMemberRole.Primary
         }
+
+    private fun FamilyOverview.withSharedPhotos(
+        photos: List<MockFamilyPhotoRecord>,
+    ): FamilyOverview {
+        return copy(
+            sharedPhotos = photos.map { photo ->
+                photo.toSharedFamilyPhoto(this)
+            }
+        )
+    }
+
+    private fun MockFamilyPhotoRecord.toSharedFamilyPhoto(
+        overview: FamilyOverview,
+    ): SharedFamilyPhoto {
+        val currentMemberId = overview.members
+            .firstOrNull { member -> member.isCurrentUser }
+            ?.id
+        val authorName = overview.members
+            .firstOrNull { member -> member.id == authorMemberId }
+            ?.name
+            ?: MockFamilyFixtures.memberNameFor(authorMemberId)
+            ?: "가족"
+
+        return SharedFamilyPhoto(
+            id = id,
+            authorName = authorName,
+            createdAt = createdAt,
+            isOwnedByCurrentUser = authorMemberId == currentMemberId,
+            imageSource = imageSource,
+            message = message,
+        )
+    }
 }

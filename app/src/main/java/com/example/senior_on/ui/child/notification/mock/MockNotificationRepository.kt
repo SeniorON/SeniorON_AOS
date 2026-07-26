@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.child.notification.mock
 
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationFooterPanelUiState
 import com.example.senior_on.ui.child.notification.NotificationFooterTone
@@ -12,7 +14,8 @@ import com.example.senior_on.ui.child.notification.NotificationSeverity
 object MockNotificationRepository {
     fun scenarioForUserId(userId: String): MockNotificationScenario {
         return when (userId.trim().lowercase()) {
-            "child01" -> MockNotificationScenario.NoAlarm
+            MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID ->
+                MockNotificationScenario.NoAlarm
             else -> MockNotificationScenario.MultipleRecentAlarms
         }
     }
@@ -31,7 +34,7 @@ object MockNotificationRepository {
                     else -> "오전 10:00"
                 },
                 title = when (category) {
-                    NotificationCategory.Sos -> "어머니 · 경기도 하남시 창우동"
+                    NotificationCategory.Sos -> homeAlertTitle
                     NotificationCategory.Inactivity -> "4시간 미사용 감지됨"
                     NotificationCategory.RiskLink -> "http://fake-bank.xyz"
                     NotificationCategory.Outing -> if (index == 3) {
@@ -128,7 +131,7 @@ object MockNotificationRepository {
             NotificationCategory.Sos to listOf(
                 NotificationMessageUiState(
                     time = "오늘 오전 10:00",
-                    title = "어머니 · 경기도 하남시 창우동",
+                    title = homeAlertTitle,
                     severity = NotificationSeverity.Danger,
                     occurredAtMillis = now - ONE_HOUR_MILLIS
                 )
@@ -167,7 +170,7 @@ object MockNotificationRepository {
             NotificationCategory.Sos to listOf(
                 NotificationMessageUiState(
                     time = "오늘 오전 10:00",
-                    title = "어머니 · 경기도 하남시 창우동",
+                    title = homeAlertTitle,
                     severity = NotificationSeverity.Danger,
                     occurredAtMillis = now - ONE_HOUR_MILLIS
                 ),
@@ -213,6 +216,8 @@ object MockNotificationRepository {
 
     private const val ONE_HOUR_MILLIS = 60L * 60L * 1000L
     private const val ONE_DAY_MILLIS = 24L * ONE_HOUR_MILLIS
+    private val homeAlertTitle =
+        "${MockSeniorFixtures.mother.relationshipLabel} · ${MockSeniorFixtures.mother.address}"
 }
 
 enum class MockNotificationScenario {

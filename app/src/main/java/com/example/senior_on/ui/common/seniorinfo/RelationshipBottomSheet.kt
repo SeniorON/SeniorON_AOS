@@ -37,7 +37,9 @@ internal fun CustomRelationshipBottomSheet(
     value: String,
     onValueChange: (String) -> Unit,
     onCancel: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    confirmText: String = "확인",
+    placeholder: String = "관계(기타)",
 ) {
     ModalBottomSheet(
         onDismissRequest = onCancel,
@@ -53,7 +55,9 @@ internal fun CustomRelationshipBottomSheet(
             value = value,
             onValueChange = onValueChange,
             onCancel = onCancel,
-            onConfirm = onConfirm
+            onConfirm = onConfirm,
+            confirmText = confirmText,
+            placeholder = placeholder,
         )
     }
 }
@@ -63,7 +67,9 @@ internal fun CustomRelationshipSheetContent(
     value: String,
     onValueChange: (String) -> Unit,
     onCancel: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    confirmText: String = "확인",
+    placeholder: String = "관계(기타)",
 ) {
     Column(
         modifier = Modifier
@@ -111,7 +117,7 @@ internal fun CustomRelationshipSheetContent(
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
-                    text = "확인",
+                    text = confirmText,
                     modifier = Modifier
                         .clip(RoundedCornerShape(SeniorOnRadius.Small))
                         .clickable(onClick = onConfirm)
@@ -126,7 +132,7 @@ internal fun CustomRelationshipSheetContent(
         CustomRelationshipInputField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = "관계(기타)"
+            placeholder = placeholder,
         )
     }
 }

@@ -53,6 +53,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -687,7 +688,7 @@ private data class NotificationDetailUiState(
     val backIconColor: Color,
     val showRipple: Boolean,
     val actionColor: Color,
-    val address: String = "경기도 하남시 창우동",
+    val address: String = MockSeniorFixtures.mother.address,
     val battery: String = "48%",
     val lastLocationUpdate: String = "2분전",
     val inactivityHours: String? = null,
@@ -802,7 +803,7 @@ private fun Long?.toKoreanDateTime(): String {
 
 private fun previewDetailMessage(
     movementType: NotificationMovementType? = null,
-    title: String = "경기도 하남시 창우동"
+    title: String = MockSeniorFixtures.mother.address,
 ) = NotificationMessageUiState(
     time = "오늘 오후 1:25",
     title = title,

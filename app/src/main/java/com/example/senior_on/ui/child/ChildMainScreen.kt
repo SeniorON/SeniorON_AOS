@@ -46,12 +46,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
 import com.example.senior_on.ui.child.notification.mock.MockNotificationScenario
+import com.example.senior_on.data.repository.mock.parent.MockCaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.family.FamilyRepository
 import com.example.senior_on.data.repository.mock.display.MockDisplayRepository
 import com.example.senior_on.data.repository.mock.family.MockFamilyRepository
-import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
+import com.example.senior_on.domain.model.auth.AppUserProfile
+import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
@@ -68,6 +72,11 @@ import com.example.senior_on.ui.child.notification.NotificationHistoryScreen
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
 import com.example.senior_on.ui.child.notification.NotificationScreen
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
+import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
+import com.example.senior_on.ui.child.settings.SettingsProfileUiState
+import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
+import com.example.senior_on.ui.child.settings.toParentInfo
+import com.example.senior_on.ui.child.settings.toSettingsProfileUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -84,10 +93,12 @@ private enum class ChildFamilyDestination {
 
 @Composable
 fun ChildMainScreen(
+    userProfile: AppUserProfile,
     familyRepository: FamilyRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
+    caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationScenario: MockNotificationScenario =
         MockNotificationScenario.MultipleRecentAlarms,
     modifier: Modifier = Modifier,
@@ -127,8 +138,20 @@ fun ChildMainScreen(
         factory = DisplayViewModel.factory(
             parentInfoRepository = parentInfoRepository,
             displayRepository = displayRepository,
+            caregiverRelationshipRepository = caregiverRelationshipRepository,
         )
     )
+    val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
+    val settingsProfile = userProfile.toSettingsProfileUiState()
+    val connectedDevice = displayUiState.parentInfo?.let { parentInfo ->
+        displayUiState.device?.let { device ->
+            parentInfo.toConnectedSeniorDeviceUiState(
+                deviceName = device.name,
+                relationshipLabel = displayUiState.relationshipLabel
+                    ?: parentInfo.relationshipLabel,
+            )
+        }
+    }
 
     val navigateToFamilyInvitation = {
         invitationReturnDestination = familyDestination
@@ -211,6 +234,8 @@ fun ChildMainScreen(
             familyPhotoDetailViewModel = familyPhotoDetailViewModel,
             familyPhotoUploadViewModel = familyPhotoUploadViewModel,
             displayViewModel = displayViewModel,
+            settingsProfile = settingsProfile,
+            connectedDevice = connectedDevice,
             canEditScreen = familyUiState.canManageMembers,
             onMemberSettingsClick = {
                 familyDestination = ChildFamilyDestination.MemberSettings
@@ -239,6 +264,14 @@ fun ChildMainScreen(
                 notificationDetail = category to message
             },
             onCloseNotificationDetail = { notificationDetail = null },
+            onConnectedDeviceInfoSave = { updatedDevice ->
+                displayUiState.parentInfo?.let { currentParentInfo ->
+                    displayViewModel.saveParentInfo(
+                        updatedDevice.toParentInfo(currentParentInfo)
+                    )
+                }
+            },
+            onDisconnectDeviceConfirm = displayViewModel::disconnectDevice,
             onLogoutClick = onLogoutClick,
             onWithdrawClick = onWithdrawClick,
             modifier = Modifier
@@ -284,6 +317,8 @@ private fun ChildMainTabContent(
     familyPhotoDetailViewModel: FamilyPhotoDetailViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     displayViewModel: DisplayViewModel,
+    settingsProfile: SettingsProfileUiState,
+    connectedDevice: ConnectedSeniorDeviceUiState?,
     canEditScreen: Boolean,
     onMemberSettingsClick: () -> Unit,
     onAddFamilyClick: () -> Unit,
@@ -303,6 +338,8 @@ private fun ChildMainTabContent(
     onCloseHistory: () -> Unit,
     onOpenNotificationDetail: (NotificationCategory, NotificationMessageUiState) -> Unit,
     onCloseNotificationDetail: () -> Unit,
+    onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
+    onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
     onWithdrawClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -434,6 +471,10 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            initialProfile = settingsProfile,
+            connectedDevice = connectedDevice,
+            onConnectedDeviceInfoSave = onConnectedDeviceInfoSave,
+            onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,
             onWithdrawConfirm = onWithdrawClick
@@ -503,16 +544,23 @@ private fun ChildMainScreenPreview() {
     val repository = remember { MockFamilyRepository() }
     val displayRepository = remember { MockDisplayRepository() }
     val parentInfoRepository = remember {
-        MockParentInfoRepository(MockParentInfoFixtures.mother)
+        MockParentInfoRepository(MockSeniorFixtures.mother)
+    }
+    val caregiverRelationshipRepository = remember {
+        MockCaregiverRelationshipRepository(
+            activeSeniorId = MockSeniorFixtures.SENIOR_ID,
+        )
     }
     val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }
 
     SENIOR_ONTheme {
         ChildMainScreen(
+            userProfile = MockUserFixtures.primaryCaregiver,
             familyRepository = repository,
             familyPhotoUploadPreparer = uploadPreparer,
             displayRepository = displayRepository,
             parentInfoRepository = parentInfoRepository,
+            caregiverRelationshipRepository = caregiverRelationshipRepository,
         )
     }
 }

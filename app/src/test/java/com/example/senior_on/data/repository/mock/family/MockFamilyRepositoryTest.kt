@@ -1,5 +1,9 @@
 package com.example.senior_on.data.repository.mock.family
 
+import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockFamilyPhotoFixtures
+import com.example.senior_on.data.repository.mock.parent.MockParentFamilyPhotoRepository
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import java.nio.file.Files
@@ -11,19 +15,45 @@ import org.junit.Test
 
 class MockFamilyRepositoryTest {
     @Test
+    fun `유효한 공유 코드로 참여하면 현재 사용자의 담당자 역할을 반환한다`() =
+        runBlocking {
+            val repository = MockFamilyRepository(
+                initialOverview = MockFamilyFixtures.assistantCaregiverOverview,
+            )
+
+            val result = repository.joinFamily(
+                MockAuthFixtures.VALID_FAMILY_SHARE_CODE
+            )
+
+            assertEquals(MockFamilyFixtures.FAMILY_ID, result.familyId)
+            assertEquals(
+                MockAuthFixtures.VALID_FAMILY_SHARE_CODE,
+                result.familyCode,
+            )
+            assertEquals(FamilyMemberRole.Assistant, result.memberRole)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `유효하지 않은 공유 코드로는 참여할 수 없다`() {
+        runBlocking {
+            MockFamilyRepository().joinFamily("INVALID0")
+        }
+    }
+
+    @Test
     fun `주 담당자를 변경하면 기존 담당자는 보조 담당자가 된다`() = runBlocking {
         val repository = MockFamilyRepository()
 
-        repository.changePrimaryMember("family-member-assistant-1")
+        repository.changePrimaryMember(MockFamilyFixtures.ASSISTANT_MEMBER_ID)
 
         val members = repository.getFamilyOverview().members
         assertEquals(
             FamilyMemberRole.Primary,
-            members.first { it.id == "family-member-assistant-1" }.role,
+            members.first { it.id == MockFamilyFixtures.ASSISTANT_MEMBER_ID }.role,
         )
         assertEquals(
             FamilyMemberRole.Assistant,
-            members.first { it.id == "family-member-primary" }.role,
+            members.first { it.id == MockFamilyFixtures.PRIMARY_MEMBER_ID }.role,
         )
     }
 
@@ -31,22 +61,36 @@ class MockFamilyRepositoryTest {
     fun `보조 담당자를 삭제하면 가족 목록에서 제거된다`() = runBlocking {
         val repository = MockFamilyRepository()
 
-        repository.deleteMember("family-member-assistant-2")
+        repository.deleteMember(MockFamilyFixtures.SECONDARY_ASSISTANT_MEMBER_ID)
 
         assertFalse(
             repository.getFamilyOverview().members.any {
-                it.id == "family-member-assistant-2"
+                it.id == MockFamilyFixtures.SECONDARY_ASSISTANT_MEMBER_ID
             },
         )
     }
 
     @Test
     fun `사진 업로드와 삭제가 공유 사진 목록에 반영된다`() = runBlocking {
-        val repository = MockFamilyRepository()
+        val photoStore = MockFamilyPhotoStore(
+            initialPhotos = MockFamilyPhotoFixtures.initialPhotos()
+        )
+        val repository = MockFamilyRepository(photoStore = photoStore)
+        val parentRepository = MockParentFamilyPhotoRepository(
+            photoStore = photoStore
+        )
         val uploadFile = Files.createTempFile("family-photo-test", ".jpg").toFile()
         uploadFile.writeBytes(byteArrayOf(1, 2, 3))
 
         try {
+            assertEquals(13, repository.getFamilyOverview().sharedPhotos.size)
+            assertEquals(
+                13,
+                parentRepository
+                    .getFamilyPhotos(MockAuthFixtures.VALID_FAMILY_SHARE_CODE)
+                    .sumOf { collection -> collection.photos.size },
+            )
+
             val uploadedPhoto = repository.uploadPhoto(
                 photo = PreparedFamilyPhoto(
                     file = uploadFile,
@@ -62,6 +106,12 @@ class MockFamilyRepositoryTest {
                     it.id == uploadedPhoto.id
                 },
             )
+            assertTrue(
+                parentRepository
+                    .getFamilyPhotos(MockAuthFixtures.VALID_FAMILY_SHARE_CODE)
+                    .flatMap { collection -> collection.photos }
+                    .any { photo -> photo.id == uploadedPhoto.id }
+            )
 
             repository.deletePhoto(uploadedPhoto.id)
 
@@ -70,6 +120,12 @@ class MockFamilyRepositoryTest {
                 repository.getFamilyOverview().sharedPhotos.any {
                     it.id == uploadedPhoto.id
                 },
+            )
+            assertFalse(
+                parentRepository
+                    .getFamilyPhotos(MockAuthFixtures.VALID_FAMILY_SHARE_CODE)
+                    .flatMap { collection -> collection.photos }
+                    .any { photo -> photo.id == uploadedPhoto.id }
             )
         } finally {
             uploadFile.delete()

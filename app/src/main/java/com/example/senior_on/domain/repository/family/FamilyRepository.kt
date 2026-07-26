@@ -2,10 +2,13 @@ package com.example.senior_on.domain.repository.family
 
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.family.FamilyOverview
+import com.example.senior_on.domain.model.family.FamilyJoinResult
 import com.example.senior_on.domain.model.family.SharedFamilyPhoto
 import kotlinx.coroutines.flow.Flow
 
 interface FamilyRepository {
+    suspend fun joinFamily(familyCode: String): FamilyJoinResult
+
     fun observeFamilyOverview(): Flow<FamilyOverview>
 
     suspend fun getFamilyOverview(): FamilyOverview

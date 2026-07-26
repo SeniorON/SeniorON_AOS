@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.Period
 
 data class ParentInfo(
+    val seniorId: Long,
     val name: String,
     val relationshipLabel: String,
     val birthDate: LocalDate,
