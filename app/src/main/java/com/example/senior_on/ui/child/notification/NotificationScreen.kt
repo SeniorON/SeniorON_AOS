@@ -83,11 +83,7 @@ fun NotificationScreen(
         enabledSections.isNotEmpty() -> NotificationSeverity.Normal
         else -> NotificationSeverity.Empty
     }
-    val notificationCount = when (severity) {
-        NotificationSeverity.Danger -> recentMessages.size
-        NotificationSeverity.Normal -> enabledSections.size
-        NotificationSeverity.Empty -> 0
-    }
+    val notificationCount = enabledSections.size
     val footerPanel = when {
         !uiState.isParentPhoneRegistered -> uiState.footerPanel
             ?: NotificationFooterPanelUiState(tone = NotificationFooterTone.Warning)

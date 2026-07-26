@@ -203,8 +203,9 @@ docs폴더 하위에 배치하였음
 | 기준 에뮬레이터 | Pixel 8 |
 | 화면 기준 | 360 x 800dp에 가까운 일반 Android 세로 화면 |
 | 확인 방향 | 상태바, 내비게이션바, 작은 화면, 큰 글씨 설정을 함께 고려 |
+sdk 36 기기에서 테스트 완료
+가족 공유코드 이후 부모님 정보 입력화면의 주소 검색 기능을 확인하려면 `local.properties`에 Kakao REST API 키를 추가하면 됩니다.
 
-주소 검색 기능을 확인하려면 프로젝트 루트의 `local.properties`에 Kakao REST API 키를 추가합니다.
 
 ## 화면 목록
 
@@ -219,10 +220,10 @@ docs폴더 하위에 배치하였음
 | 이메일 인증 화면 | SignupEmailVerificationScreen | 이름·생년월일 입력 후 | 공통 | 완료 |
 | 계정 정보 입력 화면 | SignupAccountInfoScreen | 이메일 인증 후 | 공통 | 완료 |
 | 약관 동의 화면 | SignupTermsAgreementScreen | 계정 정보 입력 후 | 공통 | 완료 |
-| 가족 공유 코드 확인 화면 | FamilyShareCodeScreen | 가족 연결 흐름 | 공통 | UI 완료·연결 예정 |
-| 가족 공유 코드 입력 화면 | FamilyShareCodeInputScreen | 가족 공유 코드 있음 선택 후 | 공통 | UI 완료·연결 예정 |
-| 가족 공유 코드 생성 화면 | FamilyShareCodeCreatedScreen | 가족 공유 코드 없음 선택 후 | 공통 | UI 완료·연결 예정 |
-| 부모님 정보 입력 화면 | ParentInfoInputScreen | 가족 공유 코드 생성 후 | 공통 | UI 완료·연결 예정 |
+| 가족 공유 코드 확인 화면 | FamilyShareCodeScreen | 가족 연결 흐름 | 공통 | 완료 |
+| 가족 공유 코드 입력 화면 | FamilyShareCodeInputScreen | 가족 공유 코드 있음 선택 후 | 공통 | 완료 |
+| 가족 공유 코드 생성 화면 | FamilyShareCodeCreatedScreen | 가족 공유 코드 없음 선택 후 | 공통 | 완료 |
+| 부모님 정보 입력 화면 | ParentInfoInputScreen | 가족 공유 코드 생성 후 | 공통 | 완료 |
 | 아이디·비밀번호 찾기 화면 | FindAccountScreen | 로그인 > 계정 찾기 | 공통 | 완료 |
 | 아이디 찾기 결과 화면 | FindIdResultScreen | 아이디 찾기 완료 후 | 공통 | 완료 |
 | 비밀번호 인증 화면 | FindPasswordVerifyScreen | 비밀번호 찾기 계정 확인 후 | 공통 | 완료 |
@@ -301,18 +302,13 @@ docs폴더 하위에 배치하였음
 -> 이메일 인증
 -> 아이디 중복 확인 및 비밀번호 입력
 -> 약관 동의
--> 로그인 화면
+-> 가족 공유 코드 확인
+   -> 코드가 있는 경우: 가족 공유 코드 입력
+   -> 코드가 없는 경우: 가족 공유 코드 생성 -> 부모님 정보 입력
 ```
 
-가족 공유 코드:
-
-```text
-가족 공유 코드 확인
--> 있는 경우: 가족 공유 코드 입력
--> 없는 경우: 가족 공유 코드 생성 -> 부모님 정보 입력
-```
-
-현재 회원가입 완료 후에는 로그인 화면으로 이동합니다. 가족 공유 코드 화면은 구현되어 있으며 메인 인증 흐름과의 최종 연결은 추후 확정합니다.
+가족 공유 코드 흐름은 신규 회원가입의 약관 동의가 끝난 직후 시작합니다.
+이미 가입된 목 계정은 로그인에 성공하면 선택한 모드의 메인 화면으로 이동합니다.
 
 자녀 메인:
 

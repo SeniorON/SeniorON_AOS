@@ -10,7 +10,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import com.example.senior_on.BuildConfig
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.data.repository.mock.auth.MockFindIdRepository
 import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
@@ -71,32 +70,17 @@ private enum class SeniorOnRoute {
     AddressSearch
 }
 
-private const val StartFamilyShareCodeFlowForDebug = true
 private const val InvalidFamilyShareCodeMessage =
     "가족 공유 코드를 다시 확인해 주세요."
 
-private val InitialRoute = if (
-    BuildConfig.DEBUG && StartFamilyShareCodeFlowForDebug
-) {
-    SeniorOnRoute.FamilyShareCode
-} else {
-    SeniorOnRoute.Splash
-}
-
-private val InitialAuthenticatedUserId = if (
-    BuildConfig.DEBUG && StartFamilyShareCodeFlowForDebug
-) {
-    MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID
-} else {
-    ""
-}
+private val InitialRoute = SeniorOnRoute.Splash
 
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
     var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
     var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
     var authenticatedUserId by rememberSaveable {
-        mutableStateOf(InitialAuthenticatedUserId)
+        mutableStateOf("")
     }
     var findAccountInitialTab by rememberSaveable { mutableStateOf(FindAccountTab.Id) }
     var findIdResultSuccess by rememberSaveable { mutableStateOf(false) }
@@ -290,7 +274,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
             )
             SeniorOnRoute.SignupTermsAgreement -> SignupTermsAgreementScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.SignupAccountInfo },
-                onCompleteClick = { currentRoute = SeniorOnRoute.Login }
+                onCompleteClick = { currentRoute = SeniorOnRoute.FamilyShareCode }
             )
             SeniorOnRoute.FamilyShareCode -> FamilyShareCodeScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement },

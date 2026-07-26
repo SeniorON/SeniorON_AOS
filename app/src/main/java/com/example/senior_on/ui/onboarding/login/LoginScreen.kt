@@ -186,20 +186,17 @@ fun LoginScreen(
                     }
                     if (loginError != LoginFieldError.None) return@clickable
 
-                    val accountMode = MockLoginAuthRepository.accountModeFor(userId)
-                    if (accountMode == null) {
+                    val authenticatedMode =
+                        MockLoginAuthRepository.login(userId, password)
+                    if (authenticatedMode == null) {
                         loginError = LoginFieldError.InvalidCredentials
                         return@clickable
                     }
-                    if (accountMode != selectedMode) {
-                        wrongModeDialogType = when (accountMode) {
+                    if (authenticatedMode != selectedMode) {
+                        wrongModeDialogType = when (authenticatedMode) {
                             AppUserMode.Senior -> LoginWrongModeDialogType.SeniorAccount
                             AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
                         }
-                        return@clickable
-                    }
-                    if (MockLoginAuthRepository.login(userId, password) == null) {
-                        loginError = LoginFieldError.InvalidCredentials
                         return@clickable
                     }
                     onLoginClick(userId.trim().lowercase())
