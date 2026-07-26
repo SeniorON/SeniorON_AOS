@@ -83,6 +83,7 @@ fun DisplayTabScreen(
             item {
                 DisplaySummarySection(
                     parentInfo = uiState.parentInfo,
+                    relationshipLabel = uiState.relationshipLabel,
                     device = uiState.device,
                     onDeviceClick = onDeviceClick,
                     onParentInfoClick = onParentInfoClick,
@@ -101,6 +102,7 @@ fun DisplayTabScreen(
             item {
                 ScreenEditSection(
                     parentInfo = uiState.parentInfo,
+                    relationshipLabel = uiState.relationshipLabel,
                     configuration = uiState.screenConfiguration,
                     canEditScreen = canEditScreen,
                     onLargePreviewClick = onLargePreviewClick,
@@ -149,6 +151,7 @@ private fun DisplayTopBar() {
 @Composable
 private fun DisplaySummarySection(
     parentInfo: ParentInfo?,
+    relationshipLabel: String?,
     device: DisplayDevice?,
     onDeviceClick: () -> Unit,
     onParentInfoClick: () -> Unit,
@@ -160,7 +163,7 @@ private fun DisplaySummarySection(
     ) {
         DeviceConnectionBanner(
             device = device,
-            relationshipLabel = parentInfo?.relationshipLabel,
+            relationshipLabel = relationshipLabel,
             onClick = onDeviceClick,
         )
 
@@ -171,6 +174,8 @@ private fun DisplaySummarySection(
         } else {
             ParentInformationCard(
                 parentInfo = parentInfo,
+                relationshipLabel = relationshipLabel
+                    ?: parentInfo.relationshipLabel,
                 onClick = onParentInfoClick,
             )
         }
@@ -271,6 +276,7 @@ private fun DeviceConnectionBanner(
 @Composable
 private fun ParentInformationCard(
     parentInfo: ParentInfo,
+    relationshipLabel: String,
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
@@ -314,7 +320,7 @@ private fun ParentInformationCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = parentInfo.relationshipLabel,
+                    text = relationshipLabel,
                     style = SeniorOnTextStyles.CaptionMedium,
                     color = SeniorOnColors.White,
                 )
@@ -428,6 +434,7 @@ private fun EmptyParentInformationCard(onClick: () -> Unit) {
 @Composable
 private fun ScreenEditSection(
     parentInfo: ParentInfo?,
+    relationshipLabel: String?,
     configuration: SeniorScreenConfiguration,
     canEditScreen: Boolean,
     onLargePreviewClick: () -> Unit,
@@ -459,7 +466,7 @@ private fun ScreenEditSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         SeniorScreenPreviewCard(
-            phoneLabel = "${parentInfo?.relationshipLabel ?: "부모님"} 폰",
+            phoneLabel = "${relationshipLabel ?: "부모님"} 폰",
             configuration = configuration,
             onLargePreviewClick = onLargePreviewClick,
         )

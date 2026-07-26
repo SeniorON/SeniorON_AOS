@@ -141,7 +141,7 @@ fun DisplayTabRoute(
 
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
                 device = uiState.device,
-                relationshipLabel = uiState.parentInfo?.relationshipLabel ?: "부모님",
+                relationshipLabel = uiState.relationshipLabel ?: "부모님",
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onRefreshClick = onRefreshClick,
@@ -150,7 +150,12 @@ fun DisplayTabRoute(
             )
 
             DisplayDestination.ParentInfoEdit -> ParentInfoEditScreen(
-                parentInfo = uiState.parentInfo,
+                parentInfo = uiState.parentInfo?.let { parentInfo ->
+                    parentInfo.copy(
+                        relationshipLabel = uiState.relationshipLabel
+                            ?: parentInfo.relationshipLabel,
+                    )
+                },
                 modifier = modifier,
                 selectedAddress = selectedAddress,
                 selectedAddressLatitude = selectedAddressLatitude,

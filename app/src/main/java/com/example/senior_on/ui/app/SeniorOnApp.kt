@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import com.example.senior_on.BuildConfig
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.data.repository.mock.auth.MockFindIdRepository
 import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
@@ -30,6 +31,7 @@ import com.example.senior_on.ui.onboarding.ModeSelectionScreen
 import com.example.senior_on.ui.onboarding.SplashScreen
 import com.example.senior_on.ui.parent.ParentLauncherScreen
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
+import com.example.senior_on.ui.common.seniorinfo.CaregiverRelationshipInputScreen
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoInputScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
 import com.example.senior_on.ui.onboarding.signup.SignupAccountInfoScreen
@@ -58,12 +60,21 @@ private enum class SeniorOnRoute {
     ParentLauncher,
     FamilyShareCode,
     FamilyShareCodeInput,
+    CaregiverRelationshipInput,
     FamilyShareCodeCreated,
     ParentInfoInput,
     AddressSearch
 }
 
-private val InitialRoute = SeniorOnRoute.Splash
+private const val StartFamilyShareCodeFlowForDebug = true
+
+private val InitialRoute = if (
+    BuildConfig.DEBUG && StartFamilyShareCodeFlowForDebug
+) {
+    SeniorOnRoute.FamilyShareCode
+} else {
+    SeniorOnRoute.Splash
+}
 
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
@@ -98,6 +109,10 @@ fun SeniorOnApp(appContainer: AppContainer) {
 
     BackHandler(enabled = currentRoute == SeniorOnRoute.AddressSearch) {
         navigateBackFromAddressSearch()
+    }
+
+    BackHandler(enabled = currentRoute == SeniorOnRoute.CaregiverRelationshipInput) {
+        currentRoute = SeniorOnRoute.FamilyShareCodeInput
     }
 
     if (currentRoute == SeniorOnRoute.Splash) {
@@ -204,6 +219,8 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
                 displayRepository = appContainer.displayRepository,
                 parentInfoRepository = appContainer.parentInfoRepository,
+                caregiverRelationshipRepository =
+                    appContainer.caregiverRelationshipRepository,
                 notificationScenario =
                     MockNotificationRepository.scenarioForUserId(authenticatedUserId),
                 onLogoutClick = { currentRoute = SeniorOnRoute.Login },
@@ -259,7 +276,25 @@ fun SeniorOnApp(appContainer: AppContainer) {
             )
             SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
-                onLoginClick = { navigateAfterFamilyConnected() }
+                onLoginClick = {
+                    currentRoute = when (selectedUserMode) {
+                        AppUserMode.Child -> SeniorOnRoute.CaregiverRelationshipInput
+                        AppUserMode.Senior -> routeAfterAuthenticated(selectedUserMode)
+                    }
+                }
+            )
+            SeniorOnRoute.CaregiverRelationshipInput -> CaregiverRelationshipInputScreen(
+                seniorName = appContainer.parentInfoRepository.parentInfo.value
+                    ?.name
+                    .orEmpty(),
+                onBackClick = {
+                    currentRoute = SeniorOnRoute.FamilyShareCodeInput
+                },
+                onNextClick = { relationshipLabel ->
+                    appContainer.caregiverRelationshipRepository
+                        .saveRelationshipLabel(relationshipLabel)
+                    navigateAfterFamilyConnected()
+                },
             )
             SeniorOnRoute.FamilyShareCodeCreated -> FamilyShareCodeCreatedScreen(
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },

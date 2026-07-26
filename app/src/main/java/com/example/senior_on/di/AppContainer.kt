@@ -6,6 +6,7 @@ import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.family.FamilyRepository
 import com.example.senior_on.data.repository.mock.parent.MockChatBuddyRepository
+import com.example.senior_on.data.repository.mock.parent.MockCaregiverRelationshipRepository
 import com.example.senior_on.data.repository.mock.display.MockDisplayRepository
 import com.example.senior_on.data.repository.mock.family.MockFamilyRepository
 import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
@@ -22,6 +23,7 @@ import com.example.senior_on.domain.repository.parent.ParentScheduleRepository
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 
 interface AppContainer {
     val familyRepository: FamilyRepository
@@ -35,6 +37,7 @@ interface AppContainer {
     val parentLinkSafetyRepository: ParentLinkSafetyRepository
     val displayRepository: DisplayRepository
     val parentInfoRepository: ParentInfoRepository
+    val caregiverRelationshipRepository: CaregiverRelationshipRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -58,6 +61,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val parentInfoRepository: ParentInfoRepository = MockParentInfoRepository(
         initialParentInfo = MockParentInfoFixtures.mother,
     )
+    override val caregiverRelationshipRepository: CaregiverRelationshipRepository =
+        MockCaregiverRelationshipRepository()
     override val parentScheduleRepository: ParentScheduleRepository =
         MockParentScheduleRepository()
     override val chatBuddyRepository: ChatBuddyRepository = MockChatBuddyRepository()
