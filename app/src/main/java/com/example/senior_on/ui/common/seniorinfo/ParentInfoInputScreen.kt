@@ -308,7 +308,7 @@ private fun SeniorInfoFormContent(
             onClearClick = { onNameChange("") }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         InputLabel(text = "관계")
         Spacer(modifier = Modifier.height(6.dp))
         RelationshipSelector(
@@ -317,7 +317,7 @@ private fun SeniorInfoFormContent(
             onRelationshipClick = onRelationshipClick
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         InputLabel(text = "생년월일", optionalText = " (필수)")
         Spacer(modifier = Modifier.height(6.dp))
         BirthDateSelector(
@@ -325,7 +325,7 @@ private fun SeniorInfoFormContent(
             onClick = onBirthDateClick
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         InputLabel(
             text = "전화번호",
             optionalText = if (isPhoneNumberRequired) " (필수)" else " (선택)",
@@ -338,7 +338,7 @@ private fun SeniorInfoFormContent(
             onClearClick = { onPhoneNumberChange(TextFieldValue("")) }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         InputLabel(text = "자택 주소", optionalText = " (선택)")
         Spacer(modifier = Modifier.height(4.dp))
         SeniorInfoTextField(

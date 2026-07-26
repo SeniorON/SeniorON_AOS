@@ -6,6 +6,7 @@ import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.family.FamilyRepository
 import com.example.senior_on.data.repository.mock.parent.MockChatBuddyRepository
+import com.example.senior_on.data.repository.mock.parent.MockCaregiverRelationshipRepository
 import com.example.senior_on.data.repository.mock.display.MockDisplayRepository
 import com.example.senior_on.data.repository.mock.family.MockFamilyRepository
 import com.example.senior_on.data.repository.mock.family.MockFamilyFixtures
@@ -22,6 +23,9 @@ import com.example.senior_on.domain.repository.parent.ParentScheduleRepository
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
+import com.example.senior_on.domain.model.parent.SeniorRelationType
 
 interface AppContainer {
     val familyRepository: FamilyRepository
@@ -35,6 +39,9 @@ interface AppContainer {
     val parentLinkSafetyRepository: ParentLinkSafetyRepository
     val displayRepository: DisplayRepository
     val parentInfoRepository: ParentInfoRepository
+    fun caregiverRelationshipRepositoryFor(
+        userId: String,
+    ): CaregiverRelationshipRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -44,13 +51,35 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val assistantFamilyRepository: FamilyRepository = MockFamilyRepository(
         initialOverview = MockFamilyFixtures.assistantCaregiverOverview
     )
+    private val primaryCaregiverRelationshipRepository:
+        CaregiverRelationshipRepository = MockCaregiverRelationshipRepository(
+            activeSeniorId = MockParentInfoFixtures.SENIOR_ID,
+            initialRelationship = CaregiverRelationship(
+                relation = SeniorRelationType.MOTHER,
+            )
+        )
+    private val assistantCaregiverRelationshipRepository:
+        CaregiverRelationshipRepository = MockCaregiverRelationshipRepository(
+            activeSeniorId = MockParentInfoFixtures.SENIOR_ID,
+        )
 
     override val familyRepository: FamilyRepository = primaryFamilyRepository
 
     override fun familyRepositoryFor(userId: String): FamilyRepository {
         return when (userId.trim().lowercase()) {
-            "child01" -> assistantFamilyRepository
+            MockFamilyFixtures.ASSISTANT_CAREGIVER_USER_ID ->
+                assistantFamilyRepository
             else -> primaryFamilyRepository
+        }
+    }
+
+    override fun caregiverRelationshipRepositoryFor(
+        userId: String,
+    ): CaregiverRelationshipRepository {
+        return when (userId.trim().lowercase()) {
+            MockFamilyFixtures.ASSISTANT_CAREGIVER_USER_ID ->
+                assistantCaregiverRelationshipRepository
+            else -> primaryCaregiverRelationshipRepository
         }
     }
     override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)

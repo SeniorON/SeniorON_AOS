@@ -46,12 +46,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
 import com.example.senior_on.ui.child.notification.mock.MockNotificationScenario
+import com.example.senior_on.data.repository.mock.parent.MockCaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.family.FamilyRepository
 import com.example.senior_on.data.repository.mock.display.MockDisplayRepository
 import com.example.senior_on.data.repository.mock.family.MockFamilyRepository
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
+import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
@@ -88,6 +90,7 @@ fun ChildMainScreen(
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
+    caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationScenario: MockNotificationScenario =
         MockNotificationScenario.MultipleRecentAlarms,
     modifier: Modifier = Modifier,
@@ -127,6 +130,7 @@ fun ChildMainScreen(
         factory = DisplayViewModel.factory(
             parentInfoRepository = parentInfoRepository,
             displayRepository = displayRepository,
+            caregiverRelationshipRepository = caregiverRelationshipRepository,
         )
     )
 
@@ -505,6 +509,11 @@ private fun ChildMainScreenPreview() {
     val parentInfoRepository = remember {
         MockParentInfoRepository(MockParentInfoFixtures.mother)
     }
+    val caregiverRelationshipRepository = remember {
+        MockCaregiverRelationshipRepository(
+            activeSeniorId = MockParentInfoFixtures.SENIOR_ID,
+        )
+    }
     val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }
 
     SENIOR_ONTheme {
@@ -513,6 +522,7 @@ private fun ChildMainScreenPreview() {
             familyPhotoUploadPreparer = uploadPreparer,
             displayRepository = displayRepository,
             parentInfoRepository = parentInfoRepository,
+            caregiverRelationshipRepository = caregiverRelationshipRepository,
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.example.senior_on.data.repository.mock.family
 
+import com.example.senior_on.data.repository.mock.auth.MockAuthFixtures
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import java.nio.file.Files
@@ -10,6 +11,32 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MockFamilyRepositoryTest {
+    @Test
+    fun `유효한 공유 코드로 참여하면 현재 사용자의 담당자 역할을 반환한다`() =
+        runBlocking {
+            val repository = MockFamilyRepository(
+                initialOverview = MockFamilyFixtures.assistantCaregiverOverview,
+            )
+
+            val result = repository.joinFamily(
+                MockAuthFixtures.VALID_FAMILY_SHARE_CODE
+            )
+
+            assertEquals(MockFamilyFixtures.FAMILY_ID, result.familyId)
+            assertEquals(
+                MockAuthFixtures.VALID_FAMILY_SHARE_CODE,
+                result.familyCode,
+            )
+            assertEquals(FamilyMemberRole.Assistant, result.memberRole)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `유효하지 않은 공유 코드로는 참여할 수 없다`() {
+        runBlocking {
+            MockFamilyRepository().joinFamily("INVALID0")
+        }
+    }
+
     @Test
     fun `주 담당자를 변경하면 기존 담당자는 보조 담당자가 된다`() = runBlocking {
         val repository = MockFamilyRepository()
