@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.display.MockDisplayFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.repository.mock.display.MockDisplayScenario
-import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.parent.ParentInfo
@@ -632,7 +632,7 @@ private fun DisplayTabConnectedPreview() {
     SENIOR_ONTheme {
         DisplayTabPreviewFrame(
             uiState = DisplayTabUiState(
-                parentInfo = MockParentInfoFixtures.mother,
+                parentInfo = MockSeniorFixtures.mother,
                 device = overview.device,
                 screenConfiguration = overview.screenConfiguration,
             )
@@ -653,7 +653,7 @@ private fun DisplayTabNotConnectedPreview() {
     SENIOR_ONTheme {
         DisplayTabPreviewFrame(
             uiState = DisplayTabUiState(
-                parentInfo = MockParentInfoFixtures.mother,
+                parentInfo = MockSeniorFixtures.mother,
                 device = overview.device,
                 screenConfiguration = overview.screenConfiguration,
             )
@@ -674,7 +674,7 @@ private fun DisplayTabOfflinePreview() {
     SENIOR_ONTheme {
         DisplayTabPreviewFrame(
             uiState = DisplayTabUiState(
-                parentInfo = MockParentInfoFixtures.mother,
+                parentInfo = MockSeniorFixtures.mother,
                 device = overview.device,
                 screenConfiguration = overview.screenConfiguration,
             )
@@ -695,7 +695,7 @@ private fun DisplayTabOfflineDialogPreview() {
     SENIOR_ONTheme {
         DisplayTabPreviewFrame(
             uiState = DisplayTabUiState(
-                parentInfo = MockParentInfoFixtures.mother,
+                parentInfo = MockSeniorFixtures.mother,
                 device = overview.device,
                 screenConfiguration = overview.screenConfiguration,
             ),

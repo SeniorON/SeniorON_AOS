@@ -1,6 +1,7 @@
 package com.example.senior_on.data.repository.mock.display
 
-import com.example.senior_on.data.repository.mock.parent.MockParentInfoFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.parent.ParentInfo
@@ -105,9 +106,9 @@ class DisplayRepositoryTest {
 
     @Test
     fun savedParentInfoIsSharedWithObservers() {
-        val repository = MockParentInfoRepository(MockParentInfoFixtures.mother)
+        val repository = MockParentInfoRepository(MockSeniorFixtures.mother)
         val savedParentInfo = ParentInfo(
-            seniorId = MockParentInfoFixtures.SENIOR_ID,
+            seniorId = MockSeniorFixtures.SENIOR_ID,
             name = "김영희",
             relationshipLabel = "아버지",
             birthDate = LocalDate.of(1960, 1, 2),

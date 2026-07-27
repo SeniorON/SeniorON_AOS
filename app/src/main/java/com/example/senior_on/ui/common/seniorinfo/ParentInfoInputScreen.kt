@@ -159,7 +159,7 @@ fun ParentInfoInputScreen(
     }
 
     if (showBirthDateSheet) {
-        BirthDateBottomSheet(
+        ParentInfoBirthDateBottomSheet(
             initialBirthDate = birthDate,
             onDismiss = { showBirthDateSheet = false },
             onConfirm = { selectedBirthDate ->
@@ -426,11 +426,11 @@ private fun CustomRelationshipBottomSheetPreview() {
 private fun BirthDateBottomSheetPreview() {
     SENIOR_ONTheme {
         SeniorInfoBottomSheetPreviewFrame(
-            scrimAlpha = 0.45f,
+            scrimAlpha = 0.5f,
             cornerRadius = 28.dp
         ) {
-            BirthDateBottomSheet(
-                initialBirthDate = "1956.01.01",
+            ParentInfoBirthDateBottomSheet(
+                initialBirthDate = "1933.05.12",
                 onDismiss = {},
                 onConfirm = {}
             )

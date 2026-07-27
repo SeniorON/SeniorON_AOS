@@ -38,6 +38,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -334,7 +335,7 @@ private fun CaregiverRelationshipItem(
 private fun CaregiverRelationshipInputScreenPreview() {
     SENIOR_ONTheme {
         CaregiverRelationshipInputScreen(
-            seniorName = "김순자",
+            seniorName = MockSeniorFixtures.mother.name,
             onBackClick = {},
             onNextClick = {},
         )
@@ -351,7 +352,7 @@ private fun CaregiverRelationshipInputScreenPreview() {
 private fun CaregiverRelationshipCustomPreview() {
     SENIOR_ONTheme {
         CaregiverRelationshipInputScreen(
-            seniorName = "김순자",
+            seniorName = MockSeniorFixtures.mother.name,
             onBackClick = {},
             onNextClick = {},
             initialRelationship = SeniorRelationship.Custom,

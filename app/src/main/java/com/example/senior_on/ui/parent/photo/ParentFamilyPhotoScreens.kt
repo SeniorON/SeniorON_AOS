@@ -54,6 +54,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.senior_on.R
+import com.example.senior_on.data.repository.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.ui.parent.component.ParentDetailTopBar
 import com.example.senior_on.ui.parent.component.parentCardShadow
@@ -550,8 +552,8 @@ private fun Instant.toParentPhotoDisplayTime(): String {
 }
 
 private fun parentPhotoPreviewMember(
-    memberId: String = "member-kim",
-    memberName: String = "김지은",
+    memberId: String = MockFamilyFixtures.SECONDARY_ASSISTANT_MEMBER_ID,
+    memberName: String = MockUserFixtures.secondaryCaregiver.name,
     usePrimaryImageFirst: Boolean = true
 ): ParentPhotoMemberUiModel {
     val now = Instant.now()
@@ -599,8 +601,8 @@ private fun ParentFamilyMembersPhotoContentPreview() {
                 members = listOf(
                     parentPhotoPreviewMember(),
                     parentPhotoPreviewMember(
-                        memberId = "member-min",
-                        memberName = "김민지",
+                        memberId = MockFamilyFixtures.PRIMARY_MEMBER_ID,
+                        memberName = MockUserFixtures.primaryCaregiver.name,
                         usePrimaryImageFirst = false
                     )
                 ),

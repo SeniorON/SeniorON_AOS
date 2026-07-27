@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.auth.MockAuthFixtures
+import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.data.repository.mock.parent.MockChatBuddyRepository
 import com.example.senior_on.data.repository.mock.parent.MockParentEmergencyAlertRepository
