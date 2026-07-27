@@ -1,0 +1,841 @@
+package com.example.senior_on.ui.child.health
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import com.example.senior_on.R
+import com.example.senior_on.ui.theme.SENIOR_ONTheme
+import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.theme.SeniorOnRadius
+import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import java.time.LocalTime
+
+enum class MedicationEditorMode { Add, View, Edit }
+
+data class MedicationDraft(
+    val category: String,
+    val name: String,
+    val times: List<LocalTime>,
+    val weekdays: Set<Int>
+)
+
+@Composable
+fun MedicationDetailScreen(
+    mode: MedicationEditorMode,
+    initialDraft: MedicationDraft,
+    modifier: Modifier = Modifier,
+    onBackClick: () -> Unit,
+    onEditClick: () -> Unit = {},
+    onSaveClick: (MedicationDraft) -> Unit,
+    onDeleteClick: () -> Unit = {}
+) {
+    val focusManager = LocalFocusManager.current
+    var category by rememberSaveable(initialDraft) { mutableStateOf(initialDraft.category) }
+    var name by rememberSaveable(initialDraft) { mutableStateOf(initialDraft.name) }
+    var times by remember(initialDraft) { mutableStateOf(initialDraft.times) }
+    var weekdays by remember(initialDraft) { mutableStateOf(initialDraft.weekdays) }
+    var showTimeSheet by rememberSaveable { mutableStateOf(false) }
+    var showExitDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var snackbarMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val isEditable = mode != MedicationEditorMode.View
+    val isEveryday = weekdays.size == MedicationWeekdayLabels.size
+    val isComplete = category.isNotBlank() && times.isNotEmpty() && weekdays.isNotEmpty()
+    val hasInput =
+        category.isNotBlank() || name.isNotBlank() || times.isNotEmpty() || weekdays.isNotEmpty()
+    val hasChanges =
+        category != initialDraft.category ||
+            name != initialDraft.name ||
+            times != initialDraft.times ||
+            weekdays != initialDraft.weekdays
+
+    LaunchedEffect(snackbarMessage) {
+        if (snackbarMessage != null) {
+            delay(2_000)
+            snackbarMessage = null
+        }
+    }
+
+    val requestBack = {
+        when {
+            mode == MedicationEditorMode.Add && hasInput -> showExitDialog = true
+            mode == MedicationEditorMode.Edit && hasChanges -> showExitDialog = true
+            else -> onBackClick()
+        }
+    }
+    BackHandler(onBack = requestBack)
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SeniorOnColors.SupportWhite100)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }
+        ) {
+            MedicationEditorTopBar(
+                title = when (mode) {
+                    MedicationEditorMode.Add -> "복약 추가하기"
+                    MedicationEditorMode.View -> "복약 정보"
+                    MedicationEditorMode.Edit -> "복약 수정하기"
+                },
+                onBackClick = requestBack
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                MedicationFormSection(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp)
+                ) {
+                    MedicationFormLabel("약 이름")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    MedicationTextInput(
+                        value = category,
+                        placeholder = if (mode == MedicationEditorMode.Add) {
+                            "약 이름을 입력해주세요"
+                        } else {
+                            "약 이름"
+                        },
+                        onValueChange = { category = it },
+                        filled = true,
+                        enabled = isEditable
+                    )
+                }
+
+                if (mode == MedicationEditorMode.Add) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .background(SeniorOnColors.Background3)
+                    )
+                }
+
+                MedicationFormSection(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MedicationFormLabel("성분명")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        MedicationSelectBadge()
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    MedicationTextInput(
+                        value = name,
+                        placeholder = if (mode == MedicationEditorMode.Add) {
+                            "예시) 아암로디핀"
+                        } else {
+                            "성분명"
+                        },
+                        onValueChange = { name = it },
+                        filled = false,
+                        enabled = isEditable
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        MedicationFormLabel(
+                            text = "복용 시간",
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isEditable && times.isNotEmpty()) {
+                            Text(
+                                text = "+ 복용 시간 추가",
+                                style = SeniorOnTextStyles.BodySSemiBold,
+                                color = SeniorOnColors.Primary600,
+                                modifier = Modifier.clickable {
+                                    focusManager.clearFocus()
+                                    showTimeSheet = true
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    when {
+                        times.isEmpty() && isEditable -> {
+                            MedicationTimePickerField(
+                                isFocused = showTimeSheet,
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    showTimeSheet = true
+                                }
+                            )
+                        }
+                        else -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                times.forEach { time ->
+                                    if (isEditable) {
+                                        MedicationEditableTimeChip(
+                                            text = time.toMedicationTime(),
+                                            onDeleteClick = {
+                                                times = times.filterNot { it == time }
+                                            }
+                                        )
+                                    } else {
+                                        MedicationTimeChip(text = time.toMedicationTime())
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        MedicationFormLabel(
+                            text = "반복 요일",
+                            modifier = Modifier.weight(1f)
+                        )
+                        MedicationEverydayCheckbox(
+                            checked = isEveryday,
+                            enabled = isEditable,
+                            onCheckedChange = { checked ->
+                                weekdays = if (checked) {
+                                    MedicationWeekdayLabels.indices.toSet()
+                                } else {
+                                    emptySet()
+                                }
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    MedicationWeekdaySelector(
+                        selectedDays = weekdays,
+                        enabled = isEditable,
+                        onDayToggle = { dayIndex ->
+                            weekdays = if (dayIndex in weekdays) {
+                                weekdays - dayIndex
+                            } else {
+                                weekdays + dayIndex
+                            }
+                        }
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                when (mode) {
+                    MedicationEditorMode.Add -> {
+                        MedicationPrimaryButton(
+                            label = "약 추가하기",
+                            enabled = isComplete,
+                            onClick = {
+                                onSaveClick(
+                                    MedicationDraft(
+                                        category = category.trim(),
+                                        name = name.trim(),
+                                        times = times,
+                                        weekdays = weekdays
+                                    )
+                                )
+                            },
+                            iconResId = R.drawable.ic_plus,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    MedicationEditorMode.View -> {
+                        MedicationDeleteButton(
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.weight(1f)
+                        )
+                        MedicationPrimaryButton(
+                            label = "수정하기",
+                            enabled = true,
+                            onClick = onEditClick,
+                            iconResId = R.drawable.ic_pencil,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    MedicationEditorMode.Edit -> {
+                        MedicationPrimaryButton(
+                            label = "수정하기",
+                            enabled = isComplete,
+                            onClick = {
+                                onSaveClick(
+                                    MedicationDraft(
+                                        category = category.trim(),
+                                        name = name.trim(),
+                                        times = times,
+                                        weekdays = weekdays
+                                    )
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        }
+
+        snackbarMessage?.let { message ->
+            MedicationSnackbar(
+                message = message,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 88.dp)
+            )
+        }
+    }
+
+    if (showTimeSheet) {
+        ScheduleTimePickerBottomSheet(
+            initialTime = times.lastOrNull() ?: LocalTime.of(8, 0),
+            onDismiss = { showTimeSheet = false },
+            onConfirm = { selected ->
+                if (selected in times) {
+                    snackbarMessage = "이미 등록된 복용 시간입니다."
+                } else {
+                    times = (times + selected).sorted()
+                }
+                showTimeSheet = false
+            }
+        )
+    }
+    if (showExitDialog) {
+        val isAddMode = mode == MedicationEditorMode.Add
+        SeniorOnConfirmDialog(
+            iconResId = R.drawable.ic_modal_unsaved,
+            title = if (isAddMode) {
+                "등록하지 않고\n나가시겠어요?"
+            } else {
+                "저장하지 않고\n나가시겠어요?"
+            },
+            description = if (isAddMode) {
+                "지금 나가면 입력한 내용이\n저장되지 않습니다."
+            } else {
+                "지금 나가면 수정한 내용이\n저장되지 않습니다."
+            },
+            cancelLabel = "나가기",
+            confirmLabel = "계속 입력",
+            confirmColor = SeniorOnColors.Primary600,
+            onCancel = onBackClick,
+            onConfirm = { showExitDialog = false }
+        )
+    }
+    if (showDeleteDialog) {
+        SeniorOnDeleteConfirmDialog(
+            title = "'${category.ifBlank { initialDraft.category }}'을 삭제할까요?",
+            onCancel = { showDeleteDialog = false },
+            onConfirm = onDeleteClick
+        )
+    }
+}
+
+@Composable
+private fun MedicationEditorTopBar(
+    title: String,
+    onBackClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .dropShadow(
+                shape = RectangleShape,
+                shadow = Shadow(
+                    radius = 12.dp,
+                    spread = 0.dp,
+                    color = Color.Black.copy(alpha = 15f / 255f),
+                    offset = DpOffset(x = 0.dp, y = 4.dp)
+                )
+            )
+            .background(SeniorOnColors.SupportWhite100)
+            .statusBarsPadding()
+            .height(54.dp)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clickable(onClick = onBackClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                tint = SeniorOnColors.Gray800,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = SeniorOnTextStyles.BodyLBold,
+            color = SeniorOnColors.Gray800
+        )
+    }
+}
+
+@Composable
+private fun MedicationFormSection(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = modifier.fillMaxWidth(), content = content)
+}
+
+@Composable
+private fun MedicationTimePickerField(
+    isFocused: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(49.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .background(SeniorOnColors.SupportWhite100)
+            .border(
+                width = 1.dp,
+                color = if (isFocused) SeniorOnColors.Primary600 else SeniorOnColors.Gray200,
+                shape = RoundedCornerShape(SeniorOnRadius.Small)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "시간 선택",
+            style = SeniorOnTextStyles.BodyMMedium,
+            color = SeniorOnColors.Gray300,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            painter = painterResource(id = R.drawable.ic_clock_1),
+            contentDescription = null,
+            tint = SeniorOnColors.Gray400,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun MedicationEditableTimeChip(
+    text: String,
+    onDeleteClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .background(SeniorOnColors.Primary100)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            style = SeniorOnTextStyles.BodyMSemiBold,
+            color = SeniorOnColors.Primary700,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            painter = painterResource(id = R.drawable.ic_trash),
+            contentDescription = "복용 시간 삭제",
+            tint = SeniorOnColors.Gray400,
+            modifier = Modifier
+                .size(24.dp)
+                .clickable(onClick = onDeleteClick)
+        )
+    }
+}
+
+@Composable
+private fun MedicationSnackbar(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(SeniorOnRadius.Large))
+            .background(SeniorOnColors.Gray700.copy(alpha = 0.92f))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_information2),
+            contentDescription = null,
+            tint = SeniorOnColors.SupportWhite100,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = message,
+            style = SeniorOnTextStyles.BodySMedium,
+            color = SeniorOnColors.SupportWhite100
+        )
+    }
+}
+
+@Composable
+private fun MedicationFormLabel(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = SeniorOnTextStyles.BodyMSemiBold,
+        color = SeniorOnColors.Gray800,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun MedicationSelectBadge() {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(45.dp))
+            .background(SeniorOnColors.Gray100)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = "선택",
+            style = SeniorOnTextStyles.CaptionMedium,
+            color = SeniorOnColors.Gray400
+        )
+    }
+}
+
+@Composable
+private fun MedicationTextInput(
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    filled: Boolean,
+    enabled: Boolean
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(SeniorOnRadius.Small)
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
+        textStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(49.dp)
+            .onFocusChanged { isFocused = it.isFocused },
+        singleLine = true,
+        decorationBox = { inner ->
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(
+                        if (filled) SeniorOnColors.Background3
+                        else SeniorOnColors.SupportWhite100
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = when {
+                            !filled && (isFocused || value.isNotEmpty()) -> SeniorOnColors.Gray800
+                            !filled -> SeniorOnColors.Gray200
+                            isFocused && enabled -> SeniorOnColors.Primary500
+                            else -> Color.Transparent
+                        },
+                        shape = shape
+                    )
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = SeniorOnTextStyles.BodyMMedium,
+                            color = SeniorOnColors.Gray300
+                        )
+                    }
+                    inner()
+                }
+                if (enabled && value.isNotEmpty() && !isFocused) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_close),
+                        contentDescription = "지우기",
+                        tint = SeniorOnColors.Gray400,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { onValueChange("") }
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun MedicationTimeChip(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .background(SeniorOnColors.Primary100),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = SeniorOnTextStyles.BodyMSemiBold,
+            color = SeniorOnColors.Primary700
+        )
+    }
+}
+
+@Composable
+private fun MedicationEverydayCheckbox(
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.clickable(
+            enabled = enabled,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = { onCheckedChange(!checked) }
+        ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(
+                id = if (checked) R.drawable.ic_check_filled else R.drawable.ic_check_unfilled
+            ),
+            contentDescription = null,
+            tint = if (checked) SeniorOnColors.Primary600 else SeniorOnColors.Gray200,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "매일",
+            style = SeniorOnTextStyles.BodySMedium,
+            color = if (checked) SeniorOnColors.Primary600 else SeniorOnColors.Gray400
+        )
+    }
+}
+
+@Composable
+private fun MedicationWeekdaySelector(
+    selectedDays: Set<Int>,
+    enabled: Boolean,
+    onDayToggle: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        MedicationWeekdayLabels.forEachIndexed { index, label ->
+            val selected = index in selectedDays
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when {
+                            selected -> SeniorOnColors.Primary100
+                            else -> SeniorOnColors.Gray50
+                        }
+                    )
+                    .then(
+                        if (selected) {
+                            Modifier.border(1.dp, SeniorOnColors.Primary400, CircleShape)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .clickable(
+                        enabled = enabled,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onDayToggle(index) }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    style = SeniorOnTextStyles.BodySSemiBold,
+                    color = when {
+                        selected -> SeniorOnColors.Primary700
+                        else -> SeniorOnColors.Gray300
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MedicationDeleteButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .border(1.dp, SeniorOnColors.Red300, RoundedCornerShape(SeniorOnRadius.Small))
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_trash),
+            contentDescription = null,
+            tint = SeniorOnColors.Red300,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "삭제하기",
+            style = SeniorOnTextStyles.ButtonM,
+            color = SeniorOnColors.Red300
+        )
+    }
+}
+
+@Composable
+private fun MedicationPrimaryButton(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconResId: Int? = null
+) {
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .alpha(if (enabled) 1f else 0.5f)
+            .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .background(SeniorOnColors.Primary600)
+            .clickable(enabled = enabled, onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        iconResId?.let {
+            Icon(
+                painter = painterResource(id = it),
+                contentDescription = null,
+                tint = SeniorOnColors.SupportWhite100,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+        Text(
+            text = label,
+            style = SeniorOnTextStyles.ButtonM,
+            color = SeniorOnColors.SupportWhite100
+        )
+    }
+}
+
+internal fun RegisteredMedicationUiState.toDraft() = MedicationDraft(
+    category = category,
+    name = name,
+    times = times,
+    weekdays = weekdays
+)
+
+@Preview(name = "복약 추가하기 - Add", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun MedicationDetailAddPreview() {
+    SENIOR_ONTheme {
+        MedicationDetailScreen(
+            mode = MedicationEditorMode.Add,
+            initialDraft = MedicationDraft("", "", emptyList(), emptySet()),
+            onBackClick = {},
+            onSaveClick = {}
+        )
+    }
+}
+
+@Preview(name = "복약 정보 - View", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun MedicationDetailViewPreview() {
+    SENIOR_ONTheme {
+        MedicationDetailScreen(
+            mode = MedicationEditorMode.View,
+            initialDraft = previewRegisteredMedications().first().toDraft(),
+            onBackClick = {},
+            onEditClick = {},
+            onSaveClick = {},
+            onDeleteClick = {}
+        )
+    }
+}
+
+@Preview(name = "복약 수정하기 - Edit", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun MedicationDetailEditPreview() {
+    SENIOR_ONTheme {
+        MedicationDetailScreen(
+            mode = MedicationEditorMode.Edit,
+            initialDraft = previewRegisteredMedications()[1].toDraft(),
+            onBackClick = {},
+            onSaveClick = {}
+        )
+    }
+}
