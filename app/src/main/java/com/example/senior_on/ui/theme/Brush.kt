@@ -8,7 +8,7 @@ object SeniorOnBrushes {
     val DisplayDeviceConnected = Brush.horizontalGradient(
         colors = listOf(
             Color(0xFFECF7DC),
-            Color(0xFFDDE2BF),
+            Color(0xFFDDF2BE),
         )
     )
 
