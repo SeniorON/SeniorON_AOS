@@ -21,8 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,13 +31,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.senior_on.data.repository.mock.auth.MockSignupAuthRepository
-import com.example.senior_on.domain.repository.auth.SignupAuthRepository
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private const val VerificationTimeoutSeconds = 5 * 60
 
@@ -51,19 +47,26 @@ private enum class EmailVerificationResult {
 @Composable
 fun SignupEmailVerificationScreen(
     onBackClick: () -> Unit,
-    onNextClick: () -> Unit,
+    onNextClick: (email: String) -> Unit,
+    onSendVerificationCode: (
+        email: String,
+        onResult: (Boolean) -> Unit
+    ) -> Unit,
+    onVerifyCode: (
+        email: String,
+        verificationCode: String,
+        onResult: (Boolean) -> Unit
+    ) -> Unit,
     modifier: Modifier = Modifier,
-    authRepository: SignupAuthRepository = MockSignupAuthRepository()
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    var email by rememberSaveable { mutableStateOf("") }
-    var verificationCode by rememberSaveable { mutableStateOf("") }
-    var hasRequestedCode by rememberSaveable { mutableStateOf(false) }
-    var verificationResult by rememberSaveable { mutableStateOf(EmailVerificationResult.None) }
-    var remainingSeconds by rememberSaveable { mutableIntStateOf(VerificationTimeoutSeconds) }
-    var requestCount by rememberSaveable { mutableIntStateOf(0) }
-    var isRequestingCode by rememberSaveable { mutableStateOf(false) }
-    var isVerifyingCode by rememberSaveable { mutableStateOf(false) }
+    var email by remember { mutableStateOf("") }
+    var verificationCode by remember { mutableStateOf("") }
+    var hasRequestedCode by remember { mutableStateOf(false) }
+    var verificationResult by remember { mutableStateOf(EmailVerificationResult.None) }
+    var remainingSeconds by remember { mutableIntStateOf(VerificationTimeoutSeconds) }
+    var requestCount by remember { mutableIntStateOf(0) }
+    var isRequestingCode by remember { mutableStateOf(false) }
+    var isVerifyingCode by remember { mutableStateOf(false) }
 
     val canRequestVerification = email.isValidEmail() && !isRequestingCode
     val isVerified = verificationResult == EmailVerificationResult.Verified
@@ -119,12 +122,11 @@ fun SignupEmailVerificationScreen(
                     width = if (shouldShowVerificationCodeInput) 53.dp else 68.dp,
                     enabled = canRequestVerification,
                     onClick = {
-                        coroutineScope.launch {
-                            isRequestingCode = true
-                            hasRequestedCode = false
-                            verificationCode = ""
-                            verificationResult = EmailVerificationResult.None
-                            val isSent = authRepository.requestEmailVerification(email)
+                        isRequestingCode = true
+                        hasRequestedCode = false
+                        verificationCode = ""
+                        verificationResult = EmailVerificationResult.None
+                        onSendVerificationCode(email) { isSent ->
                             isRequestingCode = false
 
                             if (isSent) {
@@ -174,12 +176,8 @@ fun SignupEmailVerificationScreen(
                         verified = isVerified,
                         enabled = canVerifyCode,
                         onClick = {
-                            coroutineScope.launch {
-                                isVerifyingCode = true
-                                val verified = authRepository.verifyEmailCode(
-                                    email = email,
-                                    code = verificationCode
-                                )
+                            isVerifyingCode = true
+                            onVerifyCode(email, verificationCode) { verified ->
                                 isVerifyingCode = false
                                 verificationResult = if (verified) {
                                     EmailVerificationResult.Verified
@@ -215,7 +213,7 @@ fun SignupEmailVerificationScreen(
 
         SignupNextButton(
             enabled = isVerified,
-            onClick = onNextClick
+            onClick = { onNextClick(email.trim()) }
         )
 
         Spacer(modifier = Modifier.height(22.5.dp))
@@ -231,7 +229,7 @@ private fun SignupVerificationCodeField(
     modifier: Modifier = Modifier,
     errorMessage: String? = null
 ) {
-    var isFocused by rememberSaveable { mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
     val underlineColor = when {
         errorMessage != null -> SeniorOnColors.Red300
         isFocused -> SeniorOnColors.Primary600
@@ -382,7 +380,9 @@ private fun SignupEmailVerificationScreenPreview() {
     SENIOR_ONTheme {
         SignupEmailVerificationScreen(
             onBackClick = {},
-            onNextClick = {}
+            onNextClick = {},
+            onSendVerificationCode = { _, onResult -> onResult(true) },
+            onVerifyCode = { _, _, onResult -> onResult(true) }
         )
     }
 }

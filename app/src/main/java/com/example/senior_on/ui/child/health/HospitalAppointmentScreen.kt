@@ -54,7 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
 import com.example.senior_on.R
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
-import com.example.senior_on.data.repository.mock.health.MockHospitalSpecialtyRepository
+import com.example.senior_on.data.repository.impl.HospitalSpecialtyRepositoryImpl
+import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -63,6 +64,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private val PreviewHospitalSpecialtyRepository: HospitalSpecialtyRepository =
+    HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
 
 enum class HospitalEditorMode { Add, View, Edit }
 
@@ -85,7 +89,7 @@ fun HospitalAppointmentScreen(
     mode: HospitalEditorMode,
     initialDate: LocalDate,
     initialDraft: HospitalAppointmentDraft? = null,
-    specialtyRepository: HospitalSpecialtyRepository = MockHospitalSpecialtyRepository,
+    specialtyRepository: HospitalSpecialtyRepository = PreviewHospitalSpecialtyRepository,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
     onSaveClick: (HospitalAppointmentDraft) -> Unit,

@@ -3,7 +3,7 @@ package com.example.senior_on.ui.common.seniorinfo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 

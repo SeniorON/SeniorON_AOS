@@ -48,9 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius

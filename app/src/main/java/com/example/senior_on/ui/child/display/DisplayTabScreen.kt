@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
-import com.example.senior_on.data.repository.mock.display.MockDisplayScenario
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.source.display.MockDisplayScenario
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.parent.ParentInfo

@@ -54,8 +54,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockFamilyFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.ui.parent.component.ParentDetailTopBar
 import com.example.senior_on.ui.parent.component.parentCardShadow

@@ -45,8 +45,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.auth.MockLoginAuthRepository
 import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.domain.model.auth.LoginResult
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -62,6 +62,11 @@ private enum class LoginFieldError {
 @Composable
 fun LoginScreen(
     selectedMode: AppUserMode,
+    onLoginRequest: (
+        loginId: String,
+        password: String,
+        onResult: (LoginResult?) -> Unit
+    ) -> Unit,
     onLoginClick: (userId: String) -> Unit = {},
     onGoToModeSelection: () -> Unit = {},
     onFindIdClick: () -> Unit = {},
@@ -77,6 +82,7 @@ fun LoginScreen(
     var keepLoggedIn by rememberSaveable { mutableStateOf(false) }
     var loginError by rememberSaveable { mutableStateOf(LoginFieldError.None) }
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
+    var isLoggingIn by rememberSaveable { mutableStateOf(false) }
 
     val userIdError = loginError == LoginFieldError.InvalidCredentials
     val passwordError = loginError != LoginFieldError.None
@@ -178,7 +184,7 @@ fun LoginScreen(
                 .height(50.dp) //높이 50px
                 .clip(RoundedCornerShape(SeniorOnRadius.Small))
                 .background(SeniorOnColors.Primary600)
-                .clickable {
+                .clickable(enabled = !isLoggingIn) {
                     loginError = when {
                         password.isBlank() -> LoginFieldError.EmptyPassword
                         userId.isBlank() -> LoginFieldError.InvalidCredentials
@@ -186,20 +192,25 @@ fun LoginScreen(
                     }
                     if (loginError != LoginFieldError.None) return@clickable
 
-                    val authenticatedMode =
-                        MockLoginAuthRepository.login(userId, password)
-                    if (authenticatedMode == null) {
-                        loginError = LoginFieldError.InvalidCredentials
-                        return@clickable
-                    }
-                    if (authenticatedMode != selectedMode) {
-                        wrongModeDialogType = when (authenticatedMode) {
-                            AppUserMode.Senior -> LoginWrongModeDialogType.SeniorAccount
-                            AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
+                    isLoggingIn = true
+                    onLoginRequest(userId, password) { loginResult ->
+                        isLoggingIn = false
+
+                        if (loginResult == null) {
+                            loginError = LoginFieldError.InvalidCredentials
+                            return@onLoginRequest
                         }
-                        return@clickable
+                        if (loginResult.mode != null && loginResult.mode != selectedMode) {
+                            wrongModeDialogType = when (loginResult.mode) {
+                                AppUserMode.Senior ->
+                                    LoginWrongModeDialogType.SeniorAccount
+                                AppUserMode.Child ->
+                                    LoginWrongModeDialogType.ChildAccount
+                            }
+                            return@onLoginRequest
+                        }
+                        onLoginClick(loginResult.loginId)
                     }
-                    onLoginClick(userId.trim().lowercase())
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -567,7 +578,10 @@ private fun SnsLoginDivider() {
 @Composable
 private fun LoginScreenDefaultPreview() {
     SENIOR_ONTheme {
-        LoginScreen(selectedMode = AppUserMode.Child)
+        LoginScreen(
+            selectedMode = AppUserMode.Child,
+            onLoginRequest = { _, _, onResult -> onResult(null) }
+        )
     }
 }
 
@@ -580,7 +594,10 @@ private fun LoginScreenDefaultPreview() {
 @Composable
 private fun LoginScreenCompactPreview() {
     SENIOR_ONTheme {
-        LoginScreen(selectedMode = AppUserMode.Child)
+        LoginScreen(
+            selectedMode = AppUserMode.Child,
+            onLoginRequest = { _, _, onResult -> onResult(null) }
+        )
     }
 }
 

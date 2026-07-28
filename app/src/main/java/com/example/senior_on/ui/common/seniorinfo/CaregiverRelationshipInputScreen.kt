@@ -38,7 +38,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -78,6 +78,7 @@ fun CaregiverRelationshipInputScreen(
     modifier: Modifier = Modifier,
     initialRelationship: SeniorRelationship? = null,
     initialCustomRelationship: String = "",
+    isSubmitting: Boolean = false,
 ) {
     var selectedRelationship by rememberSaveable {
         mutableStateOf(initialRelationship)
@@ -219,7 +220,7 @@ fun CaregiverRelationshipInputScreen(
                 },
                 style = SeniorInfoButtonStyle.Filled,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = isNextEnabled,
+                enabled = isNextEnabled && !isSubmitting,
                 height = 50.dp,
             )
         }

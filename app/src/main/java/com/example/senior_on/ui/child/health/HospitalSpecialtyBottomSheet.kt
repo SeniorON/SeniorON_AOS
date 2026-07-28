@@ -32,7 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.health.MockHospitalSpecialtyRepository
+import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -254,7 +254,7 @@ private fun HospitalSpecialtyBottomSheetPreview() {
                     color = SeniorOnColors.Gray800
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-                MockHospitalSpecialtyRepository.specialties
+                MockHospitalSpecialtyDataSource.specialties
                     .take(CollapsedSpecialtyCount)
                     .chunked(3)
                     .forEach { rowItems ->
@@ -352,7 +352,7 @@ private fun HospitalSpecialtyBottomSheetExpandedPreview() {
                     color = SeniorOnColors.Gray800
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-                MockHospitalSpecialtyRepository.specialties
+                MockHospitalSpecialtyDataSource.specialties
                     .chunked(3)
                     .forEach { rowItems ->
                         Row(

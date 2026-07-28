@@ -1,8 +1,8 @@
 package com.example.senior_on.ui.child.settings
 
-import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
 import org.junit.Assert.assertEquals
 import org.junit.Test

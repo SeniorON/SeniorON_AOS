@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,28 +32,32 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.auth.MockSignupAuthRepository
-import com.example.senior_on.domain.repository.auth.SignupAuthRepository
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
-import kotlinx.coroutines.launch
 
 @Composable
 fun SignupAccountInfoScreen(
     onBackClick: () -> Unit,
-    onNextClick: () -> Unit,
+    onNextClick: (
+        loginId: String,
+        password: String,
+        passwordCheck: String
+    ) -> Unit,
+    onCheckLoginId: (
+        loginId: String,
+        onResult: (Boolean?) -> Unit
+    ) -> Unit,
     modifier: Modifier = Modifier,
-    authRepository: SignupAuthRepository = MockSignupAuthRepository()
 ) {
-    val coroutineScope = rememberCoroutineScope()
     var userId by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordConfirm by rememberSaveable { mutableStateOf("") }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var isPasswordConfirmVisible by rememberSaveable { mutableStateOf(false) }
     var idCheckState by rememberSaveable { mutableStateOf(IdCheckState.Idle) }
+    var isCheckingId by rememberSaveable { mutableStateOf(false) }
 
     val isPasswordValid = password.isEmpty() || isValidPassword(password)
     val isPasswordConfirmValid = passwordConfirm.isEmpty() || password == passwordConfirm
@@ -89,7 +92,8 @@ fun SignupAccountInfoScreen(
                 placeholder = "",
                 underlineColor = when (idCheckState) {
                     IdCheckState.Available -> SeniorOnColors.Primary600
-                    IdCheckState.Duplicated -> SeniorOnColors.Red300
+                    IdCheckState.Duplicated,
+                    IdCheckState.Error -> SeniorOnColors.Red300
                     else -> null
                 },
                 modifier = Modifier.weight(1f)
@@ -98,13 +102,19 @@ fun SignupAccountInfoScreen(
             Spacer(modifier = Modifier.width(8.dp))
 
             SignupDuplicateCheckButton(
-                enabled = userId.isNotBlank(),
+                enabled = userId.isNotBlank() && !isCheckingId,
+                isChecking = isCheckingId,
                 onClick = {
-                    coroutineScope.launch {
-                        idCheckState = if (authRepository.isUserIdAvailable(userId)) {
-                            IdCheckState.Available
-                        } else {
-                            IdCheckState.Duplicated
+                    val requestedLoginId = userId.trim()
+                    isCheckingId = true
+                    onCheckLoginId(requestedLoginId) { isAvailable ->
+                        isCheckingId = false
+                        if (userId.trim() == requestedLoginId) {
+                            idCheckState = when (isAvailable) {
+                                true -> IdCheckState.Available
+                                false -> IdCheckState.Duplicated
+                                null -> IdCheckState.Error
+                            }
                         }
                     }
                 }
@@ -186,7 +196,13 @@ fun SignupAccountInfoScreen(
 
         SignupNextButton(
             enabled = canGoNext,
-            onClick = onNextClick
+            onClick = {
+                onNextClick(
+                    userId.trim(),
+                    password,
+                    passwordConfirm
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(22.5.dp))
@@ -212,11 +228,13 @@ private fun SignupIdCheckMessage(
     val message = when (idCheckState) {
         IdCheckState.Available -> "사용 가능한 아이디예요."
         IdCheckState.Duplicated -> "이미 사용 중인 아이디입니다."
+        IdCheckState.Error -> "아이디 중복 확인에 실패했어요. 다시 시도해 주세요."
         IdCheckState.Idle -> ""
     }
     val messageColor = when (idCheckState) {
         IdCheckState.Available -> SeniorOnColors.Primary600
-        IdCheckState.Duplicated -> SeniorOnColors.Red300
+        IdCheckState.Duplicated,
+        IdCheckState.Error -> SeniorOnColors.Red300
         IdCheckState.Idle -> Color.Transparent
     }
 
@@ -233,6 +251,7 @@ private fun SignupIdCheckMessage(
 @Composable
 private fun SignupDuplicateCheckButton(
     enabled: Boolean,
+    isChecking: Boolean,
     onClick: () -> Unit
 ) {
     Box(
@@ -249,7 +268,7 @@ private fun SignupDuplicateCheckButton(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "중복 확인",
+            text = if (isChecking) "확인 중" else "중복 확인",
             style = SeniorOnTextStyles.ButtonS,
             color = SeniorOnColors.Primary600
         )
@@ -280,7 +299,8 @@ private fun SignupPasswordVisibilityIcon(
 private enum class IdCheckState {
     Idle,
     Available,
-    Duplicated
+    Duplicated,
+    Error
 }
 
 private fun isValidPassword(password: String): Boolean {
@@ -300,7 +320,8 @@ private fun SignupAccountInfoScreenPreview() {
     SENIOR_ONTheme {
         SignupAccountInfoScreen(
             onBackClick = {},
-            onNextClick = {}
+            onNextClick = { _, _, _ -> },
+            onCheckLoginId = { _, onResult -> onResult(true) }
         )
     }
 }

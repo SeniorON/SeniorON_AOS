@@ -64,7 +64,7 @@ internal fun ChildBottomNavigation(
                 )
             }
             .navigationBarsPadding()
-            .padding(top = 2.dp, bottom = 6.dp),
+            .padding(top = 4.dp, bottom = 14.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {

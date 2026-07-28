@@ -1,384 +1,61 @@
-
 package com.example.senior_on.ui.app
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import com.example.senior_on.domain.model.auth.AppUserMode
-import com.example.senior_on.data.repository.mock.auth.MockFindIdRepository
-import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
-import com.example.senior_on.data.repository.mock.auth.MockSessionRepository
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
 import com.example.senior_on.di.AppContainer
-import com.example.senior_on.domain.model.family.FamilyMemberRole
-import com.example.senior_on.ui.child.ChildMainScreen
-import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
-import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeCreatedScreen
-import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeInputScreen
-import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeOption
-import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeScreen
-import com.example.senior_on.ui.onboarding.findaccount.FindAccountScreen
-import com.example.senior_on.ui.common.account.FindAccountTab
-import com.example.senior_on.ui.onboarding.findaccount.FindIdResultScreen
-import com.example.senior_on.ui.onboarding.findaccount.FindPasswordResetScreen
-import com.example.senior_on.ui.onboarding.findaccount.FindPasswordVerifyScreen
-import com.example.senior_on.ui.onboarding.login.LoginScreen
-import com.example.senior_on.ui.onboarding.ModeSelectionScreen
-import com.example.senior_on.ui.onboarding.SplashScreen
-import com.example.senior_on.ui.parent.ParentLauncherScreen
-import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
-import com.example.senior_on.ui.common.seniorinfo.CaregiverRelationshipInputScreen
-import com.example.senior_on.ui.common.seniorinfo.ParentInfoInputScreen
-import com.example.senior_on.ui.common.seniorinfo.toParentInfo
-import com.example.senior_on.ui.onboarding.signup.SignupAccountInfoScreen
-import com.example.senior_on.ui.onboarding.signup.SignupEmailVerificationScreen
-import com.example.senior_on.ui.onboarding.signup.SignupModeGuideScreen
-import com.example.senior_on.ui.onboarding.signup.SignupNameBirthScreen
-import com.example.senior_on.ui.onboarding.signup.SignupScreen
-import com.example.senior_on.ui.onboarding.signup.SignupTermsAgreementScreen
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.ui.child.route.ChildMainRoute
+import com.example.senior_on.ui.onboarding.route.OnboardingRoute
+import com.example.senior_on.ui.parent.route.ParentLauncherRoute
 
-private enum class SeniorOnRoute {
-    Splash,
-    ModeSelection,
-    Login,
-    Signup,
-    SignupModeGuide,
-    SignupNameBirth,
-    SignupEmailVerification,
-    SignupAccountInfo,
-    SignupTermsAgreement,
-    FindAccount,
-    FindIdResult,
-    FindPasswordVerify,
-    FindPasswordReset,
+private enum class AppDestination {
+    Onboarding,
     ChildMain,
     ParentLauncher,
-    FamilyShareCode,
-    FamilyShareCodeInput,
-    CaregiverRelationshipInput,
-    FamilyShareCodeCreated,
-    ParentInfoInput,
-    AddressSearch
 }
-
-private const val InvalidFamilyShareCodeMessage =
-    "가족 공유 코드를 다시 확인해 주세요."
-
-private val InitialRoute = SeniorOnRoute.Splash
 
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
-    var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
-    var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
-    var authenticatedUserId by rememberSaveable {
-        mutableStateOf("")
+    var destination by rememberSaveable {
+        mutableStateOf(AppDestination.Onboarding)
     }
-    var findAccountInitialTab by rememberSaveable { mutableStateOf(FindAccountTab.Id) }
-    var findIdResultSuccess by rememberSaveable { mutableStateOf(false) }
-    var findIdResultName by rememberSaveable { mutableStateOf("") }
-    var findIdResultUserId by rememberSaveable { mutableStateOf("") }
-    var findIdResultJoinDate by rememberSaveable { mutableStateOf("") }
-    var findPasswordMaskedEmail by rememberSaveable { mutableStateOf("") }
-    var selectedHomeAddress by rememberSaveable { mutableStateOf("") }
-    var selectedHomeLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var familyJoinErrorMessage by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    val saveableStateHolder = rememberSaveableStateHolder()
-    val appScope = rememberCoroutineScope()
+    var authenticatedUserId by rememberSaveable { mutableStateOf("") }
+    var onboardingInstance by rememberSaveable { mutableIntStateOf(0) }
 
-    fun routeAfterAuthenticated(role: AppUserMode): SeniorOnRoute {
-        return when (role) {
-            AppUserMode.Child -> SeniorOnRoute.ChildMain
-            AppUserMode.Senior -> SeniorOnRoute.ParentLauncher
-        }
+    fun openOnboarding() {
+        authenticatedUserId = ""
+        onboardingInstance += 1
+        destination = AppDestination.Onboarding
     }
 
-    fun navigateAfterFamilyConnected() {
-        currentRoute = routeAfterAuthenticated(selectedUserMode)
-    }
-
-    fun navigateBackFromAddressSearch() {
-        currentRoute = SeniorOnRoute.ParentInfoInput
-    }
-
-    BackHandler(enabled = currentRoute == SeniorOnRoute.AddressSearch) {
-        navigateBackFromAddressSearch()
-    }
-
-    BackHandler(enabled = currentRoute == SeniorOnRoute.CaregiverRelationshipInput) {
-        currentRoute = SeniorOnRoute.FamilyShareCodeInput
-    }
-
-    if (currentRoute == SeniorOnRoute.Splash) {
-        LaunchedEffect(Unit) {
-            delay(900)
-            val savedSession = MockSessionRepository.validateSavedSession()
-            currentRoute = savedSession
-                ?.let { routeAfterAuthenticated(it.role) }
-                ?: SeniorOnRoute.ModeSelection
-        }
-    }
-
-    saveableStateHolder.SaveableStateProvider(currentRoute.name) {
-        when (currentRoute) {
-            SeniorOnRoute.Splash -> SplashScreen()
-            SeniorOnRoute.ModeSelection -> ModeSelectionScreen(
-                onChildClick = {
-                    selectedUserMode = AppUserMode.Child
-                    currentRoute = SeniorOnRoute.Login
-                },
-                onSeniorClick = {
-                    selectedUserMode = AppUserMode.Senior
-                    currentRoute = SeniorOnRoute.Login
-                }
-            )
-            SeniorOnRoute.Login -> LoginScreen(
-                selectedMode = selectedUserMode,
-                onLoginClick = { userId ->
+    when (destination) {
+        AppDestination.Onboarding -> key(onboardingInstance) {
+            OnboardingRoute(
+                appContainer = appContainer,
+                onAuthenticated = { mode, userId ->
                     authenticatedUserId = userId
-                    currentRoute = routeAfterAuthenticated(selectedUserMode)
-                },
-                onGoToModeSelection = { currentRoute = SeniorOnRoute.ModeSelection },
-                onFindIdClick = {
-                    findAccountInitialTab = FindAccountTab.Id
-                    currentRoute = SeniorOnRoute.FindAccount
-                },
-                onFindPasswordClick = {
-                    findAccountInitialTab = FindAccountTab.Password
-                    currentRoute = SeniorOnRoute.FindAccount
-                },
-                onSignUpClick = { currentRoute = SeniorOnRoute.Signup }
-            )
-            SeniorOnRoute.FindAccount -> FindAccountScreen(
-                initialTab = findAccountInitialTab,
-                onBackClick = { currentRoute = SeniorOnRoute.Login },
-                onFindIdNextClick = { name, email ->
-                    val account = MockFindIdRepository.findAccount(name, email)
-                    findIdResultName = name
-                    if (account != null) {
-                        findIdResultSuccess = true
-                        findIdResultUserId = account.userId
-                        findIdResultJoinDate = account.joinDate
-                    } else {
-                        findIdResultSuccess = false
-                        findIdResultUserId = ""
-                        findIdResultJoinDate = ""
-                    }
-                    currentRoute = SeniorOnRoute.FindIdResult
-                },
-                onFindPasswordNextClick = { name, userId ->
-                    val account = MockFindPasswordRepository.findAccount(name, userId)
-                    if (account != null) {
-                        findPasswordMaskedEmail = account.maskedEmail
-                        currentRoute = SeniorOnRoute.FindPasswordVerify
-                        true
-                    } else {
-                        false
-                    }
-                }
-            )
-            SeniorOnRoute.FindIdResult -> FindIdResultScreen(
-                isSuccess = findIdResultSuccess,
-                name = findIdResultName,
-                userId = findIdResultUserId,
-                joinDate = findIdResultJoinDate,
-                onBackClick = { currentRoute = SeniorOnRoute.FindAccount },
-                onLoginClick = { currentRoute = SeniorOnRoute.Login },
-                onFindPasswordClick = {
-                    findAccountInitialTab = FindAccountTab.Password
-                    currentRoute = SeniorOnRoute.FindAccount
-                }
-            )
-            SeniorOnRoute.FindPasswordVerify -> FindPasswordVerifyScreen(
-                maskedEmail = findPasswordMaskedEmail,
-                onBackClick = {
-                    findAccountInitialTab = FindAccountTab.Password
-                    currentRoute = SeniorOnRoute.FindAccount
-                },
-                onVerifySuccess = { currentRoute = SeniorOnRoute.FindPasswordReset },
-                onVerifyCode = MockFindPasswordRepository::verifyCode,
-                onResendCode = {},
-                onTabSelected = { tab ->
-                    findAccountInitialTab = tab
-                    currentRoute = SeniorOnRoute.FindAccount
-                }
-            )
-            SeniorOnRoute.FindPasswordReset -> FindPasswordResetScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.FindPasswordVerify },
-                onComplete = {},
-                onLoginClick = { currentRoute = SeniorOnRoute.Login }
-            )
-           SeniorOnRoute.ChildMain -> ChildMainScreen(
-                userProfile = appContainer.userProfileFor(authenticatedUserId),
-                familyRepository = appContainer.familyRepositoryFor(authenticatedUserId),
-                familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
-                displayRepository = appContainer.displayRepository,
-                parentInfoRepository = appContainer.parentInfoRepository,
-                caregiverRelationshipRepository =
-                    appContainer.caregiverRelationshipRepositoryFor(
-                        authenticatedUserId
-                    ),
-                notificationScenario =
-                    MockNotificationRepository.scenarioForUserId(authenticatedUserId),
-                onLogoutClick = {
-                    authenticatedUserId = ""
-                    currentRoute = SeniorOnRoute.Login
-                },
-                onWithdrawClick = {
-                    authenticatedUserId = ""
-                    currentRoute = SeniorOnRoute.Login
-                }
-            )
-            SeniorOnRoute.ParentLauncher -> ParentLauncherScreen(
-                scheduleRepository = appContainer.parentScheduleRepository,
-                chatBuddyRepository = appContainer.chatBuddyRepository,
-                familyPhotoRepository = appContainer.parentFamilyPhotoRepository,
-                medicationRepository = appContainer.parentMedicationRepository,
-                emergencyAlertRepository = appContainer.parentEmergencyAlertRepository,
-                linkSafetyRepository = appContainer.parentLinkSafetyRepository
-            )
-            SeniorOnRoute.Signup -> SignupScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.Login },
-                onKakaoClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onGoogleClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onEmailClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onLoginClick = { currentRoute = SeniorOnRoute.Login }
-            )
-            SeniorOnRoute.SignupModeGuide -> SignupModeGuideScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.Signup },
-                onReselectClick = { currentRoute = SeniorOnRoute.ModeSelection },
-                onContinueClick = { currentRoute = SeniorOnRoute.SignupNameBirth }
-            )
-            SeniorOnRoute.SignupNameBirth -> SignupNameBirthScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onNextClick = { currentRoute = SeniorOnRoute.SignupEmailVerification }
-            )
-            SeniorOnRoute.SignupEmailVerification -> SignupEmailVerificationScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.SignupNameBirth },
-                onNextClick = { currentRoute = SeniorOnRoute.SignupAccountInfo }
-            )
-            SeniorOnRoute.SignupAccountInfo -> SignupAccountInfoScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.SignupEmailVerification },
-                onNextClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement }
-            )
-            SeniorOnRoute.SignupTermsAgreement -> SignupTermsAgreementScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.SignupAccountInfo },
-                onCompleteClick = { currentRoute = SeniorOnRoute.FamilyShareCode }
-            )
-            SeniorOnRoute.FamilyShareCode -> FamilyShareCodeScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement },
-                onNextClick = { selectedOption ->
-                    if (selectedUserMode == AppUserMode.Child) {
-                        authenticatedUserId = when (selectedOption) {
-                            FamilyShareCodeOption.HasCode ->
-                                MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID
-                            FamilyShareCodeOption.NoCode ->
-                                MockUserFixtures.PRIMARY_CAREGIVER_USER_ID
-                        }
-                    }
-                    currentRoute = when (selectedOption) {
-                        FamilyShareCodeOption.HasCode -> {
-                            familyJoinErrorMessage = null
-                            SeniorOnRoute.FamilyShareCodeInput
-                        }
-                        FamilyShareCodeOption.NoCode -> when (selectedUserMode) {
-                            AppUserMode.Child -> SeniorOnRoute.FamilyShareCodeCreated
-                            AppUserMode.Senior -> SeniorOnRoute.FamilyShareCodeInput
-                        }
-                    }
-                }
-            )
-            SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputScreen(
-                onBackClick = {
-                    familyJoinErrorMessage = null
-                    currentRoute = SeniorOnRoute.FamilyShareCode
-                },
-                onLoginClick = { familyCode ->
-                    appScope.launch {
-                        try {
-                            val joinResult = appContainer
-                                .familyRepositoryFor(authenticatedUserId)
-                                .joinFamily(familyCode)
-                            familyJoinErrorMessage = null
-                            currentRoute = when {
-                                selectedUserMode == AppUserMode.Child &&
-                                    joinResult.memberRole ==
-                                    FamilyMemberRole.Assistant ->
-                                    SeniorOnRoute.CaregiverRelationshipInput
-                                else -> routeAfterAuthenticated(selectedUserMode)
-                            }
-                        } catch (_: IllegalArgumentException) {
-                            familyJoinErrorMessage =
-                                InvalidFamilyShareCodeMessage
-                        }
+                    destination = when (mode) {
+                        AppUserMode.Child -> AppDestination.ChildMain
+                        AppUserMode.Senior -> AppDestination.ParentLauncher
                     }
                 },
-                errorMessage = familyJoinErrorMessage,
-                onFamilyShareCodeChange = {
-                    familyJoinErrorMessage = null
-                },
-            )
-            SeniorOnRoute.CaregiverRelationshipInput -> CaregiverRelationshipInputScreen(
-                seniorName = appContainer.parentInfoRepository.parentInfo.value
-                    ?.name
-                    .orEmpty(),
-                onBackClick = {
-                    currentRoute = SeniorOnRoute.FamilyShareCodeInput
-                },
-                onNextClick = { relationship ->
-                    val seniorId = requireNotNull(
-                        appContainer.parentInfoRepository.parentInfo.value
-                    ).seniorId
-                    appContainer
-                        .caregiverRelationshipRepositoryFor(authenticatedUserId)
-                        .saveRelationship(
-                            seniorId = seniorId,
-                            relationship = relationship,
-                        )
-                    navigateAfterFamilyConnected()
-                },
-            )
-            SeniorOnRoute.FamilyShareCodeCreated -> FamilyShareCodeCreatedScreen(
-                onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
-                onNextClick = { currentRoute = SeniorOnRoute.ParentInfoInput }
-            )
-            SeniorOnRoute.ParentInfoInput -> ParentInfoInputScreen(
-                selectedAddress = selectedHomeAddress,
-                selectedAddressLatitude = selectedHomeLatitude,
-                selectedAddressLongitude = selectedHomeLongitude,
-                onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCodeCreated },
-                onSkipClick = { navigateAfterFamilyConnected() },
-                onSearchAddressClick = { currentRoute = SeniorOnRoute.AddressSearch },
-                onSaveClick = { inputState ->
-                    val seniorId = appContainer.parentInfoRepository.parentInfo.value
-                        ?.seniorId
-                        ?: MockSeniorFixtures.SENIOR_ID
-                    appContainer.parentInfoRepository.saveParentInfo(
-                        inputState.toParentInfo(seniorId = seniorId)
-                    )
-                    navigateAfterFamilyConnected()
-                }
-            )
-            SeniorOnRoute.AddressSearch -> AddressSearchScreen(
-                onBackClick = ::navigateBackFromAddressSearch,
-                onAddressSelected = { result ->
-                    selectedHomeAddress = result.selectedAddress
-                    selectedHomeLatitude = result.latitude
-                    selectedHomeLongitude = result.longitude
-                    currentRoute = SeniorOnRoute.ParentInfoInput
-                }
             )
         }
+
+        AppDestination.ChildMain -> ChildMainRoute(
+            appContainer = appContainer,
+            userId = authenticatedUserId,
+            onLogoutClick = ::openOnboarding,
+            onWithdrawClick = ::openOnboarding,
+        )
+
+        AppDestination.ParentLauncher -> ParentLauncherRoute(
+            appContainer = appContainer,
+        )
     }
 }

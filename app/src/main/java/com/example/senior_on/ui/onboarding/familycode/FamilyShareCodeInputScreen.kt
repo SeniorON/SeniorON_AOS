@@ -60,11 +60,13 @@ fun FamilyShareCodeInputScreen(
     onBackClick: () -> Unit,
     onLoginClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
     errorMessage: String? = null,
     onFamilyShareCodeChange: () -> Unit = {},
 ) {
     var familyShareCode by rememberSaveable { mutableStateOf("") }
-    val isLoginEnabled = familyShareCode.length == FamilyShareCodeLength
+    val isLoginEnabled =
+        familyShareCode.length == FamilyShareCodeLength && !isLoading
     val focusManager = LocalFocusManager.current
 
     fun submitFamilyShareCode() {
