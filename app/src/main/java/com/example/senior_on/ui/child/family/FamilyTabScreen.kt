@@ -72,7 +72,10 @@ private val RegularFamilyAvatarSize = 90.dp
 private val PrimaryFamilyAvatarSize = 120.dp
 private val RegularFamilyMemberMinHeight = 141.dp
 private val PrimaryFamilyMemberMinHeight = 174.dp
+private val FamilyMemberSpacing = 14.dp
 private val FamilyBackgroundTopSpacing = 44.dp
+private const val MinFamilyAvatarScale = 0.85f
+private const val MaxFamilyAvatarScale = 1.15f
 private const val FamilyBackgroundAspectRatio = 1170f / 690f
 private const val FamilySharePictureAspectRatio = 984f / 600f
 
@@ -327,19 +330,24 @@ private fun FamilyMemberRow(
         val initialProfilesWidth = initialSlotWidths.fold(0.dp) { total, width ->
             total + width
         }
-        val memberSpacing = if (initialSlotWidths.size > 1) {
-            (
-                (maxWidth - horizontalPadding * 2 - initialProfilesWidth) /
-                    (initialSlotWidths.size - 1).toFloat()
-            ).coerceAtLeast(0.dp)
+        val totalSpacing = FamilyMemberSpacing *
+            (initialSlotWidths.size - 1).coerceAtLeast(0)
+        val availableProfilesWidth =
+            (maxWidth - horizontalPadding * 2 - totalSpacing).coerceAtLeast(0.dp)
+        val avatarScale = if (initialProfilesWidth > 0.dp) {
+            (availableProfilesWidth.value / initialProfilesWidth.value)
+                .coerceIn(MinFamilyAvatarScale, MaxFamilyAvatarScale)
         } else {
-            0.dp
+            1f
         }
 
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = horizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(memberSpacing),
+            horizontalArrangement = Arrangement.spacedBy(
+                space = FamilyMemberSpacing,
+                alignment = Alignment.CenterHorizontally,
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             items(
@@ -348,7 +356,8 @@ private fun FamilyMemberRow(
             ) { index ->
                 FamilyMemberItem(
                     member = members[index],
-                    memberImage = memberImage
+                    memberImage = memberImage,
+                    avatarScale = avatarScale,
                 )
             }
 
@@ -356,7 +365,10 @@ private fun FamilyMemberRow(
                 count = invitationSlotCount,
                 key = { index -> "family-invitation-$index" }
             ) {
-                FamilyInvitationItem(onClick = onInviteClick)
+                FamilyInvitationItem(
+                    onClick = onInviteClick,
+                    avatarScale = avatarScale,
+                )
             }
         }
     }
@@ -365,15 +377,22 @@ private fun FamilyMemberRow(
 @Composable
 private fun FamilyMemberItem(
     member: FamilyMemberUiModel,
-    memberImage: @Composable BoxScope.(FamilyMemberUiModel) -> Unit
+    memberImage: @Composable BoxScope.(FamilyMemberUiModel) -> Unit,
+    avatarScale: Float,
 ) {
     val isPrimary = member.role == FamilyCaregiverRole.Primary
-    val avatarSize = if (isPrimary) PrimaryFamilyAvatarSize else RegularFamilyAvatarSize
-    val memberMinHeight = if (isPrimary) {
+    val baseAvatarSize = if (isPrimary) {
+        PrimaryFamilyAvatarSize
+    } else {
+        RegularFamilyAvatarSize
+    }
+    val avatarSize = (baseAvatarSize.value * avatarScale).dp
+    val baseMemberMinHeight = if (isPrimary) {
         PrimaryFamilyMemberMinHeight
     } else {
         RegularFamilyMemberMinHeight
     }
+    val memberMinHeight = baseMemberMinHeight + (avatarSize - baseAvatarSize)
 
     Column(
         modifier = Modifier
@@ -460,14 +479,18 @@ private fun FamilyMemberItem(
 
 @Composable
 private fun FamilyInvitationItem(
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    avatarScale: Float,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val avatarSize = (RegularFamilyAvatarSize.value * avatarScale).dp
+    val memberMinHeight =
+        RegularFamilyMemberMinHeight + (avatarSize - RegularFamilyAvatarSize)
 
     Column(
         modifier = Modifier
-            .width(RegularFamilyAvatarSize)
-            .heightIn(min = RegularFamilyMemberMinHeight)
+            .width(avatarSize)
+            .heightIn(min = memberMinHeight)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -476,12 +499,12 @@ private fun FamilyInvitationItem(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(RegularFamilyAvatarSize),
+            modifier = Modifier.size(avatarSize),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(RegularFamilyAvatarSize)
+                    .size(avatarSize)
                     .drawBehind {
                         drawCircle(
                             color = SeniorOnColors.Gray300,

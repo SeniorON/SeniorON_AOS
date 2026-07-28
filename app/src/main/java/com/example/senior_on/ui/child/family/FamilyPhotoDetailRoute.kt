@@ -5,7 +5,6 @@ import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoDetailViewMode
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -50,12 +49,6 @@ fun FamilyPhotoDetailRoute(
         if (uiState.deletedPhotoId == photoId) onDeleteSuccess()
     }
 
-    LaunchedEffect(uiState.errorMessage) {
-        if (uiState.photo != null && uiState.errorMessage != null) {
-            Toast.makeText(context, uiState.errorMessage, Toast.LENGTH_SHORT).show()
-        }
-    }
-
     LaunchedEffect(isSaveSuccessVisible) {
         if (isSaveSuccessVisible) {
             delay(SaveSuccessVisibleDurationMillis)
@@ -63,15 +56,9 @@ fun FamilyPhotoDetailRoute(
         }
     }
 
-    val savePhoto: (SharedFamilyPhotoUiModel) -> Unit = { photo ->
-        val imageSource = photo.imageSource
-        if (imageSource == null) {
-            Toast.makeText(
-                context,
-                "저장할 사진을 찾지 못했어요.",
-                Toast.LENGTH_SHORT
-            ).show()
-        } else if (!isSaving) {
+    val savePhoto: (SharedFamilyPhotoUiModel) -> Unit = savePhoto@{ photo ->
+        val imageSource = photo.imageSource ?: return@savePhoto
+        if (!isSaving) {
             isSaving = true
             coroutineScope.launch {
                 runCatching {
@@ -82,12 +69,6 @@ fun FamilyPhotoDetailRoute(
                 }.onSuccess {
                     isSaveSuccessVisible = true
                     onDownloadClick(photo.id)
-                }.onFailure {
-                    Toast.makeText(
-                        context,
-                        "사진을 저장하지 못했어요.",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
                 isSaving = false
             }
@@ -99,12 +80,6 @@ fun FamilyPhotoDetailRoute(
     ) { isGranted ->
         if (isGranted) {
             uiState.photo?.let(savePhoto)
-        } else {
-            Toast.makeText(
-                context,
-                "사진을 저장하려면 저장 권한이 필요해요.",
-                Toast.LENGTH_SHORT
-            ).show()
         }
     }
 
