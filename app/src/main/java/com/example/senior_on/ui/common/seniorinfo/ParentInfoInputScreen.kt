@@ -75,6 +75,7 @@ fun ParentInfoInputScreen(
     selectedAddress: String = "",
     selectedAddressLatitude: Double? = null,
     selectedAddressLongitude: Double? = null,
+    isSubmitting: Boolean = false,
     onBackClick: () -> Unit = {},
     onSkipClick: () -> Unit = {},
     onSearchAddressClick: () -> Unit = {},
@@ -139,7 +140,8 @@ fun ParentInfoInputScreen(
     val isSaveEnabled = name.isNotBlank() &&
         isRelationshipValid &&
         parseBirthDate(birthDate) != null &&
-        isPhoneNumberValid
+        isPhoneNumberValid &&
+        !isSubmitting
 
     if (showCustomRelationshipSheet) {
         CustomRelationshipBottomSheet(

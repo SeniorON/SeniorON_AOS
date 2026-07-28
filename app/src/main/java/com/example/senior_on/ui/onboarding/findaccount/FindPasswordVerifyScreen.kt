@@ -35,15 +35,19 @@ fun FindPasswordVerifyScreen(
     maskedEmail: String,
     onBackClick: () -> Unit,
     onVerifySuccess: () -> Unit,
-    onVerifyCode: (String) -> Boolean,
+    onVerifyCode: (
+        verificationCode: String,
+        onResult: (Boolean) -> Unit
+    ) -> Unit,
     onResendCode: () -> Unit,
     onTabSelected: (FindAccountTab) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var verificationCode by rememberSaveable { mutableStateOf("") }
     var isVerificationError by rememberSaveable { mutableStateOf(false) }
+    var isVerifying by rememberSaveable { mutableStateOf(false) }
 
-    val isVerifyEnabled = verificationCode.length == 6
+    val isVerifyEnabled = verificationCode.length == 6 && !isVerifying
 
     FindAccountScaffold(
         modifier = modifier.systemBarsPadding(),
@@ -62,12 +66,15 @@ fun FindPasswordVerifyScreen(
                     text = "인증하기",
                     enabled = isVerifyEnabled,
                     onClick = {
-                        val verified = onVerifyCode(verificationCode)
-                        if (verified) {
-                            isVerificationError = false
-                            onVerifySuccess()
-                        } else {
-                            isVerificationError = true
+                        isVerifying = true
+                        onVerifyCode(verificationCode) { verified ->
+                            isVerifying = false
+                            if (verified) {
+                                isVerificationError = false
+                                onVerifySuccess()
+                            } else {
+                                isVerificationError = true
+                            }
                         }
                     }
                 )
@@ -164,7 +171,7 @@ private fun FindPasswordVerifyScreenPreview() {
             maskedEmail = "ex*******@gmail.com",
             onBackClick = {},
             onVerifySuccess = {},
-            onVerifyCode = { it == "123456" },
+            onVerifyCode = { code, onResult -> onResult(code == "123456") },
             onResendCode = {}
         )
     }
@@ -178,7 +185,7 @@ private fun FindPasswordVerifyErrorPreview() {
             maskedEmail = "ex*******@gmail.com",
             onBackClick = {},
             onVerifySuccess = {},
-            onVerifyCode = { false },
+            onVerifyCode = { _, onResult -> onResult(false) },
             onResendCode = {}
         )
     }

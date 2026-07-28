@@ -41,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.onboarding.viewmodel.SignupAgreements
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -49,7 +50,10 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 @Composable
 fun SignupTermsAgreementScreen(
     onBackClick: () -> Unit,
-    onCompleteClick: () -> Unit,
+    onCompleteClick: (
+        agreements: SignupAgreements,
+        onResult: (Boolean) -> Unit
+    ) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isServiceTermsAgreed by rememberSaveable { mutableStateOf(false) }
@@ -59,6 +63,7 @@ fun SignupTermsAgreementScreen(
     var isTermsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var hasOpenedTermsSheet by rememberSaveable { mutableStateOf(false) }
     var termsSheetInitialIndex by rememberSaveable { mutableStateOf(0) }
+    var isSubmitting by rememberSaveable { mutableStateOf(false) }
     val isRequiredAgreed = isServiceTermsAgreed && isPrivacyAgreed && isAgeAgreed
     val isAllAgreed = isRequiredAgreed && isMarketingAgreed
 
@@ -162,8 +167,20 @@ fun SignupTermsAgreementScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         SignupNextButton(
-            enabled = isRequiredAgreed,
-            onClick = onCompleteClick,
+            enabled = isRequiredAgreed && !isSubmitting,
+            onClick = {
+                isSubmitting = true
+                onCompleteClick(
+                    SignupAgreements(
+                        serviceTerms = isServiceTermsAgreed,
+                        privacyPolicy = isPrivacyAgreed,
+                        ageOver14 = isAgeAgreed,
+                        marketing = isMarketingAgreed
+                    )
+                ) {
+                    isSubmitting = false
+                }
+            },
             text = "회원가입 완료"
         )
 
@@ -640,7 +657,7 @@ private fun SignupTermsAgreementScreenPreview() {
     SENIOR_ONTheme {
         SignupTermsAgreementScreen(
             onBackClick = {},
-            onCompleteClick = {}
+            onCompleteClick = { _, onResult -> onResult(true) }
         )
     }
 }

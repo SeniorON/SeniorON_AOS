@@ -44,16 +44,19 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.ui.child.notification.mock.MockNotificationRepository
 import com.example.senior_on.ui.child.notification.mock.MockNotificationScenario
-import com.example.senior_on.data.repository.mock.parent.MockCaregiverRelationshipRepository
+import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
+import com.example.senior_on.data.repository.impl.DisplayRepositoryImpl
+import com.example.senior_on.data.repository.impl.FamilyRepositoryImpl
+import com.example.senior_on.data.repository.impl.ParentInfoRepositoryImpl
+import com.example.senior_on.data.source.display.MockDisplayDataSource
+import com.example.senior_on.data.source.family.MockFamilyDataSource
+import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
+import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.family.FamilyRepository
-import com.example.senior_on.data.repository.mock.display.MockDisplayRepository
-import com.example.senior_on.data.repository.mock.family.MockFamilyRepository
-import com.example.senior_on.data.repository.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
-import com.example.senior_on.data.repository.mock.parent.MockParentInfoRepository
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.model.auth.AppUserProfile
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
@@ -64,13 +67,8 @@ import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.child.family.FamilyTabRoute
-import com.example.senior_on.ui.child.health.HealthMainScreen
-import com.example.senior_on.ui.child.notification.NotificationCategory
-import com.example.senior_on.ui.child.notification.NotificationDetectionTimeSettingScreen
-import com.example.senior_on.ui.child.notification.NotificationDetailScreen
-import com.example.senior_on.ui.child.notification.NotificationHistoryScreen
-import com.example.senior_on.ui.child.notification.NotificationMessageUiState
-import com.example.senior_on.ui.child.notification.NotificationScreen
+import com.example.senior_on.ui.child.health.HealthMainRoute
+import com.example.senior_on.ui.child.notification.NotificationRoute
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.SettingsProfileUiState
@@ -214,12 +212,6 @@ fun ChildMainScreen(
         onBack = navigateBackInFamily
     )
 
-    var showDetectionTimeSetting by rememberSaveable { mutableStateOf(false) }
-    var historyCategory by rememberSaveable { mutableStateOf<NotificationCategory?>(null) }
-    var notificationDetail by remember {
-        mutableStateOf<Pair<NotificationCategory, NotificationMessageUiState>?>(null)
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -252,18 +244,7 @@ fun ChildMainScreen(
             },
             onPhotoClick = navigateToPhotoDetail,
             onFamilyBackClick = navigateBackInFamily,
-            showDetectionTimeSetting = showDetectionTimeSetting,
-            historyCategory = historyCategory,
-            notificationDetail = notificationDetail,
             notificationScenario = notificationScenario,
-            onOpenDetectionTimeSetting = { showDetectionTimeSetting = true },
-            onCloseDetectionTimeSetting = { showDetectionTimeSetting = false },
-            onOpenHistory = { category -> historyCategory = category },
-            onCloseHistory = { historyCategory = null },
-            onOpenNotificationDetail = { category, message ->
-                notificationDetail = category to message
-            },
-            onCloseNotificationDetail = { notificationDetail = null },
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
                     displayViewModel.saveParentInfo(
@@ -296,11 +277,6 @@ fun ChildMainScreen(
                     selectedPhotoId = null
                     selectedPhotoUri = null
                     familyDestination = ChildFamilyDestination.Overview
-                    if (tab != ChildMainTab.Notification) {
-                        showDetectionTimeSetting = false
-                        historyCategory = null
-                        notificationDetail = null
-                    }
                 }
             )
         }
@@ -328,16 +304,7 @@ private fun ChildMainTabContent(
     onPhotoShared: () -> Unit,
     onPhotoClick: (String) -> Unit,
     onFamilyBackClick: () -> Unit,
-    showDetectionTimeSetting: Boolean,
-    historyCategory: NotificationCategory?,
-    notificationDetail: Pair<NotificationCategory, NotificationMessageUiState>?,
     notificationScenario: MockNotificationScenario,
-    onOpenDetectionTimeSetting: () -> Unit,
-    onCloseDetectionTimeSetting: () -> Unit,
-    onOpenHistory: (NotificationCategory) -> Unit,
-    onCloseHistory: () -> Unit,
-    onOpenNotificationDetail: (NotificationCategory, NotificationMessageUiState) -> Unit,
-    onCloseNotificationDetail: () -> Unit,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -354,7 +321,7 @@ private fun ChildMainTabContent(
     }
 
     if (selectedTab == ChildMainTab.Health) {
-        HealthMainScreen(modifier = modifier)
+        HealthMainRoute(modifier = modifier)
         return
     }
 
@@ -423,48 +390,9 @@ private fun ChildMainTabContent(
     }
 
     if (selectedTab == ChildMainTab.Notification) {
-        notificationDetail?.let { (category, message) ->
-            NotificationDetailScreen(
-                category = category,
-                message = message,
-                modifier = modifier,
-                onBackClick = onCloseNotificationDetail
-            )
-            return
-        }
-
-        historyCategory?.let { category ->
-            NotificationHistoryScreen(
-                category = category,
-                messages = MockNotificationRepository.getNotificationHistory(category),
-                modifier = modifier,
-                onBackClick = onCloseHistory,
-                onMessageClick = { message ->
-                    onOpenNotificationDetail(category, message)
-                }
-            )
-            return
-        }
-
-        if (showDetectionTimeSetting) {
-            NotificationDetectionTimeSettingScreen(
-                modifier = modifier,
-                onBackClick = onCloseDetectionTimeSetting,
-                onSaveClick = { onCloseDetectionTimeSetting() }
-            )
-            return
-        }
-
-        val notificationState = MockNotificationRepository.getNotificationState(
-            scenario = notificationScenario
-        )
-
-        NotificationScreen(
-            uiState = notificationState,
+        NotificationRoute(
+            scenario = notificationScenario,
             modifier = modifier,
-            onSectionClick = onOpenHistory,
-            onNotificationClick = onOpenNotificationDetail,
-            onDetectionTimeClick = onOpenDetectionTimeSetting
         )
         return
     }
@@ -541,14 +469,22 @@ private fun createFamilyPhotoCaptureUri(context: Context): Uri {
 @Composable
 private fun ChildMainScreenPreview() {
     val context = LocalContext.current
-    val repository = remember { MockFamilyRepository() }
-    val displayRepository = remember { MockDisplayRepository() }
+    val repository = remember {
+        FamilyRepositoryImpl(MockFamilyDataSource())
+    }
+    val displayRepository = remember {
+        DisplayRepositoryImpl(MockDisplayDataSource())
+    }
     val parentInfoRepository = remember {
-        MockParentInfoRepository(MockSeniorFixtures.mother)
+        ParentInfoRepositoryImpl(
+            MockParentInfoDataSource(MockSeniorFixtures.mother)
+        )
     }
     val caregiverRelationshipRepository = remember {
-        MockCaregiverRelationshipRepository(
-            activeSeniorId = MockSeniorFixtures.SENIOR_ID,
+        CaregiverRelationshipRepositoryImpl(
+            MockCaregiverRelationshipDataSource(
+                activeSeniorId = MockSeniorFixtures.SENIOR_ID,
+            )
         )
     }
     val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }

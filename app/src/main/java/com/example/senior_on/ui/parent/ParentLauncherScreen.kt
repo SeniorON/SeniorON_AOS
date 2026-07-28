@@ -63,14 +63,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
+import com.example.senior_on.data.repository.impl.ChatBuddyRepositoryImpl
+import com.example.senior_on.data.repository.impl.ParentEmergencyAlertRepositoryImpl
+import com.example.senior_on.data.repository.impl.ParentFamilyPhotoRepositoryImpl
+import com.example.senior_on.data.repository.impl.ParentLinkSafetyRepositoryImpl
+import com.example.senior_on.data.repository.impl.ParentMedicationRepositoryImpl
+import com.example.senior_on.data.repository.impl.ParentScheduleRepositoryImpl
+import com.example.senior_on.data.source.mock.fixtures.MockAuthFixtures
+import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
+import com.example.senior_on.data.source.parent.MockParentEmergencyAlertDataSource
+import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
+import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
+import com.example.senior_on.data.source.parent.MockParentMedicationDataSource
+import com.example.senior_on.data.source.parent.MockParentScheduleDataSource
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
-import com.example.senior_on.data.repository.mock.parent.MockChatBuddyRepository
-import com.example.senior_on.data.repository.mock.parent.MockParentEmergencyAlertRepository
-import com.example.senior_on.data.repository.mock.parent.MockParentFamilyPhotoRepository
-import com.example.senior_on.data.repository.mock.parent.MockParentMedicationRepository
-import com.example.senior_on.data.repository.mock.parent.MockParentLinkSafetyRepository
-import com.example.senior_on.data.repository.mock.parent.MockParentScheduleRepository
 import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
 import com.example.senior_on.domain.repository.parent.ParentEmergencyAlertRepository
 import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
@@ -745,12 +751,20 @@ private fun openSystemGallery(context: Context) {
 private fun ParentLauncherScreenPreview() {
     SENIOR_ONTheme {
         ParentLauncherScreen(
-            scheduleRepository = MockParentScheduleRepository(),
-            chatBuddyRepository = MockChatBuddyRepository(),
-            familyPhotoRepository = MockParentFamilyPhotoRepository(),
-            medicationRepository = MockParentMedicationRepository(),
-            emergencyAlertRepository = MockParentEmergencyAlertRepository(),
-            linkSafetyRepository = MockParentLinkSafetyRepository()
+            scheduleRepository =
+                ParentScheduleRepositoryImpl(MockParentScheduleDataSource()),
+            chatBuddyRepository =
+                ChatBuddyRepositoryImpl(MockChatBuddyDataSource()),
+            familyPhotoRepository =
+                ParentFamilyPhotoRepositoryImpl(MockParentFamilyPhotoDataSource()),
+            medicationRepository =
+                ParentMedicationRepositoryImpl(MockParentMedicationDataSource()),
+            emergencyAlertRepository =
+                ParentEmergencyAlertRepositoryImpl(
+                    MockParentEmergencyAlertDataSource()
+                ),
+            linkSafetyRepository =
+                ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource())
         )
     }
 }

@@ -21,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.senior_on.data.repository.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors

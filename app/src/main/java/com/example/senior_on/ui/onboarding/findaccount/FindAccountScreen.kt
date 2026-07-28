@@ -23,8 +23,16 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 fun FindAccountScreen(
     initialTab: FindAccountTab,
     onBackClick: () -> Unit,
-    onFindIdNextClick: (name: String, email: String) -> Unit,
-    onFindPasswordNextClick: (name: String, userId: String) -> Boolean,
+    onFindIdNextClick: (
+        name: String,
+        email: String,
+        onComplete: () -> Unit
+    ) -> Unit,
+    onFindPasswordNextClick: (
+        name: String,
+        userId: String,
+        onResult: (Boolean) -> Unit
+    ) -> Unit,
     modifier: Modifier = Modifier,
     initialName: String = "",
     initialEmail: String = "",
@@ -35,6 +43,7 @@ fun FindAccountScreen(
     var email by rememberSaveable { mutableStateOf(initialEmail) }
     var userId by rememberSaveable { mutableStateOf(initialUserId) }
     var isUserIdError by rememberSaveable { mutableStateOf(false) }
+    var isSubmitting by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialTab) {
         selectedTab = initialTab
@@ -53,8 +62,13 @@ fun FindAccountScreen(
                 FindAccountTab.Id -> {
                     FindAccountPrimaryButton(
                         text = "다음",
-                        enabled = isFindIdNextEnabled,
-                        onClick = { onFindIdNextClick(name.trim(), email.trim()) }
+                        enabled = isFindIdNextEnabled && !isSubmitting,
+                        onClick = {
+                            isSubmitting = true
+                            onFindIdNextClick(name.trim(), email.trim()) {
+                                isSubmitting = false
+                            }
+                        }
                     )
                 }
                 FindAccountTab.Password -> {
@@ -67,10 +81,16 @@ fun FindAccountScreen(
 
                         FindAccountPrimaryButton(
                             text = "다음",
-                            enabled = isFindPasswordNextEnabled,
+                            enabled = isFindPasswordNextEnabled && !isSubmitting,
                             onClick = {
-                                val found = onFindPasswordNextClick(name.trim(), userId.trim())
-                                isUserIdError = !found
+                                isSubmitting = true
+                                onFindPasswordNextClick(
+                                    name.trim(),
+                                    userId.trim()
+                                ) { found ->
+                                    isSubmitting = false
+                                    isUserIdError = !found
+                                }
                             }
                         )
                     }
@@ -193,8 +213,8 @@ internal fun FindAccountScreenEmptyPreview() {
         FindAccountScreen(
             initialTab = FindAccountTab.Id,
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> },
-            onFindPasswordNextClick = { _, _ -> true }
+            onFindIdNextClick = { _, _, onComplete -> onComplete() },
+            onFindPasswordNextClick = { _, _, onResult -> onResult(true) }
         )
     }
 }
@@ -214,8 +234,8 @@ internal fun FindAccountScreenFilledPreview() {
             initialName = "홍길동",
             initialEmail = "test@naver.com",
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> },
-            onFindPasswordNextClick = { _, _ -> true }
+            onFindIdNextClick = { _, _, onComplete -> onComplete() },
+            onFindPasswordNextClick = { _, _, onResult -> onResult(true) }
         )
     }
 }
@@ -233,8 +253,8 @@ internal fun FindAccountPasswordTabPreview() {
         FindAccountScreen(
             initialTab = FindAccountTab.Password,
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> },
-            onFindPasswordNextClick = { _, _ -> true }
+            onFindIdNextClick = { _, _, onComplete -> onComplete() },
+            onFindPasswordNextClick = { _, _, onResult -> onResult(true) }
         )
     }
 }
@@ -254,8 +274,8 @@ internal fun FindAccountPasswordTabFilledPreview() {
             initialName = "홍길동",
             initialUserId = "User_Id",
             onBackClick = {},
-            onFindIdNextClick = { _, _ -> },
-            onFindPasswordNextClick = { _, _ -> true }
+            onFindIdNextClick = { _, _, onComplete -> onComplete() },
+            onFindPasswordNextClick = { _, _, onResult -> onResult(true) }
         )
     }
 }

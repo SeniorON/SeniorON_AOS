@@ -39,20 +39,20 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockAuthFixtures
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
-
-const val MockFamilyShareCode = MockAuthFixtures.DISPLAY_FAMILY_SHARE_CODE
 
 @Composable
 fun FamilyShareCodeCreatedScreen(
     onBackClick: () -> Unit,
     onNextClick: () -> Unit,
     modifier: Modifier = Modifier,
-    familyShareCode: String = MockFamilyShareCode
+    familyShareCode: String = "",
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    onRetryClick: () -> Unit = {},
 ) {
     var isCopied by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -75,7 +75,20 @@ fun FamilyShareCodeCreatedScreen(
             Spacer(modifier = Modifier.height(108.dp))
             FamilyShareCodeCreatedTitle()
             Spacer(modifier = Modifier.height(52.dp))
-            FamilyShareCodeBox(
+            if (isLoading || errorMessage != null) {
+                Text(
+                    text = errorMessage ?: "가족 공유 코드를 생성하고 있어요.",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = SeniorOnTextStyles.BodyMMedium,
+                    color = if (errorMessage != null) {
+                        SeniorOnColors.Red300
+                    } else {
+                        SeniorOnColors.Gray500
+                    },
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                FamilyShareCodeBox(
                 code = familyShareCode,
                 onCopyClick = {
                     copyFamilyShareCode(
@@ -84,22 +97,29 @@ fun FamilyShareCodeCreatedScreen(
                     )
                     isCopied = true
                 }
-            )
+                )
 
-            if (isCopied) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                if (isCopied) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
                     text = "코드가 복사됐습니다.",
                     style = SeniorOnTextStyles.CaptionRegular,
                     color = SeniorOnColors.Primary600
-                )
+                    )
+                }
             }
         }
 
         FamilyShareCodeBottomButton(
-            text = "다음",
-            enabled = true,
-            onClick = onNextClick,
+            text = if (errorMessage != null) "다시 시도" else "다음",
+            enabled = !isLoading && (errorMessage != null || familyShareCode.isNotBlank()),
+            onClick = {
+                if (errorMessage != null) {
+                    onRetryClick()
+                } else {
+                    onNextClick()
+                }
+            },
             modifier = Modifier.padding(horizontal = 16.dp)
         )
     }

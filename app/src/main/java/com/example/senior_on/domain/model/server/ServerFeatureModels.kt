@@ -1,0 +1,62 @@
+package com.example.senior_on.domain.model.server
+
+data class ServerButton(
+    val id: Long, val optionId: Long? = null, val order: Int,
+    val name: String, val icon: String?, val actionType: String?, val actionValue: String?
+)
+data class HomeSnapshot(
+    val userName: String, val fontSize: String, val connected: Boolean,
+    val battery: Int?, val buttons: List<ServerButton>
+)
+data class WeatherInfo(val temperature: Int, val status: String, val text: String, val observedAt: String?)
+data class DeviceInfo(
+    val name: String, val connected: Boolean, val status: String,
+    val batteryLevel: Int?, val networkConnected: Boolean,
+    val lastConnectedAt: String?, val lastLocationUpdatedAt: String?
+)
+data class FamilyCodeInfo(val familyId: Long?, val code: String, val memberCount: Int? = null)
+data class ServerFamilyMember(
+    val id: Long, val name: String, val role: String, val managerType: String,
+    val isMe: Boolean, val profileImageUrl: String?
+)
+data class ServerFamilyPhoto(
+    val id: Long, val imageUrl: String, val uploaderId: Long,
+    val uploaderName: String, val description: String, val createdAt: String,
+    val canDelete: Boolean, val isNew: Boolean
+)
+data class ServerFamilyHome(
+    val members: List<ServerFamilyMember>, val recentPhotos: List<ServerFamilyPhoto>
+)
+data class HospitalAppointment(
+    val id: Long, val hospitalName: String, val department: String,
+    val date: String, val time: String, val reminderType: String
+)
+data class MedicationInfo(
+    val id: Long?, val groupId: String, val name: String, val ingredient: String?,
+    val times: List<String>, val days: List<String>
+)
+data class MedicationSchedule(
+    val logId: Long, val name: String, val plannedTime: String,
+    val taken: Boolean, val takenAt: String? = null
+)
+data class AppNotification(
+    val id: Long, val eventId: Long?, val title: String,
+    val summary: String, val occurredAt: String, val read: Boolean
+)
+data class NotificationPage(
+    val totalCount: Int, val items: List<AppNotification>, val nextCursor: Long?
+)
+data class NotificationSetting(val type: String, val enabled: Boolean)
+data class InactivitySetting(val userId: Long, val thresholdHours: Int, val enabled: Boolean)
+data class SafetyEvent(
+    val id: Long?, val type: String, val occurredAt: String?,
+    val address: String?, val latitude: Double?, val longitude: Double?,
+    val deviceBattery: Int?, val linkUrl: String? = null,
+    val dangerous: Boolean? = null, val phase: String? = null
+)
+data class UserAccountSettings(val name: String, val profileImageUrl: String?)
+data class SeniorProfileUpdate(
+    val seniorId: Long, val name: String, val relation: String,
+    val customRelation: String?, val birth: String, val phoneNumber: String,
+    val address: String?, val detailAddress: String?
+)

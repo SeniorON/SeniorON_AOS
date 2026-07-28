@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
-import com.example.senior_on.data.repository.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
 import com.example.senior_on.ui.theme.SENIOR_ONTheme

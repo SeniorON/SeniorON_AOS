@@ -17,7 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
+import com.example.senior_on.domain.model.auth.isValidPassword
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -25,16 +25,21 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 @Composable
 fun FindPasswordResetScreen(
     onBackClick: () -> Unit,
-    onComplete: () -> Unit,
+    onComplete: (
+        newPassword: String,
+        newPasswordCheck: String,
+        onResult: (Boolean) -> Unit
+    ) -> Unit,
     onLoginClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isValidPassword: (String) -> Boolean = MockFindPasswordRepository::isValidPassword
+    isValidPassword: (String) -> Boolean = ::isValidPassword
 ) {
     var password by rememberSaveable { mutableStateOf("") }
     var passwordConfirm by rememberSaveable { mutableStateOf("") }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var isPasswordConfirmVisible by rememberSaveable { mutableStateOf(false) }
     var showSuccessDialog by rememberSaveable { mutableStateOf(false) }
+    var isSubmitting by rememberSaveable { mutableStateOf(false) }
 
     val isPasswordValid = password.isEmpty() || isValidPassword(password)
     val isPasswordConfirmValid = passwordConfirm.isEmpty() || password == passwordConfirm
@@ -50,10 +55,13 @@ fun FindPasswordResetScreen(
             bottomBar = {
                 FindAccountPrimaryButton(
                     text = if (canComplete) "완료" else "다음",
-                    enabled = canComplete,
+                    enabled = canComplete && !isSubmitting,
                     onClick = {
-                        showSuccessDialog = true
-                        onComplete()
+                        isSubmitting = true
+                        onComplete(password, passwordConfirm) { isReset ->
+                            isSubmitting = false
+                            showSuccessDialog = isReset
+                        }
                     }
                 )
             }
@@ -123,7 +131,7 @@ private fun FindPasswordResetScreenPreview() {
     SENIOR_ONTheme {
         FindPasswordResetScreen(
             onBackClick = {},
-            onComplete = {},
+            onComplete = { _, _, onResult -> onResult(true) },
             onLoginClick = {}
         )
     }

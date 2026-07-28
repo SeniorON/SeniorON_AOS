@@ -25,8 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.senior_on.data.repository.mock.auth.MockFindPasswordRepository
-import com.example.senior_on.data.repository.mock.fixtures.MockUserFixtures
+import com.example.senior_on.domain.model.auth.isValidPassword
+import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.ui.common.account.FindAccountPasswordTextField
 import com.example.senior_on.ui.common.account.FindAccountTextField
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -192,7 +192,7 @@ fun ChangePasswordScreen(
     onCompleteClick: (currentPassword: String, newPassword: String) -> Unit,
     modifier: Modifier = Modifier,
     currentPasswordVerifier: (String) -> Boolean = { it.isNotBlank() },
-    isValidPassword: (String) -> Boolean = MockFindPasswordRepository::isValidPassword
+    isValidPassword: (String) -> Boolean = ::isValidPassword
 ) {
     var currentPassword by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }

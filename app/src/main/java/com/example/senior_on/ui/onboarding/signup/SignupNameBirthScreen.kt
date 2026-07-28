@@ -47,7 +47,7 @@ import java.time.LocalDate
 @Composable
 fun SignupNameBirthScreen(
     onBackClick: () -> Unit,
-    onNextClick: () -> Unit,
+    onNextClick: (name: String, birth: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -89,7 +89,7 @@ fun SignupNameBirthScreen(
 
         SignupNextButton(
             enabled = canGoNext,
-            onClick = onNextClick
+            onClick = { onNextClick(name.trim(), birthDate) }
         )
 
         Spacer(modifier = Modifier.height(22.5.dp))
@@ -394,7 +394,7 @@ private fun SignupNameBirthScreenPreview() {
     SENIOR_ONTheme {
         SignupNameBirthScreen(
             onBackClick = {},
-            onNextClick = {}
+            onNextClick = { _, _ -> }
         )
     }
 }
