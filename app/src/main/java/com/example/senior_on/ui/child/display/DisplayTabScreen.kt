@@ -248,7 +248,7 @@ private fun DeviceConnectionBanner(
             Spacer(modifier = Modifier.width(4.dp))
 
             Text(
-                text = "${device?.batteryLevelPercent ?: 0}%",
+                text = device?.batteryLevelPercent?.let { "$it%" } ?: "확인 불가",
                 style = SeniorOnTextStyles.BodySSemiBold,
                 color = SeniorOnColors.Primary600,
             )

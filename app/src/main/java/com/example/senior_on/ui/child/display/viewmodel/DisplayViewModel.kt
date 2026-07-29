@@ -1,89 +1,252 @@
 package com.example.senior_on.ui.child.display.viewmodel
 
-import com.example.senior_on.ui.child.display.DisplayTabUiState
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.senior_on.domain.model.parent.CaregiverRelationship
-import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
-import com.example.senior_on.domain.repository.display.DisplayRepository
-import com.example.senior_on.domain.repository.parent.ParentInfoRepository
-import com.example.senior_on.domain.model.parent.ParentInfo
+import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
+import com.example.senior_on.domain.model.parent.ParentInfo
+import com.example.senior_on.domain.repository.display.DisplayRepository
+import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
+import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.ui.child.display.DisplayTabUiState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class DisplayViewModel(
     private val parentInfoRepository: ParentInfoRepository,
     private val displayRepository: DisplayRepository,
     private val caregiverRelationshipRepository: CaregiverRelationshipRepository,
 ) : ViewModel() {
-    val uiState = combine(
-        parentInfoRepository.parentInfo,
-        displayRepository.overview,
-        caregiverRelationshipRepository.relationship,
-    ) { parentInfo, overview, caregiverRelationship ->
+    private val initialParentInfo = parentInfoRepository.parentInfo.value
+    private val initialRelationshipLabel =
+        caregiverRelationshipRepository.relationship.value?.displayLabel
+            ?: initialParentInfo?.relationshipLabel
+    private var isInitialButtonSetupInProgress = false
+
+    private val _uiState = MutableStateFlow(
         DisplayTabUiState(
-            parentInfo = parentInfo,
-            relationshipLabel = caregiverRelationship
-                ?.displayLabel
-                ?: parentInfo?.relationshipLabel,
-            device = overview.device,
-            screenConfiguration = overview.screenConfiguration,
+            parentInfo = initialParentInfo,
+            relationshipLabel = initialRelationshipLabel,
+            isLoading = true,
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = DisplayTabUiState(
-            parentInfo = parentInfoRepository.parentInfo.value,
-            relationshipLabel =
-                caregiverRelationshipRepository.relationship.value
-                    ?.displayLabel
-                    ?: parentInfoRepository.parentInfo.value?.relationshipLabel,
-            device = displayRepository.overview.value.device,
-            screenConfiguration = displayRepository.overview.value.screenConfiguration,
-        ),
     )
+    val uiState: StateFlow<DisplayTabUiState> = _uiState.asStateFlow()
 
-    fun saveParentInfo(parentInfo: ParentInfo) {
-        val sharedParentInfo = parentInfoRepository.parentInfo.value
+    init {
+        loadOverview()
+    }
 
-        caregiverRelationshipRepository.saveRelationship(
-            seniorId = parentInfo.seniorId,
-            relationship = CaregiverRelationship.fromDisplayLabel(
-                parentInfo.relationshipLabel,
-            ),
-        )
-        parentInfoRepository.saveParentInfo(
-            parentInfo.copy(
-                relationshipLabel = sharedParentInfo
-                    ?.relationshipLabel
-                    ?: parentInfo.relationshipLabel
+    fun loadOverview() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                )
+            }
+            runCatching {
+                loadOverviewWithInitialButtons()
+            }.onSuccess { overview ->
+                val parentInfo = overview.parentInfo
+                    ?: parentInfoRepository.parentInfo.value
+                parentInfo?.let(::shareParentInfo)
+                _uiState.update {
+                    it.copy(
+                        parentInfo = parentInfo,
+                        relationshipLabel = parentInfo?.relationshipLabel,
+                        device = overview.device,
+                        screenConfiguration = overview.screenConfiguration,
+                        availableButtonTypes = overview.availableButtonTypes,
+                        isLoading = false,
+                    )
+                }
+            }.onFailure(::handleLoadFailure)
+        }
+    }
+
+    private suspend fun loadOverviewWithInitialButtons() =
+        displayRepository.getOverview(
+            parentInfoRepository.parentInfo.value
+        ).let { overview ->
+            if (
+                overview.hasSavedButtonConfiguration ||
+                isInitialButtonSetupInProgress
+            ) {
+                return@let overview
+            }
+
+            isInitialButtonSetupInProgress = true
+            try {
+                displayRepository.saveButtons(
+                    buttons = InitialSeniorHomeGridButtons,
+                    customButtonLabels = emptyMap(),
+                )
+            } catch (throwable: Throwable) {
+                isInitialButtonSetupInProgress = false
+                throw throwable
+            }
+
+            displayRepository.getOverview(
+                parentInfoRepository.parentInfo.value
             )
-        )
+        }
+
+    fun refreshDevice() {
+        if (_uiState.value.isRefreshingDevice) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isRefreshingDevice = true,
+                    errorMessage = null,
+                )
+            }
+            runCatching { displayRepository.getDevice() }
+                .onSuccess { device ->
+                    _uiState.update {
+                        it.copy(
+                            device = device,
+                            isRefreshingDevice = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingDevice = false,
+                            errorMessage = throwable.toDisplayErrorMessage(),
+                        )
+                    }
+                }
+        }
     }
 
-    fun disconnectDevice() {
-        displayRepository.disconnectDevice()
+    fun saveParentInfo(
+        parentInfo: ParentInfo,
+        onSuccess: () -> Unit = {},
+    ) {
+        launchMutation(onSuccess) {
+            val savedParentInfo = displayRepository.updateSeniorProfile(parentInfo)
+            shareParentInfo(savedParentInfo)
+            _uiState.update {
+                it.copy(
+                    parentInfo = savedParentInfo,
+                    relationshipLabel = savedParentInfo.relationshipLabel,
+                )
+            }
+        }
     }
 
-    fun updateFontSize(fontSize: SeniorFontSize) {
-        displayRepository.updateFontSize(fontSize)
+    fun disconnectDevice(onSuccess: () -> Unit = {}) {
+        launchMutation(onSuccess) {
+            displayRepository.disconnectDevice()
+            _uiState.update { it.copy(device = null) }
+        }
     }
 
-    fun updateButtons(
+    fun updateFontSize(
+        fontSize: SeniorFontSize,
+        onSuccess: () -> Unit = {},
+    ) {
+        launchMutation(onSuccess) {
+            displayRepository.updateFontSize(fontSize)
+            _uiState.update {
+                it.copy(
+                    screenConfiguration = it.screenConfiguration.copy(
+                        fontSize = fontSize,
+                    )
+                )
+            }
+        }
+    }
+
+    fun saveButtons(
         buttons: List<SeniorHomeButtonType>,
         customButtonLabels: Map<SeniorHomeButtonType, String>,
+        onSuccess: () -> Unit = {},
     ) {
-        displayRepository.updateButtons(
-            buttons = buttons,
-            customButtonLabels = customButtonLabels,
+        val distinctButtons = buttons.distinct()
+        val normalizedLabels = customButtonLabels
+            .filterKeys(distinctButtons::contains)
+            .mapValues { (_, label) -> label.trim() }
+            .filterValues(String::isNotEmpty)
+
+        launchMutation(onSuccess) {
+            displayRepository.saveButtons(
+                buttons = distinctButtons,
+                customButtonLabels = normalizedLabels,
+            )
+            _uiState.update {
+                it.copy(
+                    screenConfiguration = it.screenConfiguration.copy(
+                        buttons = distinctButtons,
+                        customButtonLabels = normalizedLabels,
+                    )
+                )
+            }
+        }
+    }
+
+    private fun launchMutation(
+        onSuccess: () -> Unit,
+        request: suspend () -> Unit,
+    ) {
+        if (_uiState.value.isSaving) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSaving = true,
+                    errorMessage = null,
+                )
+            }
+            runCatching { request() }
+                .onSuccess {
+                    _uiState.update { it.copy(isSaving = false) }
+                    onSuccess()
+                }
+                .onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = throwable.toDisplayErrorMessage(),
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun shareParentInfo(parentInfo: ParentInfo) {
+        val relationship = CaregiverRelationship.fromDisplayLabel(
+            parentInfo.relationshipLabel,
         )
+        parentInfoRepository.saveParentInfo(parentInfo)
+        if (
+            parentInfo.seniorId > 0L &&
+            parentInfo.seniorId == initialParentInfo?.seniorId
+        ) {
+            caregiverRelationshipRepository.saveRelationship(
+                seniorId = parentInfo.seniorId,
+                relationship = relationship,
+            )
+        }
+    }
+
+    private fun handleLoadFailure(throwable: Throwable) {
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = throwable.toDisplayErrorMessage(),
+            )
+        }
     }
 
     companion object {
@@ -102,3 +265,9 @@ class DisplayViewModel(
         }
     }
 }
+
+private fun Throwable.toDisplayErrorMessage(): String =
+    message?.takeIf(String::isNotBlank) ?: DEFAULT_ERROR_MESSAGE
+
+private const val DEFAULT_ERROR_MESSAGE =
+    "화면 정보를 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요."

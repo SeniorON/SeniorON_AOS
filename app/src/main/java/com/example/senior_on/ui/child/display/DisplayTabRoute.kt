@@ -101,7 +101,9 @@ fun DisplayTabRoute(
         when (destination) {
             DisplayDestination.Overview -> DisplayTabScreen(
                 uiState = uiState,
-                canEditScreen = canEditScreen,
+                canEditScreen = canEditScreen &&
+                    !uiState.isLoading &&
+                    !uiState.isSaving,
                 modifier = modifier,
                 onDeviceClick = {
                     destination = DisplayDestination.DeviceConnection
@@ -144,8 +146,11 @@ fun DisplayTabRoute(
                 relationshipLabel = uiState.relationshipLabel ?: "부모님",
                 modifier = modifier,
                 onBackClick = ::navigateBack,
-                onRefreshClick = onRefreshClick,
-                onDisconnectClick = viewModel::disconnectDevice,
+                onRefreshClick = {
+                    viewModel.refreshDevice()
+                    onRefreshClick()
+                },
+                onDisconnectClick = { viewModel.disconnectDevice() },
                 onInstallGuideClick = onInstallGuideClick,
             )
 
@@ -167,10 +172,14 @@ fun DisplayTabRoute(
                 onSaveClick = { inputState ->
                     val seniorId = requireNotNull(uiState.parentInfo).seniorId
                     viewModel.saveParentInfo(
-                        inputState.toParentInfo(seniorId = seniorId)
+                        parentInfo = inputState.toParentInfo(seniorId = seniorId),
+                        onSuccess = {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.ParentInfoEdit.name
+                            )
+                            destination = DisplayDestination.Overview
+                        },
                     )
-                    saveableStateHolder.removeState(DisplayDestination.ParentInfoEdit.name)
-                    destination = DisplayDestination.Overview
                 },
             )
 
@@ -193,9 +202,15 @@ fun DisplayTabRoute(
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onSaveClick = { fontSize ->
-                    viewModel.updateFontSize(fontSize)
-                    saveableStateHolder.removeState(DisplayDestination.FontEdit.name)
-                    destination = DisplayDestination.Overview
+                    viewModel.updateFontSize(
+                        fontSize = fontSize,
+                        onSuccess = {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.FontEdit.name
+                            )
+                            destination = DisplayDestination.Overview
+                        },
+                    )
                 },
             )
 
@@ -225,13 +240,15 @@ fun DisplayTabRoute(
                 onBackClick = ::navigateBack,
                 onSaveClick = { buttons, customButtonLabels ->
                     val savedButtons = buttons.withRequiredSeniorHomeButtons()
-                    viewModel.updateButtons(
+                    viewModel.saveButtons(
                         buttons = savedButtons,
                         customButtonLabels = customButtonLabels
                             .filterKeys(savedButtons::contains),
+                        onSuccess = {
+                            clearButtonEditFlowState()
+                            destination = DisplayDestination.Overview
+                        },
                     )
-                    clearButtonEditFlowState()
-                    destination = DisplayDestination.Overview
                 },
                 onAddButtonClick = { buttons, customButtonLabels ->
                     buttonEditDraftNames = ArrayList(
@@ -250,6 +267,10 @@ fun DisplayTabRoute(
             )
 
             DisplayDestination.ButtonAdd -> DisplayButtonAddScreen(
+                availableAppButtons = ButtonAppCatalog.filter { button ->
+                    uiState.availableButtonTypes.isEmpty() ||
+                        button in uiState.availableButtonTypes
+                },
                 initialSelectedButtons = buttonEditDraftNames
                     .map(SeniorHomeButtonType::valueOf)
                     .ifEmpty { uiState.screenConfiguration.buttons }
@@ -302,13 +323,15 @@ fun DisplayTabRoute(
                             (buttonName, _) ->
                             SeniorHomeButtonType.valueOf(buttonName)
                         }
-                    viewModel.updateButtons(
+                    viewModel.saveButtons(
                         buttons = savedButtons,
                         customButtonLabels = customButtonLabels
                             .filterKeys(savedButtons::contains),
+                        onSuccess = {
+                            clearButtonEditFlowState()
+                            destination = DisplayDestination.Overview
+                        },
                     )
-                    clearButtonEditFlowState()
-                    destination = DisplayDestination.Overview
                 },
             )
         }

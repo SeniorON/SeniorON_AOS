@@ -71,7 +71,6 @@ private const val ButtonNameMaxLength = 6
 
 private val ProvidedButtons = listOf(
     SeniorHomeButtonType.ChatBuddy,
-    SeniorHomeButtonType.Schedule,
     SeniorHomeButtonType.Medication,
 )
 
@@ -88,6 +87,7 @@ private val InitialEditableButtons = listOf(
 
 private fun SeniorHomeButtonType.isProtectedFromSelectedButtonEditing(): Boolean =
     this in ProvidedButtons ||
+        this == SeniorHomeButtonType.Schedule ||
         this == SeniorHomeButtonType.Emergency ||
         isMusicButton()
 

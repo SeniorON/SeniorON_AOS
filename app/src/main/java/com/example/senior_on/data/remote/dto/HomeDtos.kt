@@ -1,9 +1,19 @@
 package com.example.senior_on.data.remote.dto
 
-data class ButtonRequest(val optionId: Long, val buttonOrder: Int)
+data class ButtonRequest(
+    val buttonOrder: Int,
+    val buttonName: String,
+    val packageName: String,
+)
 data class HomeButtonSaveRequest(val musicApp: String?, val buttons: List<ButtonRequest>)
 data class HomeButtonCreateRequest(val optionId: Long)
-data class HomeButtonUpdateRequest(val buttons: List<ButtonRequest>)
+data class HomeButtonUpdateItemRequest(
+    val button_id: Long,
+    val button_order: Int,
+    val button_name: String?,
+    val icon: String?,
+)
+data class HomeButtonUpdateRequest(val buttons: List<HomeButtonUpdateItemRequest>)
 data class HomeFontSizeUpdateRequest(val font_size: String)
 data class SeniorProfileUpdateRequest(
     val name: String,

@@ -46,13 +46,12 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.delay
 
 internal const val MinimumButtonSelectionCount = 7
-private const val MaximumButtonCountWithoutMusic = 12
-private const val MaximumButtonCountWithMusic = 11
+private const val MaximumButtonCountWithoutMusic = 11
+private const val MaximumButtonCountWithMusic = 10
 
 private val ProvidedFeatureButtons = listOf(
     SeniorHomeButtonType.Medication,
     SeniorHomeButtonType.ChatBuddy,
-    SeniorHomeButtonType.Schedule,
 )
 
 private val MusicButtons = listOf(
@@ -147,6 +146,7 @@ internal fun buttonAddCanContinue(selectedAppCount: Int): Boolean =
 fun DisplayButtonAddScreen(
     initialSelectedButtons: List<SeniorHomeButtonType>,
     initialMusicButton: SeniorHomeButtonType? = null,
+    availableAppButtons: List<SeniorHomeButtonType> = ButtonAppCatalog,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onSaveClick: (
@@ -154,8 +154,8 @@ fun DisplayButtonAddScreen(
         appButtons: List<SeniorHomeButtonType>,
     ) -> Unit = { _, _ -> },
 ) {
-    val availableButtonNames = remember {
-        ButtonAppCatalog.mapTo(hashSetOf(), SeniorHomeButtonType::name)
+    val availableButtonNames = remember(availableAppButtons) {
+        availableAppButtons.mapTo(hashSetOf(), SeniorHomeButtonType::name)
     }
     var selectedButtonNames by rememberSaveable(initialSelectedButtons) {
         mutableStateOf(
@@ -292,7 +292,7 @@ fun DisplayButtonAddScreen(
                 item {
                     ButtonAddSection(
                         title = "앱",
-                        buttons = ButtonAppCatalog,
+                        buttons = availableAppButtons,
                         selectedButtonNames = selectedButtonNames.toSet(),
                         rowType = ButtonAddRowType.App,
                         onButtonClick = ::toggleAppButton,

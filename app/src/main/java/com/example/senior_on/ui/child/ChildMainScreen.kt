@@ -252,7 +252,9 @@ fun ChildMainScreen(
                     )
                 }
             },
-            onDisconnectDeviceConfirm = displayViewModel::disconnectDevice,
+            onDisconnectDeviceConfirm = {
+                displayViewModel.disconnectDevice()
+            },
             onLogoutClick = onLogoutClick,
             onWithdrawClick = onWithdrawClick,
             modifier = Modifier

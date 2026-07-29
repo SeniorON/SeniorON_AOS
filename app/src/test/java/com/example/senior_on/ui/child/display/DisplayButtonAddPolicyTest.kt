@@ -10,28 +10,29 @@ import org.junit.Test
 class DisplayButtonAddPolicyTest {
     @Test
     fun counterIncludesProvidedFeatures() {
-        assertEquals(8, buttonAddSelectedCount(selectedAppCount = 5))
+        assertEquals(7, buttonAddSelectedCount(selectedAppCount = 5))
     }
 
     @Test
-    fun defaultConfigurationStartsAtTenSelectedButtons() {
+    fun defaultConfigurationHasTenGridButtonsIncludingEmergency() {
         val defaultButtons = SeniorScreenConfiguration().buttons
         val selectedAppCount = defaultButtons
             .count(ButtonAppCatalog::contains)
 
         assertTrue(SeniorHomeButtonType.Camera in defaultButtons)
         assertTrue(SeniorHomeButtonType.NaverMap in defaultButtons)
-        assertEquals(10, buttonAddSelectedCount(selectedAppCount))
+        assertEquals(9, buttonAddSelectedCount(selectedAppCount))
+        assertEquals(10, buttonAddSelectedCount(selectedAppCount) + 1)
     }
 
     @Test
-    fun continueRequiresAtLeastSevenSelectedButtons() {
-        assertFalse(buttonAddCanContinue(selectedAppCount = 3))
-        assertTrue(buttonAddCanContinue(selectedAppCount = 4))
+    fun continueRequiresAtLeastSevenButtonsExcludingEmergency() {
+        assertFalse(buttonAddCanContinue(selectedAppCount = 4))
+        assertTrue(buttonAddCanContinue(selectedAppCount = 5))
     }
 
     @Test
-    fun deleteIsDisabledWhenSevenButtonsRemain() {
+    fun deleteIsDisabledWhenSevenButtonsRemainExcludingEmergency() {
         assertFalse(canDeleteSelectedButton(selectedButtonCount = 6))
         assertFalse(canDeleteSelectedButton(selectedButtonCount = 7))
         assertTrue(canDeleteSelectedButton(selectedButtonCount = 8))
@@ -39,8 +40,8 @@ class DisplayButtonAddPolicyTest {
 
     @Test
     fun musicSelectionReducesMaximumCountByOne() {
-        assertEquals(12, buttonAddMaximumCount(hasMusicButton = false))
-        assertEquals(11, buttonAddMaximumCount(hasMusicButton = true))
+        assertEquals(11, buttonAddMaximumCount(hasMusicButton = false))
+        assertEquals(10, buttonAddMaximumCount(hasMusicButton = true))
     }
 
     @Test

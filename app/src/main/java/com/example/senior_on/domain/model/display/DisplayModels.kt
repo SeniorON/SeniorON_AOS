@@ -1,5 +1,7 @@
 package com.example.senior_on.domain.model.display
 
+import com.example.senior_on.domain.model.parent.ParentInfo
+
 enum class DisplayDeviceConnectionStatus {
     Online,
     Offline,
@@ -69,6 +71,17 @@ enum class SeniorHomeButtonType {
     Emergency,
 }
 
+val InitialSeniorHomeGridButtons = listOf(
+    SeniorHomeButtonType.Call,
+    SeniorHomeButtonType.Message,
+    SeniorHomeButtonType.Camera,
+    SeniorHomeButtonType.Photo,
+    SeniorHomeButtonType.YouTube,
+    SeniorHomeButtonType.ChatBuddy,
+    SeniorHomeButtonType.Medication,
+    SeniorHomeButtonType.Emergency,
+)
+
 data class SeniorScreenConfiguration(
     val fontSize: SeniorFontSize = SeniorFontSize.Large,
     val buttons: List<SeniorHomeButtonType> = listOf(
@@ -91,4 +104,7 @@ data class SeniorScreenConfiguration(
 data class DisplayOverview(
     val device: DisplayDevice?,
     val screenConfiguration: SeniorScreenConfiguration,
+    val parentInfo: ParentInfo? = null,
+    val availableButtonTypes: Set<SeniorHomeButtonType> = emptySet(),
+    val hasSavedButtonConfiguration: Boolean = true,
 )

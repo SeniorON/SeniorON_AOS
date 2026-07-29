@@ -43,14 +43,38 @@ class HomeServerRepositoryImpl(
     override suspend fun getButtonOptions() = source.getButtonOptions().map {
         ServerButton(0, it.option_id, 0, it.button_name.orEmpty(), it.icon, it.action_type, it.action_value)
     }
-    override suspend fun saveButtons(musicApp: String?, buttons: List<Pair<Long, Int>>) =
-        source.saveButtons(HomeButtonSaveRequest(musicApp, buttons.map { ButtonRequest(it.first, it.second) }))
+    override suspend fun saveButtons(musicApp: String?, buttons: List<ServerButton>) =
+        source.saveButtons(
+            HomeButtonSaveRequest(
+                musicApp = musicApp,
+                buttons = buttons.map { button ->
+                    ButtonRequest(
+                        buttonOrder = button.order,
+                        buttonName = button.name,
+                        packageName = requireNotNull(button.actionValue) {
+                            "앱 패키지명이 없는 버튼은 저장할 수 없습니다."
+                        },
+                    )
+                },
+            )
+        )
     override suspend fun addButton(optionId: Long) =
         source.addButton(HomeButtonCreateRequest(optionId)).let {
             ServerButton(it.buttonId ?: 0, optionId, it.buttonOrder ?: 0, it.buttonName.orEmpty(), it.icon, null, null)
         }
     override suspend fun updateButtons(buttons: List<Pair<Long, Int>>) =
-        source.updateButtons(HomeButtonUpdateRequest(buttons.map { ButtonRequest(it.first, it.second) }))
+        source.updateButtons(
+            HomeButtonUpdateRequest(
+                buttons.map { (buttonId, buttonOrder) ->
+                    HomeButtonUpdateItemRequest(
+                        button_id = buttonId,
+                        button_order = buttonOrder,
+                        button_name = null,
+                        icon = null,
+                    )
+                }
+            )
+        )
     override suspend fun deleteButton(buttonId: Long) = source.deleteButton(buttonId)
     override suspend fun updateFontSize(fontSize: String) =
         source.updateFontSize(HomeFontSizeUpdateRequest(fontSize.trim().uppercase()))
