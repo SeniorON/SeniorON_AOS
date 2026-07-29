@@ -239,6 +239,7 @@ private fun AppointmentHospitalText(
         )
         Text(
             text = appointment.departmentAndTime,
+            modifier = Modifier.padding(top = 2.dp),
             style = SeniorOnTextStyles.BodySMedium,
             color = secondaryColor
         )

@@ -21,7 +21,8 @@ import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val signupEmailRequestErrorMessage: String? = null,
 )
 
 data class SignupDraft(
@@ -66,7 +67,7 @@ class AuthViewModel(
         onResult: (LoginResult?) -> Unit
     ) {
         launchRequest(
-            onFailure = { onResult(null) }
+            onFailure = { _ -> onResult(null) }
         ) {
             val deviceRegistration =
                 deviceRegistrationRepository.getDeviceRegistration()
@@ -110,7 +111,14 @@ class AuthViewModel(
         email: String,
         onResult: (Boolean) -> Unit
     ) {
-        launchBooleanRequest(onResult) {
+        launchBooleanRequest(
+            onResult = onResult,
+            onError = { message ->
+                _uiState.update {
+                    it.copy(signupEmailRequestErrorMessage = message)
+                }
+            },
+        ) {
             authRepository.sendSignupEmailVerificationCode(email)
         }
     }
@@ -133,7 +141,7 @@ class AuthViewModel(
         onResult: (Boolean?) -> Unit
     ) {
         launchRequest(
-            onFailure = { onResult(null) }
+            onFailure = { _ -> onResult(null) }
         ) {
             onResult(authRepository.isLoginIdAvailable(loginId))
         }
@@ -145,7 +153,7 @@ class AuthViewModel(
         onResult: (LoginResult?) -> Unit
     ) {
         launchRequest(
-            onFailure = { onResult(null) }
+            onFailure = { _ -> onResult(null) }
         ) {
             val draft = signupDraft
             authRepository.signup(
@@ -191,7 +199,7 @@ class AuthViewModel(
         onResult: (KakaoLoginResult?) -> Unit
     ) {
         launchRequest(
-            onFailure = { onResult(null) }
+            onFailure = { _ -> onResult(null) }
         ) {
             val result = socialAuthRepository.loginWithKakao(kakaoAccessToken)
             accessToken = result.accessToken
@@ -203,19 +211,29 @@ class AuthViewModel(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
+    fun clearSignupEmailRequestError() {
+        _uiState.update {
+            it.copy(signupEmailRequestErrorMessage = null)
+        }
+    }
+
     private fun launchBooleanRequest(
         onResult: (Boolean) -> Unit,
+        onError: (String) -> Unit = {},
         request: suspend () -> Boolean
     ) {
         launchRequest(
-            onFailure = { onResult(false) }
+            onFailure = { message ->
+                onError(message)
+                onResult(false)
+            }
         ) {
             onResult(request())
         }
     }
 
     private fun launchRequest(
-        onFailure: () -> Unit = {},
+        onFailure: (String) -> Unit = {},
         request: suspend () -> Unit
     ) {
         viewModelScope.launch {
@@ -225,11 +243,12 @@ class AuthViewModel(
                     _uiState.value = AuthUiState()
                 }
                 .onFailure { throwable ->
+                    val errorMessage = throwable.message
+                        ?: DEFAULT_ERROR_MESSAGE
                     _uiState.value = AuthUiState(
-                        errorMessage = throwable.message
-                            ?: DEFAULT_ERROR_MESSAGE
+                        errorMessage = errorMessage
                     )
-                    onFailure()
+                    onFailure(errorMessage)
                 }
         }
     }

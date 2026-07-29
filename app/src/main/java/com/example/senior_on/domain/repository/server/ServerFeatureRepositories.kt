@@ -55,7 +55,7 @@ interface NotificationRepository {
     suspend fun getNotifications(type: String, cursor: Long? = null, size: Int? = null): NotificationPage
     suspend fun markRead(id: Long)
     suspend fun delete(id: Long)
-    suspend fun getSettings(): List<NotificationSetting>
+    suspend fun getHome(): NotificationHome
     suspend fun updateSetting(type: String, enabled: Boolean): NotificationSetting
     suspend fun isParentDeviceOnline(): Boolean
     suspend fun getInactivitySetting(userId: Long): InactivitySetting

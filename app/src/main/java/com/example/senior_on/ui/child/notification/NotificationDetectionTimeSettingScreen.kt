@@ -64,7 +64,9 @@ fun NotificationDetectionTimeSettingScreen(
 ) {
     BackHandler(onBack = onBackClick)
 
-    var selectedHours by rememberSaveable { mutableFloatStateOf(initialHours.toFloat()) }
+    var selectedHours by rememberSaveable(initialHours) {
+        mutableFloatStateOf(initialHours.toFloat())
+    }
     val hours = selectedHours.toInt()
 
     Column(

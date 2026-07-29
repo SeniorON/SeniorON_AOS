@@ -26,7 +26,8 @@ class HomeServerRepositoryImpl(
             fontSize = it.font_size.orEmpty(),
             connected = it.connection?.connected == true,
             battery = it.connection?.battery,
-            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain)
+            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
+            seniorAddress = it.senior_profile?.address,
         )
     }
     override suspend fun getWeather(latitude: Double, longitude: Double) =
@@ -168,8 +169,27 @@ class NotificationRepositoryImpl(
         }
     override suspend fun markRead(id: Long) = source.markRead(id)
     override suspend fun delete(id: Long) = source.delete(id)
-    override suspend fun getSettings() = source.getSettings().items.orEmpty().map {
-        NotificationSetting(it.type.orEmpty(), it.enabled == true)
+    override suspend fun getHome() = source.getSettings().let { response ->
+        NotificationHome(
+            enabledCount = response.enabledCount ?: 0,
+            items = response.items.orEmpty().map { item ->
+                NotificationHomeItem(
+                    type = item.type.orEmpty(),
+                    enabled = item.enabled == true,
+                    hasAlert = item.hasAlert == true,
+                    occurredAt = item.occurredAt,
+                    dateTimeLabel = item.dateTimeLabel,
+                    summary = item.summary,
+                    senderId = item.senderId,
+                    senderName = item.senderName,
+                    deviceBattery = item.deviceBattery,
+                    address = item.address,
+                    linkUrl = item.linkUrl,
+                    phase = item.phase,
+                    emptyMessage = item.emptyMessage,
+                )
+            },
+        )
     }
     override suspend fun updateSetting(type: String, enabled: Boolean) =
         source.updateSetting(type.trim().uppercase(), NotificationSettingRequest(enabled)).let {

@@ -6,7 +6,8 @@ data class ServerButton(
 )
 data class HomeSnapshot(
     val userName: String, val fontSize: String, val connected: Boolean,
-    val battery: Int?, val buttons: List<ServerButton>
+    val battery: Int?, val buttons: List<ServerButton>,
+    val seniorAddress: String? = null
 )
 data class WeatherInfo(val temperature: Int, val status: String, val text: String, val observedAt: String?)
 data class DeviceInfo(
@@ -45,6 +46,25 @@ data class AppNotification(
 )
 data class NotificationPage(
     val totalCount: Int, val items: List<AppNotification>, val nextCursor: Long?
+)
+data class NotificationHome(
+    val enabledCount: Int,
+    val items: List<NotificationHomeItem>,
+)
+data class NotificationHomeItem(
+    val type: String,
+    val enabled: Boolean,
+    val hasAlert: Boolean,
+    val occurredAt: String?,
+    val dateTimeLabel: String?,
+    val summary: String?,
+    val senderId: Long?,
+    val senderName: String?,
+    val deviceBattery: Int?,
+    val address: String?,
+    val linkUrl: String?,
+    val phase: String?,
+    val emptyMessage: String?,
 )
 data class NotificationSetting(val type: String, val enabled: Boolean)
 data class InactivitySetting(val userId: Long, val thresholdHours: Int, val enabled: Boolean)

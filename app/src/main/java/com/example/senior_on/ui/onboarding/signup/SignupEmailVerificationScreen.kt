@@ -57,6 +57,8 @@ fun SignupEmailVerificationScreen(
         verificationCode: String,
         onResult: (Boolean) -> Unit
     ) -> Unit,
+    emailRequestErrorMessage: String? = null,
+    onEmailChange: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var email by remember { mutableStateOf("") }
@@ -107,11 +109,17 @@ fun SignupEmailVerificationScreen(
                     value = email,
                     onValueChange = {
                         email = it
+                        onEmailChange()
                         hasRequestedCode = false
                         verificationCode = ""
                         verificationResult = EmailVerificationResult.None
                     },
                     placeholder = "이메일 입력",
+                    underlineColor = if (emailRequestErrorMessage != null) {
+                        SeniorOnColors.Red300
+                    } else {
+                        null
+                    },
                     modifier = Modifier.weight(1f)
                 )
 
@@ -122,6 +130,7 @@ fun SignupEmailVerificationScreen(
                     width = if (shouldShowVerificationCodeInput) 53.dp else 68.dp,
                     enabled = canRequestVerification,
                     onClick = {
+                        onEmailChange()
                         isRequestingCode = true
                         hasRequestedCode = false
                         verificationCode = ""
@@ -138,7 +147,15 @@ fun SignupEmailVerificationScreen(
                 )
             }
 
-            if (shouldShowVerificationCodeInput) {
+            if (emailRequestErrorMessage != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = emailRequestErrorMessage,
+                    style = SeniorOnTextStyles.CaptionRegular,
+                    color = SeniorOnColors.Red300
+                )
+            } else if (shouldShowVerificationCodeInput) {
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
