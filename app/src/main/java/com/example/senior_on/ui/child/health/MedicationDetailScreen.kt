@@ -194,15 +194,26 @@ fun MedicationDetailScreen(
                             modifier = Modifier.weight(1f)
                         )
                         if (isEditable && times.isNotEmpty()) {
-                            Text(
-                                text = "+ 복용 시간 추가",
-                                style = SeniorOnTextStyles.BodySSemiBold,
-                                color = SeniorOnColors.Primary600,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.clickable {
                                     focusManager.clearFocus()
                                     showTimeSheet = true
                                 }
-                            )
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_sm_plus),
+                                    contentDescription = null,
+                                    tint = SeniorOnColors.Primary600,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "복용 시간 추가",
+                                    style = SeniorOnTextStyles.BodySSemiBold,
+                                    color = SeniorOnColors.Primary600
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -417,7 +428,7 @@ private fun MedicationEditorTopBar(
                 painter = painterResource(id = R.drawable.ic_arrow_back),
                 contentDescription = "뒤로가기",
                 tint = SeniorOnColors.Gray800,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(26.dp)
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
@@ -482,7 +493,7 @@ private fun MedicationEditableTimeChip(
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Primary100)
+            .background(SeniorOnColors.Background2)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -550,12 +561,12 @@ private fun MedicationSelectBadge() {
         modifier = Modifier
             .clip(RoundedCornerShape(45.dp))
             .background(SeniorOnColors.Gray100)
-            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .padding(horizontal = 8.dp, vertical = 12.dp)
     ) {
         Text(
             text = "선택",
             style = SeniorOnTextStyles.CaptionMedium,
-            color = SeniorOnColors.Gray400
+            color = SeniorOnColors.Gray500
         )
     }
 }
@@ -578,7 +589,7 @@ private fun MedicationTextInput(
         textStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800),
         modifier = Modifier
             .fillMaxWidth()
-            .height(49.dp)
+            .height(42.dp)
             .onFocusChanged { isFocused = it.isFocused },
         singleLine = true,
         decorationBox = { inner ->
@@ -635,12 +646,12 @@ private fun MedicationTimeChip(text: String) {
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Primary100),
+            .background(SeniorOnColors.Background2),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            style = SeniorOnTextStyles.BodyMSemiBold,
+            style = SeniorOnTextStyles.BodyMMedium,
             color = SeniorOnColors.Primary700
         )
     }
@@ -667,13 +678,13 @@ private fun MedicationEverydayCheckbox(
             ),
             contentDescription = null,
             tint = if (checked) SeniorOnColors.Primary600 else SeniorOnColors.Gray200,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(16.dp)
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = "매일",
             style = SeniorOnTextStyles.BodySMedium,
-            color = if (checked) SeniorOnColors.Primary600 else SeniorOnColors.Gray400
+            color = SeniorOnColors.Gray800
         )
     }
 }
@@ -696,8 +707,8 @@ private fun MedicationWeekdaySelector(
                     .clip(CircleShape)
                     .background(
                         when {
-                            selected -> SeniorOnColors.Primary100
-                            else -> SeniorOnColors.Gray50
+                            selected -> SeniorOnColors.Primary200
+                            else -> SeniorOnColors.Background3
                         }
                     )
                     .then(
@@ -719,8 +730,8 @@ private fun MedicationWeekdaySelector(
                     text = label,
                     style = SeniorOnTextStyles.BodySSemiBold,
                     color = when {
-                        selected -> SeniorOnColors.Primary700
-                        else -> SeniorOnColors.Gray300
+                        selected -> SeniorOnColors.Primary600
+                        else -> SeniorOnColors.Gray500
                     }
                 )
             }
@@ -780,7 +791,7 @@ private fun MedicationPrimaryButton(
                 painter = painterResource(id = it),
                 contentDescription = null,
                 tint = SeniorOnColors.SupportWhite100,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
         }

@@ -135,7 +135,7 @@ internal fun TodayMedicationSection(
                 onPreviousDayClick = onPreviousDayClick,
                 onNextDayClick = onNextDayClick
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         HealthGreenSectionTitle(
@@ -177,7 +177,7 @@ private fun HealthYearSelector(
             style = SeniorOnTextStyles.BodySRegular,
             color = SeniorOnColors.SupportWhite100
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(4.dp))
         Icon(
             painter = painterResource(
                 id = if (expanded) {
@@ -216,14 +216,14 @@ private fun HealthDateNavigator(
             text = "${selectedDate.monthValue}월 ${selectedDate.dayOfMonth}일",
             style = SeniorOnTextStyles.BodyLSemiBold,
             color = SeniorOnColors.SupportWhite100,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 12.dp)
         )
         Icon(
             painter = painterResource(id = R.drawable.ic_sm_arrow_right),
             contentDescription = "다음 날",
             tint = SeniorOnColors.SupportWhite100,
             modifier = Modifier
-                .size(18.dp)
+                .size(24.dp)
                 .clickable(onClick = onNextDayClick)
         )
     }
@@ -411,7 +411,7 @@ internal fun RegisteredMedicationsSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(SeniorOnColors.Background1)
+            .background(SeniorOnColors.SupportWhite100)
             .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp)
     ) {
         Row(
@@ -438,7 +438,7 @@ internal fun RegisteredMedicationsSection(
         if (medications.isEmpty()) {
             EmptyRegisteredMedicationsContent(onAddMedicationClick = onAddMedicationClick)
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 medications.forEach { medication ->
                     RegisteredMedicationCard(
                         medication = medication,
@@ -455,12 +455,16 @@ private fun RegisteredMedicationCountText(count: Int) {
     Text(
         text = buildAnnotatedString {
             append("현재 ")
-            withStyle(
-                SpanStyle(
-                    color = SeniorOnColors.Primary700,
-                    fontWeight = FontWeight.SemiBold
-                )
-            ) {
+            if (count > 0) {
+                withStyle(
+                    SpanStyle(
+                        color = SeniorOnColors.Primary700,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                ) {
+                    append("${count}개의 약")
+                }
+            } else {
                 append("${count}개의 약")
             }
             append("이 등록되어 있어요")
@@ -531,12 +535,15 @@ private fun RegisteredMedicationCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
-            .background(SeniorOnColors.SupportWhite100)
+            .background(SeniorOnColors.Gray50)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.width(88.dp)) {
+        Column(
+            modifier = Modifier.width(88.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
             Text(
                 text = medication.category,
                 style = SeniorOnTextStyles.BodySRegular,
@@ -551,9 +558,9 @@ private fun RegisteredMedicationCard(
 
         Box(
             modifier = Modifier
-                .padding(horizontal = 12.dp)
-                .width(1.dp)
-                .height(44.dp)
+                .padding(horizontal = 10.dp)
+                .width(2.dp)
+                .height(40.dp)
                 .background(SeniorOnColors.Gray100)
         )
 
@@ -562,11 +569,11 @@ private fun RegisteredMedicationCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             RegisteredMedicationMetaRow(
-                iconResId = R.drawable.ic_sm_clock_2,
+                iconResId = R.drawable.ic_clock_1,
                 label = medication.time.toMedicationHourLabel()
             )
             RegisteredMedicationMetaRow(
-                iconResId = R.drawable.ic_property1_calendar,
+                iconResId = R.drawable.ic_calendar,
                 label = medication.scheduleLabel
             )
         }
@@ -589,8 +596,8 @@ private fun RegisteredMedicationMetaRow(
         Icon(
             painter = painterResource(id = iconResId),
             contentDescription = null,
-            tint = SeniorOnColors.Gray400,
-            modifier = Modifier.size(16.dp)
+            tint = SeniorOnColors.Gray300,
+            modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
