@@ -175,14 +175,16 @@ fun ChangeNameScreen(
             )
         }
 
-        SettingsPrimaryButton(
-            text = "저장",
-            enabled = canSave,
-            onClick = { onSaveClick(trimmedNewName) },
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp)
-        )
+            SettingsPrimaryButton(
+                text = "저장",
+                enabled = canSave,
+                onClick = { onSaveClick(trimmedNewName) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp)
+                    .height(48.dp)
+            )
     }
 }
 
@@ -301,8 +303,10 @@ fun ChangePasswordScreen(
                 onCompleteClick(currentPassword, newPassword)
             },
             modifier = Modifier
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
+                .height(48.dp)
         )
     }
 }

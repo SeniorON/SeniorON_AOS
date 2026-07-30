@@ -529,9 +529,10 @@ private fun SettingsProfileSection(
         ) {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(64.dp)
                     .clip(CircleShape)
-                    .background(SeniorOnColors.Gray100),
+                    .background(SeniorOnColors.Background1)
+                    .border(1.dp, SeniorOnColors.Gray200, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -545,9 +546,10 @@ private fun SettingsProfileSection(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(28.dp)
+                    .size(30.dp)
                     .clip(CircleShape)
                     .background(SeniorOnColors.Primary600)
+                    .border(1.dp, SeniorOnColors.White, CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -601,11 +603,13 @@ private fun SettingsMenuSectionCard(
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        HorizontalDivider(
-            thickness = 1.dp,
-            color = SeniorOnColors.Gray200
+        Box(
+            modifier = Modifier
+                .width(36.dp)
+                .height(1.dp)
+                .background(SeniorOnColors.Gray200)
         )
 
         items.forEach { item ->
@@ -746,35 +750,68 @@ private fun SettingsProfilePhotoOption(
 internal fun SettingsBackTopAppBar(
     title: String,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    centerTitle: Boolean = true
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .background(SeniorOnColors.White)
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_arrow_back),
-            contentDescription = "뒤로가기",
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 16.dp)
-                .size(26.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onBackClick
-                ),
-            tint = SeniorOnColors.Gray800
-        )
+    if (centerTitle) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .background(SeniorOnColors.White)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp)
+                    .size(26.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onBackClick
+                    ),
+                tint = SeniorOnColors.Gray800
+            )
 
-        Text(
-            text = title,
-            modifier = Modifier.align(Alignment.Center),
-            style = SeniorOnTextStyles.BodyLBold,
-            color = SeniorOnColors.Gray800
-        )
+            Text(
+                text = title,
+                modifier = Modifier.align(Alignment.Center),
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800
+            )
+        }
+    } else {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .background(SeniorOnColors.White)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onBackClick
+                    ),
+                tint = SeniorOnColors.Gray800
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = title,
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800
+            )
+        }
     }
 }
 
@@ -793,11 +830,9 @@ internal fun SettingsPrimaryButton(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .background(backgroundColor)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 14.dp),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
