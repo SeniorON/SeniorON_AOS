@@ -1,4 +1,4 @@
-package com.example.senior_on.ui.parent
+package com.example.senior_on.ui.parent.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

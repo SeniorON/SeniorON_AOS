@@ -1,4 +1,4 @@
-package com.example.senior_on.ui.parent
+package com.example.senior_on.ui.parent.route
 
 import com.example.senior_on.ui.parent.schedule.viewmodel.toParentDisplayTime
 
@@ -15,8 +15,6 @@ import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionViewMod
 import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionStatus
 
 import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertViewModel
-
-import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertStatus
 
 import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyViewModel
 
@@ -88,8 +86,9 @@ import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
 import com.example.senior_on.domain.repository.parent.ParentScheduleRepository
 import com.example.senior_on.ui.parent.chat.ChatBuddyScreen
-import com.example.senior_on.ui.parent.emergency.ParentEmergencyAlertScreen
+import com.example.senior_on.ui.parent.home.ParentHomeScreen
 import com.example.senior_on.ui.parent.medication.ParentMedicationScreen
+import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionScreen
 import com.example.senior_on.ui.parent.photo.ParentFamilyMembersPhotoScreen
 import com.example.senior_on.ui.parent.photo.ParentMemberPhotoGridScreen
@@ -172,13 +171,6 @@ fun ParentLauncherScreen(
     val displayOverview by
         displayRepository.overview.collectAsStateWithLifecycle()
 
-    LaunchedEffect(emergencyAlertUiState.status) {
-        if (emergencyAlertUiState.status == ParentEmergencyAlertStatus.Sent) {
-            destination = ParentLauncherDestination.Home
-            emergencyAlertViewModel.reset()
-        }
-    }
-
     LaunchedEffect(linkDetectionUiState.status) {
         if (linkDetectionUiState.status == ParentLinkDetectionStatus.Safe) {
             linkDetectionUiState.url?.let { url ->
@@ -260,7 +252,7 @@ fun ParentLauncherScreen(
             modifier = modifier
         )
 
-        ParentLauncherDestination.Emergency -> ParentEmergencyAlertScreen(
+        ParentLauncherDestination.Emergency -> ParentEmergencyRoute(
             uiState = emergencyAlertUiState,
             onBackClick = {
                 emergencyAlertViewModel.cancel()
@@ -332,6 +324,18 @@ fun ParentLauncherScreen(
                     modifier = modifier
                 )
             }
+        }
+    }
+
+    if (medicationUiState.showReminder) {
+        medicationUiState.medication?.let { medication ->
+            ParentMedicationReminderDialog(
+                medication = medication,
+                onConfirmClick = {
+                    medicationViewModel.consumeReminder()
+                    destination = ParentLauncherDestination.Medication
+                },
+            )
         }
     }
 

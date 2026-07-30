@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -55,13 +55,19 @@ fun ParentScheduleScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .safeDrawingPadding(),
+            .background(SeniorOnColors.Background3),
     ) {
-        ParentDetailTopBar(
-            title = "일정",
-            onBackClick = onBackClick,
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(SeniorOnColors.SupportWhite100)
+                .statusBarsPadding(),
+        ) {
+            ParentDetailTopBar(
+                title = "일정",
+                onBackClick = onBackClick,
+            )
+        }
 
         when {
             uiState.isLoading -> ParentScheduleLoadingContent()
@@ -92,10 +98,10 @@ private fun ParentScheduleListContent(
             top = 24.dp,
             bottom = 24.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             ParentScheduleSummary(count = schedules.size)
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if (schedules.isEmpty()) {
@@ -111,6 +117,9 @@ private fun ParentScheduleListContent(
                     number = index + 1,
                     schedule = schedule,
                 )
+                if (index < schedules.lastIndex) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
@@ -119,19 +128,17 @@ private fun ParentScheduleListContent(
 @Composable
 private fun ParentScheduleSummary(count: Int) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_big_schedule),
             contentDescription = null,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(34.dp),
             tint = SeniorOnColors.Schedule,
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Text(
             text = buildAnnotatedString {
@@ -141,7 +148,7 @@ private fun ParentScheduleSummary(count: Int) {
                 }
                 append(" 있어요")
             },
-            style = SeniorOnTextStyles.HeadingM,
+            style = SeniorOnTextStyles.HeadingL,
             color = SeniorOnColors.Gray800,
         )
     }
@@ -158,7 +165,7 @@ private fun ParentScheduleCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(100.dp)
+            .height(104.dp)
             .dropShadow(
                 shape = shape,
                 shadow = Shadow(
@@ -174,15 +181,15 @@ private fun ParentScheduleCard(
     ) {
         Box(
             modifier = Modifier
-                .width(54.dp)
-                .height(64.dp)
-                .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                .width(56.dp)
+                .height(68.dp)
+                .clip(RoundedCornerShape(SeniorOnRadius.Small))
                 .background(SeniorOnColors.Background3),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = number.toString(),
-                style = SeniorOnTextStyles.HeadingM,
+                style = SeniorOnTextStyles.HeadingL,
                 color = SeniorOnColors.Gray800,
             )
         }
@@ -195,7 +202,7 @@ private fun ParentScheduleCard(
         ) {
             Text(
                 text = schedule.time.toParentDisplayTime(),
-                style = SeniorOnTextStyles.HeadingL,
+                style = SeniorOnTextStyles.HeadingXL,
                 color = SeniorOnColors.Gray800,
                 maxLines = 1,
             )
@@ -204,7 +211,7 @@ private fun ParentScheduleCard(
 
             Text(
                 text = schedule.displayDescription(),
-                style = SeniorOnTextStyles.BodyLMedium,
+                style = SeniorOnTextStyles.HeadingXS,
                 color = SeniorOnColors.Gray500,
                 maxLines = 1,
             )
