@@ -132,11 +132,7 @@ fun ParentInfoInputScreen(
         else -> true
     }
     val phoneDigitCount = phoneNumber.text.count(Char::isDigit)
-    val isPhoneNumberValid = when (mode) {
-        ParentInfoScreenMode.Input -> phoneDigitCount == RequiredPhoneNumberLength
-        ParentInfoScreenMode.Edit -> phoneDigitCount == 0 ||
-            phoneDigitCount == RequiredPhoneNumberLength
-    }
+    val isPhoneNumberValid = phoneDigitCount == RequiredPhoneNumberLength
     val isSaveEnabled = name.isNotBlank() &&
         isRelationshipValid &&
         parseBirthDate(birthDate) != null &&
@@ -225,7 +221,7 @@ fun ParentInfoInputScreen(
             onAddressDetailChange = { addressDetail = it },
             onSearchAddressClick = onSearchAddressClick,
             showIntro = mode == ParentInfoScreenMode.Input,
-            isPhoneNumberRequired = mode == ParentInfoScreenMode.Input,
+            isPhoneNumberRequired = true,
             modifier = Modifier.weight(1f)
         )
 

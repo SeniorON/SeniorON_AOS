@@ -56,6 +56,7 @@ import com.example.senior_on.ui.common.seniorinfo.CustomRelationshipBottomSheet
 import com.example.senior_on.ui.common.seniorinfo.CustomRelationshipMaxLength
 import com.example.senior_on.ui.common.seniorinfo.InputLabel
 import com.example.senior_on.ui.common.seniorinfo.RelationshipSelector
+import com.example.senior_on.ui.common.seniorinfo.RequiredPhoneNumberLength
 import com.example.senior_on.ui.common.seniorinfo.SeniorInfoActionButton
 import com.example.senior_on.ui.common.seniorinfo.SeniorInfoButtonStyle
 import com.example.senior_on.ui.common.seniorinfo.SeniorInfoPhoneTextField
@@ -473,7 +474,8 @@ fun EditConnectedDeviceInfoScreen(
     }
     val canSave = name.isNotBlank() &&
         isRelationshipValid &&
-        parseBirthDate(birthDate) != null
+        parseBirthDate(birthDate) != null &&
+        phoneNumber.text.count(Char::isDigit) == RequiredPhoneNumberLength
 
     if (showCustomRelationshipSheet) {
         CustomRelationshipBottomSheet(
@@ -575,7 +577,7 @@ fun EditConnectedDeviceInfoScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            InputLabel(text = "전화번호", optionalText = "(선택)")
+            InputLabel(text = "전화번호", optionalText = " (필수)")
             Spacer(modifier = Modifier.height(6.dp))
             SeniorInfoPhoneTextField(
                 value = phoneNumber,

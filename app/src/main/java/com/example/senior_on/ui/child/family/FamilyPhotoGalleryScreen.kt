@@ -5,6 +5,7 @@ import com.example.senior_on.ui.child.family.viewmodel.toFamilyTabUiState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -43,8 +44,6 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
-
-private val PhotoCardHeight = 94.dp
 
 @Composable
 fun FamilyPhotoGalleryScreen(
@@ -188,7 +187,7 @@ private fun AddFamilyPhotoCard(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(PhotoCardHeight)
+            .aspectRatio(SharedPhotoCardAspectRatio)
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(SeniorOnColors.Background4)
             .clickable(onClick = onClick)

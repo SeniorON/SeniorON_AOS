@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,8 @@ import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+
+internal const val SharedPhotoCardAspectRatio = 158f / 94f
 
 @Composable
 internal fun FamilyBackTopAppBar(
@@ -494,7 +497,7 @@ internal fun SharedPhotoCard(
 ) {
     Box(
         modifier = modifier
-            .height(94.dp)
+            .aspectRatio(SharedPhotoCardAspectRatio)
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(SeniorOnColors.Background4)
             .then(
