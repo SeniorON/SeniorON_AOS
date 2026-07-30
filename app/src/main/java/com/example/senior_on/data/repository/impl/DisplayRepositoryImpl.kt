@@ -152,16 +152,12 @@ class DisplayRepositoryImpl private constructor(
             "음악 앱은 하나만 선택할 수 있습니다."
         }
         val musicButton = musicButtons.singleOrNull()
-        val optionalButtonCount = distinctButtons.count { button ->
-            !button.isMusic() && button !in REQUIRED_FIXED_BUTTON_TYPES
-        }
-        require(optionalButtonCount >= MINIMUM_OPTIONAL_BUTTON_COUNT) {
-            "기본 제공 기능 외 버튼을 최소 ${MINIMUM_OPTIONAL_BUTTON_COUNT}개 선택해야 합니다."
-        }
         val normalizedButtons = distinctButtons.normalizeButtonsForSave()
-        val totalButtonCount = normalizedButtons.size + if (musicButton == null) 0 else 1
-        require(totalButtonCount <= MAXIMUM_TOTAL_BUTTON_COUNT) {
-            "홈 화면 버튼은 최대 ${MAXIMUM_TOTAL_BUTTON_COUNT}개까지 저장할 수 있습니다."
+        require(normalizedButtons.size >= MINIMUM_BUTTON_COUNT) {
+            "홈 화면 일반 버튼은 최소 ${MINIMUM_BUTTON_COUNT}개 이상이어야 합니다."
+        }
+        require(normalizedButtons.size <= MAXIMUM_BUTTON_COUNT) {
+            "홈 화면 일반 버튼은 최대 ${MAXIMUM_BUTTON_COUNT}개까지 저장할 수 있습니다."
         }
         val missingButtons = normalizedButtons.filterNot(
             BUTTON_API_METADATA::containsKey
@@ -539,14 +535,6 @@ private val MUSIC_BUTTON_TYPES = setOf(
     SeniorHomeButtonType.Spotify,
 )
 
-private val REQUIRED_FIXED_BUTTON_TYPES = setOf(
-    SeniorHomeButtonType.Schedule,
-    SeniorHomeButtonType.ChatBuddy,
-    SeniorHomeButtonType.Medication,
-    SeniorHomeButtonType.Photo,
-    SeniorHomeButtonType.Emergency,
-)
-
 private val REQUIRED_GRID_BUTTON_TYPES = listOf(
     SeniorHomeButtonType.ChatBuddy,
     SeniorHomeButtonType.Medication,
@@ -859,8 +847,8 @@ private const val DEFAULT_DEVICE_ID = "connected-senior-device"
 private const val DEFAULT_DEVICE_NAME = "시니어폰"
 private const val PRIMARY_MANAGER_TYPE = "PRIMARY"
 private const val BUTTON_NAME_MAX_LENGTH = 6
-private const val MINIMUM_OPTIONAL_BUTTON_COUNT = 4
-private const val MAXIMUM_TOTAL_BUTTON_COUNT = 18
+private const val MINIMUM_BUTTON_COUNT = 8
+private const val MAXIMUM_BUTTON_COUNT = 18
 private const val FIXED_EMERGENCY_GRID_INDEX = 7
 private const val DEFAULT_ACTION_TYPE = "DEFAULT"
 private const val APP_ACTION_TYPE = "APP"

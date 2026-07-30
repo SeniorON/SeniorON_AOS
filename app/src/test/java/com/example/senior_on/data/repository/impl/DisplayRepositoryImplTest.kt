@@ -304,6 +304,88 @@ class DisplayRepositoryImplTest {
     }
 
     @Test
+    fun saveButtonsAllowsEighteenGeneralButtonsWithScheduleAndMusicExcluded() =
+        runBlocking {
+            val homeDataSource = FakeHomeDataSource()
+            val repository = DisplayRepositoryImpl(
+                homeDataSource = homeDataSource,
+                deviceDataSource = FakeDeviceDataSource(),
+            )
+            val optionalButtons = listOf(
+                SeniorHomeButtonType.Call,
+                SeniorHomeButtonType.Message,
+                SeniorHomeButtonType.Calendar,
+                SeniorHomeButtonType.Alarm,
+                SeniorHomeButtonType.Memo,
+                SeniorHomeButtonType.Recorder,
+                SeniorHomeButtonType.Calculator,
+                SeniorHomeButtonType.Settings,
+                SeniorHomeButtonType.Flashlight,
+                SeniorHomeButtonType.Camera,
+                SeniorHomeButtonType.KakaoTalk,
+                SeniorHomeButtonType.NaverBand,
+                SeniorHomeButtonType.NaverCafe,
+                SeniorHomeButtonType.Line,
+            )
+
+            repository.saveButtons(
+                buttons = listOf(
+                    SeniorHomeButtonType.Melon,
+                    SeniorHomeButtonType.Schedule,
+                ) + optionalButtons,
+                customButtonLabels = emptyMap(),
+            )
+
+            val request = homeDataSource.savedButtonRequests.single()
+            assertEquals("MELON", request.musicApp)
+            assertEquals(18, request.buttons.size)
+            assertFalse(request.buttons.any { it.actionValue == "SCHEDULE" })
+            assertEquals(
+                8,
+                request.buttons.single { it.actionValue == "EMERGENCY" }.buttonOrder,
+            )
+        }
+
+    @Test
+    fun saveButtonsRejectsMoreThanEighteenGeneralButtons() = runBlocking {
+        val homeDataSource = FakeHomeDataSource()
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+        val optionalButtons = listOf(
+            SeniorHomeButtonType.Call,
+            SeniorHomeButtonType.Message,
+            SeniorHomeButtonType.Calendar,
+            SeniorHomeButtonType.Alarm,
+            SeniorHomeButtonType.Memo,
+            SeniorHomeButtonType.Recorder,
+            SeniorHomeButtonType.Calculator,
+            SeniorHomeButtonType.Settings,
+            SeniorHomeButtonType.Flashlight,
+            SeniorHomeButtonType.Camera,
+            SeniorHomeButtonType.KakaoTalk,
+            SeniorHomeButtonType.NaverBand,
+            SeniorHomeButtonType.NaverCafe,
+            SeniorHomeButtonType.Line,
+            SeniorHomeButtonType.YouTube,
+        )
+
+        val result = runCatching {
+            repository.saveButtons(
+                buttons = listOf(
+                    SeniorHomeButtonType.Spotify,
+                    SeniorHomeButtonType.Schedule,
+                ) + optionalButtons,
+                customButtonLabels = emptyMap(),
+            )
+        }
+
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(homeDataSource.savedButtonRequests.isEmpty())
+    }
+
+    @Test
     fun getOverviewMapsSavedPackagesAndPreservesInternalButtonOrder() = runBlocking {
         val homeDataSource = FakeHomeDataSource(
             homeResponse = HomeResponse(

@@ -9,8 +9,8 @@ import org.junit.Test
 
 class DisplayButtonAddPolicyTest {
     @Test
-    fun counterIncludesProvidedFeatures() {
-        assertEquals(8, buttonAddSelectedCount(selectedAppCount = 5))
+    fun counterIncludesAllFourRequiredGeneralButtons() {
+        assertEquals(9, buttonAddSelectedCount(selectedAppCount = 5))
     }
 
     @Test
@@ -21,27 +21,26 @@ class DisplayButtonAddPolicyTest {
 
         assertTrue(SeniorHomeButtonType.Camera in defaultButtons)
         assertTrue(SeniorHomeButtonType.NaverMap in defaultButtons)
-        assertEquals(9, buttonAddSelectedCount(selectedAppCount))
-        assertEquals(12, buttonAddSelectedCount(selectedAppCount) + 3)
+        assertEquals(10, buttonAddSelectedCount(selectedAppCount))
+        assertEquals(12, buttonAddSelectedCount(selectedAppCount) + 2)
     }
 
     @Test
-    fun continueRequiresFourAppsExcludingFiveFixedButtons() {
+    fun continueRequiresFourAppsInAdditionToFourRequiredGeneralButtons() {
         assertFalse(buttonAddCanContinue(selectedAppCount = 3))
         assertTrue(buttonAddCanContinue(selectedAppCount = 4))
     }
 
     @Test
-    fun deleteIsDisabledWhenSevenButtonsRemainExcludingEmergency() {
-        assertFalse(canDeleteSelectedButton(selectedButtonCount = 6))
+    fun deleteIsDisabledWhenEightGeneralButtonsRemain() {
         assertFalse(canDeleteSelectedButton(selectedButtonCount = 7))
-        assertTrue(canDeleteSelectedButton(selectedButtonCount = 8))
+        assertFalse(canDeleteSelectedButton(selectedButtonCount = 8))
+        assertTrue(canDeleteSelectedButton(selectedButtonCount = 9))
     }
 
     @Test
-    fun musicSelectionReducesMaximumCountByOne() {
-        assertEquals(16, buttonAddMaximumCount(hasMusicButton = false))
-        assertEquals(15, buttonAddMaximumCount(hasMusicButton = true))
+    fun maximumCountsOnlyGeneralButtons() {
+        assertEquals(18, buttonAddMaximumCount())
     }
 
     @Test

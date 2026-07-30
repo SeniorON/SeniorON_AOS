@@ -451,7 +451,7 @@ private fun SelectedButtonCard(
     onDeleteClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val totalButtonCount = ProvidedButtonNames.size + editableButtonNames.size
+    val totalButtonCount = buttonAddSelectedCount(editableButtonNames.size)
     val deleteEnabled = canDeleteSelectedButton(totalButtonCount)
 
     Column(
