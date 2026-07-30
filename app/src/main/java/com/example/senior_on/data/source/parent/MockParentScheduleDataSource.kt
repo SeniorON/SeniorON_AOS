@@ -7,12 +7,12 @@ import kotlinx.coroutines.delay
 
 enum class MockParentScheduleScenario {
     TodayWithSchedules,
-    TodayWithoutSchedules
+    TodayWithoutSchedules,
 }
 
 class MockParentScheduleDataSource(
     private val scenario: MockParentScheduleScenario =
-        MockParentScheduleScenario.TodayWithSchedules
+        MockParentScheduleScenario.TodayWithSchedules,
 ) : ParentScheduleDataSource {
 
     override suspend fun getSchedules(date: LocalDate): List<ParentSchedule> {
@@ -21,17 +21,25 @@ class MockParentScheduleDataSource(
         return when (scenario) {
             MockParentScheduleScenario.TodayWithSchedules -> listOf(
                 ParentSchedule(
-                    id = "medicine",
+                    id = "eye-clinic",
                     date = date,
                     time = LocalTime.of(10, 0),
-                    title = "OOO 안과"
+                    title = "안과",
                 ),
                 ParentSchedule(
-                    id = "hospital",
+                    id = "internal-medicine",
                     date = date,
-                    time = LocalTime.of(15, 0),
-                    title = "연세세브란스병원"
-                )
+                    time = LocalTime.of(14, 0),
+                    title = "서울대학교병원",
+                    description = "내과",
+                ),
+                ParentSchedule(
+                    id = "surgery",
+                    date = date,
+                    time = LocalTime.of(18, 0),
+                    title = "서울대학교병원",
+                    description = "외과",
+                ),
             )
 
             MockParentScheduleScenario.TodayWithoutSchedules -> emptyList()
