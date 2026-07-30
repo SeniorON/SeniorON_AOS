@@ -16,8 +16,14 @@ import com.example.senior_on.data.source.notification.RemoteNotificationDataSour
 import com.example.senior_on.data.source.settings.RemoteUserSettingsDataSource
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.di.DefaultAppContainer
+import com.example.senior_on.notification.SeniorOnNotificationManager
 
 class SeniorOnApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        SeniorOnNotificationManager.createAlertChannel(this)
+    }
+
     val appContainer: AppContainer by lazy {
         DefaultAppContainer(
             context = this,

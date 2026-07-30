@@ -80,13 +80,11 @@ class NotificationViewModel(
                     }
                 }
                 val hasHomeAddress = async {
-                    runCatching {
-                        homeRepository
-                            ?.getHome()
-                            ?.seniorAddress
-                            ?.isNotBlank()
-                            ?: true
-                    }.getOrDefault(TEMP_ASSUME_HOME_ADDRESS_ON_HOME_API_FAILURE)
+                    homeRepository
+                        ?.getHome()
+                        ?.seniorAddress
+                        ?.isNotBlank()
+                        ?: true
                 }
                 NotificationHomeLoadResult(
                     home = home.await().toUiState(
@@ -439,8 +437,5 @@ private fun NotificationScreenUiState.withInactivityThresholdHours(
 
 private fun formatThresholdHours(thresholdHours: Int): String =
     "${thresholdHours}시간"
-
-// TODO(BE deployment): Remove this fallback after the latest GET /api/home contract is deployed.
-private const val TEMP_ASSUME_HOME_ADDRESS_ON_HOME_API_FAILURE = true
 
 private const val DefaultInactivityThresholdHours = 12
