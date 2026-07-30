@@ -13,5 +13,6 @@ fun ParentLauncherRoute(appContainer: AppContainer) {
         medicationRepository = appContainer.parentMedicationRepository,
         emergencyAlertRepository = appContainer.parentEmergencyAlertRepository,
         linkSafetyRepository = appContainer.parentLinkSafetyRepository,
+        displayRepository = appContainer.displayRepository,
     )
 }
