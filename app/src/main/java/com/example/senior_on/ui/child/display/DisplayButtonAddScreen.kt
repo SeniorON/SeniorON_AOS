@@ -46,12 +46,13 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.delay
 
 internal const val MinimumButtonSelectionCount = 7
-private const val MaximumButtonCountWithoutMusic = 11
-private const val MaximumButtonCountWithMusic = 10
+private const val MaximumButtonCountWithoutMusic = 16
+private const val MaximumButtonCountWithMusic = 15
 
 private val ProvidedFeatureButtons = listOf(
     SeniorHomeButtonType.Medication,
     SeniorHomeButtonType.ChatBuddy,
+    SeniorHomeButtonType.Photo,
 )
 
 private val MusicButtons = listOf(
@@ -66,7 +67,6 @@ private val CommunicationAppButtons = listOf(
     SeniorHomeButtonType.Alarm,
     SeniorHomeButtonType.Memo,
     SeniorHomeButtonType.Camera,
-    SeniorHomeButtonType.Photo,
     SeniorHomeButtonType.Recorder,
     SeniorHomeButtonType.Calculator,
     SeniorHomeButtonType.Settings,
@@ -124,8 +124,8 @@ internal val ButtonAppCatalog = (
         LifestyleAppButtons +
         SeniorHomeButtonType.GoStop
     ).also { buttons ->
-    check(buttons.size == 39) {
-        "Button app catalog must contain exactly 39 apps."
+    check(buttons.size == 38) {
+        "Button app catalog must contain exactly 38 apps."
     }
 }
 

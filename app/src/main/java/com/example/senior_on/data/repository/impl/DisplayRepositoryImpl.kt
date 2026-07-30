@@ -3,6 +3,7 @@ package com.example.senior_on.data.repository.impl
 import com.example.senior_on.data.remote.dto.ButtonRequest
 import com.example.senior_on.data.remote.dto.ConnectionResponse
 import com.example.senior_on.data.remote.dto.DeviceDetailResponse
+import com.example.senior_on.data.remote.dto.FamilyMemberResponse
 import com.example.senior_on.data.remote.dto.HomeButtonResponse
 import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
@@ -10,12 +11,17 @@ import com.example.senior_on.data.remote.dto.HomeResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateResponse
+import com.example.senior_on.data.remote.dto.TodayScheduleResponse
+import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.display.DisplayDataSource
+import com.example.senior_on.data.source.family.RemoteFamilySource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.DisplayOverview
+import com.example.senior_on.domain.model.display.DisplayTodaySchedule
+import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -27,22 +33,35 @@ import java.time.LocalDate
 class DisplayRepositoryImpl private constructor(
     private val homeDataSource: HomeDataSource?,
     private val deviceDataSource: DeviceDataSource?,
+    private val familyDataSource: RemoteFamilySource?,
     private val mockDataSource: DisplayDataSource?,
 ) : DisplayRepository {
     constructor(
         homeDataSource: HomeDataSource,
         deviceDataSource: DeviceDataSource,
+        familyDataSource: RemoteFamilySource? = null,
     ) : this(
         homeDataSource = homeDataSource,
         deviceDataSource = deviceDataSource,
+        familyDataSource = familyDataSource,
         mockDataSource = null,
     )
 
     constructor(dataSource: DisplayDataSource) : this(
         homeDataSource = null,
         deviceDataSource = null,
+        familyDataSource = null,
         mockDataSource = dataSource,
     )
+
+    override suspend fun canCurrentUserEditScreen(): Boolean {
+        if (mockDataSource != null) return true
+
+        return familyDataSource
+            ?.getMembers()
+            .orEmpty()
+            .canCurrentUserEditScreen()
+    }
 
     override suspend fun getOverview(currentParentInfo: ParentInfo?): DisplayOverview {
         mockDataSource?.let { source ->
@@ -52,6 +71,24 @@ class DisplayRepositoryImpl private constructor(
         return requireNotNull(homeDataSource).getHome().toDisplayOverview(
             currentParentInfo = currentParentInfo,
         )
+    }
+
+    override suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+    ): DisplayWeather {
+        if (mockDataSource != null) {
+            return DisplayWeather(
+                temperatureCelsius = 20,
+                status = "CLEAR",
+                description = "맑음",
+                observedAt = null,
+            )
+        }
+
+        return requireNotNull(homeDataSource)
+            .getWeather(latitude = latitude, longitude = longitude)
+            .toDisplayWeather()
     }
 
     override suspend fun getDevice(): DisplayDevice? {
@@ -110,17 +147,31 @@ class DisplayRepositoryImpl private constructor(
         }
 
         val distinctButtons = buttons.distinct()
-        val musicButton = distinctButtons.firstOrNull(SeniorHomeButtonType::isMusic)
-        val appButtons = distinctButtons.filter { button ->
-            !button.isMusic() && button != SeniorHomeButtonType.Schedule
+        val musicButtons = distinctButtons.filter(SeniorHomeButtonType::isMusic)
+        require(musicButtons.size <= 1) {
+            "음악 앱은 하나만 선택할 수 있습니다."
         }
-        val missingButtons = appButtons.filterNot(BUTTON_API_METADATA::containsKey)
+        val musicButton = musicButtons.singleOrNull()
+        val optionalButtonCount = distinctButtons.count { button ->
+            !button.isMusic() && button !in REQUIRED_FIXED_BUTTON_TYPES
+        }
+        require(optionalButtonCount >= MINIMUM_OPTIONAL_BUTTON_COUNT) {
+            "기본 제공 기능 외 버튼을 최소 ${MINIMUM_OPTIONAL_BUTTON_COUNT}개 선택해야 합니다."
+        }
+        val normalizedButtons = distinctButtons.normalizeButtonsForSave()
+        val totalButtonCount = normalizedButtons.size + if (musicButton == null) 0 else 1
+        require(totalButtonCount <= MAXIMUM_TOTAL_BUTTON_COUNT) {
+            "홈 화면 버튼은 최대 ${MAXIMUM_TOTAL_BUTTON_COUNT}개까지 저장할 수 있습니다."
+        }
+        val missingButtons = normalizedButtons.filterNot(
+            BUTTON_API_METADATA::containsKey
+        )
         require(missingButtons.isEmpty()) {
-            "패키지 정보가 없는 앱은 저장할 수 없습니다: " +
+            "액션 정보가 없는 버튼은 저장할 수 없습니다: " +
                 missingButtons.joinToString { it.name }
         }
 
-        val requests = appButtons.mapIndexed { index, button ->
+        val requests = normalizedButtons.mapIndexed { index, button ->
             val metadata = requireNotNull(BUTTON_API_METADATA[button])
             val buttonName = customButtonLabels[button]
                 ?.trim()
@@ -134,11 +185,18 @@ class DisplayRepositoryImpl private constructor(
             ButtonRequest(
                 buttonOrder = index + 1,
                 buttonName = buttonName,
+                actionType = button.toApiActionType(),
+                actionValue = button.toApiActionValue(),
                 packageName = metadata.packageName,
             )
         }
-        require(requests.map(ButtonRequest::packageName).distinct().size == requests.size) {
-            "같은 앱은 중복해서 저장할 수 없습니다."
+        require(
+            requests
+                .map { Triple(it.actionType, it.actionValue, it.packageName) }
+                .distinct()
+                .size == requests.size
+        ) {
+            "같은 기능은 중복해서 저장할 수 없습니다."
         }
 
         requireNotNull(homeDataSource).saveButtons(
@@ -157,6 +215,12 @@ class DisplayRepositoryImpl private constructor(
         requireNotNull(deviceDataSource).disconnect()
     }
 }
+
+internal fun List<FamilyMemberResponse>.canCurrentUserEditScreen(): Boolean =
+    firstOrNull { member -> member.me == true }
+        ?.managerType
+        ?.trim()
+        .equals(PRIMARY_MANAGER_TYPE, ignoreCase = true)
 
 private fun HomeResponse.toDisplayOverview(
     currentParentInfo: ParentInfo?,
@@ -191,12 +255,17 @@ private fun HomeResponse.toDisplayOverview(
     val configuredButtons = buildList {
         musicButton?.let(::add)
         add(SeniorHomeButtonType.Schedule)
-        addAll(savedAppButtons.map { (button, _) -> button })
-        REQUIRED_INTERNAL_BUTTON_TYPES.forEach { requiredButton ->
+        addAll(
+            savedAppButtons
+                .map { (button, _) -> button }
+                .filterNot { it == SeniorHomeButtonType.Emergency }
+        )
+        REQUIRED_GRID_BUTTON_TYPES.forEach { requiredButton ->
             if (requiredButton !in this) {
                 add(requiredButton)
             }
         }
+        add(SeniorHomeButtonType.Emergency)
     }.distinct()
 
     return DisplayOverview(
@@ -207,8 +276,37 @@ private fun HomeResponse.toDisplayOverview(
             customButtonLabels = customButtonLabels,
         ),
         parentInfo = senior_profile.toParentInfo(currentParentInfo),
+        todaySchedule = today_schedule.toDisplayTodaySchedule(),
         availableButtonTypes = BUTTON_API_METADATA.keys + MUSIC_BUTTON_TYPES,
         hasSavedButtonConfiguration = buttons.orEmpty().isNotEmpty(),
+    )
+}
+
+private fun WeatherResponse.toDisplayWeather(): DisplayWeather = DisplayWeather(
+    temperatureCelsius = temperature,
+    status = weatherStatus?.trim()?.takeIf(String::isNotEmpty),
+    description = weatherText?.trim()?.takeIf(String::isNotEmpty),
+    observedAt = observedAt,
+)
+
+private fun TodayScheduleResponse?.toDisplayTodaySchedule(): DisplayTodaySchedule? {
+    if (this == null) return null
+
+    val hasScheduleContent =
+        !title.isNullOrBlank() ||
+        !description.isNullOrBlank() ||
+        !scheduled_time.isNullOrBlank()
+    val normalizedCount = schedule_count ?: if (hasScheduleContent) 1 else 0
+    val hasSchedule = normalizedCount > 0 || hasScheduleContent
+    if (!hasSchedule) return null
+
+    return DisplayTodaySchedule(
+        title = title?.trim()?.takeIf(String::isNotEmpty),
+        description = description?.trim()?.takeIf(String::isNotEmpty),
+        count = normalizedCount.coerceAtLeast(1),
+        displayType = display_type?.trim()?.takeIf(String::isNotEmpty),
+        id = schedule_id,
+        scheduledTime = scheduled_time?.trim()?.takeIf(String::isNotEmpty),
     )
 }
 
@@ -226,7 +324,7 @@ private fun SeniorProfileResponse?.toParentInfo(current: ParentInfo?): ParentInf
         ?: return null
 
     return ParentInfo(
-        seniorId = current?.seniorId ?: 0L,
+        seniorId = senior_id ?: current?.seniorId ?: 0L,
         name = resolvedName,
         relationshipLabel = relation.toRelationshipLabel(
             customRelation = null,
@@ -305,13 +403,17 @@ private fun HomeButtonResponse.toButtonType(): SeniorHomeButtonType? =
         name = button_name,
         actionType = action_type,
         actionValue = action_value,
+        packageName = package_name,
     )
 
 private fun resolveButtonType(
     name: String?,
     actionType: String?,
     actionValue: String?,
+    packageName: String?,
 ): SeniorHomeButtonType? {
+    BUTTON_TYPE_BY_PACKAGE[packageName?.trim()?.lowercase()]
+        ?.let { return it }
     BUTTON_TYPE_BY_PACKAGE[actionValue?.trim()?.lowercase()]
         ?.let { return it }
 
@@ -368,6 +470,43 @@ private fun String?.toMusicButtonType(): SeniorHomeButtonType? = when (
     else -> null
 }
 
+private fun List<SeniorHomeButtonType>.normalizeButtonsForSave():
+    List<SeniorHomeButtonType> {
+    val gridButtons = distinct()
+        .filterNot { button ->
+            button.isMusic() ||
+                button == SeniorHomeButtonType.Schedule ||
+                button == SeniorHomeButtonType.Emergency
+        }
+        .toMutableList()
+    REQUIRED_GRID_BUTTON_TYPES.forEach { requiredButton ->
+        if (requiredButton !in gridButtons) {
+            gridButtons.add(requiredButton)
+        }
+    }
+    val emergencyIndex = FIXED_EMERGENCY_GRID_INDEX.coerceAtMost(
+        gridButtons.size
+    )
+    gridButtons.add(
+        index = emergencyIndex,
+        element = SeniorHomeButtonType.Emergency,
+    )
+
+    return gridButtons
+}
+
+private fun SeniorHomeButtonType.toApiActionType(): String =
+    if (this in DEFAULT_BUTTON_ACTION_VALUES) {
+        DEFAULT_ACTION_TYPE
+    } else {
+        APP_ACTION_TYPE
+    }
+
+private fun SeniorHomeButtonType.toApiActionValue(): String =
+    DEFAULT_BUTTON_ACTION_VALUES[this]
+        ?: APP_BUTTON_ACTION_VALUES[this]
+        ?: error("$name 버튼의 액션 값이 정의되지 않았습니다.")
+
 private fun String?.toRelationshipLabel(
     customRelation: String?,
     fallback: String?,
@@ -400,65 +539,127 @@ private val MUSIC_BUTTON_TYPES = setOf(
     SeniorHomeButtonType.Spotify,
 )
 
-private val REQUIRED_INTERNAL_BUTTON_TYPES = listOf(
+private val REQUIRED_FIXED_BUTTON_TYPES = setOf(
+    SeniorHomeButtonType.Schedule,
     SeniorHomeButtonType.ChatBuddy,
     SeniorHomeButtonType.Medication,
+    SeniorHomeButtonType.Photo,
     SeniorHomeButtonType.Emergency,
+)
+
+private val REQUIRED_GRID_BUTTON_TYPES = listOf(
+    SeniorHomeButtonType.ChatBuddy,
+    SeniorHomeButtonType.Medication,
+    SeniorHomeButtonType.Photo,
+)
+
+private val DEFAULT_BUTTON_ACTION_VALUES = mapOf(
+    SeniorHomeButtonType.Schedule to "SCHEDULE",
+    SeniorHomeButtonType.ChatBuddy to "COMPANION",
+    SeniorHomeButtonType.Medication to "MEDICATION",
+    SeniorHomeButtonType.Photo to "PHOTO",
+    SeniorHomeButtonType.Emergency to "EMERGENCY",
+    SeniorHomeButtonType.Call to "PHONE",
+    SeniorHomeButtonType.Message to "MESSAGE",
+    SeniorHomeButtonType.Calendar to "CALENDAR",
+    SeniorHomeButtonType.Alarm to "ALARM",
+    SeniorHomeButtonType.Memo to "MEMO",
+    SeniorHomeButtonType.Recorder to "RECORDER",
+    SeniorHomeButtonType.Calculator to "CALCULATOR",
+    SeniorHomeButtonType.Settings to "SETTINGS",
+    SeniorHomeButtonType.Flashlight to "FLASHLIGHT",
+    SeniorHomeButtonType.Camera to "CAMERA",
+)
+
+private val APP_BUTTON_ACTION_VALUES = mapOf(
+    SeniorHomeButtonType.KakaoTalk to "KAKAO_TALK",
+    SeniorHomeButtonType.NaverBand to "NAVER_BAND",
+    SeniorHomeButtonType.NaverCafe to "NAVER_CAFE",
+    SeniorHomeButtonType.Line to "LINE",
+    SeniorHomeButtonType.YouTube to "YOUTUBE",
+    SeniorHomeButtonType.Naver to "NAVER",
+    SeniorHomeButtonType.Daum to "DAUM",
+    SeniorHomeButtonType.Google to "GOOGLE",
+    SeniorHomeButtonType.Tving to "TVING",
+    SeniorHomeButtonType.Netflix to "NETFLIX",
+    SeniorHomeButtonType.NaverMap to "NAVER_MAP",
+    SeniorHomeButtonType.KakaoMap to "KAKAO_MAP",
+    SeniorHomeButtonType.KakaoT to "KAKAO_T",
+    SeniorHomeButtonType.TMap to "TMAP",
+    SeniorHomeButtonType.KorailTalk to "KORAIL_TALK",
+    SeniorHomeButtonType.Toss to "TOSS",
+    SeniorHomeButtonType.KakaoPay to "KAKAO_PAY",
+    SeniorHomeButtonType.NaverPay to "NAVER_PAY",
+    SeniorHomeButtonType.SamsungWallet to "SAMSUNG_WALLET",
+    SeniorHomeButtonType.SamsungPay to "SAMSUNG_PAY",
+    SeniorHomeButtonType.CashWalk to "CASH_WALK",
+    SeniorHomeButtonType.Weather to "WEATHER",
+    SeniorHomeButtonType.Coupang to "COUPANG",
+    SeniorHomeButtonType.Karrot to "KARROT",
+    SeniorHomeButtonType.Baemin to "BAEMIN",
+    SeniorHomeButtonType.Yogiyo to "YOGIYO",
+    SeniorHomeButtonType.CoupangEats to "COUPANG_EATS",
+    SeniorHomeButtonType.HomeShopping to "HOME_SHOPPING",
+    SeniorHomeButtonType.GoStop to "GO_STOP",
 )
 
 private data class ButtonApiMetadata(
     val buttonName: String,
-    val packageName: String,
+    val packageName: String?,
 )
 
 private val BUTTON_API_METADATA = mapOf(
+    SeniorHomeButtonType.Schedule to ButtonApiMetadata(
+        buttonName = "일정",
+        packageName = null,
+    ),
     SeniorHomeButtonType.ChatBuddy to ButtonApiMetadata(
         buttonName = "말벗",
-        packageName = "COMPANION",
+        packageName = null,
     ),
     SeniorHomeButtonType.Medication to ButtonApiMetadata(
         buttonName = "복약",
-        packageName = "MEDICATION",
+        packageName = null,
     ),
     SeniorHomeButtonType.Emergency to ButtonApiMetadata(
         buttonName = "긴급알림",
-        packageName = "EMERGENCY",
+        packageName = null,
     ),
     SeniorHomeButtonType.Call to ButtonApiMetadata(
         buttonName = "전화",
-        packageName = "com.samsung.android.dialer",
+        packageName = null,
     ),
     SeniorHomeButtonType.Message to ButtonApiMetadata(
         buttonName = "메시지",
-        packageName = "com.samsung.android.messaging",
+        packageName = null,
     ),
     SeniorHomeButtonType.Calendar to ButtonApiMetadata(
         buttonName = "캘린더",
-        packageName = "com.samsung.android.calendar",
+        packageName = null,
     ),
     SeniorHomeButtonType.Alarm to ButtonApiMetadata(
         buttonName = "알람",
-        packageName = "com.sec.android.app.clockpackage",
+        packageName = null,
     ),
     SeniorHomeButtonType.Memo to ButtonApiMetadata(
         buttonName = "메모",
-        packageName = "com.samsung.android.app.notes",
+        packageName = null,
     ),
     SeniorHomeButtonType.Recorder to ButtonApiMetadata(
         buttonName = "녹음",
-        packageName = "com.sec.android.app.voicenote",
+        packageName = null,
     ),
     SeniorHomeButtonType.Calculator to ButtonApiMetadata(
         buttonName = "계산기",
-        packageName = "com.sec.android.app.popupcalculator",
+        packageName = null,
     ),
     SeniorHomeButtonType.Settings to ButtonApiMetadata(
         buttonName = "설정",
-        packageName = "com.android.settings",
+        packageName = null,
     ),
     SeniorHomeButtonType.Flashlight to ButtonApiMetadata(
         buttonName = "손전등",
-        packageName = "com.android.systemui",
+        packageName = null,
     ),
     SeniorHomeButtonType.KakaoTalk to ButtonApiMetadata(
         buttonName = "카카오톡",
@@ -578,17 +779,18 @@ private val BUTTON_API_METADATA = mapOf(
     ),
     SeniorHomeButtonType.Photo to ButtonApiMetadata(
         buttonName = "사진",
-        packageName = "com.sec.android.gallery3d",
+        packageName = null,
     ),
     SeniorHomeButtonType.Camera to ButtonApiMetadata(
         buttonName = "카메라",
-        packageName = "com.sec.android.app.camera",
+        packageName = null,
     ),
 )
 
 private val BUTTON_TYPE_BY_PACKAGE: Map<String, SeniorHomeButtonType> = buildMap {
     BUTTON_API_METADATA.forEach { (button, metadata) ->
-        val packageName = metadata.packageName.lowercase()
+        val packageName = metadata.packageName?.lowercase()
+            ?: return@forEach
         if (packageName !in this) {
             put(packageName, button)
         }
@@ -605,7 +807,7 @@ private val BUTTON_TYPE_BY_KEY: Map<String, SeniorHomeButtonType> = buildMap {
         }
     }
 
-    register(SeniorHomeButtonType.Call, "전화", "통화", "CALL", "tel")
+    register(SeniorHomeButtonType.Call, "전화", "통화", "PHONE", "CALL", "tel")
     register(SeniorHomeButtonType.Message, "메시지", "문자", "MESSAGE", "sms")
     register(SeniorHomeButtonType.Calendar, "캘린더")
     register(SeniorHomeButtonType.Alarm, "알림", "알람")
@@ -655,4 +857,10 @@ private val BUTTON_TYPE_BY_KEY: Map<String, SeniorHomeButtonType> = buildMap {
 
 private const val DEFAULT_DEVICE_ID = "connected-senior-device"
 private const val DEFAULT_DEVICE_NAME = "시니어폰"
+private const val PRIMARY_MANAGER_TYPE = "PRIMARY"
 private const val BUTTON_NAME_MAX_LENGTH = 6
+private const val MINIMUM_OPTIONAL_BUTTON_COUNT = 4
+private const val MAXIMUM_TOTAL_BUTTON_COUNT = 18
+private const val FIXED_EMERGENCY_GRID_INDEX = 7
+private const val DEFAULT_ACTION_TYPE = "DEFAULT"
+private const val APP_ACTION_TYPE = "APP"

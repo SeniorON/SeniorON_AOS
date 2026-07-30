@@ -10,7 +10,7 @@ import org.junit.Test
 class DisplayButtonAddPolicyTest {
     @Test
     fun counterIncludesProvidedFeatures() {
-        assertEquals(7, buttonAddSelectedCount(selectedAppCount = 5))
+        assertEquals(8, buttonAddSelectedCount(selectedAppCount = 5))
     }
 
     @Test
@@ -22,13 +22,13 @@ class DisplayButtonAddPolicyTest {
         assertTrue(SeniorHomeButtonType.Camera in defaultButtons)
         assertTrue(SeniorHomeButtonType.NaverMap in defaultButtons)
         assertEquals(9, buttonAddSelectedCount(selectedAppCount))
-        assertEquals(10, buttonAddSelectedCount(selectedAppCount) + 1)
+        assertEquals(12, buttonAddSelectedCount(selectedAppCount) + 3)
     }
 
     @Test
-    fun continueRequiresAtLeastSevenButtonsExcludingEmergency() {
-        assertFalse(buttonAddCanContinue(selectedAppCount = 4))
-        assertTrue(buttonAddCanContinue(selectedAppCount = 5))
+    fun continueRequiresFourAppsExcludingFiveFixedButtons() {
+        assertFalse(buttonAddCanContinue(selectedAppCount = 3))
+        assertTrue(buttonAddCanContinue(selectedAppCount = 4))
     }
 
     @Test
@@ -40,13 +40,14 @@ class DisplayButtonAddPolicyTest {
 
     @Test
     fun musicSelectionReducesMaximumCountByOne() {
-        assertEquals(11, buttonAddMaximumCount(hasMusicButton = false))
-        assertEquals(10, buttonAddMaximumCount(hasMusicButton = true))
+        assertEquals(16, buttonAddMaximumCount(hasMusicButton = false))
+        assertEquals(15, buttonAddMaximumCount(hasMusicButton = true))
     }
 
     @Test
     fun baeminRemainsATypeButIsNotSelectableFromCatalog() {
         assertFalse(SeniorHomeButtonType.Baemin in ButtonAppCatalog)
-        assertEquals(39, ButtonAppCatalog.size)
+        assertFalse(SeniorHomeButtonType.Photo in ButtonAppCatalog)
+        assertEquals(38, ButtonAppCatalog.size)
     }
 }

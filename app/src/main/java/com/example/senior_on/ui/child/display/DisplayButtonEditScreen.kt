@@ -72,6 +72,7 @@ private const val ButtonNameMaxLength = 6
 private val ProvidedButtons = listOf(
     SeniorHomeButtonType.ChatBuddy,
     SeniorHomeButtonType.Medication,
+    SeniorHomeButtonType.Photo,
 )
 
 private val ProvidedButtonNames = ProvidedButtons.map(

@@ -43,7 +43,10 @@ class HomeServerRepositoryImpl(
     override suspend fun getButtonOptions() = source.getButtonOptions().map {
         ServerButton(0, it.option_id, 0, it.button_name.orEmpty(), it.icon, it.action_type, it.action_value)
     }
-    override suspend fun saveButtons(musicApp: String?, buttons: List<ServerButton>) =
+    override suspend fun saveButtons(
+        musicApp: String?,
+        buttons: List<ServerButton>,
+    ) =
         source.saveButtons(
             HomeButtonSaveRequest(
                 musicApp = musicApp,
@@ -51,9 +54,13 @@ class HomeServerRepositoryImpl(
                     ButtonRequest(
                         buttonOrder = button.order,
                         buttonName = button.name,
-                        packageName = requireNotNull(button.actionValue) {
-                            "앱 패키지명이 없는 버튼은 저장할 수 없습니다."
+                        actionType = requireNotNull(button.actionType) {
+                            "액션 타입이 없는 버튼은 저장할 수 없습니다."
                         },
+                        actionValue = requireNotNull(button.actionValue) {
+                            "액션 값이 없는 버튼은 저장할 수 없습니다."
+                        },
+                        packageName = button.packageName,
                     )
                 },
             )
@@ -263,7 +270,8 @@ class DeviceRepositoryImpl(
 }
 
 private fun HomeButtonResponse.toDomain() = ServerButton(
-    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon, action_type, action_value
+    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon,
+    action_type, action_value, package_name,
 )
 private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
     usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl

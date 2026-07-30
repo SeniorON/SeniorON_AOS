@@ -3,6 +3,7 @@ package com.example.senior_on.data.repository.impl
 import com.example.senior_on.data.remote.dto.ButtonOptionResponse
 import com.example.senior_on.data.remote.dto.DeviceDetailResponse
 import com.example.senior_on.data.remote.dto.DeviceStatusUpdateRequest
+import com.example.senior_on.data.remote.dto.FamilyMemberResponse
 import com.example.senior_on.data.remote.dto.HomeButtonCreateRequest
 import com.example.senior_on.data.remote.dto.HomeButtonCreateResponse
 import com.example.senior_on.data.remote.dto.HomeButtonResponse
@@ -11,9 +12,11 @@ import com.example.senior_on.data.remote.dto.HomeButtonUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
 import com.example.senior_on.data.remote.dto.SeniorHomeResponse
+import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateResponse
 import com.example.senior_on.data.remote.dto.TodayHospitalListResponse
+import com.example.senior_on.data.remote.dto.TodayScheduleResponse
 import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
@@ -30,6 +33,137 @@ import org.junit.Test
 
 class DisplayRepositoryImplTest {
     @Test
+    fun getOverviewUsesSeniorIdFromHomeSeniorProfile() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            homeResponse = HomeResponse(
+                connection = null,
+                buttons = emptyList(),
+                user_name = null,
+                senior_profile = SeniorProfileResponse(
+                    senior_id = 77L,
+                    name = "김영희",
+                    relation = "MOTHER",
+                    birth = "1960-01-02",
+                    age = 66,
+                    address = "서울시 강남구",
+                    phone = "010-1234-5678",
+                ),
+                font_size = "LARGE",
+                music_card = null,
+                today_schedule = null,
+            )
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+        val staleLocalParentInfo = ParentInfo(
+            seniorId = 1L,
+            name = "기존 정보",
+            relationshipLabel = "어머니",
+            birthDate = LocalDate.of(1960, 1, 2),
+            phoneNumber = "010-0000-0000",
+            address = "",
+            addressDetail = "",
+        )
+
+        val parentInfo = repository
+            .getOverview(staleLocalParentInfo)
+            .parentInfo
+
+        assertEquals(77L, parentInfo?.seniorId)
+        assertEquals("김영희", parentInfo?.name)
+    }
+
+    @Test
+    fun getOverviewMapsTodayScheduleFromHomeResponse() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            homeResponse = HomeResponse(
+                connection = null,
+                buttons = emptyList(),
+                user_name = null,
+                senior_profile = null,
+                font_size = "LARGE",
+                music_card = null,
+                today_schedule = TodayScheduleResponse(
+                    title = "병원 일정",
+                    description = "연세세브란스병원",
+                    schedule_count = 1,
+                    display_type = "SINGLE",
+                    schedule_id = 7L,
+                    scheduled_time = "15:00",
+                ),
+            )
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val schedule = repository.getOverview(null).todaySchedule
+
+        assertEquals("병원 일정", schedule?.title)
+        assertEquals("연세세브란스병원", schedule?.description)
+        assertEquals(1, schedule?.count)
+        assertEquals("15:00", schedule?.scheduledTime)
+    }
+
+    @Test
+    fun getWeatherUsesCoordinatesAndMapsWeatherResponse() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            weatherResponse = WeatherResponse(
+                temperature = 24,
+                weatherStatus = "CLEAR",
+                weatherText = "맑음",
+                observedAt = "2026-07-29T17:00:00",
+            )
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val weather = repository.getWeather(
+            latitude = 37.5665,
+            longitude = 126.9780,
+        )
+
+        assertEquals(listOf(37.5665 to 126.9780), homeDataSource.weatherRequests)
+        assertEquals(24, weather.temperatureCelsius)
+        assertEquals("CLEAR", weather.status)
+        assertEquals("맑음", weather.description)
+    }
+
+    @Test
+    fun primaryCurrentUserCanEditScreen() {
+        val members = listOf(
+            familyMember(name = "보조 담당자", managerType = "SUB", isMe = false),
+            familyMember(name = "현재 사용자", managerType = "PRIMARY", isMe = true),
+        )
+
+        assertTrue(members.canCurrentUserEditScreen())
+    }
+
+    @Test
+    fun subCurrentUserCannotEditScreen() {
+        val members = listOf(
+            familyMember(name = "주 담당자", managerType = "PRIMARY", isMe = false),
+            familyMember(name = "현재 사용자", managerType = "SUB", isMe = true),
+        )
+
+        assertFalse(members.canCurrentUserEditScreen())
+    }
+
+    @Test
+    fun missingCurrentUserCannotEditScreen() {
+        val members = listOf(
+            familyMember(name = "주 담당자", managerType = "PRIMARY", isMe = false),
+        )
+
+        assertFalse(members.canCurrentUserEditScreen())
+    }
+
+    @Test
     fun saveButtonsUsesOneFullPutRequestWithNamesPackagesAndOneBasedOrder() =
         runBlocking {
             val homeDataSource = FakeHomeDataSource()
@@ -43,8 +177,10 @@ class DisplayRepositoryImplTest {
                     SeniorHomeButtonType.Melon,
                     SeniorHomeButtonType.Schedule,
                     SeniorHomeButtonType.Call,
-                    SeniorHomeButtonType.Message,
                     SeniorHomeButtonType.Emergency,
+                    SeniorHomeButtonType.Message,
+                    SeniorHomeButtonType.Camera,
+                    SeniorHomeButtonType.YouTube,
                 ),
                 customButtonLabels = mapOf(
                     SeniorHomeButtonType.Call to "엄마 전화",
@@ -53,16 +189,56 @@ class DisplayRepositoryImplTest {
 
             val request = homeDataSource.savedButtonRequests.single()
             assertEquals("MELON", request.musicApp)
-            assertEquals(listOf(1, 2, 3), request.buttons.map { it.buttonOrder })
+            assertEquals((1..8).toList(), request.buttons.map { it.buttonOrder })
             assertEquals(
-                listOf("엄마 전화", "메시지", "긴급알림"),
+                listOf(
+                    "엄마 전화",
+                    "메시지",
+                    "카메라",
+                    "유튜브",
+                    "말벗",
+                    "복약",
+                    "사진",
+                    "긴급알림",
+                ),
                 request.buttons.map { it.buttonName },
             )
             assertEquals(
                 listOf(
-                    "com.samsung.android.dialer",
-                    "com.samsung.android.messaging",
+                    "DEFAULT",
+                    "DEFAULT",
+                    "DEFAULT",
+                    "APP",
+                    "DEFAULT",
+                    "DEFAULT",
+                    "DEFAULT",
+                    "DEFAULT",
+                ),
+                request.buttons.map { it.actionType },
+            )
+            assertEquals(
+                listOf(
+                    "PHONE",
+                    "MESSAGE",
+                    "CAMERA",
+                    "YOUTUBE",
+                    "COMPANION",
+                    "MEDICATION",
+                    "PHOTO",
                     "EMERGENCY",
+                ),
+                request.buttons.map { it.actionValue },
+            )
+            assertEquals(
+                listOf(
+                    null,
+                    null,
+                    null,
+                    "com.google.android.youtube",
+                    null,
+                    null,
+                    null,
+                    null,
                 ),
                 request.buttons.map { it.packageName },
             )
@@ -101,14 +277,27 @@ class DisplayRepositoryImplTest {
         )
         assertEquals(
             listOf(
-                "com.samsung.android.dialer",
-                "com.samsung.android.messaging",
-                "com.sec.android.app.camera",
-                "com.sec.android.gallery3d",
-                "com.google.android.youtube",
+                "PHONE",
+                "MESSAGE",
+                "CAMERA",
+                "PHOTO",
+                "YOUTUBE",
                 "COMPANION",
                 "MEDICATION",
                 "EMERGENCY",
+            ),
+            request.buttons.map { it.actionValue },
+        )
+        assertEquals(
+            listOf(
+                null,
+                null,
+                null,
+                null,
+                "com.google.android.youtube",
+                null,
+                null,
+                null,
             ),
             request.buttons.map { it.packageName },
         )
@@ -173,6 +362,7 @@ class DisplayRepositoryImplTest {
                 SeniorHomeButtonType.ChatBuddy,
                 SeniorHomeButtonType.KakaoTalk,
                 SeniorHomeButtonType.Medication,
+                SeniorHomeButtonType.Photo,
                 SeniorHomeButtonType.Emergency,
             ),
             overview.screenConfiguration.buttons,
@@ -238,6 +428,20 @@ class DisplayRepositoryImplTest {
     }
 }
 
+private fun familyMember(
+    name: String,
+    managerType: String,
+    isMe: Boolean,
+) = FamilyMemberResponse(
+    usersId = 1L,
+    name = name,
+    role = "CHILD",
+    canBecomePrimary = false,
+    managerType = managerType,
+    me = isMe,
+    profileImageUrl = null,
+)
+
 private class FakeHomeDataSource(
     private val homeResponse: HomeResponse = HomeResponse(
         connection = null,
@@ -248,10 +452,13 @@ private class FakeHomeDataSource(
         music_card = null,
         today_schedule = null,
     ),
+    private val weatherResponse: WeatherResponse =
+        WeatherResponse(null, null, null, null),
 ) : HomeDataSource {
     val savedButtonRequests = mutableListOf<HomeButtonSaveRequest>()
     val fontSizeRequests = mutableListOf<HomeFontSizeUpdateRequest>()
     val profileRequests = mutableListOf<SeniorProfileUpdateRequest>()
+    val weatherRequests = mutableListOf<Pair<Double, Double>>()
     var buttonOptionsRequestCount = 0
         private set
     var legacyButtonMutationCount = 0
@@ -262,7 +469,10 @@ private class FakeHomeDataSource(
     override suspend fun getWeather(
         latitude: Double,
         longitude: Double,
-    ) = WeatherResponse(null, null, null, null)
+    ): WeatherResponse {
+        weatherRequests += latitude to longitude
+        return weatherResponse
+    }
 
     override suspend fun getSeniorHome() =
         SeniorHomeResponse(emptyList(), "LARGE", null, null)

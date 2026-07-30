@@ -212,6 +212,7 @@ class DefaultAppContainer(
         DisplayRepositoryImpl(
             homeDataSource = homeDataSource,
             deviceDataSource = deviceDataSource,
+            familyDataSource = remoteFamilySource,
         )
     override val hospitalSpecialtyRepository: HospitalSpecialtyRepository =
         HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)

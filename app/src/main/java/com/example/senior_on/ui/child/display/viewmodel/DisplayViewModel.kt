@@ -49,11 +49,22 @@ class DisplayViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = true,
+                    canEditScreen = false,
+                    isEditPermissionLoading = true,
                     errorMessage = null,
                 )
             }
+            val canEditScreen = runCatching {
+                displayRepository.canCurrentUserEditScreen()
+            }.getOrDefault(false)
+            _uiState.update {
+                it.copy(
+                    canEditScreen = canEditScreen,
+                    isEditPermissionLoading = false,
+                )
+            }
             runCatching {
-                loadOverviewWithInitialButtons()
+                loadOverviewWithInitialButtons(canEditScreen)
             }.onSuccess { overview ->
                 val parentInfo = overview.parentInfo
                     ?: parentInfoRepository.parentInfo.value
@@ -63,21 +74,41 @@ class DisplayViewModel(
                         parentInfo = parentInfo,
                         relationshipLabel = parentInfo?.relationshipLabel,
                         device = overview.device,
+                        todaySchedule = overview.todaySchedule,
                         screenConfiguration = overview.screenConfiguration,
                         availableButtonTypes = overview.availableButtonTypes,
                         isLoading = false,
                     )
                 }
+                refreshWeather(parentInfo)
             }.onFailure(::handleLoadFailure)
         }
     }
 
-    private suspend fun loadOverviewWithInitialButtons() =
+    fun refreshEditPermission() {
+        if (_uiState.value.isEditPermissionLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isEditPermissionLoading = true) }
+            val canEditScreen = runCatching {
+                displayRepository.canCurrentUserEditScreen()
+            }.getOrDefault(false)
+            _uiState.update {
+                it.copy(
+                    canEditScreen = canEditScreen,
+                    isEditPermissionLoading = false,
+                )
+            }
+        }
+    }
+
+    private suspend fun loadOverviewWithInitialButtons(canEditScreen: Boolean) =
         displayRepository.getOverview(
             parentInfoRepository.parentInfo.value
         ).let { overview ->
             if (
                 overview.hasSavedButtonConfiguration ||
+                !canEditScreen ||
                 isInitialButtonSetupInProgress
             ) {
                 return@let overview
@@ -142,6 +173,7 @@ class DisplayViewModel(
                     relationshipLabel = savedParentInfo.relationshipLabel,
                 )
             }
+            refreshWeather(savedParentInfo)
         }
     }
 
@@ -237,6 +269,44 @@ class DisplayViewModel(
                 seniorId = parentInfo.seniorId,
                 relationship = relationship,
             )
+        }
+    }
+
+    private fun refreshWeather(parentInfo: ParentInfo?) {
+        val latitude = parentInfo?.addressLatitude
+        val longitude = parentInfo?.addressLongitude
+        if (latitude == null || longitude == null) {
+            _uiState.update {
+                it.copy(
+                    weather = null,
+                    isWeatherLoading = false,
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isWeatherLoading = true) }
+            runCatching {
+                displayRepository.getWeather(
+                    latitude = latitude,
+                    longitude = longitude,
+                )
+            }.onSuccess { weather ->
+                _uiState.update {
+                    it.copy(
+                        weather = weather,
+                        isWeatherLoading = false,
+                    )
+                }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        weather = null,
+                        isWeatherLoading = false,
+                    )
+                }
+            }
         }
     }
 

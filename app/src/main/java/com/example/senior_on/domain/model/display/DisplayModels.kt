@@ -101,10 +101,27 @@ data class SeniorScreenConfiguration(
     val customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
 )
 
+data class DisplayWeather(
+    val temperatureCelsius: Int?,
+    val status: String?,
+    val description: String?,
+    val observedAt: String?,
+)
+
+data class DisplayTodaySchedule(
+    val title: String?,
+    val description: String?,
+    val count: Int,
+    val displayType: String?,
+    val id: Long?,
+    val scheduledTime: String?,
+)
+
 data class DisplayOverview(
     val device: DisplayDevice?,
     val screenConfiguration: SeniorScreenConfiguration,
     val parentInfo: ParentInfo? = null,
+    val todaySchedule: DisplayTodaySchedule? = null,
     val availableButtonTypes: Set<SeniorHomeButtonType> = emptySet(),
     val hasSavedButtonConfiguration: Boolean = true,
 )

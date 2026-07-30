@@ -44,6 +44,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
+import com.example.senior_on.domain.model.display.DisplayTodaySchedule
+import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -104,6 +106,9 @@ fun DisplayTabScreen(
                     parentInfo = uiState.parentInfo,
                     relationshipLabel = uiState.relationshipLabel,
                     configuration = uiState.screenConfiguration,
+                    weather = uiState.weather,
+                    isWeatherLoading = uiState.isWeatherLoading,
+                    todaySchedule = uiState.todaySchedule,
                     canEditScreen = canEditScreen,
                     onLargePreviewClick = onLargePreviewClick,
                     onFontEditClick = onFontEditClick,
@@ -436,6 +441,9 @@ private fun ScreenEditSection(
     parentInfo: ParentInfo?,
     relationshipLabel: String?,
     configuration: SeniorScreenConfiguration,
+    weather: DisplayWeather?,
+    isWeatherLoading: Boolean,
+    todaySchedule: DisplayTodaySchedule?,
     canEditScreen: Boolean,
     onLargePreviewClick: () -> Unit,
     onFontEditClick: () -> Unit,
@@ -468,6 +476,9 @@ private fun ScreenEditSection(
         SeniorScreenPreviewCard(
             phoneLabel = "${relationshipLabel ?: "부모님"} 폰",
             configuration = configuration,
+            weather = weather,
+            isWeatherLoading = isWeatherLoading,
+            todaySchedule = todaySchedule,
             onLargePreviewClick = onLargePreviewClick,
         )
 
@@ -502,6 +513,9 @@ private fun ScreenEditSection(
 private fun SeniorScreenPreviewCard(
     phoneLabel: String,
     configuration: SeniorScreenConfiguration,
+    weather: DisplayWeather?,
+    isWeatherLoading: Boolean,
+    todaySchedule: DisplayTodaySchedule?,
     onLargePreviewClick: () -> Unit,
 ) {
     Box(
@@ -562,7 +576,12 @@ private fun SeniorScreenPreviewCard(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 20.dp),
         ) {
-            SeniorPhonePreview(configuration = configuration)
+            SeniorPhonePreview(
+                configuration = configuration,
+                weather = weather,
+                isWeatherLoading = isWeatherLoading,
+                todaySchedule = todaySchedule,
+            )
         }
     }
 }

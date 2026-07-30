@@ -4,6 +4,7 @@ import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,7 +36,6 @@ private enum class DisplayDestination {
 fun DisplayTabRoute(
     viewModel: DisplayViewModel,
     modifier: Modifier = Modifier,
-    canEditScreen: Boolean = true,
     onRefreshClick: () -> Unit = {},
     onInstallGuideClick: () -> Unit = {},
     onLargePreviewClick: () -> Unit = {},
@@ -55,6 +55,10 @@ fun DisplayTabRoute(
     }
     var buttonEditDraftCustomLabels by rememberSaveable {
         mutableStateOf(hashMapOf<String, String>())
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshEditPermission()
     }
 
     fun navigateBack() {
@@ -101,7 +105,8 @@ fun DisplayTabRoute(
         when (destination) {
             DisplayDestination.Overview -> DisplayTabScreen(
                 uiState = uiState,
-                canEditScreen = canEditScreen &&
+                canEditScreen = uiState.canEditScreen &&
+                    !uiState.isEditPermissionLoading &&
                     !uiState.isLoading &&
                     !uiState.isSaving,
                 modifier = modifier,
@@ -199,6 +204,9 @@ fun DisplayTabRoute(
                 buttons = uiState.screenConfiguration.buttons,
                 customButtonLabels =
                     uiState.screenConfiguration.customButtonLabels,
+                weather = uiState.weather,
+                isWeatherLoading = uiState.isWeatherLoading,
+                todaySchedule = uiState.todaySchedule,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onSaveClick = { fontSize ->
@@ -348,6 +356,9 @@ fun DisplayTabRoute(
         SeniorScreenLargePreviewDialog(
             configuration = uiState.screenConfiguration,
             onDismiss = { showLargePreview = false },
+            weather = uiState.weather,
+            isWeatherLoading = uiState.isWeatherLoading,
+            todaySchedule = uiState.todaySchedule,
         )
     }
 }
@@ -365,7 +376,8 @@ internal fun createInitialButtonOrder(
         leadingButtons +
             appButtons +
             SeniorHomeButtonType.ChatBuddy +
-            SeniorHomeButtonType.Medication
+            SeniorHomeButtonType.Medication +
+            SeniorHomeButtonType.Photo
         ).distinct()
     val preservedButtons = currentButtons.filter { currentButton ->
         currentButton in selectedButtons && currentButton !in leadingButtons
@@ -392,6 +404,16 @@ internal fun List<SeniorHomeButtonType>.withRequiredSeniorHomeButtons():
             index = if (musicButtonIndex >= 0) musicButtonIndex + 1 else 0,
             element = SeniorHomeButtonType.Schedule,
         )
+    }
+
+    listOf(
+        SeniorHomeButtonType.ChatBuddy,
+        SeniorHomeButtonType.Medication,
+        SeniorHomeButtonType.Photo,
+    ).forEach { requiredButton ->
+        if (requiredButton !in editableButtons) {
+            editableButtons.add(requiredButton)
+        }
     }
 
     return editableButtons + SeniorHomeButtonType.Emergency

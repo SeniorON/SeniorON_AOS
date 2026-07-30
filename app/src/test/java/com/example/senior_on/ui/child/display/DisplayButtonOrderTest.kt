@@ -41,6 +41,7 @@ class DisplayButtonOrderTest {
                 SeniorHomeButtonType.Message,
                 SeniorHomeButtonType.ChatBuddy,
                 SeniorHomeButtonType.Medication,
+                SeniorHomeButtonType.Photo,
             ),
             result,
         )
@@ -70,6 +71,7 @@ class DisplayButtonOrderTest {
                 SeniorHomeButtonType.Camera,
                 SeniorHomeButtonType.ChatBuddy,
                 SeniorHomeButtonType.Medication,
+                SeniorHomeButtonType.Photo,
             ),
             result,
         )
@@ -91,6 +93,9 @@ class DisplayButtonOrderTest {
                 SeniorHomeButtonType.Schedule,
                 SeniorHomeButtonType.Call,
                 SeniorHomeButtonType.Message,
+                SeniorHomeButtonType.ChatBuddy,
+                SeniorHomeButtonType.Medication,
+                SeniorHomeButtonType.Photo,
                 SeniorHomeButtonType.Emergency,
             ),
             result,
