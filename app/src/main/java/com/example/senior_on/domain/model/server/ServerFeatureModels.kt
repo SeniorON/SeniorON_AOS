@@ -1,8 +1,35 @@
 package com.example.senior_on.domain.model.server
 
+import java.time.LocalDate
+import java.time.LocalTime
+
 data class ServerButton(
     val id: Long, val optionId: Long? = null, val order: Int,
-    val name: String, val icon: String?, val actionType: String?, val actionValue: String?
+    val name: String, val icon: String?, val actionType: String?, val actionValue: String?,
+    val packageName: String? = null
+)
+data class SeniorHomeSchedule(
+    val count: Int,
+    val displayType: String,
+    val id: Long?,
+    val title: String?,
+    val description: String?,
+    val scheduledTime: String?,
+)
+data class SeniorHomeSnapshot(
+    val fontSize: String,
+    val musicCard: ServerButton?,
+    val todaySchedule: SeniorHomeSchedule,
+    val buttons: List<ServerButton>,
+)
+data class TodayHospitalSchedule(
+    val id: Long,
+    val hospitalName: String,
+    val department: String,
+    val date: LocalDate,
+    val time: LocalTime,
+    val reminderType: String?,
+    val registeredBy: String?,
 )
 data class HomeSnapshot(
     val userName: String, val fontSize: String, val connected: Boolean,
@@ -52,7 +79,8 @@ data class SafetyEvent(
     val id: Long?, val type: String, val occurredAt: String?,
     val address: String?, val latitude: Double?, val longitude: Double?,
     val deviceBattery: Int?, val linkUrl: String? = null,
-    val dangerous: Boolean? = null, val phase: String? = null
+    val dangerous: Boolean? = null, val phase: String? = null,
+    val receiverCount: Int? = null, val notifiedCount: Int? = null,
 )
 data class UserAccountSettings(val name: String, val profileImageUrl: String?)
 data class SeniorProfileUpdate(

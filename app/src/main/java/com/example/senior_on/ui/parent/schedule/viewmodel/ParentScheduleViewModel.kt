@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.senior_on.domain.repository.parent.ParentScheduleRepository
 import com.example.senior_on.domain.model.parent.ParentSchedule
+import com.example.senior_on.domain.repository.server.HomeServerRepository
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,7 @@ data class ParentScheduleUiState(
 }
 
 class ParentScheduleViewModel(
-    private val repository: ParentScheduleRepository
+    private val repository: HomeServerRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentScheduleUiState())
     val uiState = _uiState.asStateFlow()
@@ -40,7 +40,17 @@ class ParentScheduleViewModel(
                 it.copy(date = today, isLoading = true, errorMessage = null)
             }
 
-            runCatching { repository.getSchedules(today) }
+            runCatching {
+                repository.getTodayHospitalSchedules().map { schedule ->
+                    ParentSchedule(
+                        id = schedule.id.toString(),
+                        date = schedule.date,
+                        time = schedule.time,
+                        title = schedule.hospitalName,
+                        description = schedule.department.takeIf(String::isNotBlank),
+                    )
+                }
+            }
                 .onSuccess { schedules ->
                     _uiState.update {
                         it.copy(
@@ -62,7 +72,7 @@ class ParentScheduleViewModel(
     }
 
     companion object {
-        fun factory(repository: ParentScheduleRepository) = viewModelFactory {
+        fun factory(repository: HomeServerRepository) = viewModelFactory {
             initializer {
                 ParentScheduleViewModel(repository)
             }

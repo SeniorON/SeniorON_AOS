@@ -3,7 +3,8 @@ package com.example.senior_on.data.remote.dto
 data class SosEventRequest(val latitude: Double, val longitude: Double, val deviceBattery: Int?)
 data class SosEventResponse(
     val id: Long?, val latitude: Double?, val longitude: Double?,
-    val address: String?, val deviceBattery: Int?
+    val address: String?, val deviceBattery: Int?,
+    val receiverCount: Int?, val notifiedCount: Int?,
 )
 data class RiskLinkRequest(val linkUrl: String, val deviceBattery: Int?)
 data class RiskLinkResponse(

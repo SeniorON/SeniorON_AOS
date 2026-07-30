@@ -5,6 +5,8 @@ import com.example.senior_on.domain.model.server.*
 
 interface HomeServerRepository {
     suspend fun getHome(): HomeSnapshot
+    suspend fun getSeniorHome(): SeniorHomeSnapshot
+    suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule>
     suspend fun getWeather(latitude: Double, longitude: Double): WeatherInfo
     suspend fun getDevice(): DeviceInfo
     suspend fun getButtonOptions(): List<ServerButton>

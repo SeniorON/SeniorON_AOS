@@ -17,11 +17,13 @@ data class SeniorProfileUpdateRequest(
 data class ConnectionResponse(val connected: Boolean?, val battery: Int?, val device_name: String?)
 data class HomeButtonResponse(
     val icon: String?, val button_id: Long?, val button_order: Int?,
-    val button_name: String?, val action_type: String?, val action_value: String?
+    val button_name: String?, val action_type: String?, val action_value: String?,
+    val package_name: String?
 )
 data class MusicCardResponse(
     val enabled: Boolean?, val icon: String?, val music_app: String?,
-    val app_name: String?, val action_type: String?, val action_value: String?
+    val app_name: String?, val action_type: String?, val action_value: String?,
+    val package_name: String?
 )
 data class TodayScheduleResponse(
     val title: String?, val description: String?, val schedule_count: Int?,
