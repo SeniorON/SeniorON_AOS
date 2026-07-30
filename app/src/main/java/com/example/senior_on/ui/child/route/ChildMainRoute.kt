@@ -22,6 +22,7 @@ fun ChildMainRoute(
         notificationRepository = appContainer.notificationRepository,
         familyServerRepository = appContainer.familyServerRepository,
         homeServerRepository = appContainer.homeServerRepository,
+        eventRepository = appContainer.eventRepository,
         onLogoutClick = onLogoutClick,
         onWithdrawClick = onWithdrawClick,
     )

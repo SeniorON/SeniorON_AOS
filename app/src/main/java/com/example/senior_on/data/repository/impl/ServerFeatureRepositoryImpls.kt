@@ -28,6 +28,34 @@ class HomeServerRepositoryImpl(
             battery = it.connection?.battery,
             buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
             seniorAddress = it.senior_profile?.address,
+            seniorId = it.senior_profile?.senior_id,
+        )
+    }
+    override suspend fun getSeniorHome() = source.getSeniorHome().let {
+        SeniorHomeSnapshot(
+            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
+            fontSize = it.font_size.orEmpty(),
+            musicCard = it.music_card?.let { card ->
+                ServerMusicCard(
+                    enabled = card.enabled == true,
+                    icon = card.icon,
+                    musicApp = card.music_app,
+                    appName = card.app_name,
+                    actionType = card.action_type,
+                    actionValue = card.action_value,
+                    packageName = card.package_name,
+                )
+            },
+            todaySchedule = it.today_schedule?.let { schedule ->
+                ServerTodaySchedule(
+                    title = schedule.title,
+                    description = schedule.description,
+                    count = schedule.schedule_count ?: 0,
+                    displayType = schedule.display_type,
+                    scheduleId = schedule.schedule_id,
+                    scheduledTime = schedule.scheduled_time,
+                )
+            },
         )
     }
     override suspend fun getWeather(latitude: Double, longitude: Double) =
@@ -44,14 +72,14 @@ class HomeServerRepositoryImpl(
     override suspend fun getButtonOptions() = source.getButtonOptions().map {
         ServerButton(0, it.option_id, 0, it.button_name.orEmpty(), it.icon, it.action_type, it.action_value)
     }
-    override suspend fun saveButtons(musicApp: String?, buttons: List<Pair<Long, Int>>) =
-        source.saveButtons(HomeButtonSaveRequest(musicApp, buttons.map { ButtonRequest(it.first, it.second) }))
+    override suspend fun saveButtons(musicApp: String?, buttons: List<ServerButton>) =
+        source.saveButtons(HomeButtonSaveRequest(musicApp, buttons.map(ServerButton::toRequest)))
     override suspend fun addButton(optionId: Long) =
         source.addButton(HomeButtonCreateRequest(optionId)).let {
             ServerButton(it.buttonId ?: 0, optionId, it.buttonOrder ?: 0, it.buttonName.orEmpty(), it.icon, null, null)
         }
-    override suspend fun updateButtons(buttons: List<Pair<Long, Int>>) =
-        source.updateButtons(HomeButtonUpdateRequest(buttons.map { ButtonRequest(it.first, it.second) }))
+    override suspend fun updateButtons(buttons: List<ServerButton>) =
+        source.updateButtons(HomeButtonUpdateRequest(buttons.map(ServerButton::toRequest)))
     override suspend fun deleteButton(buttonId: Long) = source.deleteButton(buttonId)
     override suspend fun updateFontSize(fontSize: String) =
         source.updateFontSize(HomeFontSizeUpdateRequest(fontSize.trim().uppercase()))
@@ -157,7 +185,7 @@ class NotificationRepositoryImpl(
     override suspend fun getNotifications(type: String, cursor: Long?, size: Int?) =
         source.getNotifications(type.trim().uppercase(), cursor, size).let {
             NotificationPage(
-                it.totalCount ?: 0,
+                it.totalCount ?: 0L,
                 it.items.orEmpty().map { item ->
                     AppNotification(
                         item.notificationId ?: 0, item.eventId, item.title.orEmpty(),
@@ -171,7 +199,7 @@ class NotificationRepositoryImpl(
     override suspend fun delete(id: Long) = source.delete(id)
     override suspend fun getHome() = source.getSettings().let { response ->
         NotificationHome(
-            enabledCount = response.enabledCount ?: 0,
+            enabledCount = response.enabledCount ?: 0L,
             items = response.items.orEmpty().map { item ->
                 NotificationHomeItem(
                     type = item.type.orEmpty(),
@@ -187,6 +215,8 @@ class NotificationRepositoryImpl(
                     linkUrl = item.linkUrl,
                     phase = item.phase,
                     emptyMessage = item.emptyMessage,
+                    notificationId = item.notificationId,
+                    eventId = item.eventId,
                 )
             },
         )
@@ -207,7 +237,17 @@ class EventRepositoryImpl(
 ) : EventRepository {
     override suspend fun createSos(latitude: Double, longitude: Double, battery: Int?) =
         source.createSos(SosEventRequest(latitude, longitude, battery)).let {
-            SafetyEvent(it.id, "SOS", null, it.address, it.latitude, it.longitude, it.deviceBattery)
+            SafetyEvent(
+                id = it.id,
+                type = "SOS",
+                occurredAt = null,
+                address = it.address,
+                latitude = it.latitude,
+                longitude = it.longitude,
+                deviceBattery = it.deviceBattery,
+                receiverCount = it.receiverCount,
+                notifiedCount = it.notifiedCount,
+            )
         }
     override suspend fun createRiskLink(url: String, battery: Int?) =
         source.createRiskLink(RiskLinkRequest(url.trim(), battery)).let {
@@ -227,8 +267,19 @@ class EventRepositoryImpl(
     }
     override suspend fun getDetail(eventId: Long) = source.getDetail(eventId).let {
         SafetyEvent(
-            it.eventId, it.eventType.orEmpty(), it.occurredAt, it.address,
-            it.latitude, it.longitude, it.deviceBattery, it.linkUrl, it.isDangerous, it.phase
+            id = it.eventId,
+            type = it.eventType.orEmpty(),
+            occurredAt = it.occurredAt,
+            address = it.address,
+            latitude = it.latitude,
+            longitude = it.longitude,
+            deviceBattery = it.deviceBattery,
+            linkUrl = it.linkUrl,
+            dangerous = it.isDangerous,
+            phase = it.phase,
+            message = it.message,
+            senderName = it.senderName,
+            lastSeenAt = it.lastSeenAt,
         )
     }
 }
@@ -259,7 +310,15 @@ class DeviceRepositoryImpl(
 }
 
 private fun HomeButtonResponse.toDomain() = ServerButton(
-    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon, action_type, action_value
+    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon, action_type,
+    action_value, package_name
+)
+private fun ServerButton.toRequest() = ButtonRequest(
+    buttonOrder = order,
+    buttonName = name,
+    actionType = actionType,
+    actionValue = actionValue,
+    packageName = packageName,
 )
 private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
     usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl

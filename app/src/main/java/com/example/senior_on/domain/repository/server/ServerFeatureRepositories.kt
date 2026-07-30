@@ -5,12 +5,13 @@ import com.example.senior_on.domain.model.server.*
 
 interface HomeServerRepository {
     suspend fun getHome(): HomeSnapshot
+    suspend fun getSeniorHome(): SeniorHomeSnapshot
     suspend fun getWeather(latitude: Double, longitude: Double): WeatherInfo
     suspend fun getDevice(): DeviceInfo
     suspend fun getButtonOptions(): List<ServerButton>
-    suspend fun saveButtons(musicApp: String?, buttons: List<Pair<Long, Int>>)
+    suspend fun saveButtons(musicApp: String?, buttons: List<ServerButton>)
     suspend fun addButton(optionId: Long): ServerButton
-    suspend fun updateButtons(buttons: List<Pair<Long, Int>>)
+    suspend fun updateButtons(buttons: List<ServerButton>)
     suspend fun deleteButton(buttonId: Long)
     suspend fun updateFontSize(fontSize: String)
     suspend fun updateSeniorProfile(

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
@@ -26,12 +27,14 @@ fun NotificationRoute(
     repository: NotificationRepository,
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
+    eventRepository: EventRepository? = null,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = notificationViewModel(
         repository = repository,
         familyRepository = familyRepository,
         homeRepository = homeRepository,
+        eventRepository = eventRepository,
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var destination by rememberSaveable {
@@ -42,6 +45,9 @@ fun NotificationRoute(
     }
     var selectedMessage by remember {
         mutableStateOf<NotificationMessageUiState?>(null)
+    }
+    var detailReturnDestination by rememberSaveable {
+        mutableStateOf(NotificationDestination.Home)
     }
 
     fun openHistory(category: NotificationCategory) {
@@ -54,8 +60,10 @@ fun NotificationRoute(
         category: NotificationCategory,
         message: NotificationMessageUiState,
     ) {
+        detailReturnDestination = destination
         selectedCategory = category
         selectedMessage = message
+        viewModel.openNotification(category, message)
         destination = NotificationDestination.Detail
     }
 
@@ -93,7 +101,10 @@ fun NotificationRoute(
 
         NotificationDestination.Detail -> {
             val category = selectedCategory
-            val message = selectedMessage
+            val selected = selectedMessage
+            val message = selected?.eventId
+                ?.let(uiState.detailMessages::get)
+                ?: selected
             if (category == null || message == null) {
                 destination = NotificationDestination.Home
             } else {
@@ -101,7 +112,7 @@ fun NotificationRoute(
                     category = category,
                     message = message,
                     onBackClick = {
-                        destination = NotificationDestination.History
+                        destination = detailReturnDestination
                     },
                     modifier = modifier,
                 )

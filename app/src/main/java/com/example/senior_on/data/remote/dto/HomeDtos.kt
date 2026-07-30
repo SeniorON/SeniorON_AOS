@@ -1,6 +1,12 @@
 package com.example.senior_on.data.remote.dto
 
-data class ButtonRequest(val optionId: Long, val buttonOrder: Int)
+data class ButtonRequest(
+    val buttonOrder: Int?,
+    val buttonName: String?,
+    val actionType: String?,
+    val actionValue: String?,
+    val packageName: String?,
+)
 data class HomeButtonSaveRequest(val musicApp: String?, val buttons: List<ButtonRequest>)
 data class HomeButtonCreateRequest(val optionId: Long)
 data class HomeButtonUpdateRequest(val buttons: List<ButtonRequest>)
@@ -17,11 +23,13 @@ data class SeniorProfileUpdateRequest(
 data class ConnectionResponse(val connected: Boolean?, val battery: Int?, val device_name: String?)
 data class HomeButtonResponse(
     val icon: String?, val button_id: Long?, val button_order: Int?,
-    val button_name: String?, val action_type: String?, val action_value: String?
+    val button_name: String?, val action_type: String?, val action_value: String?,
+    val package_name: String?,
 )
 data class MusicCardResponse(
     val enabled: Boolean?, val icon: String?, val music_app: String?,
-    val app_name: String?, val action_type: String?, val action_value: String?
+    val app_name: String?, val action_type: String?, val action_value: String?,
+    val package_name: String?,
 )
 data class TodayScheduleResponse(
     val title: String?, val description: String?, val schedule_count: Int?,
@@ -29,7 +37,7 @@ data class TodayScheduleResponse(
 )
 data class SeniorProfileResponse(
     val name: String?, val relation: String?, val birth: String?, val age: Int?,
-    val address: String?, val phone: String?
+    val address: String?, val phone: String?, val senior_id: Long?,
 )
 data class HomeResponse(
     val connection: ConnectionResponse?, val buttons: List<HomeButtonResponse>?,

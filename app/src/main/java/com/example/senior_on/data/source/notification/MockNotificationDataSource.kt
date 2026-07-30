@@ -42,7 +42,8 @@ class MockNotificationDataSource(
             }
         return NotificationListResponse(
             totalCount = history(type.uppercase())
-                .count { it.notificationId !in deletedNotificationIds },
+                .count { it.notificationId !in deletedNotificationIds }
+                .toLong(),
             items = items,
             nextCursor = items.lastOrNull()?.notificationId
                 ?.takeIf { items.size == pageSize },
@@ -66,6 +67,8 @@ class MockNotificationDataSource(
                 type = type,
                 enabled = enabledSettings[type] == true,
                 hasAlert = latest != null,
+                notificationId = latest?.notificationId,
+                eventId = latest?.eventId,
                 occurredAt = latest?.occurredAt,
                 dateTimeLabel = latest?.occurredAt?.let { "최근 알림" },
                 summary = latest?.summary,
@@ -79,7 +82,7 @@ class MockNotificationDataSource(
             )
         }
         return NotificationHomeListResponse(
-            enabledCount = items.count { it.enabled == true },
+            enabledCount = items.count { it.enabled == true }.toLong(),
             items = items,
         )
     }

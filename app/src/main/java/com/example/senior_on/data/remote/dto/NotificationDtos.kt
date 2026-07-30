@@ -11,16 +11,17 @@ data class NotificationItem(
     val summary: String?, val occurredAt: String?, val read: Boolean?
 )
 data class NotificationListResponse(
-    val totalCount: Int?, val items: List<NotificationItem>?, val nextCursor: Long?
+    val totalCount: Long?, val items: List<NotificationItem>?, val nextCursor: Long?
 )
 data class NotificationHomeResponse(
     val type: String?, val enabled: Boolean?, val hasAlert: Boolean?,
+    val notificationId: Long?, val eventId: Long?,
     val occurredAt: String?, val dateTimeLabel: String?, val summary: String?,
     val senderId: Long?, val senderName: String?, val deviceBattery: Int?,
     val address: String?, val linkUrl: String?, val phase: String?,
     val emptyMessage: String?
 )
 data class NotificationHomeListResponse(
-    val enabledCount: Int?, val items: List<NotificationHomeResponse>?
+    val enabledCount: Long?, val items: List<NotificationHomeResponse>?
 )
 data class ParentDeviceStatusResponse(val online: Boolean?)

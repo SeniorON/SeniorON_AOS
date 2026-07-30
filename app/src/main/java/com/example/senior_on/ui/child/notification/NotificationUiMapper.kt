@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.notification
 import com.example.senior_on.domain.model.server.AppNotification
 import com.example.senior_on.domain.model.server.NotificationHome
 import com.example.senior_on.domain.model.server.NotificationHomeItem
+import com.example.senior_on.domain.model.server.SafetyEvent
 import java.time.Instant
 
 internal fun emptyNotificationScreenUiState(): NotificationScreenUiState =
@@ -101,6 +102,41 @@ private fun NotificationHomeItem.toMessageUiState(
         tintBackground = category != NotificationCategory.Outing,
         occurredAtMillis = occurredAt.toEpochMillisOrNull(),
         movementType = category.outingMovementFrom(phase),
+        notificationId = notificationId,
+        eventId = eventId,
+    )
+}
+
+internal fun SafetyEvent.toUiState(
+    category: NotificationCategory,
+    fallback: NotificationMessageUiState,
+): NotificationMessageUiState {
+    val resolvedTitle = when (category) {
+        NotificationCategory.Sos -> address ?: message
+        NotificationCategory.Inactivity -> message
+        NotificationCategory.RiskLink -> linkUrl ?: message
+        NotificationCategory.Outing -> message
+    }.orEmpty().ifBlank { fallback.title }
+
+    return fallback.copy(
+        time = occurredAt ?: fallback.time,
+        title = resolvedTitle,
+        detail = when (category) {
+            NotificationCategory.Inactivity -> message ?: lastSeenAt ?: fallback.detail
+            else -> fallback.detail
+        },
+        severity = if (
+            category == NotificationCategory.RiskLink && dangerous == false
+        ) {
+            NotificationSeverity.Normal
+        } else {
+            category.severity
+        },
+        occurredAtMillis = occurredAt.toEpochMillisOrNull()
+            ?: fallback.occurredAtMillis,
+        movementType = category.outingMovementFrom(phase)
+            ?: fallback.movementType,
+        eventId = id ?: fallback.eventId,
     )
 }
 

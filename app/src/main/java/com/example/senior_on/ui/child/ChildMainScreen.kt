@@ -63,6 +63,7 @@ import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepos
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
@@ -104,6 +105,7 @@ fun ChildMainScreen(
     notificationRepository: NotificationRepository,
     familyServerRepository: FamilyServerRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
+    eventRepository: EventRepository? = null,
     modifier: Modifier = Modifier,
     onLogoutClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {}
@@ -252,6 +254,7 @@ fun ChildMainScreen(
             notificationRepository = notificationRepository,
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
+            eventRepository = eventRepository,
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
                     displayViewModel.saveParentInfo(
@@ -314,6 +317,7 @@ private fun ChildMainTabContent(
     notificationRepository: NotificationRepository,
     familyServerRepository: FamilyServerRepository?,
     homeServerRepository: HomeServerRepository?,
+    eventRepository: EventRepository?,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -403,6 +407,7 @@ private fun ChildMainTabContent(
             repository = notificationRepository,
             familyRepository = familyServerRepository,
             homeRepository = homeServerRepository,
+            eventRepository = eventRepository,
             modifier = modifier,
         )
         return
