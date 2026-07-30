@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -263,6 +264,7 @@ fun SettingsScreen(
 
             SettingsMenuSectionCard(
                 title = "지원",
+                cardHeight = 206.dp,
                 items = listOf(
                     SettingsMenuItem(
                         label = "도움말 · 문의",
@@ -554,13 +556,14 @@ private fun SettingsProfileSection(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onEditClick
-                    ),
-                contentAlignment = Alignment.Center
+                    )
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_sm_pencil),
                     contentDescription = "프로필 사진 수정",
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier
+                        .padding(start = 9.23.dp, top = 8.08.dp)
+                        .size(12.69.dp),
                     tint = SeniorOnColors.White
                 )
             }
@@ -588,14 +591,16 @@ private fun SettingsProfileSection(
 private fun SettingsMenuSectionCard(
     title: String,
     items: List<SettingsMenuItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardHeight: Dp = 170.dp
 ) {
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .width(328.dp)
+            .defaultMinSize(minHeight = cardHeight)
+            .clip(RoundedCornerShape(12.dp))
             .background(SeniorOnColors.Background1)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 10.dp)
     ) {
         Text(
             text = title,
@@ -603,7 +608,7 @@ private fun SettingsMenuSectionCard(
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Box(
             modifier = Modifier
@@ -612,7 +617,12 @@ private fun SettingsMenuSectionCard(
                 .background(SeniorOnColors.Gray200)
         )
 
-        items.forEach { item ->
+        Spacer(modifier = Modifier.height(12.dp))
+
+        items.forEachIndexed { index, item ->
+            if (index > 0) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             SettingsMenuRow(item = item)
         }
     }
@@ -626,7 +636,7 @@ private fun SettingsMenuRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(24.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -637,15 +647,15 @@ private fun SettingsMenuRow(
         Text(
             text = item.label,
             modifier = Modifier.weight(1f),
-            style = SeniorOnTextStyles.BodyMMedium,
+            style = SeniorOnTextStyles.BodySSemiBold,
             color = item.textColor
         )
 
         Icon(
             painter = painterResource(id = R.drawable.ic_arrow_next),
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = SeniorOnColors.Gray300
+            modifier = Modifier.size(24.dp),
+            tint = SeniorOnColors.Gray500
         )
     }
 }
