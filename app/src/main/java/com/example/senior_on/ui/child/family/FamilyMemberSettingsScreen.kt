@@ -448,9 +448,10 @@ private fun FamilyPermissionGuide(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 PermissionRoleDescription(
-                    iconResId = R.drawable.ic_dependents,
+                    iconResId = R.drawable.ic_big_dependents,
                     title = "보조 담당자",
-                    description = "알림 받기·기록 보기·사진 공유"
+                    description = "복약/진료 등록 및 확인·알림 받기·사진 공유",
+                    iconTint = Color.Unspecified,
                 )
 
                 HorizontalDivider(
@@ -484,14 +485,15 @@ private fun FamilyPermissionGuide(
 private fun PermissionRoleDescription(
     iconResId: Int,
     title: String,
-    description: String
+    description: String,
+    iconTint: Color = SeniorOnColors.Primary600,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = iconResId),
             contentDescription = null,
             modifier = Modifier.size(30.dp),
-            tint = SeniorOnColors.Primary600
+            tint = iconTint
         )
 
         Spacer(modifier = Modifier.width(12.dp))

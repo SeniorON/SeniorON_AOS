@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -303,7 +304,10 @@ private fun ParentInformationCard(
             )
             .padding(horizontal = 16.dp, vertical = 18.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = parentInfo.name,
                 style = SeniorOnTextStyles.HeadingS,
@@ -344,46 +348,14 @@ private fun ParentInformationCard(
             color = SeniorOnColors.White,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.width(154.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_home),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = SeniorOnColors.Primary200,
-                )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                Text(
-                    text = parentInfo.fullAddress,
-                    modifier = Modifier.weight(1f),
-                    style = SeniorOnTextStyles.CaptionMedium,
-                    color = SeniorOnColors.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(24.dp)
-                    .background(SeniorOnColors.White.copy(alpha = 0.2f))
-            )
-
-            Spacer(modifier = Modifier.width(26.dp))
-
             Icon(
-                painter = painterResource(id = R.drawable.ic_call),
+                painter = painterResource(id = R.drawable.ic_home),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = SeniorOnColors.Primary200,
@@ -392,10 +364,12 @@ private fun ParentInformationCard(
             Spacer(modifier = Modifier.width(4.dp))
 
             Text(
-                text = parentInfo.phoneNumber,
+                text = parentInfo.fullAddress,
+                modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.CaptionMedium,
                 color = SeniorOnColors.White,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -504,13 +478,18 @@ private fun SeniorScreenPreviewCard(
     configuration: SeniorScreenConfiguration,
     onLargePreviewClick: () -> Unit,
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(328f / 336f)
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
             .background(SeniorOnColors.Background1),
     ) {
+        val previewScale = maxWidth.value / 328f
+        val phonePreviewWidth = (116f * previewScale).dp
+        val phonePreviewHeight = (263f * previewScale).dp
+        val phonePreviewBottomPadding = (20f * previewScale).dp
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -560,9 +539,13 @@ private fun SeniorScreenPreviewCard(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 20.dp),
+                .padding(bottom = phonePreviewBottomPadding),
         ) {
-            SeniorPhonePreview(configuration = configuration)
+            SeniorPhonePreview(
+                configuration = configuration,
+                previewWidth = phonePreviewWidth,
+                previewHeight = phonePreviewHeight,
+            )
         }
     }
 }

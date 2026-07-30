@@ -7,7 +7,6 @@ import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertS
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,17 +16,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,14 +51,9 @@ fun ParentEmergencyAlertScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFFF4148),
-                        Color(0xFFFF7377),
-                        Color(0xFFFFA9AB)
-                    )
-                )
+            .paint(
+                painter = painterResource(R.drawable.bg_parent_emergency),
+                contentScale = ContentScale.Crop
             )
             .safeDrawingPadding()
     ) {
@@ -76,47 +69,31 @@ fun ParentEmergencyAlertScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(43.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .border(
-                        width = 1.dp,
-                        color = SeniorOnColors.White,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_big_alert_filled),
-                    contentDescription = null,
-                    modifier = Modifier.size(38.dp),
-                    tint = SeniorOnColors.White
-                )
-            }
+            ParentEmergencyIcon()
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "긴급알림을\n보낼까요?",
-                style = SeniorOnTextStyles.HeadingXL,
+                style = SeniorOnTextStyles.Display,
                 color = SeniorOnColors.White,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(50.dp))
 
             Text(
                 text = if (isSending) "긴급알림을 보내고 있어요" else "5초 후 자동 전송",
-                style = SeniorOnTextStyles.BodyMRegular,
-                color = SeniorOnColors.White
+                style = SeniorOnTextStyles.HeadingXS,
+                color = SeniorOnColors.SupportWhite80
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             if (isSending) {
                 CircularProgressIndicator(
@@ -127,7 +104,7 @@ fun ParentEmergencyAlertScreen(
             } else {
                 Text(
                     text = uiState.remainingSeconds.toString(),
-                    style = SeniorOnTextStyles.HeadingXL,
+                    style = SeniorOnTextStyles.HeadingXXXL,
                     color = SeniorOnColors.White
                 )
             }
@@ -167,7 +144,7 @@ fun ParentEmergencyAlertScreen(
                 onClick = onCancelClick
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(70.dp))
         }
     }
 }
@@ -192,7 +169,7 @@ private fun EmergencyActionButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(107.dp)
             .then(borderModifier)
             .clip(shape)
             .background(containerColor)
@@ -201,8 +178,8 @@ private fun EmergencyActionButton(
     ) {
         Text(
             text = text,
-            style = SeniorOnTextStyles.HeadingM,
-            color = contentColor.copy(alpha = if (enabled) 1f else 0.65f)
+            style = SeniorOnTextStyles.HeadingXXL,
+            color = contentColor
         )
     }
 }

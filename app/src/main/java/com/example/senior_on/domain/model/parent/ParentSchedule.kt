@@ -7,5 +7,6 @@ data class ParentSchedule(
     val id: String,
     val date: LocalDate,
     val time: LocalTime,
-    val title: String
+    val title: String,
+    val description: String? = null,
 )
