@@ -69,7 +69,8 @@ data class HomeButtonResponse(
 )
 data class MusicCardResponse(
     val enabled: Boolean?, val icon: String?, val music_app: String?,
-    val app_name: String?, val action_type: String?, val action_value: String?
+    val app_name: String?, val action_type: String?, val action_value: String?,
+    val package_name: String?,
 )
 data class TodayScheduleResponse(
     val title: String?, val description: String?, val schedule_count: Int?,

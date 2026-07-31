@@ -3,7 +3,6 @@ package com.example.senior_on.ui.child.route
 import androidx.compose.runtime.Composable
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.ui.child.ChildMainScreen
-import com.example.senior_on.ui.child.notification.mock.MockNotificationUiStateFactory
 
 @Composable
 fun ChildMainRoute(
@@ -20,8 +19,10 @@ fun ChildMainRoute(
         parentInfoRepository = appContainer.parentInfoRepository,
         caregiverRelationshipRepository =
             appContainer.caregiverRelationshipRepositoryFor(userId),
-        notificationScenario =
-            MockNotificationUiStateFactory.scenarioForUserId(userId),
+        notificationRepository = appContainer.notificationRepository,
+        familyServerRepository = appContainer.familyServerRepository,
+        homeServerRepository = appContainer.homeServerRepository,
+        eventRepository = appContainer.eventRepository,
         onLogoutClick = onLogoutClick,
         onWithdrawClick = onWithdrawClick,
     )

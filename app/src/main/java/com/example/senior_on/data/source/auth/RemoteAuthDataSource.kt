@@ -12,6 +12,7 @@ import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleResponse
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeResponse
+import com.example.senior_on.data.source.remoteRequest
 
 class RemoteAuthDataSource(
     private val userApi: UserApi
@@ -23,7 +24,9 @@ class RemoteAuthDataSource(
     override suspend fun sendSignupEmailVerificationCode(
         request: SendSignupEmailVerificationCodeRequest
     ): SendSignupEmailVerificationCodeResponse {
-        return userApi.sendSignupEmailVerificationCode(request).requireData()
+        return remoteRequest {
+            userApi.sendSignupEmailVerificationCode(request).requireData()
+        }
     }
 
     override suspend fun verifySignupEmailVerificationCode(

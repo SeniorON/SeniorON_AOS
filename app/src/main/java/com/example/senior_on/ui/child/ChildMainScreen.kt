@@ -8,8 +8,11 @@ import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -27,6 +30,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,21 +40,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.ui.child.notification.mock.MockNotificationScenario
 import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
 import com.example.senior_on.data.repository.impl.DisplayRepositoryImpl
 import com.example.senior_on.data.repository.impl.FamilyRepositoryImpl
+import com.example.senior_on.data.repository.impl.NotificationRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentInfoRepositoryImpl
 import com.example.senior_on.data.source.display.MockDisplayDataSource
 import com.example.senior_on.data.source.family.MockFamilyDataSource
+import com.example.senior_on.data.source.notification.MockNotificationDataSource
 import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
 import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.domain.repository.display.DisplayRepository
@@ -60,6 +67,10 @@ import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.model.auth.AppUserProfile
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.server.EventRepository
+import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
@@ -68,7 +79,7 @@ import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.child.family.FamilyTabRoute
 import com.example.senior_on.ui.child.health.HealthMainRoute
-import com.example.senior_on.ui.child.notification.NotificationRoute
+import com.example.senior_on.ui.child.notification.route.NotificationRoute
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.SettingsProfileUiState
@@ -97,13 +108,16 @@ fun ChildMainScreen(
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
     caregiverRelationshipRepository: CaregiverRelationshipRepository,
-    notificationScenario: MockNotificationScenario =
-        MockNotificationScenario.MultipleRecentAlarms,
+    notificationRepository: NotificationRepository,
+    familyServerRepository: FamilyServerRepository? = null,
+    homeServerRepository: HomeServerRepository? = null,
+    eventRepository: EventRepository? = null,
     modifier: Modifier = Modifier,
     onLogoutClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    RequestNotificationPermissionOnChildEntry()
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
@@ -242,7 +256,10 @@ fun ChildMainScreen(
             },
             onPhotoClick = navigateToPhotoDetail,
             onFamilyBackClick = navigateBackInFamily,
-            notificationScenario = notificationScenario,
+            notificationRepository = notificationRepository,
+            familyServerRepository = familyServerRepository,
+            homeServerRepository = homeServerRepository,
+            eventRepository = eventRepository,
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
                     displayViewModel.saveParentInfo(
@@ -303,7 +320,10 @@ private fun ChildMainTabContent(
     onPhotoShared: () -> Unit,
     onPhotoClick: (String) -> Unit,
     onFamilyBackClick: () -> Unit,
-    notificationScenario: MockNotificationScenario,
+    notificationRepository: NotificationRepository,
+    familyServerRepository: FamilyServerRepository?,
+    homeServerRepository: HomeServerRepository?,
+    eventRepository: EventRepository?,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -389,7 +409,10 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Notification) {
         NotificationRoute(
-            scenario = notificationScenario,
+            repository = notificationRepository,
+            familyRepository = familyServerRepository,
+            homeRepository = homeServerRepository,
+            eventRepository = eventRepository,
             modifier = modifier,
         )
         return
@@ -442,6 +465,33 @@ private fun ChildMainTabContent(
     }
 }
 
+@Composable
+private fun RequestNotificationPermissionOnChildEntry() {
+    if (
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        LocalInspectionMode.current
+    ) {
+        return
+    }
+
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {},
+    )
+
+    LaunchedEffect(Unit) {
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+}
+
 private fun createFamilyPhotoCaptureUri(context: Context): Uri {
     val photoDirectory = File(context.cacheDir, "family_photos").apply {
         mkdirs()
@@ -485,6 +535,9 @@ private fun ChildMainScreenPreview() {
             )
         )
     }
+    val notificationRepository = remember {
+        NotificationRepositoryImpl(MockNotificationDataSource())
+    }
     val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }
 
     SENIOR_ONTheme {
@@ -495,6 +548,7 @@ private fun ChildMainScreenPreview() {
             displayRepository = displayRepository,
             parentInfoRepository = parentInfoRepository,
             caregiverRelationshipRepository = caregiverRelationshipRepository,
+            notificationRepository = notificationRepository,
         )
     }
 }

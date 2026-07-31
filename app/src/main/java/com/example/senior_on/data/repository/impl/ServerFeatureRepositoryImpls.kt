@@ -26,7 +26,36 @@ class HomeServerRepositoryImpl(
             fontSize = it.font_size.orEmpty(),
             connected = it.connection?.connected == true,
             battery = it.connection?.battery,
-            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain)
+            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
+            seniorAddress = it.senior_profile?.address,
+            seniorId = it.senior_profile?.senior_id,
+        )
+    }
+    override suspend fun getSeniorHome() = source.getSeniorHome().let {
+        SeniorHomeSnapshot(
+            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
+            fontSize = it.font_size.orEmpty(),
+            musicCard = it.music_card?.let { card ->
+                ServerMusicCard(
+                    enabled = card.enabled == true,
+                    icon = card.icon,
+                    musicApp = card.music_app,
+                    appName = card.app_name,
+                    actionType = card.action_type,
+                    actionValue = card.action_value,
+                    packageName = card.package_name,
+                )
+            },
+            todaySchedule = it.today_schedule?.let { schedule ->
+                ServerTodaySchedule(
+                    title = schedule.title,
+                    description = schedule.description,
+                    count = schedule.schedule_count ?: 0,
+                    displayType = schedule.display_type,
+                    scheduleId = schedule.schedule_id,
+                    scheduledTime = schedule.scheduled_time,
+                )
+            },
         )
     }
     override suspend fun getWeather(latitude: Double, longitude: Double) =
@@ -187,7 +216,7 @@ class NotificationRepositoryImpl(
     override suspend fun getNotifications(type: String, cursor: Long?, size: Int?) =
         source.getNotifications(type.trim().uppercase(), cursor, size).let {
             NotificationPage(
-                it.totalCount ?: 0,
+                it.totalCount ?: 0L,
                 it.items.orEmpty().map { item ->
                     AppNotification(
                         item.notificationId ?: 0, item.eventId, item.title.orEmpty(),
@@ -199,8 +228,29 @@ class NotificationRepositoryImpl(
         }
     override suspend fun markRead(id: Long) = source.markRead(id)
     override suspend fun delete(id: Long) = source.delete(id)
-    override suspend fun getSettings() = source.getSettings().items.orEmpty().map {
-        NotificationSetting(it.type.orEmpty(), it.enabled == true)
+    override suspend fun getHome() = source.getSettings().let { response ->
+        NotificationHome(
+            enabledCount = response.enabledCount ?: 0L,
+            items = response.items.orEmpty().map { item ->
+                NotificationHomeItem(
+                    type = item.type.orEmpty(),
+                    enabled = item.enabled == true,
+                    hasAlert = item.hasAlert == true,
+                    occurredAt = item.occurredAt,
+                    dateTimeLabel = item.dateTimeLabel,
+                    summary = item.summary,
+                    senderId = item.senderId,
+                    senderName = item.senderName,
+                    deviceBattery = item.deviceBattery,
+                    address = item.address,
+                    linkUrl = item.linkUrl,
+                    phase = item.phase,
+                    emptyMessage = item.emptyMessage,
+                    notificationId = item.notificationId,
+                    eventId = item.eventId,
+                )
+            },
+        )
     }
     override suspend fun updateSetting(type: String, enabled: Boolean) =
         source.updateSetting(type.trim().uppercase(), NotificationSettingRequest(enabled)).let {
@@ -218,7 +268,17 @@ class EventRepositoryImpl(
 ) : EventRepository {
     override suspend fun createSos(latitude: Double, longitude: Double, battery: Int?) =
         source.createSos(SosEventRequest(latitude, longitude, battery)).let {
-            SafetyEvent(it.id, "SOS", null, it.address, it.latitude, it.longitude, it.deviceBattery)
+            SafetyEvent(
+                id = it.id,
+                type = "SOS",
+                occurredAt = null,
+                address = it.address,
+                latitude = it.latitude,
+                longitude = it.longitude,
+                deviceBattery = it.deviceBattery,
+                receiverCount = it.receiverCount,
+                notifiedCount = it.notifiedCount,
+            )
         }
     override suspend fun createRiskLink(url: String, battery: Int?) =
         source.createRiskLink(RiskLinkRequest(url.trim(), battery)).let {
@@ -238,8 +298,19 @@ class EventRepositoryImpl(
     }
     override suspend fun getDetail(eventId: Long) = source.getDetail(eventId).let {
         SafetyEvent(
-            it.eventId, it.eventType.orEmpty(), it.occurredAt, it.address,
-            it.latitude, it.longitude, it.deviceBattery, it.linkUrl, it.isDangerous, it.phase
+            id = it.eventId,
+            type = it.eventType.orEmpty(),
+            occurredAt = it.occurredAt,
+            address = it.address,
+            latitude = it.latitude,
+            longitude = it.longitude,
+            deviceBattery = it.deviceBattery,
+            linkUrl = it.linkUrl,
+            dangerous = it.isDangerous,
+            phase = it.phase,
+            message = it.message,
+            senderName = it.senderName,
+            lastSeenAt = it.lastSeenAt,
         )
     }
 }

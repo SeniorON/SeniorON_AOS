@@ -58,16 +58,12 @@ fun NotificationScreen(
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
     onDetectionTimeClick: () -> Unit = {}
 ) {
-    var sections by remember(uiState.sections, uiState.isParentPhoneRegistered) {
-        mutableStateOf(
-            uiState.sections.map { section ->
-                when {
-                    !uiState.isParentPhoneRegistered -> section.copy(enabled = false)
-                    section.category == NotificationCategory.Sos -> section.copy(enabled = true)
-                    else -> section
-                }
-            }
-        )
+    val sections = uiState.sections.map { section ->
+        when {
+            !uiState.isParentPhoneRegistered -> section.copy(enabled = false)
+            section.category == NotificationCategory.Sos -> section.copy(enabled = true)
+            else -> section
+        }
     }
     var showHomeAddressMissingDialog by remember { mutableStateOf(false) }
     var showParentPhoneInternetRequiredDialog by remember { mutableStateOf(false) }
@@ -144,13 +140,6 @@ fun NotificationScreen(
 
                             else -> {
                                 val toggledEnabled = !section.enabled
-                                sections = sections.map { item ->
-                                    if (item.category == section.category) {
-                                        item.copy(enabled = toggledEnabled)
-                                    } else {
-                                        item
-                                    }
-                                }
                                 onNotificationToggle(section.category, toggledEnabled)
                             }
                         }
