@@ -83,6 +83,6 @@ interface UserSettingsRepository {
 }
 
 interface DeviceRepository {
-    suspend fun updateStatus(identifier: String, name: String, batteryLevel: Int)
+    suspend fun updateStatus()
     suspend fun disconnect()
 }
