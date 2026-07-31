@@ -3,7 +3,15 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <queries>
-        <package android:name="com.duolingo" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.iloen.melon" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.nhn.android.nmap" />
+        <package android:name="net.daum.android.map" />
+        <package android:name="com.kakao.talk" />
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
     </queries>
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

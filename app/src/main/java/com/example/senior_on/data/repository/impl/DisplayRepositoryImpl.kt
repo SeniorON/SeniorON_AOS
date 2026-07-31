@@ -8,6 +8,7 @@ import com.example.senior_on.data.remote.dto.HomeButtonResponse
 import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
+import com.example.senior_on.data.remote.dto.SeniorHomeResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateResponse
@@ -71,6 +72,16 @@ class DisplayRepositoryImpl private constructor(
         return requireNotNull(homeDataSource).getHome().toDisplayOverview(
             currentParentInfo = currentParentInfo,
         )
+    }
+
+    override suspend fun getSeniorScreenConfiguration(): SeniorScreenConfiguration {
+        mockDataSource?.let { source ->
+            return source.overview.value.screenConfiguration
+        }
+
+        return requireNotNull(homeDataSource)
+            .getSeniorHome()
+            .toSeniorScreenConfiguration()
     }
 
     override suspend fun getWeather(
@@ -269,6 +280,52 @@ private fun HomeResponse.toDisplayOverview(
         todaySchedule = today_schedule.toDisplayTodaySchedule(),
         availableButtonTypes = BUTTON_API_METADATA.keys + MUSIC_BUTTON_TYPES,
         hasSavedButtonConfiguration = buttons.orEmpty().isNotEmpty(),
+    )
+}
+
+private fun SeniorHomeResponse.toSeniorScreenConfiguration():
+    SeniorScreenConfiguration {
+    val musicButton = music_card
+        ?.takeIf { it.enabled != false }
+        ?.music_app
+        .toMusicButtonType()
+    val savedAppButtons = buttons
+        .orEmpty()
+        .sortedBy { it.button_order ?: Int.MAX_VALUE }
+        .mapNotNull { response ->
+            response.toButtonType()
+                ?.takeIf {
+                    !it.isMusic() && it != SeniorHomeButtonType.Schedule
+                }
+                ?.let { button -> button to response }
+        }
+        .distinctBy { (button, _) -> button }
+    val customButtonLabels = savedAppButtons.mapNotNull { (button, response) ->
+        val savedName = response.button_name
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?: return@mapNotNull null
+        val defaultName = BUTTON_API_METADATA[button]?.buttonName
+        if (savedName == defaultName) {
+            null
+        } else {
+            button to savedName
+        }
+    }.toMap()
+    val configuredButtons = buildList {
+        musicButton?.let(::add)
+        add(SeniorHomeButtonType.Schedule)
+        addAll(
+            savedAppButtons
+                .map { (button, _) -> button }
+                .normalizeButtonsForSave()
+        )
+    }.distinct()
+
+    return SeniorScreenConfiguration(
+        fontSize = font_size.toSeniorFontSize(),
+        buttons = configuredButtons,
+        customButtonLabels = customButtonLabels,
     )
 }
 

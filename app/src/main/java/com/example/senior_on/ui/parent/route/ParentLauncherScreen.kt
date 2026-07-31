@@ -1,4 +1,4 @@
-package com.example.senior_on.ui.parent
+package com.example.senior_on.ui.parent.route
 
 import com.example.senior_on.ui.parent.schedule.viewmodel.toParentDisplayTime
 
@@ -16,8 +16,6 @@ import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionStatus
 
 import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertViewModel
 
-import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertStatus
-
 import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyViewModel
 
 import com.example.senior_on.ui.parent.chat.viewmodel.ChatBuddyUiState
@@ -27,6 +25,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -69,13 +69,18 @@ import com.example.senior_on.data.repository.impl.ParentFamilyPhotoRepositoryImp
 import com.example.senior_on.data.repository.impl.ParentLinkSafetyRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentMedicationRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentScheduleRepositoryImpl
+import com.example.senior_on.data.repository.impl.DisplayRepositoryImpl
 import com.example.senior_on.data.source.mock.fixtures.MockAuthFixtures
+import com.example.senior_on.data.source.display.MockDisplayDataSource
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.MockParentEmergencyAlertDataSource
 import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
 import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
 import com.example.senior_on.data.source.parent.MockParentMedicationDataSource
 import com.example.senior_on.data.source.parent.MockParentScheduleDataSource
+import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
+import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
 import com.example.senior_on.domain.repository.parent.ParentEmergencyAlertRepository
@@ -83,8 +88,9 @@ import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
 import com.example.senior_on.domain.repository.parent.ParentScheduleRepository
 import com.example.senior_on.ui.parent.chat.ChatBuddyScreen
-import com.example.senior_on.ui.parent.emergency.ParentEmergencyAlertScreen
+import com.example.senior_on.ui.parent.home.ParentHomeScreen
 import com.example.senior_on.ui.parent.medication.ParentMedicationScreen
+import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionScreen
 import com.example.senior_on.ui.parent.photo.ParentFamilyMembersPhotoScreen
 import com.example.senior_on.ui.parent.photo.ParentMemberPhotoGridScreen
@@ -119,6 +125,7 @@ fun ParentLauncherScreen(
     medicationRepository: ParentMedicationRepository,
     emergencyAlertRepository: ParentEmergencyAlertRepository,
     linkSafetyRepository: ParentLinkSafetyRepository,
+    displayRepository: DisplayRepository,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -163,12 +170,13 @@ fun ParentLauncherScreen(
         emergencyAlertViewModel.uiState.collectAsStateWithLifecycle()
     val linkDetectionUiState by
         linkDetectionViewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(emergencyAlertUiState.status) {
-        if (emergencyAlertUiState.status == ParentEmergencyAlertStatus.Sent) {
-            destination = ParentLauncherDestination.Home
-            emergencyAlertViewModel.reset()
-        }
+    val screenConfiguration by produceState(
+        initialValue = SeniorScreenConfiguration(),
+        key1 = displayRepository,
+    ) {
+        value = runCatching {
+            displayRepository.getSeniorScreenConfiguration()
+        }.getOrDefault(value)
     }
 
     LaunchedEffect(linkDetectionUiState.status) {
@@ -205,19 +213,29 @@ fun ParentLauncherScreen(
     }
 
     when (destination) {
-        ParentLauncherDestination.Home -> ParentLauncherHome(
-            onPhotoClick = {
-                isPhotoSourceSheetVisible = true
+        ParentLauncherDestination.Home -> ParentHomeScreen(
+            configuration = screenConfiguration,
+            scheduleUiState = scheduleUiState,
+            onMusicClick = { button ->
+                openSeniorHomeButton(context, button)
             },
-            onLinkDetectionClick = {
-                linkDetectionViewModel.inspectLink(TEMPORARY_SAFE_LINK)
-                destination = ParentLauncherDestination.LinkDetection
+            onScheduleClick = {
+                destination = ParentLauncherDestination.Schedule
             },
-            onMissingAppTestClick = {
-                openAppOrPlayStore(
-                    context = context,
-                    packageName = TEMPORARY_TEST_APP_PACKAGE
-                )
+            onButtonClick = { button ->
+                when (button) {
+                    SeniorHomeButtonType.ChatBuddy ->
+                        destination = ParentLauncherDestination.ChatBuddy
+                    SeniorHomeButtonType.Medication ->
+                        destination = ParentLauncherDestination.Medication
+                    SeniorHomeButtonType.Schedule ->
+                        destination = ParentLauncherDestination.Schedule
+                    SeniorHomeButtonType.Photo ->
+                        isPhotoSourceSheetVisible = true
+                    SeniorHomeButtonType.Emergency ->
+                        destination = ParentLauncherDestination.Emergency
+                    else -> openSeniorHomeButton(context, button)
+                }
             },
             modifier = modifier
         )
@@ -242,7 +260,7 @@ fun ParentLauncherScreen(
             modifier = modifier
         )
 
-        ParentLauncherDestination.Emergency -> ParentEmergencyAlertScreen(
+        ParentLauncherDestination.Emergency -> ParentEmergencyRoute(
             uiState = emergencyAlertUiState,
             onBackClick = {
                 emergencyAlertViewModel.cancel()
@@ -314,6 +332,18 @@ fun ParentLauncherScreen(
                     modifier = modifier
                 )
             }
+        }
+    }
+
+    if (medicationUiState.showReminder) {
+        medicationUiState.medication?.let { medication ->
+            ParentMedicationReminderDialog(
+                medication = medication,
+                onConfirmClick = {
+                    medicationViewModel.consumeReminder()
+                    destination = ParentLauncherDestination.Medication
+                },
+            )
         }
     }
 
@@ -721,6 +751,62 @@ private fun openAppOrPlayStore(
     runCatching { context.startActivity(webStoreIntent) }
 }
 
+private fun openSeniorHomeButton(
+    context: Context,
+    button: SeniorHomeButtonType,
+) {
+    when (button) {
+        SeniorHomeButtonType.Call -> startIntent(
+            context,
+            Intent(Intent.ACTION_DIAL),
+        )
+        SeniorHomeButtonType.Message -> startIntent(
+            context,
+            Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")),
+        )
+        SeniorHomeButtonType.Camera -> startIntent(
+            context,
+            Intent(MediaStore.ACTION_IMAGE_CAPTURE),
+        )
+        SeniorHomeButtonType.Calendar -> startIntent(
+            context,
+            Intent(Intent.ACTION_VIEW, Uri.parse("content://com.android.calendar/time")),
+        )
+        SeniorHomeButtonType.Settings -> startIntent(
+            context,
+            Intent(Settings.ACTION_SETTINGS),
+        )
+        SeniorHomeButtonType.YouTube ->
+            openAppOrPlayStore(context, "com.google.android.youtube")
+        SeniorHomeButtonType.Melon ->
+            openAppOrPlayStore(context, "com.iloen.melon")
+        SeniorHomeButtonType.Spotify ->
+            openAppOrPlayStore(context, "com.spotify.music")
+        SeniorHomeButtonType.NaverMap ->
+            openAppOrPlayStore(context, "com.nhn.android.nmap")
+        SeniorHomeButtonType.KakaoMap ->
+            openAppOrPlayStore(context, "net.daum.android.map")
+        SeniorHomeButtonType.KakaoTalk ->
+            openAppOrPlayStore(context, "com.kakao.talk")
+        SeniorHomeButtonType.Naver ->
+            openExternalBrowser(context, "https://www.naver.com")
+        SeniorHomeButtonType.Daum ->
+            openExternalBrowser(context, "https://www.daum.net")
+        SeniorHomeButtonType.Google ->
+            openExternalBrowser(context, "https://www.google.com")
+        SeniorHomeButtonType.Schedule,
+        SeniorHomeButtonType.ChatBuddy,
+        SeniorHomeButtonType.Medication,
+        SeniorHomeButtonType.Photo,
+        SeniorHomeButtonType.Emergency -> Unit
+        else -> Unit
+    }
+}
+
+private fun startIntent(context: Context, intent: Intent) {
+    runCatching { context.startActivity(intent) }
+}
+
 private fun openExternalBrowser(context: Context, url: String) {
     val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
         addCategory(Intent.CATEGORY_BROWSABLE)
@@ -764,10 +850,8 @@ private fun ParentLauncherScreenPreview() {
                     MockParentEmergencyAlertDataSource()
                 ),
             linkSafetyRepository =
-                ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource())
+                ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource()),
+            displayRepository = DisplayRepositoryImpl(MockDisplayDataSource()),
         )
     }
 }
-
-private const val TEMPORARY_SAFE_LINK = "https://www.naver.com"
-private const val TEMPORARY_TEST_APP_PACKAGE = "com.duolingo"

@@ -51,6 +51,7 @@ import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -118,8 +119,10 @@ internal fun SeniorPhonePreview(
 
 private val SeniorPhoneDesignWidth = 360.dp
 private val SeniorPhoneDesignHeight = 960.dp
-private val SeniorPhoneFeatureCardShape = RoundedCornerShape(12.dp)
-private val SeniorPhoneGridCardShape = RoundedCornerShape(16.dp)
+private val SeniorPhoneFeatureCardShape =
+    RoundedCornerShape(SeniorOnRadius.Large)
+private val SeniorPhoneGridCardShape =
+    RoundedCornerShape(SeniorOnRadius.Large)
 
 private enum class SeniorSchedulePreviewState {
     None,
@@ -373,7 +376,7 @@ private fun SeniorScheduleCard(
     val state = schedule.toPreviewState()
     val isFeatured = !hasMusic
     val backgroundColor = if (isFeatured) {
-        SeniorOnColors.Primary600
+        SeniorOnColors.Primary700
     } else {
         SeniorOnColors.White
     }
@@ -477,7 +480,7 @@ private fun SeniorHomeButton(
             .clip(SeniorPhoneGridCardShape)
             .background(
                 if (isEmergency) {
-                    SeniorOnColors.Red300
+                    SeniorOnColors.Red400
                 } else {
                     SeniorOnColors.White
                 }
