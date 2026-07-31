@@ -45,6 +45,7 @@ import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
 import com.example.senior_on.data.source.parent.MockParentMedicationDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.data.source.device.DeviceDataSource
+import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
 import com.example.senior_on.data.source.device.FcmTokenStore
 import com.example.senior_on.data.source.device.FirebaseFcmTokenDataSource
 import com.example.senior_on.data.source.device.LocalDeviceIdentifierDataSource
@@ -121,6 +122,8 @@ class DefaultAppContainer(
     userSettingsDataSource: UserSettingsDataSource,
     deviceDataSource: DeviceDataSource
 ) : AppContainer {
+    private val deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
+
     override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource)
     override val accountRecoveryRepository: AccountRecoveryRepository =
         AccountRecoveryRepositoryImpl(accountRecoveryDataSource)
@@ -133,7 +136,7 @@ class DefaultAppContainer(
     override val deviceRegistrationRepository: DeviceRegistrationRepository =
         DeviceRegistrationRepositoryImpl(
             fcmTokenDataSource = FirebaseFcmTokenDataSource(FcmTokenStore(context)),
-            deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
+            deviceIdentifierDataSource = deviceIdentifierDataSource
         )
     override val homeServerRepository = HomeServerRepositoryImpl(homeDataSource)
     override val familyServerRepository = FamilyServerRepositoryImpl(remoteFamilySource)
@@ -142,7 +145,11 @@ class DefaultAppContainer(
     override val notificationRepository = NotificationRepositoryImpl(notificationDataSource)
     override val eventRepository = EventRepositoryImpl(eventDataSource)
     override val userSettingsRepository = UserSettingsRepositoryImpl(userSettingsDataSource)
-    override val deviceRepository = DeviceRepositoryImpl(deviceDataSource)
+    override val deviceRepository = DeviceRepositoryImpl(
+        source = deviceDataSource,
+        identifierSource = deviceIdentifierDataSource,
+        localStatusSource = AndroidDeviceStatusDataSource(context),
+    )
 
     private val familyPhotoStore = MockFamilyPhotoStore(
         initialPhotos = MockFamilyPhotoFixtures.initialPhotos()

@@ -2,6 +2,8 @@ package com.example.senior_on.data.repository.impl
 
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.device.DeviceDataSource
+import com.example.senior_on.data.source.device.DeviceIdentifierDataSource
+import com.example.senior_on.data.source.device.LocalDeviceStatusDataSource
 import com.example.senior_on.data.source.event.EventDataSource
 import com.example.senior_on.data.source.family.RemoteFamilySource
 import com.example.senior_on.data.source.health.HospitalDataSource
@@ -353,10 +355,18 @@ class UserSettingsRepositoryImpl(
 }
 
 class DeviceRepositoryImpl(
-    private val source: DeviceDataSource
+    private val source: DeviceDataSource,
+    private val identifierSource: DeviceIdentifierDataSource,
+    private val localStatusSource: LocalDeviceStatusDataSource,
 ) : DeviceRepository {
-    override suspend fun updateStatus(identifier: String, name: String, batteryLevel: Int) =
-        source.updateStatus(DeviceStatusUpdateRequest(identifier.trim(), name.trim(), batteryLevel.coerceIn(0, 100)))
+    override suspend fun updateStatus() = source.updateStatus(
+        DeviceStatusUpdateRequest(
+            deviceIdentifier = identifierSource.getOrCreateIdentifier(),
+            deviceName = localStatusSource.getDeviceName(),
+            batteryLevel = localStatusSource.getBatteryLevel(),
+        )
+    )
+
     override suspend fun disconnect() = source.disconnect()
 }
 
