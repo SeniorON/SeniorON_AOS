@@ -391,30 +391,31 @@ internal fun createInitialButtonOrder(
 
 internal fun List<SeniorHomeButtonType>.withRequiredSeniorHomeButtons():
     List<SeniorHomeButtonType> {
-    val editableButtons = distinct()
+    val distinctButtons = distinct()
         .filterNot { it == SeniorHomeButtonType.Emergency }
-        .toMutableList()
-
-    if (SeniorHomeButtonType.Schedule !in editableButtons) {
-        val musicButtonIndex = editableButtons.indexOfFirst {
-            it == SeniorHomeButtonType.Melon ||
-                it == SeniorHomeButtonType.Spotify
-        }
-        editableButtons.add(
-            index = if (musicButtonIndex >= 0) musicButtonIndex + 1 else 0,
-            element = SeniorHomeButtonType.Schedule,
-        )
+    val musicButton = distinctButtons.firstOrNull {
+        it.isMusicButton()
     }
+    val gridButtons = distinctButtons
+        .filterNot { button ->
+            button.isMusicButton() ||
+                button == SeniorHomeButtonType.Schedule
+        }
+        .toMutableList()
 
     listOf(
         SeniorHomeButtonType.ChatBuddy,
         SeniorHomeButtonType.Medication,
         SeniorHomeButtonType.Photo,
     ).forEach { requiredButton ->
-        if (requiredButton !in editableButtons) {
-            editableButtons.add(requiredButton)
+        if (requiredButton !in gridButtons) {
+            gridButtons.add(requiredButton)
         }
     }
 
-    return editableButtons + SeniorHomeButtonType.Emergency
+    return buildList {
+        musicButton?.let(::add)
+        add(SeniorHomeButtonType.Schedule)
+        addAll(gridButtons.withEmergencyAtFixedGridSlot())
+    }
 }

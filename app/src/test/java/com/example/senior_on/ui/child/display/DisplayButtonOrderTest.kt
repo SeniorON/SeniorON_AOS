@@ -7,13 +7,25 @@ import org.junit.Test
 
 class DisplayButtonOrderTest {
     @Test
-    fun defaultButtonsEndWithNaverAndEmergency() {
+    fun defaultButtonsMatchBackendInitialOrder() {
         assertEquals(
             listOf(
-                SeniorHomeButtonType.Naver,
+                SeniorHomeButtonType.Call,
+                SeniorHomeButtonType.Message,
+                SeniorHomeButtonType.Camera,
+                SeniorHomeButtonType.Photo,
+                SeniorHomeButtonType.YouTube,
+                SeniorHomeButtonType.ChatBuddy,
+                SeniorHomeButtonType.Medication,
                 SeniorHomeButtonType.Emergency,
+                SeniorHomeButtonType.KakaoTalk,
+                SeniorHomeButtonType.Naver,
             ),
-            SeniorScreenConfiguration().buttons.takeLast(2),
+            SeniorScreenConfiguration().buttons
+                .filterNot { button ->
+                    button.isMusicButton() ||
+                        button == SeniorHomeButtonType.Schedule
+                },
         )
     }
 
@@ -78,12 +90,16 @@ class DisplayButtonOrderTest {
     }
 
     @Test
-    fun requiredButtonsCannotBeRemovedAndEmergencyStaysLast() {
+    fun requiredButtonsCannotBeRemovedAndEmergencyUsesEighthGridSlot() {
         val result = listOf(
             SeniorHomeButtonType.Melon,
             SeniorHomeButtonType.Call,
             SeniorHomeButtonType.Emergency,
             SeniorHomeButtonType.Message,
+            SeniorHomeButtonType.Camera,
+            SeniorHomeButtonType.YouTube,
+            SeniorHomeButtonType.KakaoTalk,
+            SeniorHomeButtonType.Naver,
             SeniorHomeButtonType.Emergency,
         ).withRequiredSeniorHomeButtons()
 
@@ -93,10 +109,14 @@ class DisplayButtonOrderTest {
                 SeniorHomeButtonType.Schedule,
                 SeniorHomeButtonType.Call,
                 SeniorHomeButtonType.Message,
+                SeniorHomeButtonType.Camera,
+                SeniorHomeButtonType.YouTube,
+                SeniorHomeButtonType.KakaoTalk,
+                SeniorHomeButtonType.Naver,
                 SeniorHomeButtonType.ChatBuddy,
+                SeniorHomeButtonType.Emergency,
                 SeniorHomeButtonType.Medication,
                 SeniorHomeButtonType.Photo,
-                SeniorHomeButtonType.Emergency,
             ),
             result,
         )

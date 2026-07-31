@@ -261,7 +261,7 @@ class DisplayRepositoryImplTest {
 
         val request = homeDataSource.savedButtonRequests.single()
         assertEquals(null, request.musicApp)
-        assertEquals((1..8).toList(), request.buttons.map { it.buttonOrder })
+        assertEquals((1..10).toList(), request.buttons.map { it.buttonOrder })
         assertEquals(
             listOf(
                 "전화",
@@ -272,6 +272,8 @@ class DisplayRepositoryImplTest {
                 "말벗",
                 "복약",
                 "긴급알림",
+                "카카오톡",
+                "네이버",
             ),
             request.buttons.map { it.buttonName },
         )
@@ -285,6 +287,8 @@ class DisplayRepositoryImplTest {
                 "COMPANION",
                 "MEDICATION",
                 "EMERGENCY",
+                "KAKAO_TALK",
+                "NAVER",
             ),
             request.buttons.map { it.actionValue },
         )
@@ -298,10 +302,68 @@ class DisplayRepositoryImplTest {
                 null,
                 null,
                 null,
+                "com.kakao.talk",
+                "com.nhn.android.search",
             ),
             request.buttons.map { it.packageName },
         )
+        assertEquals(
+            8,
+            request.buttons.single {
+                it.actionValue == "EMERGENCY"
+            }.buttonOrder,
+        )
     }
+
+    @Test
+    fun getOverviewKeepsBackendInitialButtonsAndEmergencyAtOrderEight() =
+        runBlocking {
+            val initialButtonNames = listOf(
+                "전화",
+                "메시지",
+                "카메라",
+                "사진",
+                "유튜브",
+                "말벗",
+                "복약",
+                "긴급알림",
+                "카카오톡",
+                "네이버",
+            )
+            val homeDataSource = FakeHomeDataSource(
+                homeResponse = HomeResponse(
+                    connection = null,
+                    buttons = initialButtonNames.mapIndexed { index, name ->
+                        HomeButtonResponse(
+                            icon = null,
+                            button_id = index.toLong(),
+                            button_order = index + 1,
+                            button_name = name,
+                            action_type = null,
+                            action_value = null,
+                        )
+                    },
+                    user_name = null,
+                    senior_profile = null,
+                    font_size = "LARGE",
+                    music_card = null,
+                    today_schedule = null,
+                )
+            )
+            val repository = DisplayRepositoryImpl(
+                homeDataSource = homeDataSource,
+                deviceDataSource = FakeDeviceDataSource(),
+            )
+
+            val gridButtons = repository
+                .getOverview(currentParentInfo = null)
+                .screenConfiguration
+                .buttons
+                .filterNot { it == SeniorHomeButtonType.Schedule }
+
+            assertEquals(InitialSeniorHomeGridButtons, gridButtons)
+            assertEquals(SeniorHomeButtonType.Emergency, gridButtons[7])
+        }
 
     @Test
     fun saveButtonsAllowsEighteenGeneralButtonsWithScheduleAndMusicExcluded() =

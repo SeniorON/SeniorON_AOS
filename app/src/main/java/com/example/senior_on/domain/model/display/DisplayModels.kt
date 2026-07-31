@@ -80,24 +80,17 @@ val InitialSeniorHomeGridButtons = listOf(
     SeniorHomeButtonType.ChatBuddy,
     SeniorHomeButtonType.Medication,
     SeniorHomeButtonType.Emergency,
+    SeniorHomeButtonType.KakaoTalk,
+    SeniorHomeButtonType.Naver,
 )
 
 data class SeniorScreenConfiguration(
     val fontSize: SeniorFontSize = SeniorFontSize.Large,
-    val buttons: List<SeniorHomeButtonType> = listOf(
-        SeniorHomeButtonType.Melon,
-        SeniorHomeButtonType.Schedule,
-        SeniorHomeButtonType.Call,
-        SeniorHomeButtonType.Message,
-        SeniorHomeButtonType.ChatBuddy,
-        SeniorHomeButtonType.Medication,
-        SeniorHomeButtonType.YouTube,
-        SeniorHomeButtonType.Photo,
-        SeniorHomeButtonType.Camera,
-        SeniorHomeButtonType.NaverMap,
-        SeniorHomeButtonType.Naver,
-        SeniorHomeButtonType.Emergency,
-    ),
+    val buttons: List<SeniorHomeButtonType> =
+        listOf(
+            SeniorHomeButtonType.Melon,
+            SeniorHomeButtonType.Schedule,
+        ) + InitialSeniorHomeGridButtons,
     val customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
 )
 

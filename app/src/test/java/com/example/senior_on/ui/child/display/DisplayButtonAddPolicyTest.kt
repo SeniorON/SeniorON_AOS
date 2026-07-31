@@ -20,7 +20,8 @@ class DisplayButtonAddPolicyTest {
             .count(ButtonAppCatalog::contains)
 
         assertTrue(SeniorHomeButtonType.Camera in defaultButtons)
-        assertTrue(SeniorHomeButtonType.NaverMap in defaultButtons)
+        assertTrue(SeniorHomeButtonType.KakaoTalk in defaultButtons)
+        assertTrue(SeniorHomeButtonType.Naver in defaultButtons)
         assertEquals(10, buttonAddSelectedCount(selectedAppCount))
         assertEquals(12, buttonAddSelectedCount(selectedAppCount) + 2)
     }

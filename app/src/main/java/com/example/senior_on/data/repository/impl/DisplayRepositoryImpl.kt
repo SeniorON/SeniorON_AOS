@@ -254,14 +254,8 @@ private fun HomeResponse.toDisplayOverview(
         addAll(
             savedAppButtons
                 .map { (button, _) -> button }
-                .filterNot { it == SeniorHomeButtonType.Emergency }
+                .normalizeButtonsForSave()
         )
-        REQUIRED_GRID_BUTTON_TYPES.forEach { requiredButton ->
-            if (requiredButton !in this) {
-                add(requiredButton)
-            }
-        }
-        add(SeniorHomeButtonType.Emergency)
     }.distinct()
 
     return DisplayOverview(
