@@ -122,7 +122,6 @@ fun ChildMainScreen(
     val familyViewModel: FamilyViewModel = viewModel(
         factory = FamilyViewModel.factory(familyRepository),
     )
-    val familyUiState by familyViewModel.uiState.collectAsStateWithLifecycle()
     val familyPhotoDetailViewModel: FamilyPhotoDetailViewModel = viewModel(
         factory = FamilyPhotoDetailViewModel.factory(familyRepository),
     )
@@ -228,7 +227,6 @@ fun ChildMainScreen(
             displayViewModel = displayViewModel,
             settingsProfile = settingsProfile,
             connectedDevice = connectedDevice,
-            canEditScreen = familyUiState.canManageMembers,
             onMemberSettingsClick = {
                 familyDestination = ChildFamilyDestination.MemberSettings
             },
@@ -252,7 +250,9 @@ fun ChildMainScreen(
                     )
                 }
             },
-            onDisconnectDeviceConfirm = displayViewModel::disconnectDevice,
+            onDisconnectDeviceConfirm = {
+                displayViewModel.disconnectDevice()
+            },
             onLogoutClick = onLogoutClick,
             onWithdrawClick = onWithdrawClick,
             modifier = Modifier
@@ -295,7 +295,6 @@ private fun ChildMainTabContent(
     displayViewModel: DisplayViewModel,
     settingsProfile: SettingsProfileUiState,
     connectedDevice: ConnectedSeniorDeviceUiState?,
-    canEditScreen: Boolean,
     onMemberSettingsClick: () -> Unit,
     onAddFamilyClick: () -> Unit,
     onMorePhotosClick: () -> Unit,
@@ -314,7 +313,6 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Screen) {
         DisplayTabRoute(
             viewModel = displayViewModel,
-            canEditScreen = canEditScreen,
             modifier = modifier,
         )
         return

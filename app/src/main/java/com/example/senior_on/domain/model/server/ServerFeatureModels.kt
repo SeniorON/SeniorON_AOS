@@ -2,7 +2,8 @@ package com.example.senior_on.domain.model.server
 
 data class ServerButton(
     val id: Long, val optionId: Long? = null, val order: Int,
-    val name: String, val icon: String?, val actionType: String?, val actionValue: String?
+    val name: String, val icon: String?, val actionType: String?,
+    val actionValue: String?, val packageName: String? = null,
 )
 data class HomeSnapshot(
     val userName: String, val fontSize: String, val connected: Boolean,
