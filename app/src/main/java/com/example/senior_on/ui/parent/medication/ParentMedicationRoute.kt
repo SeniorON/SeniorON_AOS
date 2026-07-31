@@ -1,16 +1,19 @@
 package com.example.senior_on.ui.parent.medication
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
+import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationViewModel
 
 @Composable
 fun ParentMedicationRoute(
-    repository: ParentMedicationRepository,
+    repository: MedicationRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -19,9 +22,24 @@ fun ParentMedicationRoute(
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadMedication()
+    }
+
+    DisposableEffect(viewModel) {
+        onDispose(viewModel::reset)
+    }
+
+    fun resetAndGoBack() {
+        viewModel.reset()
+        onBackClick()
+    }
+
+    BackHandler(onBack = ::resetAndGoBack)
+
     ParentMedicationScreen(
         uiState = uiState,
-        onBackClick = onBackClick,
+        onBackClick = ::resetAndGoBack,
         onTakenClick = viewModel::markAsTaken,
         modifier = modifier,
     )

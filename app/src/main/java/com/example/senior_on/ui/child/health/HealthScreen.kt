@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,30 +23,15 @@ fun HealthScreen(
     modifier: Modifier = Modifier,
     registeredMedications: List<RegisteredMedicationUiState> = previewRegisteredMedications(),
     todayMedications: List<TodayMedicationUiState> = previewTodayMedications(),
-    medicationMarkedDays: Set<Int> = previewMedicationMarkedDays(),
-    initialDate: LocalDate = LocalDate.of(2026, 6, 12),
+    medicationMarkedDates: Set<LocalDate> = previewMedicationMarkedDates(),
+    selectedDate: LocalDate = LocalDate.now(),
+    onSelectedDateChange: (LocalDate) -> Unit = {},
     onAddTodayMedicationClick: () -> Unit = {},
     onAddRegisteredMedicationClick: () -> Unit = {},
     onRegisteredMedicationClick: (RegisteredMedicationUiState) -> Unit = {}
 ) {
-    var selectedYear by rememberSaveable(initialDate) { mutableIntStateOf(initialDate.year) }
-    var selectedMonth by rememberSaveable(initialDate) { mutableIntStateOf(initialDate.monthValue) }
-    var selectedDay by rememberSaveable(initialDate) { mutableIntStateOf(initialDate.dayOfMonth) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
-
-    val selectedDate = remember(selectedYear, selectedMonth, selectedDay) {
-        YearMonth.of(selectedYear, selectedMonth)
-            .atDay(selectedDay.coerceAtMost(YearMonth.of(selectedYear, selectedMonth).lengthOfMonth()))
-    }
-    val displayedMonth = remember(selectedYear, selectedMonth) {
-        YearMonth.of(selectedYear, selectedMonth)
-    }
-
-    fun updateSelectedDate(date: LocalDate) {
-        selectedYear = date.year
-        selectedMonth = date.monthValue
-        selectedDay = date.dayOfMonth
-    }
+    val displayedMonth = remember(selectedDate) { YearMonth.from(selectedDate) }
 
     Column(
         modifier = modifier
@@ -58,30 +42,30 @@ fun HealthScreen(
         TodayMedicationSection(
             selectedDate = selectedDate,
             todayMedications = todayMedications,
-            markedDays = medicationMarkedDays,
+            markedDates = medicationMarkedDates,
             showCalendar = showCalendar,
             onYearClick = { showCalendar = !showCalendar },
             onPreviousDayClick = {
-                updateSelectedDate(selectedDate.minusDays(1))
+                onSelectedDateChange(selectedDate.minusDays(1))
             },
             onNextDayClick = {
-                updateSelectedDate(selectedDate.plusDays(1))
+                onSelectedDateChange(selectedDate.plusDays(1))
             },
             onDayClick = { day ->
-                updateSelectedDate(displayedMonth.atDay(day))
+                onSelectedDateChange(displayedMonth.atDay(day))
                 showCalendar = false
             },
             onPreviousMonthClick = {
                 val movedMonth = displayedMonth.minusMonths(1)
-                selectedYear = movedMonth.year
-                selectedMonth = movedMonth.monthValue
-                selectedDay = selectedDay.coerceAtMost(movedMonth.lengthOfMonth())
+                onSelectedDateChange(
+                    movedMonth.atDay(selectedDate.dayOfMonth.coerceAtMost(movedMonth.lengthOfMonth()))
+                )
             },
             onNextMonthClick = {
                 val movedMonth = displayedMonth.plusMonths(1)
-                selectedYear = movedMonth.year
-                selectedMonth = movedMonth.monthValue
-                selectedDay = selectedDay.coerceAtMost(movedMonth.lengthOfMonth())
+                onSelectedDateChange(
+                    movedMonth.atDay(selectedDate.dayOfMonth.coerceAtMost(movedMonth.lengthOfMonth()))
+                )
             },
             onAddTodayMedicationClick = onAddTodayMedicationClick
         )
@@ -109,7 +93,7 @@ private fun HealthScreenEmptyPreview() {
         HealthScreen(
             registeredMedications = emptyList(),
             todayMedications = emptyList(),
-            medicationMarkedDays = emptySet()
+            medicationMarkedDates = emptySet()
         )
     }
 }

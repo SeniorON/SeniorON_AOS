@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.BatteryManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -62,6 +64,12 @@ fun ParentEmergencyRoute(
     fun cancelAndGoBack() {
         viewModel.cancel()
         onBackClick()
+    }
+
+    BackHandler(onBack = ::cancelAndGoBack)
+
+    DisposableEffect(viewModel) {
+        onDispose(viewModel::reset)
     }
 
     if (uiState.status == ParentEmergencyAlertStatus.Sent) {

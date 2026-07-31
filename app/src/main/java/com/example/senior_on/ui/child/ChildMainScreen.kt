@@ -71,6 +71,7 @@ import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
+import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
@@ -78,7 +79,8 @@ import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.child.family.FamilyTabRoute
-import com.example.senior_on.ui.child.health.HealthMainRoute
+import com.example.senior_on.ui.child.health.HealthMainScreen
+import com.example.senior_on.ui.child.health.route.HealthMainRoute
 import com.example.senior_on.ui.child.notification.route.NotificationRoute
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
@@ -109,6 +111,7 @@ fun ChildMainScreen(
     parentInfoRepository: ParentInfoRepository,
     caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationRepository: NotificationRepository,
+    medicationRepository: MedicationRepository? = null,
     familyServerRepository: FamilyServerRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -257,6 +260,7 @@ fun ChildMainScreen(
             onPhotoClick = navigateToPhotoDetail,
             onFamilyBackClick = navigateBackInFamily,
             notificationRepository = notificationRepository,
+            medicationRepository = medicationRepository,
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
@@ -321,6 +325,7 @@ private fun ChildMainTabContent(
     onPhotoClick: (String) -> Unit,
     onFamilyBackClick: () -> Unit,
     notificationRepository: NotificationRepository,
+    medicationRepository: MedicationRepository?,
     familyServerRepository: FamilyServerRepository?,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
@@ -339,7 +344,15 @@ private fun ChildMainTabContent(
     }
 
     if (selectedTab == ChildMainTab.Health) {
-        HealthMainRoute(modifier = modifier)
+        if (medicationRepository != null && familyServerRepository != null) {
+            HealthMainRoute(
+                medicationRepository = medicationRepository,
+                familyRepository = familyServerRepository,
+                modifier = modifier,
+            )
+        } else {
+            HealthMainScreen(modifier = modifier)
+        }
         return
     }
 

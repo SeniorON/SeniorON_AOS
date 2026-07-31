@@ -21,7 +21,12 @@ interface MedicationApi {
     @GET("api/v1/medications/parents/{parentUserId}/schedules") suspend fun getParentSchedules(
         @Path("parentUserId") parentUserId: Long, @Query("date") date: String
     ): ApiResponse<List<MedicationScheduleResponse>>
-    @PATCH("api/v1/medication-logs/{medicationLogId}/check") suspend fun check(
-        @Path("medicationLogId") medicationLogId: Long
-    ): ApiResponse<MedicationCheckResponse>
+    @GET("api/v1/medications/parents/{parentUserId}/schedules/monthly")
+    suspend fun getParentMonthlySchedules(
+        @Path("parentUserId") parentUserId: Long,
+        @Query("year") year: Int,
+        @Query("month") month: Int,
+    ): ApiResponse<MedicationMonthlyScheduleResponse>
+    @PATCH("api/v1/medication-logs/check")
+    suspend fun checkNearest(): ApiResponse<MedicationCheckResponse>
 }

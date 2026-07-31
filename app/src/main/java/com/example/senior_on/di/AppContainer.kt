@@ -12,7 +12,6 @@ import com.example.senior_on.data.repository.impl.HospitalSpecialtyRepositoryImp
 import com.example.senior_on.data.repository.impl.ParentFamilyPhotoRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentInfoRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentLinkSafetyRepositoryImpl
-import com.example.senior_on.data.repository.impl.ParentMedicationRepositoryImpl
 import com.example.senior_on.data.repository.impl.SessionRepositoryImpl
 import com.example.senior_on.data.repository.impl.SeniorRepositoryImpl
 import com.example.senior_on.data.repository.impl.SocialAuthRepositoryImpl
@@ -43,7 +42,6 @@ import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
 import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
-import com.example.senior_on.data.source.parent.MockParentMedicationDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
@@ -74,7 +72,6 @@ import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
-import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
 import com.example.senior_on.domain.repository.server.*
@@ -102,7 +99,6 @@ interface AppContainer {
     val familyPhotoUploadPreparer: FamilyPhotoUploadPreparer
     val chatBuddyRepository: ChatBuddyRepository
     val parentFamilyPhotoRepository: ParentFamilyPhotoRepository
-    val parentMedicationRepository: ParentMedicationRepository
     val parentLinkSafetyRepository: ParentLinkSafetyRepository
     val displayRepository: DisplayRepository
     val hospitalSpecialtyRepository: HospitalSpecialtyRepository
@@ -238,8 +234,6 @@ class DefaultAppContainer(
         ParentFamilyPhotoRepositoryImpl(
             MockParentFamilyPhotoDataSource(photoStore = familyPhotoStore)
         )
-    override val parentMedicationRepository: ParentMedicationRepository =
-        ParentMedicationRepositoryImpl(MockParentMedicationDataSource())
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
         ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource())
 }

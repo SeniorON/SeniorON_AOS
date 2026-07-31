@@ -20,6 +20,7 @@ fun ChildMainRoute(
         caregiverRelationshipRepository =
             appContainer.caregiverRelationshipRepositoryFor(userId),
         notificationRepository = appContainer.notificationRepository,
+        medicationRepository = appContainer.medicationRepository,
         familyServerRepository = appContainer.familyServerRepository,
         homeServerRepository = appContainer.homeServerRepository,
         eventRepository = appContainer.eventRepository,

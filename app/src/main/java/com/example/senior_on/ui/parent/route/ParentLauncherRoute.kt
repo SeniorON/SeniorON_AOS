@@ -1,13 +1,23 @@
 package com.example.senior_on.ui.parent.route
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.ui.parent.chat.ParentChatBuddyRoute
@@ -16,6 +26,9 @@ import com.example.senior_on.ui.parent.home.ParentHomeRoute
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentDeviceStatusViewModel
 import com.example.senior_on.ui.parent.medication.ParentMedicationRoute
+import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
+import com.example.senior_on.domain.model.parent.ParentMedication
+import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
 
@@ -34,6 +47,7 @@ fun ParentLauncherRoute(
     appContainer: AppContainer,
     modifier: Modifier = Modifier,
 ) {
+    RequestNotificationPermissionOnParentEntry()
     val deviceStatusViewModel: ParentDeviceStatusViewModel = viewModel(
         factory = ParentDeviceStatusViewModel.factory(
             repository = appContainer.deviceRepository,
@@ -50,6 +64,8 @@ fun ParentLauncherRoute(
     var destination by rememberSaveable {
         mutableStateOf(ParentDestination.Home)
     }
+    val medicationReminder by MedicationReminderEventStore.pendingEvent
+        .collectAsStateWithLifecycle()
 
     fun openHome() {
         destination = ParentDestination.Home
@@ -83,7 +99,7 @@ fun ParentLauncherRoute(
         )
 
         ParentDestination.Medication -> ParentMedicationRoute(
-            repository = appContainer.parentMedicationRepository,
+            repository = appContainer.medicationRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )
@@ -108,4 +124,43 @@ fun ParentLauncherRoute(
         )
     }
 
+    medicationReminder?.let { reminder ->
+        ParentMedicationReminderDialog(
+            medication = ParentMedication(
+                id = reminder.medicationLogId.toString(),
+                name = reminder.medicineName,
+                scheduledTime = reminder.plannedTime,
+            ),
+            onConfirmClick = {
+                MedicationReminderEventStore.consume()
+                destination = ParentDestination.Medication
+            },
+        )
+    }
+
+}
+
+@Composable
+private fun RequestNotificationPermissionOnParentEntry() {
+    if (
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        LocalInspectionMode.current
+    ) return
+
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {},
+    )
+
+    LaunchedEffect(Unit) {
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 }

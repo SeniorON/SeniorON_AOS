@@ -202,13 +202,32 @@ class HospitalRepositoryImpl(
 class MedicationRepositoryImpl(
     private val source: MedicationDataSource
 ) : MedicationRepository {
-    override suspend fun getMedications(parentId: Long) = source.getMedications(parentId).map {
-        MedicationInfo(
-            it.medicationId, it.medicationGroupId.orEmpty(), it.medicineName.orEmpty(),
-            it.ingredientName, listOfNotNull(it.medicineTime), it.medicineDays.orEmpty()
-                .split(",").map(String::trim).filter(String::isNotEmpty)
-        )
-    }
+    override suspend fun getMedications(parentId: Long): List<MedicationInfo> =
+        source.getMedications(parentId)
+            .groupBy { response ->
+                response.medicationGroupId
+                    ?.takeIf(String::isNotBlank)
+                    ?: response.medicationId?.toString().orEmpty()
+            }
+            .map { (groupId, responses) ->
+                val first = responses.first()
+                MedicationInfo(
+                    id = first.medicationId,
+                    groupId = groupId,
+                    name = first.medicineName.orEmpty(),
+                    ingredient = first.ingredientName,
+                    times = responses.mapNotNull { it.medicineTime }
+                        .map(String::trim)
+                        .filter(String::isNotEmpty)
+                        .distinct(),
+                    days = responses.flatMap { response ->
+                        response.medicineDays.orEmpty()
+                            .split(",")
+                            .map(String::trim)
+                            .filter(String::isNotEmpty)
+                    }.distinct(),
+                )
+            }
     override suspend fun create(parentId: Long, medication: MedicationInfo) =
         source.create(parentId, medication.toCreateRequest()).let {
             MedicationInfo(
@@ -227,8 +246,26 @@ class MedicationRepositoryImpl(
         source.getMySchedules(date.trim()).map(MedicationScheduleResponse::toDomain)
     override suspend fun getParentSchedules(parentId: Long, date: String) =
         source.getParentSchedules(parentId, date.trim()).map(MedicationScheduleResponse::toDomain)
-    override suspend fun markTaken(logId: Long) = source.check(logId).let {
-        MedicationSchedule(it.medicationLogId ?: logId, "", "", it.isTaken == true, it.takenAt)
+    override suspend fun getParentMonthlySchedules(parentId: Long, year: Int, month: Int) =
+        source.getParentMonthlySchedules(parentId, year, month).let { response ->
+            MedicationMonthlySchedule(
+                year = response.year ?: year,
+                month = response.month ?: month,
+                scheduledDates = response.scheduledDates.orEmpty()
+                    .mapNotNull { value ->
+                        runCatching { LocalDate.parse(value) }.getOrNull()
+                    }
+                    .toSet(),
+            )
+        }
+    override suspend fun markNearestTaken() = source.checkNearest().let {
+        MedicationSchedule(
+            logId = it.medicationLogId ?: 0L,
+            name = "",
+            plannedTime = "",
+            taken = it.isTaken == true,
+            takenAt = it.takenAt,
+        )
     }
 }
 
@@ -408,6 +445,14 @@ private fun MedicationInfo.toCreateRequest() =
 private fun MedicationInfo.toUpdateRequest() =
     MedicationUpdateRequest(groupId.trim(), name.trim(), ingredient?.trim(), days, times)
 private fun MedicationScheduleResponse.toDomain() =
-    MedicationSchedule(medicationLogId ?: 0, medicineName.orEmpty(), plannedTime.orEmpty(), isTaken == true)
+    MedicationSchedule(
+        logId = medicationLogId ?: 0,
+        name = medicineName.orEmpty(),
+        plannedTime = plannedTime.orEmpty(),
+        taken = isTaken == true,
+        ingredient = ingredientName,
+        plannedDate = plannedDate,
+        status = status,
+    )
 private fun InactivitySettingResponse.toDomain() =
     InactivitySetting(usersId ?: 0, thresholdHours ?: 0, isEnabled == true)

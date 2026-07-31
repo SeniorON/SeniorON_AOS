@@ -91,7 +91,7 @@ data class TodayMedicationUiState(
 internal fun TodayMedicationSection(
     selectedDate: LocalDate,
     todayMedications: List<TodayMedicationUiState>,
-    markedDays: Set<Int>,
+    markedDates: Set<LocalDate>,
     showCalendar: Boolean,
     onYearClick: () -> Unit,
     onPreviousDayClick: () -> Unit,
@@ -123,7 +123,7 @@ internal fun TodayMedicationSection(
             HealthCalendarCard(
                 displayedMonth = displayedMonth,
                 selectedDay = selectedDate.dayOfMonth,
-                markedDays = markedDays,
+                markedDates = markedDates,
                 onDayClick = onDayClick,
                 onPreviousMonthClick = onPreviousMonthClick,
                 onNextMonthClick = onNextMonthClick
@@ -233,7 +233,7 @@ private fun HealthDateNavigator(
 private fun HealthCalendarCard(
     displayedMonth: YearMonth,
     selectedDay: Int,
-    markedDays: Set<Int>,
+    markedDates: Set<LocalDate>,
     onDayClick: (Int) -> Unit,
     onPreviousMonthClick: () -> Unit,
     onNextMonthClick: () -> Unit
@@ -259,7 +259,11 @@ private fun HealthCalendarCard(
         ScheduleCalendar(
             displayedMonth = displayedMonth,
             selectedDay = selectedDay,
-            markedDays = markedDays,
+            markedDays = markedDates
+                .asSequence()
+                .filter { YearMonth.from(it) == displayedMonth }
+                .map(LocalDate::getDayOfMonth)
+                .toSet(),
             onDayClick = onDayClick,
             onPreviousMonthClick = onPreviousMonthClick,
             onNextMonthClick = onNextMonthClick,
@@ -682,7 +686,10 @@ internal fun previewTodayMedications() = listOf(
     )
 )
 
-internal fun previewMedicationMarkedDays() = setOf(19, 27)
+internal fun previewMedicationMarkedDates() = setOf(
+    LocalDate.of(2026, 6, 19),
+    LocalDate.of(2026, 6, 27),
+)
 
 @Preview(name = "오늘 복약 - 복약 있음", showBackground = true, widthDp = 360)
 @Composable
@@ -691,7 +698,7 @@ private fun TodayMedicationSectionPreview() {
         TodayMedicationSection(
             selectedDate = LocalDate.of(2026, 6, 12),
             todayMedications = previewTodayMedications(),
-            markedDays = previewMedicationMarkedDays(),
+            markedDates = previewMedicationMarkedDates(),
             showCalendar = false,
             onYearClick = {},
             onPreviousDayClick = {},
@@ -711,7 +718,7 @@ private fun EmptyTodayMedicationSectionPreview() {
         TodayMedicationSection(
             selectedDate = LocalDate.of(2026, 6, 12),
             todayMedications = emptyList(),
-            markedDays = emptySet(),
+            markedDates = emptySet(),
             showCalendar = false,
             onYearClick = {},
             onPreviousDayClick = {},

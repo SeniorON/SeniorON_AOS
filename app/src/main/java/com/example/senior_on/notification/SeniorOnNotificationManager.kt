@@ -71,6 +71,7 @@ object SeniorOnNotificationManager {
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or
                 Intent.FLAG_ACTIVITY_SINGLE_TOP
+            message.data.forEach { (key, value) -> putExtra(key, value) }
         }
         val pendingIntent = PendingIntent.getActivity(
             context,

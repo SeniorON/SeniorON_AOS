@@ -4,8 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
 import com.example.senior_on.domain.model.parent.ParentMedication
+import com.example.senior_on.domain.model.server.MedicationSchedule
+import com.example.senior_on.domain.repository.server.MedicationRepository
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeParseException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -26,17 +34,17 @@ data class ParentMedicationUiState(
 )
 
 class ParentMedicationViewModel(
-    private val repository: ParentMedicationRepository
+    private val repository: MedicationRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentMedicationUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        loadMedication()
-    }
+    private var loadJob: Job? = null
+    private var submitJob: Job? = null
 
     fun loadMedication() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     content = ParentMedicationContent.Loading,
@@ -45,21 +53,31 @@ class ParentMedicationViewModel(
             }
 
             runCatching {
-                repository.getTodayMedication()
-            }.onSuccess { medication ->
+                repository.getMySchedules(LocalDate.now().toString())
+            }.onSuccess { schedules ->
+                val pendingMedication = schedules
+                    .filterNot(MedicationSchedule::taken)
+                    .minByOrNull { schedule ->
+                        Duration.between(
+                            LocalTime.now(),
+                            schedule.plannedTime.toLocalTimeOrNull() ?: LocalTime.MAX,
+                        ).abs()
+                    }
+                    ?.toParentMedication()
                 _uiState.update {
                     it.copy(
                         content = when {
-                            medication == null -> ParentMedicationContent.Empty
-                            medication.takenAt != null ->
-                                ParentMedicationContent.Completed
-                            else -> ParentMedicationContent.Due
+                            pendingMedication != null -> ParentMedicationContent.Due
+                            else -> ParentMedicationContent.Empty
                         },
-                        medication = medication,
+                        medication = pendingMedication,
                         isSubmitting = false
                     )
                 }
-            }.onFailure {
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) {
+                    return@onFailure
+                }
                 _uiState.update {
                     it.copy(
                         content = ParentMedicationContent.Empty,
@@ -72,23 +90,26 @@ class ParentMedicationViewModel(
     }
 
     fun markAsTaken() {
-        val medication = _uiState.value.medication ?: return
+        if (_uiState.value.medication == null) return
         if (_uiState.value.isSubmitting) return
 
-        viewModelScope.launch {
+        submitJob = viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
-            runCatching { repository.markAsTaken(medication.id) }
-                .onSuccess { updatedMedication ->
+            runCatching { repository.markNearestTaken() }
+                .onSuccess {
                     _uiState.update {
                         it.copy(
                             content = ParentMedicationContent.Completed,
-                            medication = updatedMedication,
+                            medication = it.medication?.copy(takenAt = Instant.now()),
                             isSubmitting = false
                         )
                     }
                 }
-                .onFailure {
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) {
+                        return@onFailure
+                    }
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
@@ -99,11 +120,40 @@ class ParentMedicationViewModel(
         }
     }
 
+    fun reset() {
+        loadJob?.cancel()
+        loadJob = null
+        submitJob?.cancel()
+        submitJob = null
+        _uiState.value = ParentMedicationUiState()
+    }
+
+    override fun onCleared() {
+        loadJob?.cancel()
+        submitJob?.cancel()
+        super.onCleared()
+    }
+
     companion object {
-        fun factory(repository: ParentMedicationRepository) = viewModelFactory {
+        fun factory(repository: MedicationRepository) = viewModelFactory {
             initializer {
                 ParentMedicationViewModel(repository)
             }
         }
     }
+}
+
+private fun MedicationSchedule.toParentMedication(
+    taken: Boolean = this.taken,
+): ParentMedication = ParentMedication(
+    id = logId.toString(),
+    name = name,
+    scheduledTime = plannedTime.toLocalTimeOrNull() ?: LocalTime.MIDNIGHT,
+    takenAt = if (taken) Instant.EPOCH else null,
+)
+
+private fun String.toLocalTimeOrNull(): LocalTime? = try {
+    LocalTime.parse(trim())
+} catch (_: DateTimeParseException) {
+    null
 }

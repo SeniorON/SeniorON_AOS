@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.server.EventRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +41,7 @@ class ParentEmergencyAlertViewModel(
     val uiState = _uiState.asStateFlow()
 
     private var countdownJob: Job? = null
+    private var sendJob: Job? = null
 
     fun startCountdown() {
         countdownJob?.cancel()
@@ -70,7 +72,7 @@ class ParentEmergencyAlertViewModel(
         countdownJob?.cancel()
         countdownJob = null
 
-        viewModelScope.launch {
+        sendJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     status = ParentEmergencyAlertStatus.Sending,
@@ -92,6 +94,9 @@ class ParentEmergencyAlertViewModel(
                     }
                 }
                 .onFailure { throwable ->
+                    if (throwable is CancellationException) {
+                        return@onFailure
+                    }
                     _uiState.update {
                         it.copy(
                             status = ParentEmergencyAlertStatus.Failed,
@@ -117,6 +122,8 @@ class ParentEmergencyAlertViewModel(
     fun cancel() {
         countdownJob?.cancel()
         countdownJob = null
+        sendJob?.cancel()
+        sendJob = null
         _uiState.value = ParentEmergencyAlertUiState()
     }
 
@@ -126,6 +133,7 @@ class ParentEmergencyAlertViewModel(
 
     override fun onCleared() {
         countdownJob?.cancel()
+        sendJob?.cancel()
         super.onCleared()
     }
 
