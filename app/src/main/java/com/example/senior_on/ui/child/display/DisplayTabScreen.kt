@@ -290,7 +290,7 @@ private fun ParentInformationCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(126.dp)
+            .height(134.dp)
             .dropShadow(
                 shape = shape,
                 shadow = Shadow(
@@ -354,6 +354,15 @@ private fun ParentInformationCard(
         )
 
         Spacer(modifier = Modifier.weight(1f))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(SeniorOnColors.SupportWhite20)
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),

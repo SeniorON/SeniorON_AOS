@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -23,6 +24,7 @@ import com.example.senior_on.ui.common.seniorinfo.toParentInfo
 private enum class DisplayDestination {
     Overview,
     DeviceConnection,
+    SeniorAppInstallGuide,
     ParentInfoEdit,
     AddressSearch,
     FontEdit,
@@ -50,6 +52,7 @@ fun DisplayTabRoute(
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var showInternetRequiredDialog by remember { mutableStateOf(false) }
     var showLargePreview by rememberSaveable { mutableStateOf(false) }
+    var installGuidePhoneNumber by rememberSaveable { mutableStateOf("") }
     var buttonEditDraftNames by rememberSaveable {
         mutableStateOf(arrayListOf<String>())
     }
@@ -68,6 +71,7 @@ fun DisplayTabRoute(
             DisplayDestination.ButtonAdd -> DisplayDestination.ButtonEditSelected
             DisplayDestination.ButtonEditSelected -> DisplayDestination.ButtonEditGuide
             DisplayDestination.DeviceConnection,
+            DisplayDestination.SeniorAppInstallGuide,
             DisplayDestination.ParentInfoEdit,
             DisplayDestination.FontEdit,
             DisplayDestination.ButtonEditGuide,
@@ -75,11 +79,20 @@ fun DisplayTabRoute(
         }
     }
 
+    fun navigateToSeniorAppInstallGuide() {
+        installGuidePhoneNumber = uiState.parentInfo
+            ?.phoneNumber
+            .orEmpty()
+            .filter(Char::isDigit)
+            .take(11)
+        destination = DisplayDestination.SeniorAppInstallGuide
+    }
+
     fun runWhenParentPhoneOnline(action: () -> Unit) {
         when (uiState.device?.connectionStatus) {
             DisplayDeviceConnectionStatus.Online -> action()
             DisplayDeviceConnectionStatus.Offline -> showInternetRequiredDialog = true
-            null -> destination = DisplayDestination.DeviceConnection
+            null -> navigateToSeniorAppInstallGuide()
         }
     }
 
@@ -111,14 +124,24 @@ fun DisplayTabRoute(
                     !uiState.isSaving,
                 modifier = modifier,
                 onDeviceClick = {
-                    destination = DisplayDestination.DeviceConnection
+                    if (uiState.device == null) {
+                        navigateToSeniorAppInstallGuide()
+                    } else {
+                        destination = DisplayDestination.DeviceConnection
+                    }
                 },
                 onParentInfoClick = {
-                    saveableStateHolder.removeState(DisplayDestination.ParentInfoEdit.name)
-                    selectedAddress = uiState.parentInfo?.address.orEmpty()
-                    selectedAddressLatitude = uiState.parentInfo?.addressLatitude
-                    selectedAddressLongitude = uiState.parentInfo?.addressLongitude
-                    destination = DisplayDestination.ParentInfoEdit
+                    if (uiState.device == null) {
+                        navigateToSeniorAppInstallGuide()
+                    } else {
+                        saveableStateHolder.removeState(
+                            DisplayDestination.ParentInfoEdit.name
+                        )
+                        selectedAddress = uiState.parentInfo?.address.orEmpty()
+                        selectedAddressLatitude = uiState.parentInfo?.addressLatitude
+                        selectedAddressLongitude = uiState.parentInfo?.addressLongitude
+                        destination = DisplayDestination.ParentInfoEdit
+                    }
                 },
                 onLargePreviewClick = {
                     runWhenParentPhoneOnline {
@@ -157,6 +180,18 @@ fun DisplayTabRoute(
                 },
                 onDisconnectClick = { viewModel.disconnectDevice() },
                 onInstallGuideClick = onInstallGuideClick,
+            )
+
+            DisplayDestination.SeniorAppInstallGuide -> SeniorAppInstallGuideScreen(
+                phoneNumber = TextFieldValue(installGuidePhoneNumber),
+                onPhoneNumberChange = { value ->
+                    installGuidePhoneNumber = value.text
+                        .filter(Char::isDigit)
+                        .take(11)
+                },
+                modifier = modifier,
+                onBackClick = ::navigateBack,
+                onSendInstallLinkClick = onInstallGuideClick,
             )
 
             DisplayDestination.ParentInfoEdit -> ParentInfoEditScreen(
