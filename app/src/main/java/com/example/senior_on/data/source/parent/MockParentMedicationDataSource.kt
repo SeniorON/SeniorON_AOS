@@ -28,10 +28,6 @@ class MockParentMedicationDataSource(
         }
     }
 
-    override suspend fun hasPendingReminder(): Boolean =
-        scenario == MockParentMedicationScenario.Scheduled &&
-            medication.takenAt == null
-
     override suspend fun markAsTaken(medicationId: String): ParentMedication {
         require(scenario == MockParentMedicationScenario.Scheduled) {
             "No medication is scheduled"

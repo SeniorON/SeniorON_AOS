@@ -1,5 +1,8 @@
 package com.example.senior_on.domain.model.server
 
+import java.time.LocalDate
+import java.time.LocalTime
+
 data class ServerButton(
     val id: Long, val optionId: Long? = null, val order: Int,
     val name: String, val icon: String?, val actionType: String?,
@@ -33,6 +36,15 @@ data class SeniorHomeSnapshot(
     val fontSize: String,
     val musicCard: ServerMusicCard?,
     val todaySchedule: ServerTodaySchedule?,
+)
+data class TodayHospitalSchedule(
+    val id: Long,
+    val hospitalName: String,
+    val department: String,
+    val date: LocalDate,
+    val time: LocalTime,
+    val reminderType: String?,
+    val registeredBy: String?,
 )
 data class WeatherInfo(val temperature: Int, val status: String, val text: String, val observedAt: String?)
 data class DeviceInfo(

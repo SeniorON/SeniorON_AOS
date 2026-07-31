@@ -16,6 +16,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.time.LocalDate
+import java.time.LocalTime
 
 class HomeServerRepositoryImpl(
     private val source: HomeDataSource
@@ -33,7 +35,9 @@ class HomeServerRepositoryImpl(
     }
     override suspend fun getSeniorHome() = source.getSeniorHome().let {
         SeniorHomeSnapshot(
-            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
+            buttons = it.buttons.orEmpty()
+                .sortedBy { button -> button.button_order }
+                .map(HomeButtonResponse::toDomain),
             fontSize = it.font_size.orEmpty(),
             musicCard = it.music_card?.let { card ->
                 ServerMusicCard(
@@ -58,6 +62,22 @@ class HomeServerRepositoryImpl(
             },
         )
     }
+    override suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule> =
+        source.getTodayHospitals().map { schedule ->
+            TodayHospitalSchedule(
+                id = schedule.hospitalId ?: 0,
+                hospitalName = schedule.hospitalName.orEmpty(),
+                department = schedule.department.orEmpty(),
+                date = schedule.scheduleDate
+                    ?.let(LocalDate::parse)
+                    ?: LocalDate.now(),
+                time = schedule.scheduleTime
+                    ?.let(LocalTime::parse)
+                    ?: LocalTime.MIDNIGHT,
+                reminderType = schedule.reminderType,
+                registeredBy = schedule.registeredBy,
+            )
+        }.sortedBy(TodayHospitalSchedule::time)
     override suspend fun getWeather(latitude: Double, longitude: Double) =
         source.getWeather(latitude, longitude).let {
             WeatherInfo(it.temperature ?: 0, it.weatherStatus.orEmpty(), it.weatherText.orEmpty(), it.observedAt)
@@ -341,8 +361,14 @@ class DeviceRepositoryImpl(
 }
 
 private fun HomeButtonResponse.toDomain() = ServerButton(
-    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon,
-    action_type, action_value, package_name,
+    button_id ?: 0,
+    null,
+    button_order ?: 0,
+    button_name.orEmpty(),
+    icon,
+    action_type,
+    action_value,
+    package_name,
 )
 private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
     usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl

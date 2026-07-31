@@ -9,6 +9,7 @@
         <package android:name="com.nhn.android.nmap" />
         <package android:name="net.daum.android.map" />
         <package android:name="com.kakao.talk" />
+        <package android:name="com.nhn.android.search" />
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
@@ -54,6 +55,11 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <activity
+            android:name=".ui.parent.launcher.ParentLauncherActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SENIOR_ON" />
 
         <activity
             android:name=".MainActivity"

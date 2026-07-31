@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -46,9 +47,9 @@ import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.child.display.displayLabel
-import com.example.senior_on.ui.child.display.isMusicButton
-import com.example.senior_on.ui.child.display.withEmergencyAtFixedGridSlot
-import com.example.senior_on.ui.parent.schedule.viewmodel.ParentScheduleUiState
+import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
+import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeScheduleUiState
+import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeWeatherUiState
 import com.example.senior_on.ui.parent.schedule.viewmodel.toParentDisplayTime
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -62,10 +63,13 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun ParentHomeScreen(
     configuration: SeniorScreenConfiguration,
-    scheduleUiState: ParentScheduleUiState,
-    onMusicClick: (SeniorHomeButtonType) -> Unit,
+    musicButton: ParentHomeButtonUiModel?,
+    buttons: List<ParentHomeButtonUiModel>,
+    scheduleUiState: ParentHomeScheduleUiState,
+    weatherUiState: ParentHomeWeatherUiState,
+    onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
-    onButtonClick: (SeniorHomeButtonType) -> Unit,
+    onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val now by produceState(initialValue = LocalDateTime.now()) {
@@ -74,13 +78,8 @@ internal fun ParentHomeScreen(
             delay(30_000)
         }
     }
-    val musicButton = configuration.buttons.firstOrNull {
-        it.isMusicButton()
-    }
-    val gridButtons = configuration.buttons
-        .filterNot { button ->
-            button.isMusicButton() || button == SeniorHomeButtonType.Schedule
-        }
+    val gridButtons = buttons
+        .filterNot { it.type == SeniorHomeButtonType.Schedule }
         .withEmergencyAtFixedGridSlot()
 
     Column(
@@ -105,13 +104,15 @@ internal fun ParentHomeScreen(
             .verticalScroll(rememberScrollState())
             .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 24.dp),
     ) {
-        ParentDateWeatherHeader(now = now)
+        ParentDateWeatherHeader(
+            now = now,
+            weatherUiState = weatherUiState,
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         musicButton?.let { button ->
             ParentMusicCard(
-                label = configuration.customButtonLabels[button] ?: "노래 듣기",
                 onClick = { onMusicClick(button) },
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -134,8 +135,6 @@ internal fun ParentHomeScreen(
                     rowButtons.forEach { button ->
                         ParentHomeGridButton(
                             button = button,
-                            label = configuration.customButtonLabels[button]
-                                ?: button.displayLabel(),
                             textStyle = configuration.fontSize.homeButtonTextStyle,
                             onClick = { onButtonClick(button) },
                             modifier = Modifier.weight(1f),
@@ -151,49 +150,54 @@ internal fun ParentHomeScreen(
 }
 
 @Composable
-private fun ParentDateWeatherHeader(now: LocalDateTime) {
+private fun ParentDateWeatherHeader(
+    now: LocalDateTime,
+    weatherUiState: ParentHomeWeatherUiState,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(78.dp),
+            .heightIn(min = 78.dp),
     ) {
-        Text(
-            text = now.format(
-                DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
-            ),
-            modifier = Modifier.align(Alignment.TopStart),
-            style = SeniorOnTextStyles.HeadingS,
-            color = SeniorOnColors.Gray700,
-            maxLines = 1,
-        )
-        Text(
-            text = now.format(
-                DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
-            ),
-            modifier = Modifier.align(Alignment.BottomStart),
-            style = SeniorOnTextStyles.Display,
-            color = SeniorOnColors.Gray800,
-            maxLines = 1,
-        )
+        Column(modifier = Modifier.align(Alignment.CenterStart)) {
+            Text(
+                text = now.format(
+                    DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
+                ),
+                style = SeniorOnTextStyles.HeadingS,
+                color = SeniorOnColors.Gray700,
+                maxLines = 1,
+            )
+            Text(
+                text = now.format(
+                    DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+                ),
+                style = SeniorOnTextStyles.Display,
+                color = SeniorOnColors.Gray800,
+                maxLines = 1,
+            )
+        }
         Row(
             modifier = Modifier.align(Alignment.BottomEnd),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_weather_sun),
-                contentDescription = "맑음",
+                contentDescription = weatherUiState.text,
                 modifier = Modifier.size(34.dp).align(Alignment.Top),
                 tint = Color.Unspecified,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "20°C",
+                    text = weatherUiState.temperature
+                        ?.let { "$it°C" }
+                        ?: "--°C",
                     style = SeniorOnTextStyles.HeadingM,
                     color = SeniorOnColors.Gray800,
                 )
                 Text(
-                    text = "맑음",
+                    text = weatherUiState.text,
                     style = SeniorOnTextStyles.HeadingS,
                     color = SeniorOnColors.Gray700,
                 )
@@ -204,7 +208,6 @@ private fun ParentDateWeatherHeader(now: LocalDateTime) {
 
 @Composable
 private fun ParentMusicCard(
-    label: String,
     onClick: () -> Unit,
 ) {
     Row(
@@ -227,7 +230,7 @@ private fun ParentMusicCard(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = label,
+                text = "음악 듣기",
                 style = SeniorOnTextStyles.HeadingL,
                 color = SeniorOnColors.SupportWhite100,
                 maxLines = 1,
@@ -235,7 +238,7 @@ private fun ParentMusicCard(
         }
         Icon(
             painter = painterResource(R.drawable.ic_big_play),
-            contentDescription = "$label 실행",
+            contentDescription = "음악 듣기 실행",
             modifier = Modifier.size(42.dp),
             tint = SeniorOnColors.White,
         )
@@ -244,12 +247,11 @@ private fun ParentMusicCard(
 
 @Composable
 private fun ParentTodayScheduleCard(
-    uiState: ParentScheduleUiState,
+    uiState: ParentHomeScheduleUiState,
     isFeatured: Boolean,
     onClick: () -> Unit,
 ) {
-    val firstSchedule = uiState.schedules.firstOrNull()
-    val scheduleCount = uiState.schedules.size
+    val scheduleCount = uiState.count
     val backgroundColor = if (isFeatured) {
         SeniorOnColors.Primary700
     } else {
@@ -345,17 +347,21 @@ private fun ParentTodayScheduleCard(
                 maxLines = 1,
             )
 
-            scheduleCount == 1 && firstSchedule != null -> Column(
+            scheduleCount == 1 -> Column(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = firstSchedule.time.toParentDisplayTime(),
+                    text = uiState.scheduledTime?.toParentDisplayTime()
+                        ?: "오늘 일정이 있어요",
                     style = SeniorOnTextStyles.HeadingL,
                     color = primaryContentColor,
                     maxLines = 1,
                 )
                 Text(
-                    text = firstSchedule.title,
+                    text = listOfNotNull(
+                        uiState.title?.takeIf(String::isNotBlank),
+                        uiState.description?.takeIf(String::isNotBlank),
+                    ).joinToString(" · "),
                     style = SeniorOnTextStyles.HeadingXS,
                     color = secondaryContentColor,
                     maxLines = 1,
@@ -390,13 +396,12 @@ private fun ParentTodayScheduleCard(
 
 @Composable
 private fun ParentHomeGridButton(
-    button: SeniorHomeButtonType,
-    label: String,
+    button: ParentHomeButtonUiModel,
     textStyle: TextStyle,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isEmergency = button == SeniorHomeButtonType.Emergency
+    val isEmergency = button.type == SeniorHomeButtonType.Emergency
 
     Box(
         modifier = modifier
@@ -417,7 +422,7 @@ private fun ParentHomeGridButton(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = label,
+            text = button.label,
             modifier = Modifier.padding(horizontal = 20.dp),
             style = textStyle,
             color = if (isEmergency) SeniorOnColors.White else SeniorOnColors.Gray800,
@@ -440,13 +445,51 @@ private val ParentFeatureCardShape =
 private val ParentGridCardShape =
     RoundedCornerShape(20.dp)
 
+private fun List<ParentHomeButtonUiModel>.withEmergencyAtFixedGridSlot():
+    List<ParentHomeButtonUiModel> {
+    val emergency = firstOrNull { it.type == SeniorHomeButtonType.Emergency }
+    val otherButtons = filterNot { it.type == SeniorHomeButtonType.Emergency }
+    if (emergency == null) return otherButtons
+
+    return buildList {
+        addAll(otherButtons.take(7))
+        add(emergency)
+        addAll(otherButtons.drop(7))
+    }
+}
+
 @Preview(showBackground = true, widthDp = 360, heightDp = 960)
 @Composable
 private fun ParentHomeScreenPreview() {
     SENIOR_ONTheme {
         ParentHomeScreen(
             configuration = MockDisplayFixtures.defaultScreenConfiguration,
-            scheduleUiState = ParentScheduleUiState(isLoading = false),
+            musicButton = ParentHomeButtonUiModel(
+                id = 0,
+                type = SeniorHomeButtonType.Melon,
+                label = "음악 듣기",
+                actionType = "APP",
+                actionValue = "MELON",
+                packageName = "com.iloen.melon",
+            ),
+            buttons = MockDisplayFixtures.defaultScreenConfiguration.buttons
+                .filterNot { it == SeniorHomeButtonType.Melon }
+                .mapIndexed { index, type ->
+                    ParentHomeButtonUiModel(
+                        id = index.toLong(),
+                        type = type,
+                        label = type.displayLabel(),
+                        actionType = "DEFAULT",
+                        actionValue = type.name,
+                        packageName = null,
+                    )
+                },
+            scheduleUiState = ParentHomeScheduleUiState(isLoading = false),
+            weatherUiState = ParentHomeWeatherUiState(
+                temperature = 20,
+                status = "CLEAR",
+                text = "맑음",
+            ),
             onMusicClick = {},
             onScheduleClick = {},
             onButtonClick = {},
