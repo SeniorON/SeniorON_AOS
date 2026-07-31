@@ -19,6 +19,7 @@ object MockDisplayFixtures {
                 name = CONNECTED_DEVICE_NAME,
                 connectionStatus = DisplayDeviceConnectionStatus.Online,
                 batteryLevelPercent = 72,
+                lastConnectedAtLabel = "1분 전",
                 lastLocationUpdatedAtLabel = "1분 전",
             )
 

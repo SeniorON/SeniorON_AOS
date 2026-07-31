@@ -78,7 +78,8 @@ data class TodayScheduleResponse(
 )
 data class SeniorProfileResponse(
     val senior_id: Long?, val name: String?, val relation: String?,
-    val birth: String?, val age: Int?, val address: String?, val phone: String?
+    val birth: String?, val age: Int?, val address: String?, val phone: String?,
+    val detail_address: String? = null,
 )
 data class HomeResponse(
     val connection: ConnectionResponse?, val buttons: List<HomeButtonResponse>?,

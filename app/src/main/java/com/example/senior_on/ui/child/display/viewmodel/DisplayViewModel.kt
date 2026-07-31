@@ -5,15 +5,18 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.senior_on.domain.model.display.DisplayOverview
 import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.ui.child.display.DisplayTabUiState
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,34 +57,60 @@ class DisplayViewModel(
                     errorMessage = null,
                 )
             }
-            val canEditScreen = runCatching {
-                displayRepository.canCurrentUserEditScreen()
-            }.getOrDefault(false)
+
+            val editPermissionRequest = async {
+                runCatching { displayRepository.canCurrentUserEditScreen() }
+            }
+            val overviewRequest = async {
+                runCatching {
+                    displayRepository.getOverview(
+                        parentInfoRepository.parentInfo.value
+                    )
+                }
+            }
+            val deviceRequest = async {
+                runCatching { displayRepository.getDevice() }
+            }
+            refreshWeather()
+
+            val canEditScreen = editPermissionRequest.await().getOrDefault(false)
             _uiState.update {
                 it.copy(
                     canEditScreen = canEditScreen,
                     isEditPermissionLoading = false,
                 )
             }
-            runCatching {
-                loadOverviewWithInitialButtons(canEditScreen)
-            }.onSuccess { overview ->
-                val parentInfo = overview.parentInfo
-                    ?: parentInfoRepository.parentInfo.value
-                parentInfo?.let(::shareParentInfo)
-                _uiState.update {
-                    it.copy(
-                        parentInfo = parentInfo,
-                        relationshipLabel = parentInfo?.relationshipLabel,
-                        device = overview.device,
-                        todaySchedule = overview.todaySchedule,
-                        screenConfiguration = overview.screenConfiguration,
-                        availableButtonTypes = overview.availableButtonTypes,
-                        isLoading = false,
+            overviewRequest.await()
+                .mapCatching { overview ->
+                    applyInitialButtonsIfNeeded(
+                        overview = overview,
+                        canEditScreen = canEditScreen,
                     )
                 }
-                refreshWeather(parentInfo)
-            }.onFailure(::handleLoadFailure)
+                .onSuccess { overview ->
+                    val parentInfo = overview.parentInfo
+                        ?: parentInfoRepository.parentInfo.value
+                    parentInfo?.let(::shareParentInfo)
+                    _uiState.update {
+                        it.copy(
+                            parentInfo = parentInfo,
+                            relationshipLabel = parentInfo?.relationshipLabel,
+                            device = overview.device,
+                            todaySchedule = overview.todaySchedule,
+                            screenConfiguration = overview.screenConfiguration,
+                            availableButtonTypes = overview.availableButtonTypes,
+                            isLoading = false,
+                        )
+                    }
+                }
+                .onFailure(::handleLoadFailure)
+
+            deviceRequest.await()
+                .onSuccess { device ->
+                    if (device != null) {
+                        _uiState.update { it.copy(device = device) }
+                    }
+                }
         }
     }
 
@@ -102,33 +131,33 @@ class DisplayViewModel(
         }
     }
 
-    private suspend fun loadOverviewWithInitialButtons(canEditScreen: Boolean) =
-        displayRepository.getOverview(
-            parentInfoRepository.parentInfo.value
-        ).let { overview ->
-            if (
-                overview.hasSavedButtonConfiguration ||
-                !canEditScreen ||
-                isInitialButtonSetupInProgress
-            ) {
-                return@let overview
-            }
-
-            isInitialButtonSetupInProgress = true
-            try {
-                displayRepository.saveButtons(
-                    buttons = InitialSeniorHomeGridButtons,
-                    customButtonLabels = emptyMap(),
-                )
-            } catch (throwable: Throwable) {
-                isInitialButtonSetupInProgress = false
-                throw throwable
-            }
-
-            displayRepository.getOverview(
-                parentInfoRepository.parentInfo.value
-            )
+    private suspend fun applyInitialButtonsIfNeeded(
+        overview: DisplayOverview,
+        canEditScreen: Boolean,
+    ): DisplayOverview {
+        if (
+            overview.hasSavedButtonConfiguration ||
+            !canEditScreen ||
+            isInitialButtonSetupInProgress
+        ) {
+            return overview
         }
+
+        isInitialButtonSetupInProgress = true
+        try {
+            displayRepository.saveButtons(
+                buttons = InitialSeniorHomeGridButtons,
+                customButtonLabels = emptyMap(),
+            )
+        } catch (throwable: Throwable) {
+            isInitialButtonSetupInProgress = false
+            throw throwable
+        }
+
+        return displayRepository.getOverview(
+            parentInfoRepository.parentInfo.value
+        )
+    }
 
     fun refreshDevice() {
         if (_uiState.value.isRefreshingDevice) return
@@ -173,7 +202,7 @@ class DisplayViewModel(
                     relationshipLabel = savedParentInfo.relationshipLabel,
                 )
             }
-            refreshWeather(savedParentInfo)
+            refreshWeather()
         }
     }
 
@@ -273,25 +302,13 @@ class DisplayViewModel(
         }
     }
 
-    private fun refreshWeather(parentInfo: ParentInfo?) {
-        val latitude = parentInfo?.addressLatitude
-        val longitude = parentInfo?.addressLongitude
-        if (latitude == null || longitude == null) {
-            _uiState.update {
-                it.copy(
-                    weather = null,
-                    isWeatherLoading = false,
-                )
-            }
-            return
-        }
-
+    private fun refreshWeather() {
         viewModelScope.launch {
             _uiState.update { it.copy(isWeatherLoading = true) }
             runCatching {
                 displayRepository.getWeather(
-                    latitude = latitude,
-                    longitude = longitude,
+                    latitude = DefaultWeatherCoordinates.LATITUDE,
+                    longitude = DefaultWeatherCoordinates.LONGITUDE,
                 )
             }.onSuccess { weather ->
                 _uiState.update {

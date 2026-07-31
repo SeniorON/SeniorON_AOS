@@ -47,6 +47,7 @@ class DisplayRepositoryImplTest {
                     age = 66,
                     address = "서울시 강남구",
                     phone = "010-1234-5678",
+                    detail_address = "101동 202호",
                 ),
                 font_size = "LARGE",
                 music_card = null,
@@ -73,6 +74,8 @@ class DisplayRepositoryImplTest {
 
         assertEquals(77L, parentInfo?.seniorId)
         assertEquals("김영희", parentInfo?.name)
+        assertEquals("서울시 강남구", parentInfo?.address)
+        assertEquals("101동 202호", parentInfo?.addressDetail)
     }
 
     @Test
