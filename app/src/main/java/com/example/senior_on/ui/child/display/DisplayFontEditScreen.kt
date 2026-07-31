@@ -40,6 +40,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
+import com.example.senior_on.domain.model.display.DisplayTodaySchedule
+import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -50,6 +52,9 @@ fun DisplayFontEditScreen(
     initialFontSize: SeniorFontSize,
     buttons: List<SeniorHomeButtonType>,
     customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
+    weather: DisplayWeather? = null,
+    isWeatherLoading: Boolean = false,
+    todaySchedule: DisplayTodaySchedule? = null,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onSaveClick: (SeniorFontSize) -> Unit = {},
@@ -89,7 +94,12 @@ fun DisplayFontEditScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            FontPreviewCard(configuration = previewConfiguration)
+            FontPreviewCard(
+                configuration = previewConfiguration,
+                weather = weather,
+                isWeatherLoading = isWeatherLoading,
+                todaySchedule = todaySchedule,
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -169,6 +179,9 @@ private fun FontEditTopBar(
 @Composable
 private fun FontPreviewCard(
     configuration: SeniorScreenConfiguration,
+    weather: DisplayWeather?,
+    isWeatherLoading: Boolean,
+    todaySchedule: DisplayTodaySchedule?,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -210,6 +223,9 @@ private fun FontPreviewCard(
         ) {
             SeniorPhonePreview(
                 configuration = configuration,
+                weather = weather,
+                isWeatherLoading = isWeatherLoading,
+                todaySchedule = todaySchedule,
             )
         }
     }

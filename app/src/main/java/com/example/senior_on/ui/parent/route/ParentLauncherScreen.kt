@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -78,6 +79,7 @@ import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
 import com.example.senior_on.data.source.parent.MockParentMedicationDataSource
 import com.example.senior_on.data.source.parent.MockParentScheduleDataSource
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
@@ -168,8 +170,14 @@ fun ParentLauncherScreen(
         emergencyAlertViewModel.uiState.collectAsStateWithLifecycle()
     val linkDetectionUiState by
         linkDetectionViewModel.uiState.collectAsStateWithLifecycle()
-    val displayOverview by
-        displayRepository.overview.collectAsStateWithLifecycle()
+    val screenConfiguration by produceState(
+        initialValue = SeniorScreenConfiguration(),
+        key1 = displayRepository,
+    ) {
+        value = runCatching {
+            displayRepository.getSeniorScreenConfiguration()
+        }.getOrDefault(value)
+    }
 
     LaunchedEffect(linkDetectionUiState.status) {
         if (linkDetectionUiState.status == ParentLinkDetectionStatus.Safe) {
@@ -206,7 +214,7 @@ fun ParentLauncherScreen(
 
     when (destination) {
         ParentLauncherDestination.Home -> ParentHomeScreen(
-            configuration = displayOverview.screenConfiguration,
+            configuration = screenConfiguration,
             scheduleUiState = scheduleUiState,
             onMusicClick = { button ->
                 openSeniorHomeButton(context, button)

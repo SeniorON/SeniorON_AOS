@@ -72,14 +72,45 @@ class HomeServerRepositoryImpl(
     override suspend fun getButtonOptions() = source.getButtonOptions().map {
         ServerButton(0, it.option_id, 0, it.button_name.orEmpty(), it.icon, it.action_type, it.action_value)
     }
-    override suspend fun saveButtons(musicApp: String?, buttons: List<ServerButton>) =
-        source.saveButtons(HomeButtonSaveRequest(musicApp, buttons.map(ServerButton::toRequest)))
+    override suspend fun saveButtons(
+        musicApp: String?,
+        buttons: List<ServerButton>,
+    ) =
+        source.saveButtons(
+            HomeButtonSaveRequest(
+                musicApp = musicApp,
+                buttons = buttons.map { button ->
+                    ButtonRequest(
+                        buttonOrder = button.order,
+                        buttonName = button.name,
+                        actionType = requireNotNull(button.actionType) {
+                            "액션 타입이 없는 버튼은 저장할 수 없습니다."
+                        },
+                        actionValue = requireNotNull(button.actionValue) {
+                            "액션 값이 없는 버튼은 저장할 수 없습니다."
+                        },
+                        packageName = button.packageName,
+                    )
+                },
+            )
+        )
     override suspend fun addButton(optionId: Long) =
         source.addButton(HomeButtonCreateRequest(optionId)).let {
             ServerButton(it.buttonId ?: 0, optionId, it.buttonOrder ?: 0, it.buttonName.orEmpty(), it.icon, null, null)
         }
-    override suspend fun updateButtons(buttons: List<ServerButton>) =
-        source.updateButtons(HomeButtonUpdateRequest(buttons.map(ServerButton::toRequest)))
+    override suspend fun updateButtons(buttons: List<Pair<Long, Int>>) =
+        source.updateButtons(
+            HomeButtonUpdateRequest(
+                buttons.map { (buttonId, buttonOrder) ->
+                    HomeButtonUpdateItemRequest(
+                        button_id = buttonId,
+                        button_order = buttonOrder,
+                        button_name = null,
+                        icon = null,
+                    )
+                }
+            )
+        )
     override suspend fun deleteButton(buttonId: Long) = source.deleteButton(buttonId)
     override suspend fun updateFontSize(fontSize: String) =
         source.updateFontSize(HomeFontSizeUpdateRequest(fontSize.trim().uppercase()))
@@ -310,15 +341,8 @@ class DeviceRepositoryImpl(
 }
 
 private fun HomeButtonResponse.toDomain() = ServerButton(
-    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon, action_type,
-    action_value, package_name
-)
-private fun ServerButton.toRequest() = ButtonRequest(
-    buttonOrder = order,
-    buttonName = name,
-    actionType = actionType,
-    actionValue = actionValue,
-    packageName = packageName,
+    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon,
+    action_type, action_value, package_name,
 )
 private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
     usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl

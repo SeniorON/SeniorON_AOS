@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -263,6 +264,7 @@ fun SettingsScreen(
 
             SettingsMenuSectionCard(
                 title = "지원",
+                cardHeight = 206.dp,
                 items = listOf(
                     SettingsMenuItem(
                         label = "도움말 · 문의",
@@ -529,9 +531,10 @@ private fun SettingsProfileSection(
         ) {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(64.dp)
                     .clip(CircleShape)
-                    .background(SeniorOnColors.Gray100),
+                    .background(SeniorOnColors.Background1)
+                    .border(1.dp, SeniorOnColors.Gray200, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -545,20 +548,22 @@ private fun SettingsProfileSection(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(28.dp)
+                    .size(30.dp)
                     .clip(CircleShape)
                     .background(SeniorOnColors.Primary600)
+                    .border(1.dp, SeniorOnColors.White, CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onEditClick
-                    ),
-                contentAlignment = Alignment.Center
+                    )
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_sm_pencil),
                     contentDescription = "프로필 사진 수정",
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier
+                        .padding(start = 9.23.dp, top = 8.08.dp)
+                        .size(12.69.dp),
                     tint = SeniorOnColors.White
                 )
             }
@@ -586,14 +591,16 @@ private fun SettingsProfileSection(
 private fun SettingsMenuSectionCard(
     title: String,
     items: List<SettingsMenuItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardHeight: Dp = 170.dp
 ) {
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .width(328.dp)
+            .defaultMinSize(minHeight = cardHeight)
+            .clip(RoundedCornerShape(12.dp))
             .background(SeniorOnColors.Background1)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 10.dp)
     ) {
         Text(
             text = title,
@@ -601,14 +608,21 @@ private fun SettingsMenuSectionCard(
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        HorizontalDivider(
-            thickness = 1.dp,
-            color = SeniorOnColors.Gray200
+        Box(
+            modifier = Modifier
+                .width(36.dp)
+                .height(1.dp)
+                .background(SeniorOnColors.Gray200)
         )
 
-        items.forEach { item ->
+        Spacer(modifier = Modifier.height(12.dp))
+
+        items.forEachIndexed { index, item ->
+            if (index > 0) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             SettingsMenuRow(item = item)
         }
     }
@@ -622,7 +636,7 @@ private fun SettingsMenuRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(24.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -633,15 +647,15 @@ private fun SettingsMenuRow(
         Text(
             text = item.label,
             modifier = Modifier.weight(1f),
-            style = SeniorOnTextStyles.BodyMMedium,
+            style = SeniorOnTextStyles.BodySSemiBold,
             color = item.textColor
         )
 
         Icon(
             painter = painterResource(id = R.drawable.ic_arrow_next),
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = SeniorOnColors.Gray300
+            modifier = Modifier.size(24.dp),
+            tint = SeniorOnColors.Gray500
         )
     }
 }
@@ -746,35 +760,68 @@ private fun SettingsProfilePhotoOption(
 internal fun SettingsBackTopAppBar(
     title: String,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    centerTitle: Boolean = true
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .background(SeniorOnColors.White)
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_arrow_back),
-            contentDescription = "뒤로가기",
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 16.dp)
-                .size(26.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onBackClick
-                ),
-            tint = SeniorOnColors.Gray800
-        )
+    if (centerTitle) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .background(SeniorOnColors.White)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp)
+                    .size(26.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onBackClick
+                    ),
+                tint = SeniorOnColors.Gray800
+            )
 
-        Text(
-            text = title,
-            modifier = Modifier.align(Alignment.Center),
-            style = SeniorOnTextStyles.BodyLBold,
-            color = SeniorOnColors.Gray800
-        )
+            Text(
+                text = title,
+                modifier = Modifier.align(Alignment.Center),
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800
+            )
+        }
+    } else {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .background(SeniorOnColors.White)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onBackClick
+                    ),
+                tint = SeniorOnColors.Gray800
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = title,
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800
+            )
+        }
     }
 }
 
@@ -793,11 +840,9 @@ internal fun SettingsPrimaryButton(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .background(backgroundColor)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 14.dp),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(

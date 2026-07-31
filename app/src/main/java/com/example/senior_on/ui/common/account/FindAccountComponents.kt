@@ -259,7 +259,9 @@ internal fun FindAccountTextField(
                             isError = isError,
                             interactionSource = interactionSource,
                             colors = textFieldColors,
-                            shape = fieldShape
+                            shape = fieldShape,
+                            focusedBorderThickness = 1.dp,
+                            unfocusedBorderThickness = 1.dp
                         )
                     }
                 )

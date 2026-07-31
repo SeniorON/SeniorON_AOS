@@ -71,8 +71,8 @@ private const val ButtonNameMaxLength = 6
 
 private val ProvidedButtons = listOf(
     SeniorHomeButtonType.ChatBuddy,
-    SeniorHomeButtonType.Schedule,
     SeniorHomeButtonType.Medication,
+    SeniorHomeButtonType.Photo,
 )
 
 private val ProvidedButtonNames = ProvidedButtons.map(
@@ -88,6 +88,7 @@ private val InitialEditableButtons = listOf(
 
 private fun SeniorHomeButtonType.isProtectedFromSelectedButtonEditing(): Boolean =
     this in ProvidedButtons ||
+        this == SeniorHomeButtonType.Schedule ||
         this == SeniorHomeButtonType.Emergency ||
         isMusicButton()
 
@@ -450,7 +451,7 @@ private fun SelectedButtonCard(
     onDeleteClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val totalButtonCount = ProvidedButtonNames.size + editableButtonNames.size
+    val totalButtonCount = buttonAddSelectedCount(editableButtonNames.size)
     val deleteEnabled = canDeleteSelectedButton(totalButtonCount)
 
     Column(

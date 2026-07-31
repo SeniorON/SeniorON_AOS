@@ -9,7 +9,10 @@ interface HomeServerRepository {
     suspend fun getWeather(latitude: Double, longitude: Double): WeatherInfo
     suspend fun getDevice(): DeviceInfo
     suspend fun getButtonOptions(): List<ServerButton>
-    suspend fun saveButtons(musicApp: String?, buttons: List<ServerButton>)
+    suspend fun saveButtons(
+        musicApp: String?,
+        buttons: List<ServerButton>,
+    )
     suspend fun addButton(optionId: Long): ServerButton
     suspend fun updateButtons(buttons: List<ServerButton>)
     suspend fun deleteButton(buttonId: Long)

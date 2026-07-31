@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -244,12 +245,18 @@ internal fun SeniorInfoPhoneTextField(
     onValueChange: (TextFieldValue) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
-    onClearClick: (() -> Unit)? = null
+    onClearClick: (() -> Unit)? = null,
+    textStyle: TextStyle = SeniorOnTextStyles.BodyMRegular,
+    showFocusedBorder: Boolean = true,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val borderColor = if (isFocused) SeniorOnColors.Primary600 else SeniorOnColors.Gray200
+    val borderColor = if (showFocusedBorder && isFocused) {
+        SeniorOnColors.Primary600
+    } else {
+        SeniorOnColors.Gray200
+    }
     val clearButtonClick = if (!isFocused && value.text.isNotEmpty()) {
         onClearClick
     } else {
@@ -268,10 +275,10 @@ internal fun SeniorInfoPhoneTextField(
                 width = 1.dp,
                 color = borderColor,
                 shape = shape
-            ),
+        ),
         interactionSource = interactionSource,
         singleLine = true,
-        textStyle = SeniorOnTextStyles.BodyMRegular.copy(color = SeniorOnColors.Gray800),
+        textStyle = textStyle.copy(color = SeniorOnColors.Gray800),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Phone,
             imeAction = ImeAction.Next
@@ -287,7 +294,7 @@ internal fun SeniorInfoPhoneTextField(
                     if (value.text.isEmpty()) {
                         Text(
                             text = placeholder,
-                            style = SeniorOnTextStyles.BodyMRegular,
+                            style = textStyle,
                             color = SeniorOnColors.Gray300
                         )
                     }

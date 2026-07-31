@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,9 +28,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
@@ -117,7 +120,7 @@ internal fun ScheduleSectionTitle(
         }
         Text(
             text = title,
-            style = SeniorOnTextStyles.BodyLBold,
+            style = SeniorOnTextStyles.HeadingS,
             color = SeniorOnColors.Gray800,
             modifier = Modifier.weight(1f)
         )
@@ -143,7 +146,7 @@ internal fun OutlineAddButton(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_plus),
+            painter = painterResource(id = R.drawable.ic_sm_plus),
             contentDescription = null,
             tint = SeniorOnColors.Primary600,
             modifier = Modifier.size(18.dp)
@@ -151,8 +154,72 @@ internal fun OutlineAddButton(
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
-            style = SeniorOnTextStyles.BodySSemiBold,
+            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Primary600
         )
+    }
+}
+
+@Preview(name = "섹션 헤더 - 건강", showBackground = true, widthDp = 360)
+@Composable
+private fun HealthSectionHeaderHealthPreview() {
+    SENIOR_ONTheme {
+        HealthSectionHeader(
+            selectedSection = HealthSection.Health,
+            onSectionClick = {}
+        )
+    }
+}
+
+@Preview(name = "섹션 헤더 - 병원", showBackground = true, widthDp = 360)
+@Composable
+private fun HealthSectionHeaderHospitalPreview() {
+    SENIOR_ONTheme {
+        HealthSectionHeader(
+            selectedSection = HealthSection.Hospital,
+            onSectionClick = {}
+        )
+    }
+}
+
+@Preview(name = "섹션 타이틀 - 액션 있음", showBackground = true, widthDp = 360)
+@Composable
+private fun ScheduleSectionTitleWithActionPreview() {
+    SENIOR_ONTheme {
+        Column(modifier = Modifier.padding(16.dp)) {
+            ScheduleSectionTitle(
+                title = "등록된 약",
+                actionLabel = "복약 추가",
+                onActionClick = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "섹션 타이틀 - 아이콘", showBackground = true, widthDp = 360)
+@Composable
+private fun ScheduleSectionTitleWithIconPreview() {
+    SENIOR_ONTheme {
+        Column(modifier = Modifier.padding(16.dp)) {
+            ScheduleSectionTitle(
+                title = "병원 일정",
+                iconResId = R.drawable.ic_illust_hospital_schedule,
+                actionLabel = "진료 추가",
+                onActionClick = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "아웃라인 추가 버튼", showBackground = true, widthDp = 360)
+@Composable
+private fun OutlineAddButtonPreview() {
+    SENIOR_ONTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            OutlineAddButton(
+                label = "복약 추가",
+                onClick = {}
+            )
+        }
     }
 }

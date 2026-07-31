@@ -1,5 +1,7 @@
 package com.example.senior_on.domain.model.display
 
+import com.example.senior_on.domain.model.parent.ParentInfo
+
 enum class DisplayDeviceConnectionStatus {
     Online,
     Offline,
@@ -69,26 +71,50 @@ enum class SeniorHomeButtonType {
     Emergency,
 }
 
+val InitialSeniorHomeGridButtons = listOf(
+    SeniorHomeButtonType.Call,
+    SeniorHomeButtonType.Message,
+    SeniorHomeButtonType.Camera,
+    SeniorHomeButtonType.Photo,
+    SeniorHomeButtonType.YouTube,
+    SeniorHomeButtonType.ChatBuddy,
+    SeniorHomeButtonType.Medication,
+    SeniorHomeButtonType.Emergency,
+    SeniorHomeButtonType.KakaoTalk,
+    SeniorHomeButtonType.Naver,
+)
+
 data class SeniorScreenConfiguration(
     val fontSize: SeniorFontSize = SeniorFontSize.Large,
-    val buttons: List<SeniorHomeButtonType> = listOf(
-        SeniorHomeButtonType.Melon,
-        SeniorHomeButtonType.Schedule,
-        SeniorHomeButtonType.Call,
-        SeniorHomeButtonType.Message,
-        SeniorHomeButtonType.ChatBuddy,
-        SeniorHomeButtonType.Medication,
-        SeniorHomeButtonType.YouTube,
-        SeniorHomeButtonType.Photo,
-        SeniorHomeButtonType.Camera,
-        SeniorHomeButtonType.NaverMap,
-        SeniorHomeButtonType.Naver,
-        SeniorHomeButtonType.Emergency,
-    ),
+    val buttons: List<SeniorHomeButtonType> =
+        listOf(
+            SeniorHomeButtonType.Melon,
+            SeniorHomeButtonType.Schedule,
+        ) + InitialSeniorHomeGridButtons,
     val customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
+)
+
+data class DisplayWeather(
+    val temperatureCelsius: Int?,
+    val status: String?,
+    val description: String?,
+    val observedAt: String?,
+)
+
+data class DisplayTodaySchedule(
+    val title: String?,
+    val description: String?,
+    val count: Int,
+    val displayType: String?,
+    val id: Long?,
+    val scheduledTime: String?,
 )
 
 data class DisplayOverview(
     val device: DisplayDevice?,
     val screenConfiguration: SeniorScreenConfiguration,
+    val parentInfo: ParentInfo? = null,
+    val todaySchedule: DisplayTodaySchedule? = null,
+    val availableButtonTypes: Set<SeniorHomeButtonType> = emptySet(),
+    val hasSavedButtonConfiguration: Boolean = true,
 )
