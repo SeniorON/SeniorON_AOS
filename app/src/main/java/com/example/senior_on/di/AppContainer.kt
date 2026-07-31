@@ -30,7 +30,6 @@ import com.example.senior_on.data.source.auth.AuthDataSource
 import com.example.senior_on.data.source.auth.MockAuthDataSource
 import com.example.senior_on.data.source.auth.MockSessionDataSource
 import com.example.senior_on.data.source.auth.SocialAuthDataSource
-import com.example.senior_on.data.source.display.MockDisplayDataSource
 import com.example.senior_on.data.source.family.MockFamilyDataSource
 import com.example.senior_on.data.source.family.MockFamilyPhotoStore
 import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
@@ -202,7 +201,11 @@ class DefaultAppContainer(
     }
     override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
     override val displayRepository: DisplayRepository =
-        DisplayRepositoryImpl(MockDisplayDataSource())
+        DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = deviceDataSource,
+            familyDataSource = remoteFamilySource,
+        )
     override val hospitalSpecialtyRepository: HospitalSpecialtyRepository =
         HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
     override val parentInfoRepository: ParentInfoRepository = ParentInfoRepositoryImpl(

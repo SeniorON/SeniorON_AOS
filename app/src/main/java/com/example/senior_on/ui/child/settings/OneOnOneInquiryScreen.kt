@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -135,7 +136,8 @@ fun OneOnOneInquiryScreen(
         ) {
             SettingsBackTopAppBar(
                 title = "1:1 문의하기",
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                centerTitle = false
             )
 
             OneOnOneInquiryTabRow(
@@ -217,12 +219,16 @@ private fun OneOnOneInquiryTabRow(
             text = "문의하기",
             selected = selectedTab == OneOnOneInquiryTab.Write,
             onClick = { onTabSelected(OneOnOneInquiryTab.Write) },
+            underlineStartPadding = 16.dp,
+            underlineEndPadding = 0.dp,
             modifier = Modifier.weight(1f)
         )
         OneOnOneInquiryTabItem(
             text = "내 문의내역",
             selected = selectedTab == OneOnOneInquiryTab.History,
             onClick = { onTabSelected(OneOnOneInquiryTab.History) },
+            underlineStartPadding = 0.dp,
+            underlineEndPadding = 16.dp,
             modifier = Modifier.weight(1f)
         )
     }
@@ -233,6 +239,8 @@ private fun OneOnOneInquiryTabItem(
     text: String,
     selected: Boolean,
     onClick: () -> Unit,
+    underlineStartPadding: Dp,
+    underlineEndPadding: Dp,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -248,9 +256,9 @@ private fun OneOnOneInquiryTabItem(
         Text(
             text = text,
             style = if (selected) {
-                SeniorOnTextStyles.BodyMBold
+                SeniorOnTextStyles.BodyLBold
             } else {
-                SeniorOnTextStyles.BodyMMedium
+                SeniorOnTextStyles.BodyLMedium
             },
             color = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray300
         )
@@ -260,6 +268,7 @@ private fun OneOnOneInquiryTabItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(start = underlineStartPadding, end = underlineEndPadding)
                 .height(if (selected) 2.dp else 1.dp)
                 .background(
                     if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray200
@@ -292,12 +301,12 @@ private fun OneOnOneInquiryWriteContent(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_information2),
+                    painter = painterResource(id = R.drawable.ic_information3),
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = SeniorOnColors.Gray300
+                    modifier = Modifier.size(16.67.dp),
+                    tint = SeniorOnColors.Gray500
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = buildAnnotatedString {
                         append("답변 등록시 ")
@@ -321,7 +330,7 @@ private fun OneOnOneInquiryWriteContent(
                         append("로 알려드려요!")
                     },
                     style = SeniorOnTextStyles.BodySRegular,
-                    color = SeniorOnColors.Gray500
+                    color = SeniorOnColors.Gray800
                 )
             }
 
@@ -342,12 +351,30 @@ private fun OneOnOneInquiryWriteContent(
                 modifier = Modifier.height(180.dp)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "이미지 첨부 (최대 5장)",
-                style = SeniorOnTextStyles.BodyMSemiBold,
-                color = SeniorOnColors.Gray800
+                text = buildAnnotatedString {
+                    withStyle(
+                        SpanStyle(
+                            color = SeniorOnColors.Gray800,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = SeniorOnTextStyles.BodyMSemiBold.fontSize
+                        )
+                    ) {
+                        append("이미지 첨부 ")
+                    }
+                    withStyle(
+                        SpanStyle(
+                            color = SeniorOnColors.Gray500,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = SeniorOnTextStyles.BodySMedium.fontSize
+                        )
+                    ) {
+                        append("(최대 5장)")
+                    }
+                },
+                style = SeniorOnTextStyles.BodyMSemiBold
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -374,8 +401,10 @@ private fun OneOnOneInquiryWriteContent(
             enabled = canSubmit,
             onClick = onSubmitClick,
             modifier = Modifier
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
+                .height(48.dp)
         )
     }
 }
@@ -406,7 +435,7 @@ private fun InquirySingleLineField(
                 if (value.isEmpty()) {
                     Text(
                         text = placeholder,
-                        style = SeniorOnTextStyles.BodyMMedium,
+                        style = SeniorOnTextStyles.BodySMedium,
                         color = SeniorOnColors.Gray300
                     )
                 }
@@ -440,8 +469,8 @@ private fun InquiryMultiLineField(
                 if (value.isEmpty()) {
                     Text(
                         text = placeholder,
-                        style = SeniorOnTextStyles.BodyMMedium,
-                        color = SeniorOnColors.Gray300
+                        style = SeniorOnTextStyles.BodySMedium,
+                        color = SeniorOnColors.Gray200
                     )
                 }
                 innerTextField()
@@ -457,7 +486,7 @@ private fun InquiryAddImageButton(
 ) {
     Box(
         modifier = modifier
-            .size(72.dp)
+            .size(60.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .border(1.dp, SeniorOnColors.Gray200, RoundedCornerShape(SeniorOnRadius.Small))
             .clickable(
@@ -471,7 +500,7 @@ private fun InquiryAddImageButton(
             painter = painterResource(id = R.drawable.ic_plus),
             contentDescription = "이미지 추가",
             modifier = Modifier.size(24.dp),
-            tint = SeniorOnColors.Gray300
+            tint = SeniorOnColors.Gray800
         )
     }
 }
@@ -589,15 +618,15 @@ private fun OneOnOneInquiryHistoryContent(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "아직 문의한 내용이 없어요",
-                    style = SeniorOnTextStyles.BodyMBold,
-                    color = SeniorOnColors.Gray800,
+                    style = SeniorOnTextStyles.BodyLSemiBold,
+                    color = SeniorOnColors.Gray700,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "시니어 ON에 궁금한 부분이 있다면 문의를 남겨주세요",
                     style = SeniorOnTextStyles.BodySMedium,
-                    color = SeniorOnColors.Gray400,
+                    color = SeniorOnColors.Gray500,
                     textAlign = TextAlign.Center
                 )
             }
@@ -663,10 +692,10 @@ private fun InquiryHistoryCard(
         Text(
             text = item.createdAtLabel,
             style = SeniorOnTextStyles.CaptionRegular,
-            color = SeniorOnColors.Gray400
+            color = SeniorOnColors.Gray500
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -674,15 +703,15 @@ private fun InquiryHistoryCard(
         ) {
             Text(
                 text = "Q",
-                style = SeniorOnTextStyles.BodyMBold,
+                style = SeniorOnTextStyles.BodyLSemiBold,
                 color = SeniorOnColors.Primary600
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = item.question,
                 modifier = Modifier.weight(1f),
-                style = SeniorOnTextStyles.BodyMMedium,
-                color = SeniorOnColors.Gray800
+                style = SeniorOnTextStyles.BodySMedium,
+                color = SeniorOnColors.Gray700
             )
             if (canExpand) {
                 Icon(
@@ -694,7 +723,7 @@ private fun InquiryHistoryCard(
                         }
                     ),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(24.dp),
                     tint = SeniorOnColors.Gray300
                 )
             }
@@ -748,9 +777,11 @@ private fun InquiryStatusBadge(
         InquiryAnswerStatus.Answered -> {
             Box(
                 modifier = modifier
-                    .clip(shape)
+                    .size(width = 69.dp, height = 25.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(SeniorOnColors.Primary600)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "답변 완료",

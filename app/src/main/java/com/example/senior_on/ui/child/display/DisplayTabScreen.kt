@@ -45,6 +45,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
+import com.example.senior_on.domain.model.display.DisplayTodaySchedule
+import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -105,6 +107,9 @@ fun DisplayTabScreen(
                     parentInfo = uiState.parentInfo,
                     relationshipLabel = uiState.relationshipLabel,
                     configuration = uiState.screenConfiguration,
+                    weather = uiState.weather,
+                    isWeatherLoading = uiState.isWeatherLoading,
+                    todaySchedule = uiState.todaySchedule,
                     canEditScreen = canEditScreen,
                     onLargePreviewClick = onLargePreviewClick,
                     onFontEditClick = onFontEditClick,
@@ -249,7 +254,7 @@ private fun DeviceConnectionBanner(
             Spacer(modifier = Modifier.width(4.dp))
 
             Text(
-                text = "${device?.batteryLevelPercent ?: 0}%",
+                text = device?.batteryLevelPercent?.let { "$it%" } ?: "확인 불가",
                 style = SeniorOnTextStyles.BodySSemiBold,
                 color = SeniorOnColors.Primary600,
             )
@@ -285,7 +290,7 @@ private fun ParentInformationCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(126.dp)
+            .height(134.dp)
             .dropShadow(
                 shape = shape,
                 shadow = Shadow(
@@ -350,6 +355,15 @@ private fun ParentInformationCard(
 
         Spacer(modifier = Modifier.weight(1f))
 
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(SeniorOnColors.SupportWhite20)
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -410,6 +424,9 @@ private fun ScreenEditSection(
     parentInfo: ParentInfo?,
     relationshipLabel: String?,
     configuration: SeniorScreenConfiguration,
+    weather: DisplayWeather?,
+    isWeatherLoading: Boolean,
+    todaySchedule: DisplayTodaySchedule?,
     canEditScreen: Boolean,
     onLargePreviewClick: () -> Unit,
     onFontEditClick: () -> Unit,
@@ -442,6 +459,9 @@ private fun ScreenEditSection(
         SeniorScreenPreviewCard(
             phoneLabel = "${relationshipLabel ?: "부모님"} 폰",
             configuration = configuration,
+            weather = weather,
+            isWeatherLoading = isWeatherLoading,
+            todaySchedule = todaySchedule,
             onLargePreviewClick = onLargePreviewClick,
         )
 
@@ -476,6 +496,9 @@ private fun ScreenEditSection(
 private fun SeniorScreenPreviewCard(
     phoneLabel: String,
     configuration: SeniorScreenConfiguration,
+    weather: DisplayWeather?,
+    isWeatherLoading: Boolean,
+    todaySchedule: DisplayTodaySchedule?,
     onLargePreviewClick: () -> Unit,
 ) {
     BoxWithConstraints(
@@ -545,6 +568,9 @@ private fun SeniorScreenPreviewCard(
                 configuration = configuration,
                 previewWidth = phonePreviewWidth,
                 previewHeight = phonePreviewHeight,
+                weather = weather,
+                isWeatherLoading = isWeatherLoading,
+                todaySchedule = todaySchedule,
             )
         }
     }

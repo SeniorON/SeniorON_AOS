@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.domain.model.display.DisplayTodaySchedule
+import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -34,6 +36,9 @@ private val LargePhonePreviewHeight = 481.dp
 fun SeniorScreenLargePreviewDialog(
     configuration: SeniorScreenConfiguration,
     onDismiss: () -> Unit,
+    weather: DisplayWeather? = null,
+    isWeatherLoading: Boolean = false,
+    todaySchedule: DisplayTodaySchedule? = null,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -47,6 +52,9 @@ fun SeniorScreenLargePreviewDialog(
         SeniorScreenLargePreviewContent(
             configuration = configuration,
             onDismiss = onDismiss,
+            weather = weather,
+            isWeatherLoading = isWeatherLoading,
+            todaySchedule = todaySchedule,
         )
     }
 }
@@ -55,6 +63,9 @@ fun SeniorScreenLargePreviewDialog(
 private fun SeniorScreenLargePreviewContent(
     configuration: SeniorScreenConfiguration,
     onDismiss: () -> Unit,
+    weather: DisplayWeather? = null,
+    isWeatherLoading: Boolean = false,
+    todaySchedule: DisplayTodaySchedule? = null,
 ) {
     Box(
         modifier = Modifier
@@ -67,6 +78,9 @@ private fun SeniorScreenLargePreviewContent(
                 configuration = configuration,
                 previewWidth = LargePhonePreviewWidth,
                 previewHeight = LargePhonePreviewHeight,
+                weather = weather,
+                isWeatherLoading = isWeatherLoading,
+                todaySchedule = todaySchedule,
             )
 
             Spacer(modifier = Modifier.height(21.dp))

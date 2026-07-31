@@ -8,7 +8,8 @@ import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.domain.model.server.ServerButton
-import com.example.senior_on.domain.model.server.SeniorHomeSchedule
+import com.example.senior_on.domain.model.server.ServerMusicCard
+import com.example.senior_on.domain.model.server.ServerTodaySchedule
 import com.example.senior_on.domain.model.server.TodayHospitalSchedule
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import java.time.LocalTime
@@ -95,7 +96,9 @@ class ParentHomeViewModel(
                             fontSize = home.fontSize.toFontSize(),
                             buttons = emptyList(),
                         ),
-                        musicButton = home.musicCard?.toUiModel(),
+                        musicButton = home.musicCard
+                            ?.takeIf { musicCard -> musicCard.enabled }
+                            ?.toUiModel(),
                         buttons = home.buttons.map(ServerButton::toUiModel),
                         schedule = schedulesResult
                             .getOrNull()
@@ -150,12 +153,21 @@ private fun List<TodayHospitalSchedule>.toHomeScheduleUiState(): ParentHomeSched
     )
 }
 
-private fun SeniorHomeSchedule.toUiState() = ParentHomeScheduleUiState(
-    count = count,
-    title = title,
-    description = description,
-    scheduledTime = scheduledTime.toLocalTimeOrNull(),
+private fun ServerTodaySchedule?.toUiState() = ParentHomeScheduleUiState(
+    count = this?.count ?: 0,
+    title = this?.title,
+    description = this?.description,
+    scheduledTime = this?.scheduledTime.toLocalTimeOrNull(),
     isLoading = false,
+)
+
+private fun ServerMusicCard.toUiModel() = ParentHomeButtonUiModel(
+    id = 0,
+    type = resolveButtonType(actionValue, packageName),
+    label = "음악 듣기",
+    actionType = actionType,
+    actionValue = actionValue,
+    packageName = packageName,
 )
 
 private fun ServerButton.toUiModel() = ParentHomeButtonUiModel(
@@ -173,7 +185,13 @@ private fun String.toFontSize(): SeniorFontSize = when (trim().uppercase()) {
     else -> SeniorFontSize.Large
 }
 
-private fun ServerButton.toButtonType(): SeniorHomeButtonType? {
+private fun ServerButton.toButtonType(): SeniorHomeButtonType? =
+    resolveButtonType(actionValue, packageName)
+
+private fun resolveButtonType(
+    actionValue: String?,
+    packageName: String?,
+): SeniorHomeButtonType? {
     val value = actionValue.orEmpty().trim().uppercase()
     val packageValue = packageName.orEmpty().trim().lowercase()
 

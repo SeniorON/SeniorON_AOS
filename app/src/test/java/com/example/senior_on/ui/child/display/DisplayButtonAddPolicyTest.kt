@@ -9,43 +9,45 @@ import org.junit.Test
 
 class DisplayButtonAddPolicyTest {
     @Test
-    fun counterIncludesProvidedFeatures() {
-        assertEquals(8, buttonAddSelectedCount(selectedAppCount = 5))
+    fun counterIncludesAllFourRequiredGeneralButtons() {
+        assertEquals(9, buttonAddSelectedCount(selectedAppCount = 5))
     }
 
     @Test
-    fun defaultConfigurationStartsAtTenSelectedButtons() {
+    fun defaultConfigurationHasTenGridButtonsIncludingEmergency() {
         val defaultButtons = SeniorScreenConfiguration().buttons
         val selectedAppCount = defaultButtons
             .count(ButtonAppCatalog::contains)
 
         assertTrue(SeniorHomeButtonType.Camera in defaultButtons)
-        assertTrue(SeniorHomeButtonType.NaverMap in defaultButtons)
+        assertTrue(SeniorHomeButtonType.KakaoTalk in defaultButtons)
+        assertTrue(SeniorHomeButtonType.Naver in defaultButtons)
         assertEquals(10, buttonAddSelectedCount(selectedAppCount))
+        assertEquals(12, buttonAddSelectedCount(selectedAppCount) + 2)
     }
 
     @Test
-    fun continueRequiresAtLeastSevenSelectedButtons() {
+    fun continueRequiresFourAppsInAdditionToFourRequiredGeneralButtons() {
         assertFalse(buttonAddCanContinue(selectedAppCount = 3))
         assertTrue(buttonAddCanContinue(selectedAppCount = 4))
     }
 
     @Test
-    fun deleteIsDisabledWhenSevenButtonsRemain() {
-        assertFalse(canDeleteSelectedButton(selectedButtonCount = 6))
+    fun deleteIsDisabledWhenEightGeneralButtonsRemain() {
         assertFalse(canDeleteSelectedButton(selectedButtonCount = 7))
-        assertTrue(canDeleteSelectedButton(selectedButtonCount = 8))
+        assertFalse(canDeleteSelectedButton(selectedButtonCount = 8))
+        assertTrue(canDeleteSelectedButton(selectedButtonCount = 9))
     }
 
     @Test
-    fun musicSelectionReducesMaximumCountByOne() {
-        assertEquals(12, buttonAddMaximumCount(hasMusicButton = false))
-        assertEquals(11, buttonAddMaximumCount(hasMusicButton = true))
+    fun maximumCountsOnlyGeneralButtons() {
+        assertEquals(18, buttonAddMaximumCount())
     }
 
     @Test
     fun baeminRemainsATypeButIsNotSelectableFromCatalog() {
         assertFalse(SeniorHomeButtonType.Baemin in ButtonAppCatalog)
-        assertEquals(39, ButtonAppCatalog.size)
+        assertFalse(SeniorHomeButtonType.Photo in ButtonAppCatalog)
+        assertEquals(38, ButtonAppCatalog.size)
     }
 }

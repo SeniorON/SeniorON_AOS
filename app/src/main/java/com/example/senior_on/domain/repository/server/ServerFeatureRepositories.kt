@@ -10,7 +10,10 @@ interface HomeServerRepository {
     suspend fun getWeather(latitude: Double, longitude: Double): WeatherInfo
     suspend fun getDevice(): DeviceInfo
     suspend fun getButtonOptions(): List<ServerButton>
-    suspend fun saveButtons(musicApp: String?, buttons: List<Pair<Long, Int>>)
+    suspend fun saveButtons(
+        musicApp: String?,
+        buttons: List<ServerButton>,
+    )
     suspend fun addButton(optionId: Long): ServerButton
     suspend fun updateButtons(buttons: List<Pair<Long, Int>>)
     suspend fun deleteButton(buttonId: Long)
@@ -57,7 +60,7 @@ interface NotificationRepository {
     suspend fun getNotifications(type: String, cursor: Long? = null, size: Int? = null): NotificationPage
     suspend fun markRead(id: Long)
     suspend fun delete(id: Long)
-    suspend fun getSettings(): List<NotificationSetting>
+    suspend fun getHome(): NotificationHome
     suspend fun updateSetting(type: String, enabled: Boolean): NotificationSetting
     suspend fun isParentDeviceOnline(): Boolean
     suspend fun getInactivitySetting(userId: Long): InactivitySetting
