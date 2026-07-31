@@ -180,7 +180,8 @@ class DisplayViewModel(
     fun disconnectDevice(onSuccess: () -> Unit = {}) {
         launchMutation(onSuccess) {
             displayRepository.disconnectDevice()
-            _uiState.update { it.copy(device = null) }
+            val device = displayRepository.getDevice()
+            _uiState.update { it.copy(device = device) }
         }
     }
 

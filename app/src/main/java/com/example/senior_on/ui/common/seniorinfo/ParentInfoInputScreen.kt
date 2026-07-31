@@ -93,7 +93,11 @@ fun ParentInfoInputScreen(
     }
     var birthDate by rememberSaveable { mutableStateOf(initialState?.birthDate.orEmpty()) }
     var phoneNumber by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(initialState?.phoneNumber.orEmpty()))
+        mutableStateOf(
+            formatPhoneFieldValue(
+                TextFieldValue(initialState?.phoneNumber.orEmpty())
+            )
+        )
     }
     var address by rememberSaveable {
         mutableStateOf(selectedAddress.ifBlank { initialState?.address.orEmpty() })
@@ -241,7 +245,7 @@ fun ParentInfoInputScreen(
                             ""
                         },
                         birthDate = birthDate,
-                        phoneNumber = phoneNumber.text,
+                        phoneNumber = phoneNumber.text.filter(Char::isDigit),
                         address = address,
                         addressDetail = addressDetail,
                         addressLatitude = addressLatitude,
