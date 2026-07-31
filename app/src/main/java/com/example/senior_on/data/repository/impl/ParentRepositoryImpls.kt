@@ -5,18 +5,15 @@ import com.example.senior_on.data.source.parent.ChatBuddyDataSource
 import com.example.senior_on.data.source.parent.ParentFamilyPhotoDataSource
 import com.example.senior_on.data.source.parent.ParentInfoDataSource
 import com.example.senior_on.data.source.parent.ParentLinkSafetyDataSource
-import com.example.senior_on.data.source.parent.ParentMedicationDataSource
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.ParentFamilyPhotoCollection
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.parent.ParentLinkSafetyResult
-import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
-import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
 import kotlinx.coroutines.flow.StateFlow
 
 class CaregiverRelationshipRepositoryImpl(
@@ -58,15 +55,5 @@ class ParentLinkSafetyRepositoryImpl(
 ) : ParentLinkSafetyRepository {
     override suspend fun inspectLink(url: String): ParentLinkSafetyResult =
         dataSource.inspectLink(url.trim())
-}
-
-class ParentMedicationRepositoryImpl(
-    private val dataSource: ParentMedicationDataSource
-) : ParentMedicationRepository {
-    override suspend fun getTodayMedication(): ParentMedication? =
-        dataSource.getTodayMedication()
-
-    override suspend fun markAsTaken(medicationId: String): ParentMedication =
-        dataSource.markAsTaken(medicationId.trim())
 }
 

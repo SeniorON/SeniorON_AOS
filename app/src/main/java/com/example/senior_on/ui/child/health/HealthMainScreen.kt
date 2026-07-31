@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
 import java.time.LocalDate
 
 enum class HealthSection {
@@ -26,7 +27,15 @@ enum class HealthSection {
 @Composable
 fun HealthMainScreen(
     modifier: Modifier = Modifier,
-    initialSection: HealthSection = HealthSection.Health
+    initialSection: HealthSection = HealthSection.Health,
+    medicationUiState: MedicationUiState = MedicationUiState(),
+    onMedicationDateSelected: (LocalDate) -> Unit = {},
+    onAddMedicationClick: () -> Unit = {},
+    onMedicationClick: (RegisteredMedicationUiState) -> Unit = {},
+    onMedicationEditorBackClick: () -> Unit = {},
+    onMedicationEditClick: () -> Unit = {},
+    onMedicationSaveClick: (MedicationDraft) -> Unit = {},
+    onMedicationDeleteClick: () -> Unit = {},
 ) {
     var selectedSection by rememberSaveable(initialSection) {
         mutableStateOf(initialSection)
@@ -36,10 +45,6 @@ fun HealthMainScreen(
     var editingAppointment by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
     var appointmentToDelete by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
     var appointments by remember { mutableStateOf(previewHospitalAppointments()) }
-
-    var medicationEditorMode by rememberSaveable { mutableStateOf<MedicationEditorMode?>(null) }
-    var editingMedication by remember { mutableStateOf<RegisteredMedicationUiState?>(null) }
-    var medications by remember { mutableStateOf(previewRegisteredMedications()) }
 
     fun openAdd(date: LocalDate) {
         editorDate = date
@@ -59,29 +64,14 @@ fun HealthMainScreen(
         editorMode = HospitalEditorMode.Edit
     }
 
-    fun openMedicationView(medication: RegisteredMedicationUiState) {
-        editingMedication = medication
-        medicationEditorMode = MedicationEditorMode.View
-    }
-
-    fun openMedicationAdd() {
-        editingMedication = null
-        medicationEditorMode = MedicationEditorMode.Add
-    }
-
-    fun closeMedicationEditor() {
-        medicationEditorMode = null
-        editingMedication = null
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.SupportWhite100)
     ) {
         val activeEditorMode = editorMode
-        val activeMedicationMode = medicationEditorMode
-        val activeMedication = editingMedication
+        val activeMedicationMode = medicationUiState.editorMode
+        val activeMedication = medicationUiState.editingMedication
 
         when {
             selectedSection == HealthSection.Hospital && activeEditorMode != null -> {
@@ -123,18 +113,8 @@ fun HealthMainScreen(
                     mode = MedicationEditorMode.Add,
                     initialDraft = MedicationDraft("", "", emptyList(), emptySet()),
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    onBackClick = ::closeMedicationEditor,
-                    onSaveClick = { draft ->
-                        val newMedication = RegisteredMedicationUiState(
-                            id = (medications.size + 1).toString(),
-                            category = draft.category,
-                            name = draft.name,
-                            times = draft.times,
-                            weekdays = draft.weekdays
-                        )
-                        medications = medications + newMedication
-                        closeMedicationEditor()
-                    }
+                    onBackClick = onMedicationEditorBackClick,
+                    onSaveClick = onMedicationSaveClick,
                 )
             }
 
@@ -147,35 +127,10 @@ fun HealthMainScreen(
                             mode = activeMedicationMode,
                             initialDraft = activeMedication.toDraft(),
                             modifier = Modifier.fillMaxSize(),
-                            onBackClick = {
-                                when (activeMedicationMode) {
-                                    MedicationEditorMode.Add -> closeMedicationEditor()
-                                    MedicationEditorMode.Edit -> {
-                                        medicationEditorMode = MedicationEditorMode.View
-                                    }
-                                    MedicationEditorMode.View -> closeMedicationEditor()
-                                }
-                            },
-                            onEditClick = {
-                                medicationEditorMode = MedicationEditorMode.Edit
-                            },
-                            onSaveClick = { draft ->
-                                val saved = activeMedication.copy(
-                                    category = draft.category,
-                                    name = draft.name,
-                                    times = draft.times,
-                                    weekdays = draft.weekdays
-                                )
-                                medications = medications.map {
-                                    if (it.id == activeMedication.id) saved else it
-                                }
-                                editingMedication = saved
-                                medicationEditorMode = MedicationEditorMode.View
-                            },
-                            onDeleteClick = {
-                                medications = medications.filterNot { it.id == activeMedication.id }
-                                closeMedicationEditor()
-                            }
+                            onBackClick = onMedicationEditorBackClick,
+                            onEditClick = onMedicationEditClick,
+                            onSaveClick = onMedicationSaveClick,
+                            onDeleteClick = onMedicationDeleteClick,
                         )
                     }
                 }
@@ -187,17 +142,23 @@ fun HealthMainScreen(
                     onSectionClick = {
                         selectedSection = it
                         editorMode = null
-                        closeMedicationEditor()
+                        if (activeMedicationMode != null) {
+                            onMedicationEditorBackClick()
+                        }
                     }
                 )
 
                 when (selectedSection) {
                     HealthSection.Health -> HealthScreen(
-                        registeredMedications = medications,
+                        registeredMedications = medicationUiState.registeredMedications,
+                        todayMedications = medicationUiState.todayMedications,
+                        medicationMarkedDates = medicationUiState.medicationMarkedDates,
+                        selectedDate = medicationUiState.selectedDate,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
-                        onAddRegisteredMedicationClick = ::openMedicationAdd,
-                        onAddTodayMedicationClick = ::openMedicationAdd,
-                        onRegisteredMedicationClick = ::openMedicationView
+                        onSelectedDateChange = onMedicationDateSelected,
+                        onAddRegisteredMedicationClick = onAddMedicationClick,
+                        onAddTodayMedicationClick = onAddMedicationClick,
+                        onRegisteredMedicationClick = onMedicationClick,
                     )
                     HealthSection.Hospital -> HospitalScreen(
                         appointments = appointments,

@@ -53,7 +53,12 @@ interface MedicationRepository {
     suspend fun delete(parentId: Long, groupId: String)
     suspend fun getMySchedules(date: String): List<MedicationSchedule>
     suspend fun getParentSchedules(parentId: Long, date: String): List<MedicationSchedule>
-    suspend fun markTaken(logId: Long): MedicationSchedule
+    suspend fun getParentMonthlySchedules(
+        parentId: Long,
+        year: Int,
+        month: Int,
+    ): MedicationMonthlySchedule
+    suspend fun markNearestTaken(): MedicationSchedule
 }
 
 interface NotificationRepository {

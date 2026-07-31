@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -25,6 +26,17 @@ class AndroidLocationDataSource(
     private val locationClient: FusedLocationProviderClient,
 ) : LocationDataSource {
     override suspend fun getCurrentLocation(): GeoLocation {
+        if (isEmulator()) {
+            Log.w(
+                LOG_TAG,
+                "Using hardcoded Seongdong-gu Office location on emulator",
+            )
+            return GeoLocation(
+                latitude = EMULATOR_LATITUDE,
+                longitude = EMULATOR_LONGITUDE,
+            )
+        }
+
         check(context.hasLocationPermission()) {
             "현재 위치를 전송하려면 위치 권한이 필요합니다."
         }
@@ -114,10 +126,23 @@ private fun Context.hasLocationPermission(): Boolean =
     ) == PackageManager.PERMISSION_GRANTED ||
         ContextCompat.checkSelfPermission(
             this,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+
+private fun isEmulator(): Boolean =
+    Build.FINGERPRINT.startsWith("generic") ||
+        Build.FINGERPRINT.contains("emulator", ignoreCase = true) ||
+        Build.FINGERPRINT.contains("unknown", ignoreCase = true) ||
+        Build.MODEL.contains("google_sdk", ignoreCase = true) ||
+        Build.MODEL.contains("Emulator", ignoreCase = true) ||
+        Build.MODEL.contains("Android SDK built for", ignoreCase = true) ||
+        Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
+        (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+        Build.PRODUCT.contains("sdk", ignoreCase = true)
 
 private const val MAX_LOCATION_AGE_MILLIS = 30_000L
 private const val MAX_FALLBACK_LOCATION_AGE_MILLIS = 5L * 60L * 1_000L
 private const val LOCATION_TIMEOUT_MILLIS = 10_000L
+private const val EMULATOR_LATITUDE = 37.5634270
+private const val EMULATOR_LONGITUDE = 127.0369339
 private const val LOG_TAG = "SeniorOnLocation"

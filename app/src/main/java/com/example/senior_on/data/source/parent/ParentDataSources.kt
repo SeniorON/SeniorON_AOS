@@ -4,7 +4,6 @@ import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.ParentFamilyPhotoCollection
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.parent.ParentLinkSafetyResult
-import com.example.senior_on.domain.model.parent.ParentMedication
 import kotlinx.coroutines.flow.StateFlow
 
 interface CaregiverRelationshipDataSource {
@@ -27,10 +26,5 @@ interface ParentInfoDataSource {
 
 interface ParentLinkSafetyDataSource {
     suspend fun inspectLink(url: String): ParentLinkSafetyResult
-}
-
-interface ParentMedicationDataSource {
-    suspend fun getTodayMedication(): ParentMedication?
-    suspend fun markAsTaken(medicationId: String): ParentMedication
 }
 

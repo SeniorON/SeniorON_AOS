@@ -11,7 +11,12 @@ interface MedicationDataSource {
     suspend fun delete(parentId: Long, groupId: String): String
     suspend fun getMySchedules(date: String): List<MedicationScheduleResponse>
     suspend fun getParentSchedules(parentId: Long, date: String): List<MedicationScheduleResponse>
-    suspend fun check(logId: Long): MedicationCheckResponse
+    suspend fun getParentMonthlySchedules(
+        parentId: Long,
+        year: Int,
+        month: Int,
+    ): MedicationMonthlyScheduleResponse
+    suspend fun checkNearest(): MedicationCheckResponse
 }
 
 class RemoteMedicationDataSource(private val api: MedicationApi) : MedicationDataSource {
@@ -24,5 +29,7 @@ class RemoteMedicationDataSource(private val api: MedicationApi) : MedicationDat
     override suspend fun getMySchedules(date: String) = api.getMySchedules(date).requireData()
     override suspend fun getParentSchedules(parentId: Long, date: String) =
         api.getParentSchedules(parentId, date).requireData()
-    override suspend fun check(logId: Long) = api.check(logId).requireData()
+    override suspend fun getParentMonthlySchedules(parentId: Long, year: Int, month: Int) =
+        api.getParentMonthlySchedules(parentId, year, month).requireData()
+    override suspend fun checkNearest() = api.checkNearest().requireData()
 }

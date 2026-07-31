@@ -56,6 +56,7 @@ import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -72,9 +73,9 @@ internal fun ParentHomeScreen(
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val now by produceState(initialValue = LocalDateTime.now()) {
+    val now by produceState(initialValue = LocalDateTime.now(KoreaZoneId)) {
         while (true) {
-            value = LocalDateTime.now()
+            value = LocalDateTime.now(KoreaZoneId)
             delay(30_000)
         }
     }
@@ -444,6 +445,7 @@ private val ParentFeatureCardShape =
     RoundedCornerShape(SeniorOnRadius.Large)
 private val ParentGridCardShape =
     RoundedCornerShape(20.dp)
+private val KoreaZoneId = ZoneId.of("Asia/Seoul")
 
 private fun List<ParentHomeButtonUiModel>.withEmergencyAtFixedGridSlot():
     List<ParentHomeButtonUiModel> {

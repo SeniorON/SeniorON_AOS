@@ -20,7 +20,11 @@ data class MedicationReadResponse(
 )
 data class MedicationScheduleResponse(
     val medicationLogId: Long?, val medicineName: String?,
-    val plannedTime: String?, val isTaken: Boolean?
+    val ingredientName: String?, val plannedDate: String?,
+    val plannedTime: String?, val isTaken: Boolean?, val status: String?
+)
+data class MedicationMonthlyScheduleResponse(
+    val year: Int?, val month: Int?, val scheduledDates: List<String>?
 )
 data class MedicationCheckResponse(
     val medicationLogId: Long?, val isTaken: Boolean?, val takenAt: String?
