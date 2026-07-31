@@ -13,6 +13,7 @@ val localProperties = Properties().apply {
     }
 }
 val kakaoRestApiKey = localProperties.getProperty("KAKAO_REST_API_KEY").orEmpty()
+val kakaoNativeAppKey = localProperties.getProperty("KAKAO_NATIVE_APP_KEY").orEmpty()
 
 android {
     namespace = "com.example.senior_on"
@@ -27,6 +28,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "KAKAO_REST_API_KEY", "\"$kakaoRestApiKey\"")
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
     }
 
     buildTypes {
@@ -70,6 +72,7 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.kakao.maps)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

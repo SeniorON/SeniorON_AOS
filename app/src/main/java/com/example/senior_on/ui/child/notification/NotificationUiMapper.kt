@@ -5,6 +5,8 @@ import com.example.senior_on.domain.model.server.NotificationHome
 import com.example.senior_on.domain.model.server.NotificationHomeItem
 import com.example.senior_on.domain.model.server.SafetyEvent
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 internal fun emptyNotificationScreenUiState(): NotificationScreenUiState =
     NotificationScreenUiState(
@@ -137,6 +139,13 @@ internal fun SafetyEvent.toUiState(
         movementType = category.outingMovementFrom(phase)
             ?: fallback.movementType,
         eventId = id ?: fallback.eventId,
+        eventMessage = message,
+        senderName = senderName,
+        address = address,
+        latitude = latitude,
+        longitude = longitude,
+        deviceBattery = deviceBattery,
+        lastSeenAt = lastSeenAt,
     )
 }
 
@@ -169,5 +178,12 @@ private fun String?.toNotificationCategory(): NotificationCategory? =
 
 private fun String?.toEpochMillisOrNull(): Long? =
     this?.let { value ->
-        runCatching { Instant.parse(value).toEpochMilli() }.getOrNull()
+        runCatching { Instant.parse(value).toEpochMilli() }
+            .recoverCatching {
+                LocalDateTime.parse(value)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            }
+            .getOrNull()
     }

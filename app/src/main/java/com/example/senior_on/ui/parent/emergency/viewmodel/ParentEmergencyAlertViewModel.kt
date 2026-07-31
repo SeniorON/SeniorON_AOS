@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,8 +33,7 @@ data class ParentEmergencyAlertUiState(
 
 class ParentEmergencyAlertViewModel(
     private val repository: EventRepository,
-    private val latitude: Double,
-    private val longitude: Double,
+    private val locationRepository: LocationRepository,
     private val deviceBattery: Int?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentEmergencyAlertUiState())
@@ -79,9 +79,10 @@ class ParentEmergencyAlertViewModel(
             }
 
             runCatching {
+                val currentLocation = locationRepository.getCurrentLocation()
                 repository.createSos(
-                    latitude = latitude,
-                    longitude = longitude,
+                    latitude = currentLocation.latitude,
+                    longitude = currentLocation.longitude,
                     battery = deviceBattery,
                 )
             }
@@ -90,14 +91,26 @@ class ParentEmergencyAlertViewModel(
                         it.copy(status = ParentEmergencyAlertStatus.Sent)
                     }
                 }
-                .onFailure {
+                .onFailure { throwable ->
                     _uiState.update {
                         it.copy(
                             status = ParentEmergencyAlertStatus.Failed,
-                            errorMessage = "긴급알림을 보내지 못했어요. 다시 시도해 주세요."
+                            errorMessage = throwable.message
+                                ?: "긴급알림을 보내지 못했어요. 다시 시도해 주세요."
                         )
                     }
                 }
+        }
+    }
+
+    fun onLocationPermissionDenied() {
+        countdownJob?.cancel()
+        countdownJob = null
+        _uiState.update {
+            it.copy(
+                status = ParentEmergencyAlertStatus.Failed,
+                errorMessage = "긴급알림에 현재 위치를 보내려면 위치 권한이 필요합니다.",
+            )
         }
     }
 
@@ -119,15 +132,13 @@ class ParentEmergencyAlertViewModel(
     companion object {
         fun factory(
             repository: EventRepository,
-            latitude: Double,
-            longitude: Double,
+            locationRepository: LocationRepository,
             deviceBattery: Int?,
         ) = viewModelFactory {
             initializer {
                 ParentEmergencyAlertViewModel(
                     repository = repository,
-                    latitude = latitude,
-                    longitude = longitude,
+                    locationRepository = locationRepository,
                     deviceBattery = deviceBattery,
                 )
             }

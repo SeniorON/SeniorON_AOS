@@ -1,6 +1,7 @@
 package com.example.senior_on
 
 import android.app.Application
+import android.util.Log
 import com.example.senior_on.data.remote.api.SeniorOnNetwork
 import com.example.senior_on.data.source.auth.RemoteAccountRecoveryDataSource
 import com.example.senior_on.data.source.auth.RemoteAuthDataSource
@@ -17,11 +18,23 @@ import com.example.senior_on.data.source.settings.RemoteUserSettingsDataSource
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.di.DefaultAppContainer
 import com.example.senior_on.notification.SeniorOnNotificationManager
+import com.example.senior_on.map.KakaoMapAvailability
+import com.kakao.vectormap.KakaoMapSdk
 
 class SeniorOnApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         SeniorOnNotificationManager.createAlertChannel(this)
+        if (
+            BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank() &&
+            KakaoMapAvailability.isSupportedDevice()
+        ) {
+            runCatching {
+                KakaoMapSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)
+            }.onFailure { throwable ->
+                Log.e("SeniorOnKakaoMap", "Kakao Maps SDK initialization failed", throwable)
+            }
+        }
     }
 
     val appContainer: AppContainer by lazy {

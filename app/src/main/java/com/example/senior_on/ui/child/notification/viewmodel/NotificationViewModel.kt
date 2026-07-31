@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.notification.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -202,6 +203,12 @@ class NotificationViewModel(
             runCatching {
                 events.getDetail(eventId).toUiState(category, message)
             }.onSuccess { detail ->
+                Log.d(
+                    DetailLogTag,
+                    "Loaded eventId=$eventId, battery=${detail.deviceBattery}, " +
+                        "hasCoordinates=${detail.latitude != null && detail.longitude != null}, " +
+                        "occurredAtMillis=${detail.occurredAtMillis}",
+                )
                 _uiState.update {
                     it.copy(
                         detailMessages = it.detailMessages + (eventId to detail),
@@ -413,6 +420,7 @@ class NotificationViewModel(
 
     private companion object {
         const val ParentRole = "PARENT"
+        const val DetailLogTag = "SeniorOnNotificationDetail"
     }
 }
 
