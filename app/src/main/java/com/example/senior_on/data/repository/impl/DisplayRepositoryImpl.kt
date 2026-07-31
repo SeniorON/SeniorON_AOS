@@ -380,7 +380,7 @@ private fun SeniorProfileResponse?.toParentInfo(current: ParentInfo?): ParentInf
         birthDate = resolvedBirthDate,
         phoneNumber = resolvedPhoneNumber,
         address = address?.trim() ?: current?.address.orEmpty(),
-        addressDetail = current?.addressDetail.orEmpty(),
+        addressDetail = detail_address?.trim() ?: current?.addressDetail.orEmpty(),
         addressLatitude = current?.addressLatitude,
         addressLongitude = current?.addressLongitude,
     )

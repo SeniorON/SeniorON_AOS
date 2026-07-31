@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
+import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
 import com.example.senior_on.domain.model.server.ServerButton
 import com.example.senior_on.domain.model.server.ServerMusicCard
 import com.example.senior_on.domain.model.server.ServerTodaySchedule
@@ -81,8 +82,8 @@ class ParentHomeViewModel(
                 val weather = async {
                     runCatching {
                         repository.getWeather(
-                            latitude = SEONGDONG_DISTRICT_OFFICE_LATITUDE,
-                            longitude = SEONGDONG_DISTRICT_OFFICE_LONGITUDE,
+                            latitude = DefaultWeatherCoordinates.LATITUDE,
+                            longitude = DefaultWeatherCoordinates.LONGITUDE,
                         )
                     }
                 }
@@ -133,9 +134,6 @@ class ParentHomeViewModel(
     }
 
     companion object {
-        private const val SEONGDONG_DISTRICT_OFFICE_LATITUDE = 37.56342697
-        private const val SEONGDONG_DISTRICT_OFFICE_LONGITUDE = 127.03693390
-
         fun factory(repository: HomeServerRepository) = viewModelFactory {
             initializer { ParentHomeViewModel(repository) }
         }

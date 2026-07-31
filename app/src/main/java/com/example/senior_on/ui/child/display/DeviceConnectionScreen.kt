@@ -37,6 +37,7 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
+import com.example.senior_on.ui.common.time.toRelativeTimeLabel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnBrushes
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -166,7 +167,10 @@ private fun DeviceStatusCard(
     val statusDescription = when {
         device == null -> "가족 코드를 연결해주세요"
         isOnline -> "연결됨"
-        else -> listOfNotNull("오프라인", device.lastConnectedAtLabel)
+        else -> listOfNotNull(
+            "오프라인",
+            device.lastConnectedAtLabel.toRelativeTimeLabel(),
+        )
             .joinToString(" · ")
     }
 
@@ -287,8 +291,9 @@ private fun DeviceInformationCard(
             )
             DeviceInformationRow(
                 iconResId = R.drawable.ic_share_location,
-                label = "마지막 위치 업데이트",
-                value = device?.lastLocationUpdatedAtLabel ?: unavailableText,
+                label = "마지막 인터넷 연결",
+                value = device?.lastConnectedAtLabel.toRelativeTimeLabel()
+                    ?: unavailableText,
                 valueColor = valueColor,
             )
         }
