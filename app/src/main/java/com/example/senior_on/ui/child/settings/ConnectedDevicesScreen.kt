@@ -184,25 +184,29 @@ private fun ConnectedSeniorDeviceCard(
             Text(
                 text = device.deviceName,
                 modifier = Modifier.weight(1f),
-                style = SeniorOnTextStyles.BodyMSemiBold,
+                style = SeniorOnTextStyles.BodyMMedium,
                 color = SeniorOnColors.White
             )
 
+            Spacer(modifier = Modifier.width(10.dp))
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .size(width = 73.dp, height = 25.dp)
+                    .clip(RoundedCornerShape(17.dp))
                     .background(SeniorOnColors.Primary200)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onDeviceInfoClick
                     )
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "기기 정보",
                     style = SeniorOnTextStyles.CaptionMedium,
-                    color = SeniorOnColors.Primary700
+                    color = SeniorOnColors.Primary600
                 )
             }
         }
@@ -226,7 +230,7 @@ private fun ConnectedSeniorDeviceCard(
                 color = SeniorOnColors.White
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(4.dp))
 
             Box(
                 modifier = Modifier
@@ -642,7 +646,7 @@ fun EditConnectedDeviceInfoScreen(
                         }
                         append("될 수 있어요")
                     },
-                    style = SeniorOnTextStyles.BodySRegular,
+                    style = SeniorOnTextStyles.BodySMedium,
                     color = SeniorOnColors.Gray400
                 )
             }
