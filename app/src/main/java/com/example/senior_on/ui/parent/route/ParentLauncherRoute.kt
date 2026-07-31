@@ -7,11 +7,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.ui.parent.chat.ParentChatBuddyRoute
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyRoute
 import com.example.senior_on.ui.parent.home.ParentHomeRoute
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
+import com.example.senior_on.ui.parent.launcher.viewmodel.ParentDeviceStatusViewModel
 import com.example.senior_on.ui.parent.medication.ParentMedicationRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
@@ -31,6 +34,19 @@ fun ParentLauncherRoute(
     appContainer: AppContainer,
     modifier: Modifier = Modifier,
 ) {
+    val deviceStatusViewModel: ParentDeviceStatusViewModel = viewModel(
+        factory = ParentDeviceStatusViewModel.factory(
+            repository = appContainer.deviceRepository,
+        )
+    )
+
+    LifecycleStartEffect(deviceStatusViewModel) {
+        deviceStatusViewModel.startStatusUpdates()
+        onStopOrDispose {
+            deviceStatusViewModel.stopStatusUpdates()
+        }
+    }
+
     var destination by rememberSaveable {
         mutableStateOf(ParentDestination.Home)
     }
