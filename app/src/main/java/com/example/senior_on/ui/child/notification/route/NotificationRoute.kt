@@ -114,6 +114,9 @@ fun NotificationRoute(
                     onBackClick = {
                         destination = detailReturnDestination
                     },
+                    onRefreshClick = {
+                        viewModel.openNotification(category, message)
+                    },
                     modifier = modifier,
                 )
             }

@@ -1,12 +1,13 @@
 package com.example.senior_on.ui.child.notification
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +57,17 @@ enum class NotificationSeverity {
     Danger
 }
 
+private enum class NotificationSectionContentMode {
+    Description,
+    Empty,
+    Message,
+}
+
+private data class NotificationSectionContentState(
+    val mode: NotificationSectionContentMode,
+    val detectionStandardTime: String?,
+)
+
 enum class NotificationCategory(
     val displayTitle: String,
     val displayDescription: String
@@ -97,7 +109,14 @@ data class NotificationMessageUiState(
     val movementType: NotificationMovementType? = null,
     val notificationId: Long? = null,
     val eventId: Long? = null,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val eventMessage: String? = null,
+    val senderName: String? = null,
+    val address: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val deviceBattery: Int? = null,
+    val lastSeenAt: String? = null,
 )
 
 enum class NotificationMovementType {
@@ -253,20 +272,22 @@ internal fun NotificationSectionCard(
     } else {
         emptyList()
     }
-    val hasDetectionStandardTime =
-        section.category == NotificationCategory.Inactivity &&
-            section.enabled &&
-            section.detectionStandardTime != null
+    val contentState = NotificationSectionContentState(
+        mode = when {
+            visibleMessages.isNotEmpty() -> NotificationSectionContentMode.Message
+            showDetailArrow -> NotificationSectionContentMode.Empty
+            else -> NotificationSectionContentMode.Description
+        },
+        detectionStandardTime = section.detectionStandardTime.takeIf {
+            section.category == NotificationCategory.Inactivity && section.enabled
+        },
+    )
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 220))
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(SeniorOnColors.White)
-            .padding(
-                top = 10.dp,
-                bottom = if (hasDetectionStandardTime) 0.dp else 10.dp
-            )
+            .padding(top = 10.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -297,47 +318,68 @@ internal fun NotificationSectionCard(
                 )
             }
 
-            if (visibleMessages.isEmpty()) {
-                Spacer(modifier = Modifier.height(if (showDetailArrow) 12.dp else 4.dp))
-
-                AnimatedVisibility(
-                    visible = showDetailArrow,
-                    enter = fadeIn(animationSpec = tween(durationMillis = 160)),
-                    exit = fadeOut(animationSpec = tween(durationMillis = 120))
+            AnimatedContent(
+                targetState = contentState,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(durationMillis = 160)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = 120)))
+                        .using(
+                            SizeTransform(clip = false) { _, _ ->
+                                tween(durationMillis = 220)
+                            }
+                        )
+                },
+                label = "NotificationSectionContent",
+            ) { targetContent ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            bottom = if (
+                                targetContent.detectionStandardTime != null
+                            ) 0.dp else 10.dp
+                        )
                 ) {
-                    NotificationEmptyMessage(section = section)
-                }
+                    Spacer(
+                        modifier = Modifier.height(
+                            if (
+                                targetContent.mode ==
+                                NotificationSectionContentMode.Description
+                            ) 4.dp else 12.dp
+                        )
+                    )
 
-                AnimatedVisibility(
-                    visible = !showDetailArrow,
-                    enter = fadeIn(animationSpec = tween(durationMillis = 160)),
-                    exit = fadeOut(animationSpec = tween(durationMillis = 120))
-                ) {
-                    Text(
-                        text = section.description,
-                        modifier = Modifier.padding(end = 60.dp),
-                        style = SeniorOnTextStyles.BodySMedium,
-                        color = descriptionColor
+                    when (targetContent.mode) {
+                        NotificationSectionContentMode.Description -> Text(
+                            text = section.description,
+                            modifier = Modifier.padding(end = 60.dp),
+                            style = SeniorOnTextStyles.BodySMedium,
+                            color = descriptionColor,
+                        )
+
+                        NotificationSectionContentMode.Empty ->
+                            NotificationEmptyMessage(section = section)
+
+                        NotificationSectionContentMode.Message -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                visibleMessages.forEach { message ->
+                                    NotificationMessageRow(
+                                        category = section.category,
+                                        message = message,
+                                        onClick = { onMessageClick(message) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    NotificationDetectionStandardTime(
+                        category = section.category,
+                        standardTime = targetContent.detectionStandardTime,
+                        onClick = onDetectionTimeClick,
                     )
                 }
-            } else {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    visibleMessages.forEach { message ->
-                        NotificationMessageRow(
-                            category = section.category,
-                            message = message,
-                            onClick = { onMessageClick(message) }
-                        )
-                    }
-                }
             }
-
-            NotificationDetectionStandardTime(
-                section = section,
-                onClick = onDetectionTimeClick
-            )
         }
 
         if (showToggle) {
@@ -365,16 +407,12 @@ private fun NotificationMessageUiState.isRecentAlarm(
 
 @Composable
 private fun NotificationDetectionStandardTime(
-    section: NotificationSectionUiState,
+    category: NotificationCategory,
+    standardTime: String?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val standardTime = section.detectionStandardTime
-    if (
-        section.category != NotificationCategory.Inactivity ||
-        !section.enabled ||
-        standardTime == null
-    ) {
+    if (category != NotificationCategory.Inactivity || standardTime == null) {
         return
     }
 

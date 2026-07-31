@@ -24,6 +24,7 @@ import com.example.senior_on.data.repository.impl.HomeServerRepositoryImpl
 import com.example.senior_on.data.repository.impl.HospitalRepositoryImpl
 import com.example.senior_on.data.repository.impl.MedicationRepositoryImpl
 import com.example.senior_on.data.repository.impl.NotificationRepositoryImpl
+import com.example.senior_on.data.repository.impl.LocationRepositoryImpl
 import com.example.senior_on.data.repository.impl.UserSettingsRepositoryImpl
 import com.example.senior_on.data.source.auth.AccountRecoveryDataSource
 import com.example.senior_on.data.source.auth.AuthDataSource
@@ -53,6 +54,7 @@ import com.example.senior_on.data.source.family.RemoteFamilySource
 import com.example.senior_on.data.source.health.HospitalDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.data.source.medication.MedicationDataSource
+import com.example.senior_on.data.source.location.AndroidLocationDataSource
 import com.example.senior_on.data.source.notification.NotificationDataSource
 import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import com.example.senior_on.domain.model.auth.AppUserProfile
@@ -65,6 +67,7 @@ import com.example.senior_on.domain.repository.auth.SocialAuthRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.family.FamilyRepository
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
+import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
@@ -74,6 +77,7 @@ import com.example.senior_on.domain.repository.parent.ParentMedicationRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
 import com.example.senior_on.domain.repository.server.*
+import com.google.android.gms.location.LocationServices
 
 interface AppContainer {
     val authRepository: AuthRepository
@@ -90,6 +94,7 @@ interface AppContainer {
     val eventRepository: EventRepository
     val userSettingsRepository: UserSettingsRepository
     val deviceRepository: DeviceRepository
+    val locationRepository: LocationRepository
     fun userProfileFor(userId: String): AppUserProfile
     val familyRepository: FamilyRepository
     fun familyRepositoryFor(userId: String): FamilyRepository
@@ -143,6 +148,12 @@ class DefaultAppContainer(
     override val eventRepository = EventRepositoryImpl(eventDataSource)
     override val userSettingsRepository = UserSettingsRepositoryImpl(userSettingsDataSource)
     override val deviceRepository = DeviceRepositoryImpl(deviceDataSource)
+    override val locationRepository: LocationRepository = LocationRepositoryImpl(
+        AndroidLocationDataSource(
+            context = context.applicationContext,
+            locationClient = LocationServices.getFusedLocationProviderClient(context),
+        )
+    )
 
     private val familyPhotoStore = MockFamilyPhotoStore(
         initialPhotos = MockFamilyPhotoFixtures.initialPhotos()

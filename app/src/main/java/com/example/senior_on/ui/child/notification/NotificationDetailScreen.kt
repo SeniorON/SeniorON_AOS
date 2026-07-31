@@ -42,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.LinearGradientShader
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
@@ -371,7 +370,10 @@ private fun LocationDetailSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        NotificationMapPlaceholder()
+        NotificationKakaoMap(
+            latitude = detail.latitude,
+            longitude = detail.longitude,
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -536,49 +538,6 @@ private fun DetailSheetHeader(
 }
 
 @Composable
-private fun NotificationMapPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(102.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
-            .background(SeniorOnColors.Background5)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val roadColor = SeniorOnColors.SupportWhite100
-            drawLine(
-                color = roadColor,
-                start = androidx.compose.ui.geometry.Offset(0f, size.height * 0.7f),
-                end = androidx.compose.ui.geometry.Offset(size.width, size.height * 0.2f),
-                strokeWidth = 12.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = SeniorOnColors.Primary300.copy(alpha = 0.75f),
-                start = androidx.compose.ui.geometry.Offset(size.width * 0.15f, 0f),
-                end = androidx.compose.ui.geometry.Offset(size.width * 0.75f, size.height),
-                strokeWidth = 3.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = SeniorOnColors.Gray200,
-                start = androidx.compose.ui.geometry.Offset(size.width * 0.48f, 0f),
-                end = androidx.compose.ui.geometry.Offset(size.width * 0.35f, size.height),
-                strokeWidth = 2.dp.toPx()
-            )
-        }
-        Icon(
-            painter = painterResource(id = R.drawable.ic_location),
-            contentDescription = "현재 위치",
-            tint = SeniorOnColors.Red300,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(30.dp)
-        )
-    }
-}
-
-@Composable
 private fun DetailInformationRow(
     label: String,
     value: String,
@@ -688,9 +647,11 @@ private data class NotificationDetailUiState(
     val backIconColor: Color,
     val showRipple: Boolean,
     val actionColor: Color,
-    val address: String = MockSeniorFixtures.mother.address,
-    val battery: String = "48%",
-    val lastLocationUpdate: String = "2분전",
+    val address: String = "위치 정보 없음",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val battery: String = "확인 불가",
+    val lastLocationUpdate: String = "확인 불가",
     val inactivityHours: String? = null,
     val url: String = "http://fake-bank.xyz",
     val detectedTime: String = "오후 5:00"
@@ -705,14 +666,17 @@ private data class NotificationDetailUiState(
             return when (category) {
                 NotificationCategory.Sos -> NotificationDetailUiState(
                     category = category,
-                    heroTitle = "도움이 필요해요",
+                    heroTitle = message.eventMessage
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
+                        ?: "도움이 필요해요",
                     heroTime = formattedTime,
                     heroIconResId = R.drawable.ic_big_alert_filled,
                     heroBrush = Brush.verticalGradient(listOf(SeniorOnColors.Red200, SeniorOnColors.Red300)),
                     heroContentColor = SeniorOnColors.SupportWhite100,
                     backIconColor = SeniorOnColors.SupportWhite100,
                     showRipple = true,
-                    actionColor = SeniorOnColors.Red400
+                    actionColor = SeniorOnColors.Red400,
                 )
                 NotificationCategory.Inactivity -> NotificationDetailUiState(
                     category = category,
@@ -765,7 +729,16 @@ private data class NotificationDetailUiState(
                     showRipple = false,
                     actionColor = SeniorOnColors.Primary700
                 )
-            }
+            }.copy(
+                address = message.address
+                    ?.trim()
+                    ?.takeIf(String::isNotEmpty)
+                    ?: message.title.ifBlank { "위치 정보 없음" },
+                latitude = message.latitude,
+                longitude = message.longitude,
+                battery = message.deviceBattery.toBatteryLabel(),
+                lastLocationUpdate = message.occurredAtMillis.toRelativeTimeLabel(),
+            )
         }
     }
 }
@@ -799,6 +772,23 @@ private fun Long?.toKoreanDateTime(): String {
     val dateTime = Instant.ofEpochMilli(this ?: System.currentTimeMillis())
         .atZone(ZoneId.systemDefault())
     return DateTimeFormatter.ofPattern("M월 d일 a h:mm", Locale.KOREAN).format(dateTime)
+}
+
+private fun Int?.toBatteryLabel(): String =
+    this?.takeIf { it in 0..100 }?.let { "$it%" } ?: "확인 불가"
+
+private fun Long?.toRelativeTimeLabel(
+    nowMillis: Long = System.currentTimeMillis(),
+): String {
+    val occurredAt = this ?: return "확인 불가"
+    val elapsedMillis = (nowMillis - occurredAt).coerceAtLeast(0L)
+    val elapsedMinutes = elapsedMillis / 60_000L
+    return when {
+        elapsedMinutes < 1L -> "방금 전"
+        elapsedMinutes < 60L -> "${elapsedMinutes}분 전"
+        elapsedMinutes < 24L * 60L -> "${elapsedMinutes / 60L}시간 전"
+        else -> "${elapsedMinutes / (24L * 60L)}일 전"
+    }
 }
 
 private fun previewDetailMessage(

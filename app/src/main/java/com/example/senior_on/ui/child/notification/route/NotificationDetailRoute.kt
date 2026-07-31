@@ -11,6 +11,7 @@ internal fun NotificationDetailRoute(
     category: NotificationCategory,
     message: NotificationMessageUiState,
     onBackClick: () -> Unit,
+    onRefreshClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     NotificationDetailScreen(
@@ -18,5 +19,6 @@ internal fun NotificationDetailRoute(
         message = message,
         modifier = modifier,
         onBackClick = onBackClick,
+        onRefreshClick = onRefreshClick,
     )
 }
