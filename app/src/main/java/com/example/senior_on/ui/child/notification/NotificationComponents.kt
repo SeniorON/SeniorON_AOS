@@ -94,7 +94,10 @@ data class NotificationMessageUiState(
     val severity: NotificationSeverity,
     val tintBackground: Boolean = true,
     val occurredAtMillis: Long? = null,
-    val movementType: NotificationMovementType? = null
+    val movementType: NotificationMovementType? = null,
+    val notificationId: Long? = null,
+    val eventId: Long? = null,
+    val isRead: Boolean = false
 )
 
 enum class NotificationMovementType {

@@ -234,7 +234,11 @@ private fun DeviceInformationCard(
     onInstallGuideClick: () -> Unit,
 ) {
     val isOnline = device?.connectionStatus == DisplayDeviceConnectionStatus.Online
-    val unavailableText = "연결 후 확인 가능"
+    val unavailableText = if (device == null) {
+        "연결 후 확인 가능"
+    } else {
+        "확인 불가"
+    }
     val valueColor = if (device == null) SeniorOnColors.Gray300 else SeniorOnColors.Gray800
     val shape = RoundedCornerShape(SeniorOnRadius.Medium)
 

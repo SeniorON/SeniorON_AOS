@@ -18,6 +18,9 @@ captures/
 *.apk
 output-metadata.json
 
+# Local backend repository
+/SeniorON_BE/
+
 # IntelliJ / Android Studio
 *.iml
 .idea/

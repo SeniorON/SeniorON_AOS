@@ -1,13 +1,10 @@
 package com.example.senior_on.data.source.parent
 
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
-import com.example.senior_on.domain.model.parent.ParentEmergencyAlertReceipt
 import com.example.senior_on.domain.model.parent.ParentFamilyPhotoCollection
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.parent.ParentLinkSafetyResult
 import com.example.senior_on.domain.model.parent.ParentMedication
-import com.example.senior_on.domain.model.parent.ParentSchedule
-import java.time.LocalDate
 import kotlinx.coroutines.flow.StateFlow
 
 interface CaregiverRelationshipDataSource {
@@ -17,10 +14,6 @@ interface CaregiverRelationshipDataSource {
 
 interface ChatBuddyDataSource {
     suspend fun requestReply(message: String, turn: Int): String
-}
-
-interface ParentEmergencyAlertDataSource {
-    suspend fun sendEmergencyAlert(): ParentEmergencyAlertReceipt
 }
 
 interface ParentFamilyPhotoDataSource {
@@ -38,10 +31,6 @@ interface ParentLinkSafetyDataSource {
 
 interface ParentMedicationDataSource {
     suspend fun getTodayMedication(): ParentMedication?
-    suspend fun hasPendingReminder(): Boolean
     suspend fun markAsTaken(medicationId: String): ParentMedication
 }
 
-interface ParentScheduleDataSource {
-    suspend fun getSchedules(date: LocalDate): List<ParentSchedule>
-}

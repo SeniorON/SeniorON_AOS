@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.senior_on.domain.repository.parent.ParentEmergencyAlertRepository
+import com.example.senior_on.domain.repository.server.EventRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +31,10 @@ data class ParentEmergencyAlertUiState(
 }
 
 class ParentEmergencyAlertViewModel(
-    private val repository: ParentEmergencyAlertRepository
+    private val repository: EventRepository,
+    private val latitude: Double,
+    private val longitude: Double,
+    private val deviceBattery: Int?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentEmergencyAlertUiState())
     val uiState = _uiState.asStateFlow()
@@ -75,7 +78,13 @@ class ParentEmergencyAlertViewModel(
                 )
             }
 
-            runCatching { repository.sendEmergencyAlert() }
+            runCatching {
+                repository.createSos(
+                    latitude = latitude,
+                    longitude = longitude,
+                    battery = deviceBattery,
+                )
+            }
                 .onSuccess {
                     _uiState.update {
                         it.copy(status = ParentEmergencyAlertStatus.Sent)
@@ -108,9 +117,19 @@ class ParentEmergencyAlertViewModel(
     }
 
     companion object {
-        fun factory(repository: ParentEmergencyAlertRepository) = viewModelFactory {
+        fun factory(
+            repository: EventRepository,
+            latitude: Double,
+            longitude: Double,
+            deviceBattery: Int?,
+        ) = viewModelFactory {
             initializer {
-                ParentEmergencyAlertViewModel(repository)
+                ParentEmergencyAlertViewModel(
+                    repository = repository,
+                    latitude = latitude,
+                    longitude = longitude,
+                    deviceBattery = deviceBattery,
+                )
             }
         }
     }

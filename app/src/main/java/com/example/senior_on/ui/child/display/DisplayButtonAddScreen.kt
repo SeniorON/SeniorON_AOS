@@ -45,14 +45,13 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.delay
 
-internal const val MinimumButtonSelectionCount = 7
-private const val MaximumButtonCountWithoutMusic = 12
-private const val MaximumButtonCountWithMusic = 11
+internal const val MinimumButtonSelectionCount = 8
+private const val MaximumButtonSelectionCount = 18
 
 private val ProvidedFeatureButtons = listOf(
     SeniorHomeButtonType.Medication,
     SeniorHomeButtonType.ChatBuddy,
-    SeniorHomeButtonType.Schedule,
+    SeniorHomeButtonType.Photo,
 )
 
 private val MusicButtons = listOf(
@@ -67,7 +66,6 @@ private val CommunicationAppButtons = listOf(
     SeniorHomeButtonType.Alarm,
     SeniorHomeButtonType.Memo,
     SeniorHomeButtonType.Camera,
-    SeniorHomeButtonType.Photo,
     SeniorHomeButtonType.Recorder,
     SeniorHomeButtonType.Calculator,
     SeniorHomeButtonType.Settings,
@@ -125,20 +123,15 @@ internal val ButtonAppCatalog = (
         LifestyleAppButtons +
         SeniorHomeButtonType.GoStop
     ).also { buttons ->
-    check(buttons.size == 39) {
-        "Button app catalog must contain exactly 39 apps."
+    check(buttons.size == 38) {
+        "Button app catalog must contain exactly 38 apps."
     }
 }
 
 internal fun buttonAddSelectedCount(selectedAppCount: Int): Int =
-    ProvidedFeatureButtons.size + selectedAppCount
+    ProvidedFeatureButtons.size + FixedEmergencyButtonCount + selectedAppCount
 
-internal fun buttonAddMaximumCount(hasMusicButton: Boolean): Int =
-    if (hasMusicButton) {
-        MaximumButtonCountWithMusic
-    } else {
-        MaximumButtonCountWithoutMusic
-    }
+internal fun buttonAddMaximumCount(): Int = MaximumButtonSelectionCount
 
 internal fun buttonAddCanContinue(selectedAppCount: Int): Boolean =
     buttonAddSelectedCount(selectedAppCount) >= MinimumButtonSelectionCount
@@ -147,6 +140,7 @@ internal fun buttonAddCanContinue(selectedAppCount: Int): Boolean =
 fun DisplayButtonAddScreen(
     initialSelectedButtons: List<SeniorHomeButtonType>,
     initialMusicButton: SeniorHomeButtonType? = null,
+    availableAppButtons: List<SeniorHomeButtonType> = ButtonAppCatalog,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onSaveClick: (
@@ -154,8 +148,8 @@ fun DisplayButtonAddScreen(
         appButtons: List<SeniorHomeButtonType>,
     ) -> Unit = { _, _ -> },
 ) {
-    val availableButtonNames = remember {
-        ButtonAppCatalog.mapTo(hashSetOf(), SeniorHomeButtonType::name)
+    val availableButtonNames = remember(availableAppButtons) {
+        availableAppButtons.mapTo(hashSetOf(), SeniorHomeButtonType::name)
     }
     var selectedButtonNames by rememberSaveable(initialSelectedButtons) {
         mutableStateOf(
@@ -178,9 +172,7 @@ fun DisplayButtonAddScreen(
     var showLimitMessage by remember { mutableStateOf(false) }
 
     val selectedButtonCount = buttonAddSelectedCount(selectedButtonNames.size)
-    val maximumButtonCount = buttonAddMaximumCount(
-        hasMusicButton = selectedMusicName != null
-    )
+    val maximumButtonCount = buttonAddMaximumCount()
     val canSave = buttonAddCanContinue(selectedButtonNames.size)
 
     LaunchedEffect(limitMessageEvent) {
@@ -201,15 +193,7 @@ fun DisplayButtonAddScreen(
             return
         }
 
-        if (selectedButtonCount > MaximumButtonCountWithMusic) {
-            showButtonsFullMessage()
-            return
-        }
-
         selectedMusicName = button.name
-        if (selectedButtonCount == MaximumButtonCountWithMusic) {
-            showButtonsFullMessage()
-        }
     }
 
     fun toggleAppButton(button: SeniorHomeButtonType) {
@@ -292,7 +276,7 @@ fun DisplayButtonAddScreen(
                 item {
                     ButtonAddSection(
                         title = "앱",
-                        buttons = ButtonAppCatalog,
+                        buttons = availableAppButtons,
                         selectedButtonNames = selectedButtonNames.toSet(),
                         rowType = ButtonAddRowType.App,
                         onButtonClick = ::toggleAppButton,
@@ -318,6 +302,8 @@ fun DisplayButtonAddScreen(
         }
     }
 }
+
+private const val FixedEmergencyButtonCount = 1
 
 @Composable
 private fun ButtonAddTopBar(

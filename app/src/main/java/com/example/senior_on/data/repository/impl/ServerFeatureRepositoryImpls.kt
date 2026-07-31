@@ -16,6 +16,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.time.LocalDate
+import java.time.LocalTime
 
 class HomeServerRepositoryImpl(
     private val source: HomeDataSource
@@ -26,9 +28,56 @@ class HomeServerRepositoryImpl(
             fontSize = it.font_size.orEmpty(),
             connected = it.connection?.connected == true,
             battery = it.connection?.battery,
-            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain)
+            buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
+            seniorAddress = it.senior_profile?.address,
+            seniorId = it.senior_profile?.senior_id,
         )
     }
+    override suspend fun getSeniorHome() = source.getSeniorHome().let {
+        SeniorHomeSnapshot(
+            buttons = it.buttons.orEmpty()
+                .sortedBy { button -> button.button_order }
+                .map(HomeButtonResponse::toDomain),
+            fontSize = it.font_size.orEmpty(),
+            musicCard = it.music_card?.let { card ->
+                ServerMusicCard(
+                    enabled = card.enabled == true,
+                    icon = card.icon,
+                    musicApp = card.music_app,
+                    appName = card.app_name,
+                    actionType = card.action_type,
+                    actionValue = card.action_value,
+                    packageName = card.package_name,
+                )
+            },
+            todaySchedule = it.today_schedule?.let { schedule ->
+                ServerTodaySchedule(
+                    title = schedule.title,
+                    description = schedule.description,
+                    count = schedule.schedule_count ?: 0,
+                    displayType = schedule.display_type,
+                    scheduleId = schedule.schedule_id,
+                    scheduledTime = schedule.scheduled_time,
+                )
+            },
+        )
+    }
+    override suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule> =
+        source.getTodayHospitals().map { schedule ->
+            TodayHospitalSchedule(
+                id = schedule.hospitalId ?: 0,
+                hospitalName = schedule.hospitalName.orEmpty(),
+                department = schedule.department.orEmpty(),
+                date = schedule.scheduleDate
+                    ?.let(LocalDate::parse)
+                    ?: LocalDate.now(),
+                time = schedule.scheduleTime
+                    ?.let(LocalTime::parse)
+                    ?: LocalTime.MIDNIGHT,
+                reminderType = schedule.reminderType,
+                registeredBy = schedule.registeredBy,
+            )
+        }.sortedBy(TodayHospitalSchedule::time)
     override suspend fun getWeather(latitude: Double, longitude: Double) =
         source.getWeather(latitude, longitude).let {
             WeatherInfo(it.temperature ?: 0, it.weatherStatus.orEmpty(), it.weatherText.orEmpty(), it.observedAt)
@@ -43,14 +92,45 @@ class HomeServerRepositoryImpl(
     override suspend fun getButtonOptions() = source.getButtonOptions().map {
         ServerButton(0, it.option_id, 0, it.button_name.orEmpty(), it.icon, it.action_type, it.action_value)
     }
-    override suspend fun saveButtons(musicApp: String?, buttons: List<Pair<Long, Int>>) =
-        source.saveButtons(HomeButtonSaveRequest(musicApp, buttons.map { ButtonRequest(it.first, it.second) }))
+    override suspend fun saveButtons(
+        musicApp: String?,
+        buttons: List<ServerButton>,
+    ) =
+        source.saveButtons(
+            HomeButtonSaveRequest(
+                musicApp = musicApp,
+                buttons = buttons.map { button ->
+                    ButtonRequest(
+                        buttonOrder = button.order,
+                        buttonName = button.name,
+                        actionType = requireNotNull(button.actionType) {
+                            "액션 타입이 없는 버튼은 저장할 수 없습니다."
+                        },
+                        actionValue = requireNotNull(button.actionValue) {
+                            "액션 값이 없는 버튼은 저장할 수 없습니다."
+                        },
+                        packageName = button.packageName,
+                    )
+                },
+            )
+        )
     override suspend fun addButton(optionId: Long) =
         source.addButton(HomeButtonCreateRequest(optionId)).let {
             ServerButton(it.buttonId ?: 0, optionId, it.buttonOrder ?: 0, it.buttonName.orEmpty(), it.icon, null, null)
         }
     override suspend fun updateButtons(buttons: List<Pair<Long, Int>>) =
-        source.updateButtons(HomeButtonUpdateRequest(buttons.map { ButtonRequest(it.first, it.second) }))
+        source.updateButtons(
+            HomeButtonUpdateRequest(
+                buttons.map { (buttonId, buttonOrder) ->
+                    HomeButtonUpdateItemRequest(
+                        button_id = buttonId,
+                        button_order = buttonOrder,
+                        button_name = null,
+                        icon = null,
+                    )
+                }
+            )
+        )
     override suspend fun deleteButton(buttonId: Long) = source.deleteButton(buttonId)
     override suspend fun updateFontSize(fontSize: String) =
         source.updateFontSize(HomeFontSizeUpdateRequest(fontSize.trim().uppercase()))
@@ -156,7 +236,7 @@ class NotificationRepositoryImpl(
     override suspend fun getNotifications(type: String, cursor: Long?, size: Int?) =
         source.getNotifications(type.trim().uppercase(), cursor, size).let {
             NotificationPage(
-                it.totalCount ?: 0,
+                it.totalCount ?: 0L,
                 it.items.orEmpty().map { item ->
                     AppNotification(
                         item.notificationId ?: 0, item.eventId, item.title.orEmpty(),
@@ -168,8 +248,29 @@ class NotificationRepositoryImpl(
         }
     override suspend fun markRead(id: Long) = source.markRead(id)
     override suspend fun delete(id: Long) = source.delete(id)
-    override suspend fun getSettings() = source.getSettings().items.orEmpty().map {
-        NotificationSetting(it.type.orEmpty(), it.enabled == true)
+    override suspend fun getHome() = source.getSettings().let { response ->
+        NotificationHome(
+            enabledCount = response.enabledCount ?: 0L,
+            items = response.items.orEmpty().map { item ->
+                NotificationHomeItem(
+                    type = item.type.orEmpty(),
+                    enabled = item.enabled == true,
+                    hasAlert = item.hasAlert == true,
+                    occurredAt = item.occurredAt,
+                    dateTimeLabel = item.dateTimeLabel,
+                    summary = item.summary,
+                    senderId = item.senderId,
+                    senderName = item.senderName,
+                    deviceBattery = item.deviceBattery,
+                    address = item.address,
+                    linkUrl = item.linkUrl,
+                    phase = item.phase,
+                    emptyMessage = item.emptyMessage,
+                    notificationId = item.notificationId,
+                    eventId = item.eventId,
+                )
+            },
+        )
     }
     override suspend fun updateSetting(type: String, enabled: Boolean) =
         source.updateSetting(type.trim().uppercase(), NotificationSettingRequest(enabled)).let {
@@ -187,7 +288,17 @@ class EventRepositoryImpl(
 ) : EventRepository {
     override suspend fun createSos(latitude: Double, longitude: Double, battery: Int?) =
         source.createSos(SosEventRequest(latitude, longitude, battery)).let {
-            SafetyEvent(it.id, "SOS", null, it.address, it.latitude, it.longitude, it.deviceBattery)
+            SafetyEvent(
+                id = it.id,
+                type = "SOS",
+                occurredAt = null,
+                address = it.address,
+                latitude = it.latitude,
+                longitude = it.longitude,
+                deviceBattery = it.deviceBattery,
+                receiverCount = it.receiverCount,
+                notifiedCount = it.notifiedCount,
+            )
         }
     override suspend fun createRiskLink(url: String, battery: Int?) =
         source.createRiskLink(RiskLinkRequest(url.trim(), battery)).let {
@@ -207,8 +318,19 @@ class EventRepositoryImpl(
     }
     override suspend fun getDetail(eventId: Long) = source.getDetail(eventId).let {
         SafetyEvent(
-            it.eventId, it.eventType.orEmpty(), it.occurredAt, it.address,
-            it.latitude, it.longitude, it.deviceBattery, it.linkUrl, it.isDangerous, it.phase
+            id = it.eventId,
+            type = it.eventType.orEmpty(),
+            occurredAt = it.occurredAt,
+            address = it.address,
+            latitude = it.latitude,
+            longitude = it.longitude,
+            deviceBattery = it.deviceBattery,
+            linkUrl = it.linkUrl,
+            dangerous = it.isDangerous,
+            phase = it.phase,
+            message = it.message,
+            senderName = it.senderName,
+            lastSeenAt = it.lastSeenAt,
         )
     }
 }
@@ -239,7 +361,14 @@ class DeviceRepositoryImpl(
 }
 
 private fun HomeButtonResponse.toDomain() = ServerButton(
-    button_id ?: 0, null, button_order ?: 0, button_name.orEmpty(), icon, action_type, action_value
+    button_id ?: 0,
+    null,
+    button_order ?: 0,
+    button_name.orEmpty(),
+    icon,
+    action_type,
+    action_value,
+    package_name,
 )
 private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
     usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl

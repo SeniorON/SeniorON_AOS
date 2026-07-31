@@ -1,6 +1,8 @@
 package com.example.senior_on.ui.onboarding.route
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.ui.onboarding.signup.SignupAccountInfoScreen
@@ -64,6 +66,7 @@ fun SignupEmailVerificationRoute(
     onNextClick: () -> Unit
 ) {
     val viewModel = onboardingAuthViewModel(appContainer)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     SignupEmailVerificationScreen(
         onBackClick = onBackClick,
@@ -74,7 +77,11 @@ fun SignupEmailVerificationRoute(
         onSendVerificationCode =
             viewModel::sendSignupEmailVerificationCode,
         onVerifyCode =
-            viewModel::verifySignupEmailVerificationCode
+            viewModel::verifySignupEmailVerificationCode,
+        emailRequestErrorMessage =
+            uiState.signupEmailRequestErrorMessage,
+        onEmailChange =
+            viewModel::clearSignupEmailRequestError,
     )
 }
 

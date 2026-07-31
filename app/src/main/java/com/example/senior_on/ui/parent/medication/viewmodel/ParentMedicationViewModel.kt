@@ -21,7 +21,6 @@ enum class ParentMedicationContent {
 data class ParentMedicationUiState(
     val content: ParentMedicationContent = ParentMedicationContent.Loading,
     val medication: ParentMedication? = null,
-    val showReminder: Boolean = false,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null
 )
@@ -46,10 +45,8 @@ class ParentMedicationViewModel(
             }
 
             runCatching {
-                val medication = repository.getTodayMedication()
-                val pendingReminder = repository.hasPendingReminder()
-                medication to pendingReminder
-            }.onSuccess { (medication, pendingReminder) ->
+                repository.getTodayMedication()
+            }.onSuccess { medication ->
                 _uiState.update {
                     it.copy(
                         content = when {
@@ -59,7 +56,6 @@ class ParentMedicationViewModel(
                             else -> ParentMedicationContent.Due
                         },
                         medication = medication,
-                        showReminder = pendingReminder,
                         isSubmitting = false
                     )
                 }
@@ -68,16 +64,11 @@ class ParentMedicationViewModel(
                     it.copy(
                         content = ParentMedicationContent.Empty,
                         medication = null,
-                        showReminder = false,
                         errorMessage = "복약 정보를 불러오지 못했어요."
                     )
                 }
             }
         }
-    }
-
-    fun consumeReminder() {
-        _uiState.update { it.copy(showReminder = false) }
     }
 
     fun markAsTaken() {
@@ -93,7 +84,6 @@ class ParentMedicationViewModel(
                         it.copy(
                             content = ParentMedicationContent.Completed,
                             medication = updatedMedication,
-                            showReminder = false,
                             isSubmitting = false
                         )
                     }
