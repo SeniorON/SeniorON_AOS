@@ -29,7 +29,12 @@ import com.example.senior_on.ui.parent.medication.ParentMedicationRoute
 import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
 import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.notification.MedicationReminderEventStore
+import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
+import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipErrorScreen
+import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
+import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipStatus
+import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipViewModel
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
 
 private enum class ParentDestination {
@@ -44,6 +49,46 @@ private enum class ParentDestination {
 
 @Composable
 fun ParentLauncherRoute(
+    appContainer: AppContainer,
+    onExitToOnboarding: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val familyMembershipViewModel: ParentFamilyMembershipViewModel = viewModel(
+        factory = ParentFamilyMembershipViewModel.factory(
+            repository = appContainer.familyServerRepository,
+        ),
+    )
+    val familyMembershipUiState by familyMembershipViewModel.uiState
+        .collectAsStateWithLifecycle()
+
+    when (familyMembershipUiState.status) {
+        ParentFamilyMembershipStatus.Checking ->
+            ParentFamilyMembershipLoadingScreen(modifier)
+
+        ParentFamilyMembershipStatus.NotConnected ->
+            FamilyShareCodeInputRoute(
+                appContainer = appContainer,
+                userId = ParentFamilyConnectionViewModelKey,
+                onBackClick = onExitToOnboarding,
+                onJoinSuccess = { familyMembershipViewModel.onFamilyJoined() },
+            )
+
+        ParentFamilyMembershipStatus.Error ->
+            ParentFamilyMembershipErrorScreen(
+                onRetryClick = familyMembershipViewModel::checkFamilyMembership,
+                modifier = modifier,
+            )
+
+        ParentFamilyMembershipStatus.Connected ->
+            ParentLauncherContent(
+                appContainer = appContainer,
+                modifier = modifier,
+            )
+    }
+}
+
+@Composable
+private fun ParentLauncherContent(
     appContainer: AppContainer,
     modifier: Modifier = Modifier,
 ) {
@@ -139,6 +184,8 @@ fun ParentLauncherRoute(
     }
 
 }
+
+private const val ParentFamilyConnectionViewModelKey = "parent-family-connection"
 
 @Composable
 private fun RequestNotificationPermissionOnParentEntry() {

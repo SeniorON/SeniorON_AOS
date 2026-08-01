@@ -20,8 +20,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -62,6 +64,7 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 internal fun ParentHomeScreen(
     configuration: SeniorScreenConfiguration,
     musicButton: ParentHomeButtonUiModel?,
@@ -71,6 +74,8 @@ internal fun ParentHomeScreen(
     onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val now by produceState(initialValue = LocalDateTime.now(KoreaZoneId)) {
@@ -83,66 +88,77 @@ internal fun ParentHomeScreen(
         .filterNot { it.type == SeniorHomeButtonType.Schedule }
         .withEmergencyAtFixedGridSlot()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SeniorOnColors.White)
-            .drawWithCache {
-                val gradient = Brush.radialGradient(
-                    colors = listOf(
-                        SeniorOnColors.Primary400.copy(alpha = 0.2f),
-                        Color(0xFFFAFFEC).copy(alpha = 0.2f),
-                    ),
-                    center = Offset(
-                        x = size.width * 0.5551f,
-                        y = size.height * 0.5812f,
-                    ),
-                    radius = size.height * 0.5869f,
-                )
-                onDrawBehind { drawRect(gradient) }
-            }
-            .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 24.dp),
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
     ) {
-        ParentDateWeatherHeader(
-            now = now,
-            weatherUiState = weatherUiState,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        musicButton?.let { button ->
-            ParentMusicCard(
-                onClick = { onMusicClick(button) },
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SeniorOnColors.White)
+                .drawWithCache {
+                    val gradient = Brush.radialGradient(
+                        colors = listOf(
+                            SeniorOnColors.Primary400.copy(alpha = 0.2f),
+                            Color(0xFFFAFFEC).copy(alpha = 0.2f),
+                        ),
+                        center = Offset(
+                            x = size.width * 0.5551f,
+                            y = size.height * 0.5812f,
+                        ),
+                        radius = size.height * 0.5869f,
+                    )
+                    onDrawBehind { drawRect(gradient) }
+                }
+                .safeDrawingPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 14.dp,
+                    bottom = 24.dp,
+                ),
+        ) {
+            ParentDateWeatherHeader(
+                now = now,
+                weatherUiState = weatherUiState,
             )
-            Spacer(modifier = Modifier.height(12.dp))
-        }
 
-        ParentTodayScheduleCard(
-            uiState = scheduleUiState,
-            isFeatured = musicButton == null,
-            onClick = onScheduleClick,
-        )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            musicButton?.let { button ->
+                ParentMusicCard(
+                    onClick = { onMusicClick(button) },
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            gridButtons.chunked(2).forEach { rowButtons ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    rowButtons.forEach { button ->
-                        ParentHomeGridButton(
-                            button = button,
-                            textStyle = configuration.fontSize.homeButtonTextStyle,
-                            onClick = { onButtonClick(button) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    if (rowButtons.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
+            ParentTodayScheduleCard(
+                uiState = scheduleUiState,
+                isFeatured = musicButton == null,
+                onClick = onScheduleClick,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                gridButtons.chunked(2).forEach { rowButtons ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        rowButtons.forEach { button ->
+                            ParentHomeGridButton(
+                                button = button,
+                                textStyle = configuration.fontSize.homeButtonTextStyle,
+                                onClick = { onButtonClick(button) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (rowButtons.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }

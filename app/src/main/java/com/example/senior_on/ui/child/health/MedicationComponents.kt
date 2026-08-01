@@ -84,7 +84,8 @@ data class TodayMedicationUiState(
     val category: String,
     val name: String,
     val time: LocalTime,
-    val status: MedicationDoseStatus
+    val status: MedicationDoseStatus,
+    val medicationLogId: Long = 0L,
 )
 
 @Composable

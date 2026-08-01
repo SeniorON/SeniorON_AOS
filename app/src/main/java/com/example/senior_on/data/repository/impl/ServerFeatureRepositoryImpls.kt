@@ -18,6 +18,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -156,6 +157,12 @@ class HomeServerRepositoryImpl(
 class FamilyServerRepositoryImpl(
     private val source: RemoteFamilySource
 ) : FamilyServerRepository {
+    override suspend fun hasFamily(): Boolean = try {
+        source.getMembers().isNotEmpty()
+    } catch (exception: HttpException) {
+        if (exception.code() == 404) false else throw exception
+    }
+
     override suspend fun join(code: String) = source.join(FamilyJoinRequest(code.trim())).let {
         FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }

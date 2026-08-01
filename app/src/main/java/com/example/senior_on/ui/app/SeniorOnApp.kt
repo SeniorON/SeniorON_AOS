@@ -56,6 +56,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
 
         AppDestination.ParentLauncher -> ParentLauncherRoute(
             appContainer = appContainer,
+            onExitToOnboarding = ::openOnboarding,
         )
     }
 }
