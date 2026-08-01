@@ -38,6 +38,8 @@ fun ParentHomeRoute(
         buttons = uiState.buttons,
         scheduleUiState = uiState.schedule,
         weatherUiState = uiState.weather,
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = viewModel::refresh,
         onMusicClick = { openParentHomeButton(context, it) },
         onScheduleClick = onScheduleClick,
         onButtonClick = { button ->

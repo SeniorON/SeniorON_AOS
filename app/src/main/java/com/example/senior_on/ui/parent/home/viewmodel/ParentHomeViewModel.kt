@@ -51,6 +51,7 @@ data class ParentHomeUiState(
     val schedule: ParentHomeScheduleUiState = ParentHomeScheduleUiState(),
     val weather: ParentHomeWeatherUiState = ParentHomeWeatherUiState(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
 )
 
@@ -61,14 +62,20 @@ class ParentHomeViewModel(
     val uiState = _uiState.asStateFlow()
 
     init {
-        loadHome()
+        loadHome(isRefresh = false)
     }
 
-    fun loadHome() {
+    fun refresh() {
+        if (_uiState.value.isLoading || _uiState.value.isRefreshing) return
+        loadHome(isRefresh = true)
+    }
+
+    private fun loadHome(isRefresh: Boolean) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = true,
+                    isLoading = !isRefresh,
+                    isRefreshing = isRefresh,
                     schedule = it.schedule.copy(isLoading = true),
                     errorMessage = null,
                 )
@@ -118,12 +125,14 @@ class ParentHomeViewModel(
                             },
                         ),
                         isLoading = false,
+                        isRefreshing = false,
                     )
                 }
                 .onFailure { throwable ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             schedule = it.schedule.copy(isLoading = false),
                             errorMessage = throwable.message
                                 ?: "부모님 홈 정보를 불러오지 못했어요.",

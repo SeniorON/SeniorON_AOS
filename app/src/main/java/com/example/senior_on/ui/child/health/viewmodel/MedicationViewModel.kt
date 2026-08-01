@@ -147,6 +147,36 @@ class MedicationViewModel(
         loadMedicationData()
     }
 
+    fun onMedicationChecked(
+        checkedParentUserId: Long,
+        medicationLogId: Long,
+    ) {
+        if (medicationLogId <= 0L) return
+
+        viewModelScope.launch {
+            val resolvedParentUserId = runCatching { resolveParentUserId() }
+                .getOrNull()
+                ?: return@launch
+            if (resolvedParentUserId != checkedParentUserId) return@launch
+
+            val selectedDate = _uiState.value.selectedDate
+            if (selectedDate != LocalDate.now()) return@launch
+
+            _uiState.update { state ->
+                state.copy(
+                    todayMedications = state.todayMedications.map { medication ->
+                        if (medication.medicationLogId == medicationLogId) {
+                            medication.copy(status = MedicationDoseStatus.Taken)
+                        } else {
+                            medication
+                        }
+                    },
+                )
+            }
+            loadSchedules(selectedDate, refreshMonthly = false)
+        }
+    }
+
     private fun loadMedicationData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -304,6 +334,7 @@ private fun MedicationSchedule.toUiState(
         name = ingredient ?: registeredMedication?.name.orEmpty(),
         time = time,
         status = uiStatus,
+        medicationLogId = logId,
     )
 }
 
