@@ -74,6 +74,8 @@ import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
+import com.example.senior_on.ui.child.family.FamilyInvitationScreen
+import com.example.senior_on.ui.child.family.FamilyInvitationUiState
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
@@ -377,11 +379,23 @@ private fun ChildMainTabContent(
                 viewModel = familyViewModel,
             )
 
-            ChildFamilyDestination.Invitation -> FamilyInvitationRoute(
-                onBackClick = onFamilyBackClick,
-                modifier = modifier,
-                viewModel = familyViewModel,
-            )
+            ChildFamilyDestination.Invitation -> {
+                if (familyServerRepository != null) {
+                    FamilyInvitationRoute(
+                        onBackClick = onFamilyBackClick,
+                        modifier = modifier,
+                        repository = familyServerRepository,
+                    )
+                } else {
+                    FamilyInvitationScreen(
+                        uiState = FamilyInvitationUiState(
+                            errorMessage = "가족 공유 코드를 불러오지 못했어요.",
+                        ),
+                        onBackClick = onFamilyBackClick,
+                        modifier = modifier,
+                    )
+                }
+            }
 
             ChildFamilyDestination.PhotoGallery -> FamilyPhotoGalleryRoute(
                 onBackClick = onFamilyBackClick,

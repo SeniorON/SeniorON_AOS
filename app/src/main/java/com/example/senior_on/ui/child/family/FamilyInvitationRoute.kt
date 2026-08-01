@@ -1,11 +1,12 @@
 package com.example.senior_on.ui.child.family
 
-import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.ui.child.family.viewmodel.FamilyInvitationViewModel
 
 @Composable
 fun FamilyInvitationRoute(
@@ -13,8 +14,11 @@ fun FamilyInvitationRoute(
     modifier: Modifier = Modifier,
     onKakaoShareClick: () -> Unit = {},
     onMessageShareClick: () -> Unit = {},
-    viewModel: FamilyViewModel,
+    repository: FamilyServerRepository,
 ) {
+    val viewModel: FamilyInvitationViewModel = viewModel(
+        factory = FamilyInvitationViewModel.factory(repository),
+    )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FamilyInvitationScreen(
@@ -22,6 +26,7 @@ fun FamilyInvitationRoute(
         onBackClick = onBackClick,
         onKakaoShareClick = onKakaoShareClick,
         onMessageShareClick = onMessageShareClick,
-        modifier = modifier
+        onRetryClick = viewModel::retry,
+        modifier = modifier,
     )
 }

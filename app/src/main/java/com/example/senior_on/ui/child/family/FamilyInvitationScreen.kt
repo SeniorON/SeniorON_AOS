@@ -1,7 +1,5 @@
 package com.example.senior_on.ui.child.family
 
-import com.example.senior_on.ui.child.family.viewmodel.toFamilyTabUiState
-
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -26,7 +24,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,7 +46,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockAuthFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -58,13 +58,16 @@ private const val InvitationCardAspectRatio = 328f / 297f
 
 @Composable
 fun FamilyInvitationScreen(
-    uiState: FamilyTabUiState,
+    uiState: FamilyInvitationUiState,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onKakaoShareClick: () -> Unit = {},
-    onMessageShareClick: () -> Unit = {}
+    onMessageShareClick: () -> Unit = {},
+    onRetryClick: () -> Unit = {},
 ) {
-    var isCodeCopied by rememberSaveable { mutableStateOf(false) }
+    var isCodeCopied by rememberSaveable(uiState.invitationCode) {
+        mutableStateOf(false)
+    }
     val context = LocalContext.current
 
     Column(
@@ -78,65 +81,139 @@ fun FamilyInvitationScreen(
             onBackClick = onBackClick,
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(SeniorOnColors.Background1)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-        ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            FamilyInvitationHero(memberCount = uiState.members.size)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Image(
-                painter = painterResource(id = R.drawable.ic_family_invitation_envelope),
-                contentDescription = null,
-                modifier = Modifier.size(width = 35.dp, height = 28.dp),
-                contentScale = ContentScale.Fit
+        when {
+            uiState.isLoading -> FamilyInvitationLoadingContent(
+                modifier = Modifier.weight(1f),
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FamilyInvitationCodeTitle()
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FamilyInvitationCodeBox(
-                code = uiState.invitationCode,
+            uiState.errorMessage != null -> FamilyInvitationErrorContent(
+                message = uiState.errorMessage,
+                onRetryClick = onRetryClick,
+                modifier = Modifier.weight(1f),
+            )
+            else -> FamilyInvitationContent(
+                uiState = uiState,
+                isCodeCopied = isCodeCopied,
                 onCopyClick = {
                     copyFamilyInvitationCode(
                         context = context,
-                        invitationCode = uiState.invitationCode
+                        invitationCode = uiState.invitationCode,
                     )
                     isCodeCopied = true
-                }
-            )
-
-            if (isCodeCopied) {
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "코드가 복사되었습니다.",
-                    style = SeniorOnTextStyles.CaptionRegular,
-                    color = SeniorOnColors.Primary600
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-            } else {
-                Spacer(modifier = Modifier.height(28.dp))
-            }
-
-            FamilyInvitationShareButtons(
+                },
                 onKakaoShareClick = onKakaoShareClick,
-                onMessageShareClick = onMessageShareClick
+                onMessageShareClick = onMessageShareClick,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FamilyInvitationLoadingContent(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxSize()
+            .background(SeniorOnColors.Background1),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(color = SeniorOnColors.Primary600)
+    }
+}
+
+@Composable
+private fun FamilyInvitationErrorContent(
+    message: String,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.Background1),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = message,
+            style = SeniorOnTextStyles.BodySMedium,
+            color = SeniorOnColors.Gray500,
+        )
+        TextButton(onClick = onRetryClick) {
+            Text(
+                text = "다시 시도",
+                style = SeniorOnTextStyles.BodyMSemiBold,
+                color = SeniorOnColors.Primary600,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FamilyInvitationContent(
+    uiState: FamilyInvitationUiState,
+    isCodeCopied: Boolean,
+    onCopyClick: () -> Unit,
+    onKakaoShareClick: () -> Unit,
+    onMessageShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxSize()
+            .background(SeniorOnColors.Background1)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        FamilyInvitationHero(memberCount = uiState.memberCount ?: 0)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Image(
+            painter = painterResource(
+                id = R.drawable.ic_family_invitation_envelope,
+            ),
+            contentDescription = null,
+            modifier = Modifier.size(width = 35.dp, height = 28.dp),
+            contentScale = ContentScale.Fit,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        FamilyInvitationCodeTitle()
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        FamilyInvitationCodeBox(
+            code = uiState.invitationCode,
+            onCopyClick = onCopyClick,
+        )
+
+        if (isCodeCopied) {
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "코드가 복사되었습니다.",
+                style = SeniorOnTextStyles.CaptionRegular,
+                color = SeniorOnColors.Primary600,
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+        } else {
+            Spacer(modifier = Modifier.height(28.dp))
         }
+
+        FamilyInvitationShareButtons(
+            onKakaoShareClick = onKakaoShareClick,
+            onMessageShareClick = onMessageShareClick,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -249,21 +326,23 @@ private fun FamilyInvitationCodeBox(
             text = code,
             modifier = Modifier.weight(1f),
             style = SeniorOnTextStyles.HeadingXS,
-            color = SeniorOnColors.Gray800
+            color = SeniorOnColors.Gray800,
         )
 
-        Icon(
-            painter = painterResource(id = R.drawable.ic_family_code_copy),
-            contentDescription = "가족 공유 코드 복사",
-            modifier = Modifier
-                .size(34.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onCopyClick
-                ),
-            tint = SeniorOnColors.Gray400
-        )
+        if (code.isNotBlank()) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_family_code_copy),
+                contentDescription = "가족 공유 코드 복사",
+                modifier = Modifier
+                    .size(34.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onCopyClick
+                    ),
+                tint = SeniorOnColors.Gray400
+            )
+        }
     }
 }
 
@@ -319,7 +398,10 @@ private fun copyFamilyInvitationCode(
 )
 @Composable
 private fun FamilyInvitationScreenPreview() {
-    val uiState = MockFamilyFixtures.primaryCaregiverOverview.toFamilyTabUiState()
+    val uiState = FamilyInvitationUiState(
+        invitationCode = MockAuthFixtures.DISPLAY_FAMILY_SHARE_CODE,
+        memberCount = 3,
+    )
 
     SENIOR_ONTheme {
         Column(
