@@ -6,8 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.domain.repository.family.FamilyRepository
-import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +21,7 @@ data class FamilyPhotoUploadUiState(
 )
 
 class FamilyPhotoUploadViewModel(
-    private val repository: FamilyRepository,
+    private val repository: FamilyServerRepository,
     private val uploadPreparer: FamilyPhotoUploadPreparer,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FamilyPhotoUploadUiState())
@@ -47,14 +46,12 @@ class FamilyPhotoUploadViewModel(
             try {
                 val preparedPhoto = uploadPreparer.prepare(photoUri)
                 preparedFile = preparedPhoto.file
-                val uploadedPhoto = repository.uploadPhoto(
+                repository.uploadPhoto(
                     photo = preparedPhoto,
-                    message = message,
+                    description = message,
                 )
                 discardPreparedFileOnFailure = false
-                if (uploadedPhoto.imageSource !is FamilyImageSource.Uri) {
-                    preparedFile.delete()
-                }
+                preparedFile.delete()
                 try {
                     uploadPreparer.deleteOwnedSource(photoUri)
                 } catch (exception: CancellationException) {
@@ -81,7 +78,7 @@ class FamilyPhotoUploadViewModel(
 
     companion object {
         fun factory(
-            repository: FamilyRepository,
+            repository: FamilyServerRepository,
             uploadPreparer: FamilyPhotoUploadPreparer,
         ) = viewModelFactory {
             initializer {

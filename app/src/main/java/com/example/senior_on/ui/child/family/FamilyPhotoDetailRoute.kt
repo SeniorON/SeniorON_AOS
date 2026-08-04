@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.child.family
 
-import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoDetailViewModel
+import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -31,18 +31,25 @@ fun FamilyPhotoDetailRoute(
     modifier: Modifier = Modifier,
     onDownloadClick: (String) -> Unit = {},
     onDeleteSuccess: () -> Unit = {},
-    viewModel: FamilyPhotoDetailViewModel,
+    viewModel: FamilyViewModel,
 ) {
     val context = LocalContext.current
     val photoSaver = remember(context) { FamilyPhotoSaver(context) }
     val coroutineScope = rememberCoroutineScope()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val familyUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState = FamilyPhotoDetailUiState(
+        photo = familyUiState.sharedPhotos.firstOrNull { it.id == photoId },
+        isLoading = familyUiState.loadingPhotoId == photoId,
+        isDeleting = familyUiState.deletingPhotoId == photoId,
+        deletedPhotoId = familyUiState.deletedPhotoId,
+        errorMessage = familyUiState.photoMutationErrorMessage,
+    )
     var isSaving by remember { mutableStateOf(false) }
     var isSaveSuccessVisible by remember { mutableStateOf(false) }
     var isDeleteDialogVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(photoId) {
-        viewModel.loadPhoto(photoId)
+        viewModel.ensurePhotoLoaded(photoId)
     }
 
     LaunchedEffect(uiState.deletedPhotoId, photoId) {
@@ -114,9 +121,9 @@ fun FamilyPhotoDetailRoute(
         onDeleteDismiss = { isDeleteDialogVisible = false },
         onDeleteConfirm = {
             isDeleteDialogVisible = false
-            viewModel.deletePhoto()
+            viewModel.deletePhoto(photoId)
         },
-        onRetryClick = { viewModel.loadPhoto(photoId) },
+        onRetryClick = { viewModel.ensurePhotoLoaded(photoId) },
         modifier = modifier
     )
 }

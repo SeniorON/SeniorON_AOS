@@ -56,12 +56,22 @@ data class DeviceInfo(
 data class FamilyCodeInfo(val familyId: Long?, val code: String, val memberCount: Int? = null)
 data class ServerFamilyMember(
     val id: Long, val name: String, val role: String, val managerType: String,
-    val isMe: Boolean, val profileImageUrl: String?
+    val canBecomePrimary: Boolean, val isMe: Boolean, val profileImageUrl: String?
 )
 data class ServerFamilyPhoto(
     val id: Long, val imageUrl: String, val uploaderId: Long,
     val uploaderName: String, val description: String, val createdAt: String,
     val canDelete: Boolean, val isNew: Boolean
+)
+data class ServerFamilyPhotoCursor(
+    val createdAt: String,
+    val photoId: Long,
+)
+data class ServerFamilyPhotoPage(
+    val photos: List<ServerFamilyPhoto>,
+    val totalCount: Long,
+    val nextCursor: ServerFamilyPhotoCursor?,
+    val hasNext: Boolean,
 )
 data class ServerFamilyHome(
     val members: List<ServerFamilyMember>, val recentPhotos: List<ServerFamilyPhoto>

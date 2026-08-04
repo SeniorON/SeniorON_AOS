@@ -173,21 +173,101 @@ class FamilyServerRepositoryImpl(
     override suspend fun getCode() = source.getCode().let {
         FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
     }
-    override suspend fun getHome() = source.getHome().let {
-        ServerFamilyHome(it.members.orEmpty().map(FamilyMemberResponse::toDomain), it.recentPhotos.orEmpty().map(FamilyPhotoItemResponse::toDomain))
+    override suspend fun getHome() = source.getHome().let { response ->
+        ServerFamilyHome(
+            members = response.members.orEmpty().map { member ->
+                ServerFamilyMember(
+                    id = member.usersId ?: 0,
+                    name = member.name.orEmpty(),
+                    role = member.role.orEmpty(),
+                    managerType = member.managerType.orEmpty(),
+                    canBecomePrimary = member.canBecomePrimary == true,
+                    isMe = member.me == true,
+                    profileImageUrl = member.profileImageUrl,
+                )
+            },
+            recentPhotos = response.recentPhotos.orEmpty().map { photo ->
+                ServerFamilyPhoto(
+                    id = photo.familyPhotoId ?: 0,
+                    imageUrl = photo.imageUrl.orEmpty(),
+                    uploaderId = photo.uploaderUserId ?: 0,
+                    uploaderName = photo.uploaderName.orEmpty(),
+                    description = photo.description.orEmpty(),
+                    createdAt = photo.createdAt.orEmpty(),
+                    canDelete = photo.canDelete == true,
+                    isNew = photo.newPhoto == true,
+                )
+            },
+        )
     }
-    override suspend fun getMembers() = source.getMembers().map(FamilyMemberResponse::toDomain)
+    override suspend fun getMembers() = source.getMembers().map { member ->
+        ServerFamilyMember(
+            id = member.usersId ?: 0,
+            name = member.name.orEmpty(),
+            role = member.role.orEmpty(),
+            managerType = member.managerType.orEmpty(),
+            canBecomePrimary = member.canBecomePrimary == true,
+            isMe = member.me == true,
+            profileImageUrl = member.profileImageUrl,
+        )
+    }
     override suspend fun changePrimaryManager(userId: Long) {
         source.changePrimaryManager(FamilyPrimaryManagerUpdateRequest(userId))
     }
     override suspend fun deleteMember(userId: Long) = source.deleteMember(userId)
-    override suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?) =
-        source.getPhotos(uploaderId, cursorAt, cursorId, size).photos.orEmpty().map(FamilyPhotoItemResponse::toDomain)
+    override suspend fun getPhotos(
+        uploaderId: Long?,
+        cursorAt: String?,
+        cursorId: Long?,
+        size: Int?,
+    ) = source.getPhotos(uploaderId, cursorAt, cursorId, size).let { response ->
+        ServerFamilyPhotoPage(
+            photos = response.photos.orEmpty().map { photo ->
+                ServerFamilyPhoto(
+                    id = photo.familyPhotoId ?: 0,
+                    imageUrl = photo.imageUrl.orEmpty(),
+                    uploaderId = photo.uploaderUserId ?: 0,
+                    uploaderName = photo.uploaderName.orEmpty(),
+                    description = photo.description.orEmpty(),
+                    createdAt = photo.createdAt.orEmpty(),
+                    canDelete = photo.canDelete == true,
+                    isNew = photo.newPhoto == true,
+                )
+            },
+            totalCount = response.totalCount ?: 0,
+            nextCursor = response.nextCursor?.let { cursor ->
+                val createdAt = cursor.createdAt
+                val photoId = cursor.familyPhotoId
+                if (createdAt.isNullOrBlank() || photoId == null) {
+                    null
+                } else {
+                    ServerFamilyPhotoCursor(
+                        createdAt = createdAt,
+                        photoId = photoId,
+                    )
+                }
+            },
+            hasNext = response.hasNext == true,
+        )
+    }
     override suspend fun uploadPhoto(photo: PreparedFamilyPhoto, description: String): ServerFamilyPhoto {
         val body = photo.file.asRequestBody(photo.mimeType.toMediaType())
         val part = MultipartBody.Part.createFormData("image", photo.displayName, body)
-        val descriptionBody = description.trim().toRequestBody("text/plain".toMediaType())
-        return source.uploadPhoto(part, descriptionBody).toDomain()
+        val descriptionBody = description.trim()
+            .takeIf(String::isNotEmpty)
+            ?.toRequestBody("text/plain".toMediaType())
+        return source.uploadPhoto(part, descriptionBody).let { uploaded ->
+            ServerFamilyPhoto(
+                id = uploaded.familyPhotoId ?: 0,
+                imageUrl = uploaded.imageUrl.orEmpty(),
+                uploaderId = uploaded.uploaderUserId ?: 0,
+                uploaderName = uploaded.uploaderName.orEmpty(),
+                description = uploaded.description.orEmpty(),
+                createdAt = uploaded.createdAt.orEmpty(),
+                canDelete = uploaded.canDelete == true,
+                isNew = uploaded.newPhoto == true,
+            )
+        }
     }
     override suspend fun markPhotoViewed(photoId: Long) = source.markViewed(photoId)
     override suspend fun deletePhoto(photoId: Long) = source.deletePhoto(photoId)
@@ -424,13 +504,6 @@ private fun HomeButtonResponse.toDomain() = ServerButton(
     action_type,
     action_value,
     package_name,
-)
-private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
-    usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl
-)
-private fun FamilyPhotoItemResponse.toDomain() = ServerFamilyPhoto(
-    familyPhotoId ?: 0, imageUrl.orEmpty(), uploaderUserId ?: 0, uploaderName.orEmpty(),
-    description.orEmpty(), createdAt.orEmpty(), canDelete == true, newPhoto == true
 )
 private fun HospitalListResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),

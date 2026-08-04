@@ -13,7 +13,7 @@ fun ChildMainRoute(
 ) {
     ChildMainScreen(
         userProfile = appContainer.userProfileFor(userId),
-        familyRepository = appContainer.familyRepositoryFor(userId),
+        familyServerRepository = appContainer.familyServerRepository,
         familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
         displayRepository = appContainer.displayRepository,
         parentInfoRepository = appContainer.parentInfoRepository,
@@ -21,7 +21,6 @@ fun ChildMainRoute(
             appContainer.caregiverRelationshipRepositoryFor(userId),
         notificationRepository = appContainer.notificationRepository,
         medicationRepository = appContainer.medicationRepository,
-        familyServerRepository = appContainer.familyServerRepository,
         homeServerRepository = appContainer.homeServerRepository,
         eventRepository = appContainer.eventRepository,
         onLogoutClick = onLogoutClick,

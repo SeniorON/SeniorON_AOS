@@ -33,7 +33,12 @@ interface FamilyServerRepository {
     suspend fun getMembers(): List<ServerFamilyMember>
     suspend fun changePrimaryManager(userId: Long)
     suspend fun deleteMember(userId: Long)
-    suspend fun getPhotos(uploaderId: Long? = null, cursorAt: String? = null, cursorId: Long? = null, size: Int? = null): List<ServerFamilyPhoto>
+    suspend fun getPhotos(
+        uploaderId: Long? = null,
+        cursorAt: String? = null,
+        cursorId: Long? = null,
+        size: Int? = null,
+    ): ServerFamilyPhotoPage
     suspend fun uploadPhoto(photo: PreparedFamilyPhoto, description: String): ServerFamilyPhoto
     suspend fun markPhotoViewed(photoId: Long)
     suspend fun deletePhoto(photoId: Long)

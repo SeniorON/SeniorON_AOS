@@ -499,7 +499,7 @@ internal fun SharedPhotoCard(
     Box(
         modifier = modifier
             .aspectRatio(SharedPhotoCardAspectRatio)
-            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .clip(RoundedCornerShape(10.dp))
             .background(SeniorOnColors.Background4)
             .then(
                 if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),

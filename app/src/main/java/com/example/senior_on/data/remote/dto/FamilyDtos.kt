@@ -15,12 +15,12 @@ data class FamilyPhotoItemResponse(
 )
 data class FamilyPhotoCursorResponse(val createdAt: String?, val familyPhotoId: Long?)
 data class FamilyPhotoListResponse(
-    val photos: List<FamilyPhotoItemResponse>?, val totalCount: Int?,
+    val photos: List<FamilyPhotoItemResponse>?, val totalCount: Long?,
     val nextCursor: FamilyPhotoCursorResponse?, val hasNext: Boolean?
 )
 data class FamilyPhotoAlbumResponse(
     val uploaderUserId: Long?, val uploaderName: String?, val latestPhotoUrl: String?,
-    val photoCount: Int?, val hasNewPhotos: Boolean?
+    val photoCount: Long?, val hasNewPhotos: Boolean?
 )
 data class FamilyMemberResponse(
     val usersId: Long?, val name: String?, val role: String?,

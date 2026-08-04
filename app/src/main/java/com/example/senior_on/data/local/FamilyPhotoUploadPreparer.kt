@@ -19,14 +19,16 @@ class FamilyPhotoUploadPreparer(context: Context) {
         withContext(Dispatchers.IO) {
             val uri = photoUri.toUri()
             val resolver = appContext.contentResolver
-            val mimeType = resolver.getType(uri)
-                ?: MimeTypeMap.getSingleton()
+            val mimeType = (
+                resolver.getType(uri)
+                    ?: MimeTypeMap.getSingleton()
                     .getMimeTypeFromExtension(
                         MimeTypeMap.getFileExtensionFromUrl(photoUri).lowercase(),
                     )
-                ?: DefaultImageMimeType
-            require(mimeType.startsWith("image/")) {
-                "Only image files can be uploaded"
+                    ?: DefaultImageMimeType
+                ).lowercase()
+            require(mimeType in AllowedImageMimeTypes) {
+                "Only JPEG, PNG, and WebP images can be uploaded"
             }
 
             val extension = MimeTypeMap.getSingleton()
@@ -100,5 +102,10 @@ class FamilyPhotoUploadPreparer(context: Context) {
         const val DefaultBufferSize = 8 * 1024
         const val MaxUploadBytes = 10L * 1024L * 1024L
         const val MaxDisplayNameLength = 120
+        val AllowedImageMimeTypes = setOf(
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        )
     }
 }

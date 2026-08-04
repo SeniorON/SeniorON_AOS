@@ -54,9 +54,10 @@ object SeniorOnNetwork {
 
     private fun configuredClientBuilder(): OkHttpClient.Builder =
         OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .callTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(45, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
 
     private val retrofit by lazy {

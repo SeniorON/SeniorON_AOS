@@ -68,7 +68,7 @@ fun FamilyMemberSettingsScreen(
         member.role == FamilyCaregiverRole.Primary
     }
     val assistantMembers = uiState.members.filter { member ->
-        member.role == FamilyCaregiverRole.Assistant
+        member.role == FamilyCaregiverRole.Assistant && member.canBecomePrimary
     }
     var selectedMemberId by rememberSaveable { mutableStateOf<String?>(null) }
     var isPermissionGuideExpanded by rememberSaveable { mutableStateOf(false) }

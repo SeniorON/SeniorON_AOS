@@ -1,11 +1,7 @@
 package com.example.senior_on.ui.child
 
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoUploadViewModel
-
-import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoDetailViewModel
-
 import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
-
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
 import android.Manifest
@@ -33,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,27 +38,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
-import com.example.senior_on.data.repository.impl.DisplayRepositoryImpl
-import com.example.senior_on.data.repository.impl.FamilyRepositoryImpl
-import com.example.senior_on.data.repository.impl.NotificationRepositoryImpl
-import com.example.senior_on.data.repository.impl.ParentInfoRepositoryImpl
-import com.example.senior_on.data.source.display.MockDisplayDataSource
-import com.example.senior_on.data.source.family.MockFamilyDataSource
-import com.example.senior_on.data.source.notification.MockNotificationDataSource
-import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
-import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.domain.repository.display.DisplayRepository
-import com.example.senior_on.domain.repository.family.FamilyRepository
-import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.model.auth.AppUserProfile
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
@@ -74,8 +55,6 @@ import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
-import com.example.senior_on.ui.child.family.FamilyInvitationScreen
-import com.example.senior_on.ui.child.family.FamilyInvitationUiState
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
@@ -90,7 +69,6 @@ import com.example.senior_on.ui.child.settings.SettingsProfileUiState
 import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.toParentInfo
 import com.example.senior_on.ui.child.settings.toSettingsProfileUiState
-import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
@@ -107,14 +85,13 @@ private enum class ChildFamilyDestination {
 @Composable
 fun ChildMainScreen(
     userProfile: AppUserProfile,
-    familyRepository: FamilyRepository,
+    familyServerRepository: FamilyServerRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
     caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationRepository: NotificationRepository,
     medicationRepository: MedicationRepository? = null,
-    familyServerRepository: FamilyServerRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
     modifier: Modifier = Modifier,
@@ -139,14 +116,11 @@ fun ChildMainScreen(
     var selectedPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
     val familyViewModel: FamilyViewModel = viewModel(
-        factory = FamilyViewModel.factory(familyRepository),
-    )
-    val familyPhotoDetailViewModel: FamilyPhotoDetailViewModel = viewModel(
-        factory = FamilyPhotoDetailViewModel.factory(familyRepository),
+        factory = FamilyViewModel.factory(familyServerRepository),
     )
     val familyPhotoUploadViewModel: FamilyPhotoUploadViewModel = viewModel(
         factory = FamilyPhotoUploadViewModel.factory(
-            repository = familyRepository,
+            repository = familyServerRepository,
             uploadPreparer = familyPhotoUploadPreparer,
         ),
     )
@@ -241,7 +215,6 @@ fun ChildMainScreen(
             selectedPhotoId = selectedPhotoId,
             selectedPhotoUri = selectedPhotoUri,
             familyViewModel = familyViewModel,
-            familyPhotoDetailViewModel = familyPhotoDetailViewModel,
             familyPhotoUploadViewModel = familyPhotoUploadViewModel,
             displayViewModel = displayViewModel,
             settingsProfile = settingsProfile,
@@ -257,6 +230,7 @@ fun ChildMainScreen(
             onCameraClick = launchCamera,
             onPhotoShared = {
                 selectedPhotoUri = null
+                familyViewModel.refreshAfterPhotoUpload()
                 familyDestination = ChildFamilyDestination.PhotoGallery
             },
             onPhotoClick = navigateToPhotoDetail,
@@ -313,7 +287,6 @@ private fun ChildMainTabContent(
     selectedPhotoId: String?,
     selectedPhotoUri: String?,
     familyViewModel: FamilyViewModel,
-    familyPhotoDetailViewModel: FamilyPhotoDetailViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     displayViewModel: DisplayViewModel,
     settingsProfile: SettingsProfileUiState,
@@ -328,7 +301,7 @@ private fun ChildMainTabContent(
     onFamilyBackClick: () -> Unit,
     notificationRepository: NotificationRepository,
     medicationRepository: MedicationRepository?,
-    familyServerRepository: FamilyServerRepository?,
+    familyServerRepository: FamilyServerRepository,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
@@ -346,7 +319,7 @@ private fun ChildMainTabContent(
     }
 
     if (selectedTab == ChildMainTab.Health) {
-        if (medicationRepository != null && familyServerRepository != null) {
+        if (medicationRepository != null) {
             HealthMainRoute(
                 medicationRepository = medicationRepository,
                 familyRepository = familyServerRepository,
@@ -380,21 +353,11 @@ private fun ChildMainTabContent(
             )
 
             ChildFamilyDestination.Invitation -> {
-                if (familyServerRepository != null) {
-                    FamilyInvitationRoute(
-                        onBackClick = onFamilyBackClick,
-                        modifier = modifier,
-                        repository = familyServerRepository,
-                    )
-                } else {
-                    FamilyInvitationScreen(
-                        uiState = FamilyInvitationUiState(
-                            errorMessage = "가족 공유 코드를 불러오지 못했어요.",
-                        ),
-                        onBackClick = onFamilyBackClick,
-                        modifier = modifier,
-                    )
-                }
+                FamilyInvitationRoute(
+                    onBackClick = onFamilyBackClick,
+                    modifier = modifier,
+                    repository = familyServerRepository,
+                )
             }
 
             ChildFamilyDestination.PhotoGallery -> FamilyPhotoGalleryRoute(
@@ -426,7 +389,7 @@ private fun ChildMainTabContent(
                         onBackClick = onFamilyBackClick,
                         onDeleteSuccess = onFamilyBackClick,
                         modifier = modifier,
-                        viewModel = familyPhotoDetailViewModel,
+                        viewModel = familyViewModel,
                     )
                 }
             }
@@ -533,49 +496,4 @@ private fun createFamilyPhotoCaptureUri(context: Context): Uri {
         "${context.packageName}.fileprovider",
         photoFile
     )
-}
-
-@Preview(
-    name = "Child Main",
-    showBackground = true,
-    widthDp = 360,
-    heightDp = 800
-)
-@Composable
-private fun ChildMainScreenPreview() {
-    val context = LocalContext.current
-    val repository = remember {
-        FamilyRepositoryImpl(MockFamilyDataSource())
-    }
-    val displayRepository = remember {
-        DisplayRepositoryImpl(MockDisplayDataSource())
-    }
-    val parentInfoRepository = remember {
-        ParentInfoRepositoryImpl(
-            MockParentInfoDataSource(MockSeniorFixtures.mother)
-        )
-    }
-    val caregiverRelationshipRepository = remember {
-        CaregiverRelationshipRepositoryImpl(
-            MockCaregiverRelationshipDataSource(
-                activeSeniorId = MockSeniorFixtures.SENIOR_ID,
-            )
-        )
-    }
-    val notificationRepository = remember {
-        NotificationRepositoryImpl(MockNotificationDataSource())
-    }
-    val uploadPreparer = remember(context) { FamilyPhotoUploadPreparer(context) }
-
-    SENIOR_ONTheme {
-        ChildMainScreen(
-            userProfile = MockUserFixtures.primaryCaregiver,
-            familyRepository = repository,
-            familyPhotoUploadPreparer = uploadPreparer,
-            displayRepository = displayRepository,
-            parentInfoRepository = parentInfoRepository,
-            caregiverRelationshipRepository = caregiverRelationshipRepository,
-            notificationRepository = notificationRepository,
-        )
-    }
 }
