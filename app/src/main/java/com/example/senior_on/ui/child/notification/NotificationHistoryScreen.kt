@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.notification
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import android.widget.Space
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -147,7 +148,7 @@ private fun NotificationHistoryTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp),
+            .height(SeniorOnDimensions.TopBarHeight),
         contentAlignment = Alignment.Center
     ) {
         Box(

@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.onboarding.login
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -280,7 +281,7 @@ private fun LoginTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp),
+            .height(SeniorOnDimensions.TopBarHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

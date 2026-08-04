@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.display
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -141,7 +142,7 @@ private fun DisplayTopBar() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp)
+                .height(SeniorOnDimensions.TopBarHeight)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart,
         ) {

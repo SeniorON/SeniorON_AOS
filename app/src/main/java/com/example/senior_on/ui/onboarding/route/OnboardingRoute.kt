@@ -95,11 +95,12 @@ fun OnboardingRoute(
         when (currentRoute) {
             SeniorOnRoute.Splash -> SplashRoute(
                 appContainer = appContainer,
-                onSessionLoaded = { mode ->
-                    if (mode == null) {
+                onSessionLoaded = { session ->
+                    if (session == null) {
                         currentRoute = SeniorOnRoute.ModeSelection
                     } else {
-                        onAuthenticated(mode, authenticatedUserId)
+                        authenticatedUserId = session.userId
+                        onAuthenticated(session.role, session.userId)
                     }
                 }
             )

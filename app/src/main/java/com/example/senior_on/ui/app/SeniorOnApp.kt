@@ -28,6 +28,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
     var onboardingInstance by rememberSaveable { mutableIntStateOf(0) }
 
     fun openOnboarding() {
+        appContainer.sessionRepository.clearSession()
         authenticatedUserId = ""
         onboardingInstance += 1
         destination = AppDestination.Onboarding

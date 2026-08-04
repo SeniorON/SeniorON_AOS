@@ -64,6 +64,7 @@ class AuthViewModel(
     fun login(
         loginId: String,
         password: String,
+        mode: AppUserMode,
         onResult: (LoginResult?) -> Unit
     ) {
         launchRequest(
@@ -80,6 +81,13 @@ class AuthViewModel(
                 )
             )
             accessToken = result?.accessToken
+            if (result != null) {
+                sessionRepository.saveSession(
+                    accessToken = result.accessToken,
+                    userId = result.loginId,
+                    mode = mode,
+                )
+            }
             onResult(result)
         }
     }
@@ -189,6 +197,11 @@ class AuthViewModel(
             )
 
             accessToken = loginResult.accessToken
+            sessionRepository.saveSession(
+                accessToken = loginResult.accessToken,
+                userId = loginResult.loginId,
+                mode = mode,
+            )
             signupDraft = SignupDraft()
             onResult(loginResult.copy(mode = mode))
         }
@@ -203,6 +216,13 @@ class AuthViewModel(
         ) {
             val result = socialAuthRepository.loginWithKakao(kakaoAccessToken)
             accessToken = result.accessToken
+            result.mode?.let { mode ->
+                sessionRepository.saveSession(
+                    accessToken = result.accessToken,
+                    userId = result.usersId.toString(),
+                    mode = mode,
+                )
+            }
             onResult(result)
         }
     }
