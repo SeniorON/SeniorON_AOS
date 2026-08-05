@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
@@ -29,6 +32,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -37,6 +41,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -44,7 +51,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.onSizeChanged
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.LoginResult
@@ -52,6 +61,7 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import kotlin.math.roundToInt
 
 private enum class LoginFieldError {
     None,
@@ -84,6 +94,20 @@ fun LoginScreen(
     var loginError by rememberSaveable { mutableStateOf(LoginFieldError.None) }
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
     var isLoggingIn by rememberSaveable { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val imeBottomPx = WindowInsets.ime.getBottom(density)
+    var rootHeightPx by remember { mutableIntStateOf(0) }
+    var loginButtonTopPx by remember { mutableStateOf<Float?>(null) }
+    val loginButtonHeightPx = with(density) { 50.dp.toPx() }
+    val keyboardTopPx = rootHeightPx - imeBottomPx
+    val loginButtonMovementPx = loginButtonTopPx?.let { buttonTop ->
+        (buttonTop + loginButtonHeightPx - keyboardTopPx).coerceAtLeast(0f)
+    } ?: 0f
+    val loginButtonTransitionDistancePx = with(density) { 16.dp.toPx() }
+    val loginButtonTransitionProgress =
+        (loginButtonMovementPx / loginButtonTransitionDistancePx).coerceIn(0f, 1f)
+    val loginButtonHorizontalPadding = 16.dp * (1f - loginButtonTransitionProgress)
+    val loginButtonCornerRadius = SeniorOnRadius.Small * (1f - loginButtonTransitionProgress)
 
     val userIdError = loginError == LoginFieldError.InvalidCredentials
     val passwordError = loginError != LoginFieldError.None
@@ -93,10 +117,36 @@ fun LoginScreen(
         LoginFieldError.PasswordMismatch -> "비밀번호가 일치하지 않아요"
         LoginFieldError.None -> null
     }
+    val performLogin: () -> Unit = {
+        loginError = when {
+            password.isBlank() -> LoginFieldError.EmptyPassword
+            userId.isBlank() -> LoginFieldError.InvalidCredentials
+            else -> LoginFieldError.None
+        }
+
+        if (loginError == LoginFieldError.None && !isLoggingIn) {
+            isLoggingIn = true
+            onLoginRequest(userId, password) { loginResult ->
+                isLoggingIn = false
+
+                if (loginResult == null) {
+                    loginError = LoginFieldError.InvalidCredentials
+                } else if (loginResult.mode != null && loginResult.mode != selectedMode) {
+                    wrongModeDialogType = when (loginResult.mode) {
+                        AppUserMode.Senior -> LoginWrongModeDialogType.SeniorAccount
+                        AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
+                    }
+                } else {
+                    onLoginClick(loginResult.loginId)
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { rootHeightPx = it.height }
             .background(SeniorOnColors.White)
     ) {
         Column(
@@ -179,48 +229,14 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(18.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
 
-        Box(
+        Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp) //높이 50px
-                .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                .background(SeniorOnColors.Primary600)
-                .clickable(enabled = !isLoggingIn) {
-                    loginError = when {
-                        password.isBlank() -> LoginFieldError.EmptyPassword
-                        userId.isBlank() -> LoginFieldError.InvalidCredentials
-                        else -> LoginFieldError.None
-                    }
-                    if (loginError != LoginFieldError.None) return@clickable
-
-                    isLoggingIn = true
-                    onLoginRequest(userId, password) { loginResult ->
-                        isLoggingIn = false
-
-                        if (loginResult == null) {
-                            loginError = LoginFieldError.InvalidCredentials
-                            return@onLoginRequest
-                        }
-                        if (loginResult.mode != null && loginResult.mode != selectedMode) {
-                            wrongModeDialogType = when (loginResult.mode) {
-                                AppUserMode.Senior ->
-                                    LoginWrongModeDialogType.SeniorAccount
-                                AppUserMode.Child ->
-                                    LoginWrongModeDialogType.ChildAccount
-                            }
-                            return@onLoginRequest
-                        }
-                        onLoginClick(loginResult.loginId)
-                    }
+                .height(50.dp)
+                .onGloballyPositioned { coordinates ->
+                    loginButtonTopPx = coordinates.positionInRoot().y
                 },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "로그인",
-                style = SeniorOnTextStyles.ButtonM,
-                color = SeniorOnColors.White
-            )
-        }
+        )
 
         Spacer(modifier = Modifier.height(24.dp)) // 로그인 버튼 - 아이디 찾기 row 간격
 
@@ -259,6 +275,32 @@ fun LoginScreen(
                     .clickable(onClick = onGoogleClick)
             )
         }
+        }
+
+        loginButtonTopPx?.let { buttonTopPx ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset {
+                        IntOffset(
+                            x = 0,
+                            y = (buttonTopPx - loginButtonMovementPx).roundToInt(),
+                        )
+                    }
+                    .fillMaxWidth()
+                    .padding(horizontal = loginButtonHorizontalPadding)
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(loginButtonCornerRadius))
+                    .background(SeniorOnColors.Primary600)
+                    .clickable(enabled = !isLoggingIn, onClick = performLogin),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "로그인",
+                    style = SeniorOnTextStyles.ButtonM,
+                    color = SeniorOnColors.White,
+                )
+            }
         }
 
         wrongModeDialogType?.let { dialogType ->

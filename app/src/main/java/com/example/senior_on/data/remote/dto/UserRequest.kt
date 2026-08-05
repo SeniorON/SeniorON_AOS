@@ -29,6 +29,11 @@ data class LoginRequest(
     val deviceIdentifier: String
 )
 
+data class TokenRefreshRequest(
+    val refreshToken: String,
+    val deviceIdentifier: String?
+)
+
 data class UpdateRoleRequest(
     val role: UserRole
 )

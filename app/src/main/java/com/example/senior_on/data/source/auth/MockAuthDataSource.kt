@@ -10,8 +10,10 @@ import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.SignupResponse
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleResponse
+import com.example.senior_on.data.remote.dto.UserRole
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeResponse
+import com.example.senior_on.domain.model.auth.AppUserMode
 import kotlinx.coroutines.delay
 
 class MockAuthDataSource : AuthDataSource {
@@ -65,7 +67,12 @@ class MockAuthDataSource : AuthDataSource {
             usersId = account.profile.userId.hashCode().toLong(),
             name = account.name,
             loginId = account.userId,
-            accessToken = MOCK_ACCESS_TOKEN
+            role = when (account.role) {
+                AppUserMode.Child -> UserRole.CHILD
+                AppUserMode.Senior -> UserRole.PARENT
+            },
+            accessToken = MOCK_ACCESS_TOKEN,
+            refreshToken = MOCK_REFRESH_TOKEN,
         )
     }
 
@@ -85,5 +92,6 @@ class MockAuthDataSource : AuthDataSource {
         const val MOCK_NETWORK_DELAY_MILLIS = 300L
         const val MOCK_SIGNUP_USER_ID = 1L
         const val MOCK_ACCESS_TOKEN = "mock-access-token"
+        const val MOCK_REFRESH_TOKEN = "mock-refresh-token"
     }
 }

@@ -80,15 +80,29 @@ class AuthViewModel(
                     deviceIdentifier = deviceRegistration.deviceIdentifier
                 )
             )
-            accessToken = result?.accessToken
-            if (result != null) {
-                sessionRepository.saveSession(
-                    accessToken = result.accessToken,
-                    userId = result.loginId,
-                    mode = mode,
-                )
+            when {
+                result == null || result.mode == null -> {
+                    accessToken = null
+                    sessionRepository.clearSession()
+                    onResult(null)
+                }
+                result.mode != mode -> {
+                    accessToken = null
+                    sessionRepository.clearSession()
+                    onResult(result)
+                }
+                else -> {
+                    accessToken = result.accessToken
+                    sessionRepository.saveLoginSession(
+                        accessToken = result.accessToken,
+                        refreshToken = result.refreshToken,
+                        deviceIdentifier = deviceRegistration.deviceIdentifier,
+                        userId = result.loginId,
+                        mode = result.mode,
+                    )
+                    onResult(result)
+                }
             }
-            onResult(result)
         }
     }
 
@@ -197,8 +211,10 @@ class AuthViewModel(
             )
 
             accessToken = loginResult.accessToken
-            sessionRepository.saveSession(
+            sessionRepository.saveLoginSession(
                 accessToken = loginResult.accessToken,
+                refreshToken = loginResult.refreshToken,
+                deviceIdentifier = deviceRegistration.deviceIdentifier,
                 userId = loginResult.loginId,
                 mode = mode,
             )

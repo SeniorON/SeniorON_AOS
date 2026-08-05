@@ -39,5 +39,28 @@ class SessionRepositoryImpl(
         )
     }
 
+    override fun saveLoginSession(
+        accessToken: String,
+        refreshToken: String?,
+        deviceIdentifier: String,
+        userId: String,
+        mode: AppUserMode,
+    ) {
+        AccessTokenStore.saveLoginTokens(
+            accessToken = accessToken,
+            newRefreshToken = refreshToken,
+            newDeviceIdentifier = deviceIdentifier,
+        )
+        dataSource.saveSession(
+            SavedSession(
+                role = when (mode) {
+                    AppUserMode.Child -> UserRole.CHILD
+                    AppUserMode.Senior -> UserRole.PARENT
+                },
+                userId = userId,
+            )
+        )
+    }
+
     override fun clearSession() = dataSource.clearSession()
 }

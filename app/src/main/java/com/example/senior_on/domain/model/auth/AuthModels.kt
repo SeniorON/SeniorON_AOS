@@ -31,7 +31,8 @@ data class LoginResult(
     val name: String,
     val loginId: String,
     val accessToken: String,
-    val mode: AppUserMode? = null
+    val mode: AppUserMode? = null,
+    val refreshToken: String? = null,
 )
 
 data class RoleUpdateResult(

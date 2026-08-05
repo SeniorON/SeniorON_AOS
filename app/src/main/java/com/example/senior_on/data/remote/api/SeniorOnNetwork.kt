@@ -1,6 +1,7 @@
 package com.example.senior_on.data.remote.api
 
 import com.example.senior_on.data.local.AccessTokenStore
+import com.example.senior_on.data.remote.interceptor.AccessTokenAuthenticator
 import com.example.senior_on.data.remote.interceptor.HttpLoggingInterceptorFactory
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
@@ -10,8 +11,25 @@ import retrofit2.converter.gson.GsonConverterFactory
 object SeniorOnNetwork {
     private const val BASE_URL = "https://senioron.site/"
 
+    private val refreshOkHttpClient by lazy {
+        configuredClientBuilder()
+            .addInterceptor(
+                HttpLoggingInterceptorFactory.create(tag = "SeniorOnHttp")
+            )
+            .build()
+    }
+
+    private val refreshUserApi: UserApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(refreshOkHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(UserApi::class.java)
+    }
+
     private val okHttpClient by lazy {
-        OkHttpClient.Builder()
+        configuredClientBuilder()
             .addInterceptor { chain ->
                 val request = chain.request()
                 val token = AccessTokenStore.getBearerToken()
@@ -25,15 +43,19 @@ object SeniorOnNetwork {
                     }
                 chain.proceed(authenticatedRequest)
             }
+            .authenticator(AccessTokenAuthenticator(refreshUserApi))
             .addInterceptor(
                 HttpLoggingInterceptorFactory.create(tag = "SeniorOnHttp")
             )
+            .build()
+    }
+
+    private fun configuredClientBuilder(): OkHttpClient.Builder =
+        OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .callTimeout(15, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
-            .build()
-    }
 
     private val retrofit by lazy {
         Retrofit.Builder()

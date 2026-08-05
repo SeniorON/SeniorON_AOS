@@ -1,7 +1,6 @@
 package com.example.senior_on.data.repository.impl
 
 import com.example.senior_on.data.source.auth.AuthDataSource
-import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.dto.LoginRequest
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SignupRequest
@@ -68,12 +67,13 @@ class AuthRepositoryImpl(
                 deviceIdentifier = credentials.deviceIdentifier
             )
         ) ?: return null
-        AccessTokenStore.save(response.accessToken)
         return LoginResult(
             usersId = response.usersId,
             name = response.name,
             loginId = response.loginId,
-            accessToken = response.accessToken
+            accessToken = response.accessToken,
+            mode = response.role?.toAppUserMode(),
+            refreshToken = response.refreshToken,
         )
     }
 

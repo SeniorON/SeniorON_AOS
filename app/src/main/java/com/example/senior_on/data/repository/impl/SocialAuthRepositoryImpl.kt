@@ -13,7 +13,12 @@ class SocialAuthRepositoryImpl(
 ) : SocialAuthRepository {
     override suspend fun loginWithKakao(kakaoAccessToken: String): KakaoLoginResult {
         val response = dataSource.loginWithKakao(KakaoLoginRequest(kakaoAccessToken.trim()))
-        AccessTokenStore.save(response.accessToken)
+        response.refreshToken?.let { refreshToken ->
+            AccessTokenStore.saveRefreshedTokens(
+                accessToken = response.accessToken,
+                newRefreshToken = refreshToken,
+            )
+        } ?: AccessTokenStore.save(response.accessToken)
         return KakaoLoginResult(
             accessToken = response.accessToken,
             usersId = response.usersId,
