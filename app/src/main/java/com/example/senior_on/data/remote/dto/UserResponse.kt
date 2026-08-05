@@ -21,7 +21,14 @@ data class LoginResponse(
     val usersId: Long,
     val name: String,
     val loginId: String,
-    val accessToken: String
+    val role: UserRole?,
+    val accessToken: String,
+    val refreshToken: String?
+)
+
+data class TokenRefreshResponse(
+    val accessToken: String?,
+    val refreshToken: String?
 )
 
 data class UpdateRoleResponse(

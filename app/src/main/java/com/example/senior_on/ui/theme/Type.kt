@@ -30,13 +30,15 @@ object SeniorOnTextStyles {
 
     val Display = pretendardStyle(FontWeight.ExtraBold, 36, 50.4f)
 
-    val HeadingXXXL = pretendardStyle(FontWeight.Bold, 34, 47.6f)
-    val HeadingXXL = pretendardStyle(FontWeight.Bold, 32, 44.8f)
-    val HeadingXL = pretendardStyle(FontWeight.Bold, 30, 42f)
-    val HeadingL = pretendardStyle(FontWeight.Bold, 26, 36.4f)
-    val HeadingM = pretendardStyle(FontWeight.Bold, 24, 33.6f)
-    val HeadingS = pretendardStyle(FontWeight.Bold, 20, 28f)
-    val HeadingXS = pretendardStyle(FontWeight.SemiBold, 20, 28f)
+    val HeadingXXXL = pretendardStyle(FontWeight.Bold, 38, 47.6f)
+    val HeadingXXL = pretendardStyle(FontWeight.Bold, 34, 44.8f)
+    val HeadingXL = pretendardStyle(FontWeight.Bold, 32, 42f)
+    val HeadingL = pretendardStyle(FontWeight.Bold, 30, 36.4f)
+    val HeadingM = pretendardStyle(FontWeight.Bold, 26, 33.6f)
+    val HeadingS = pretendardStyle(FontWeight.Bold, 24, 28f)
+    val HeadingXS = pretendardStyle(FontWeight.Bold, 20, 28f)
+    val HeadingXXS = pretendardStyle(FontWeight.SemiBold, 20, 28f)
+
     val OnboardingHeading = pretendardStyle(FontWeight.Bold, 22, 32f)
     val WeatherTemperature = pretendardStyle(FontWeight.Bold, 22, 30.8f)
 

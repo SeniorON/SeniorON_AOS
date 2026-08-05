@@ -453,8 +453,8 @@ private fun ParentHomeGridButton(
 private val SeniorFontSize.homeButtonTextStyle: TextStyle
     get() = when (this) {
         SeniorFontSize.Large -> SeniorOnTextStyles.HeadingXXXL
-        SeniorFontSize.Normal -> SeniorOnTextStyles.HeadingXXL
-        SeniorFontSize.Small -> SeniorOnTextStyles.HeadingXL
+        SeniorFontSize.Normal -> SeniorOnTextStyles.HeadingXL
+        SeniorFontSize.Small -> SeniorOnTextStyles.HeadingL
     }
 
 private val ParentFeatureCardShape =

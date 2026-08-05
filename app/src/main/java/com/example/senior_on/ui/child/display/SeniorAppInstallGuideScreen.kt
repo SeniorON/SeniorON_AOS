@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.display
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -187,7 +188,7 @@ private fun SeniorAppInstallGuideTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart,
     ) {

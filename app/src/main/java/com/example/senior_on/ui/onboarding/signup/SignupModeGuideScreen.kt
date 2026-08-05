@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.onboarding.signup
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -139,7 +140,7 @@ private fun SignupModeGuideTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

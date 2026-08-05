@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.health
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -379,7 +380,7 @@ private fun HospitalEditorTopBar(title: String, onBackClick: () -> Unit) {
             )
             .background(SeniorOnColors.SupportWhite100)
             .statusBarsPadding()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

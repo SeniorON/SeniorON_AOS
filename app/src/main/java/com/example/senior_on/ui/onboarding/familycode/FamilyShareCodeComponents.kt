@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.onboarding.familycode
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,7 +33,7 @@ internal fun FamilyShareCodeTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
     ) {
         Box(
             modifier = Modifier

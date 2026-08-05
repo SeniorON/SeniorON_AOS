@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.display
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -314,7 +315,7 @@ private fun ButtonAddTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .background(SeniorOnColors.White)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,

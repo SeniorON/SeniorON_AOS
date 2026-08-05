@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.common.seniorinfo
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchUiState
@@ -256,7 +257,7 @@ private fun AddressSearchTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_arrow_back),

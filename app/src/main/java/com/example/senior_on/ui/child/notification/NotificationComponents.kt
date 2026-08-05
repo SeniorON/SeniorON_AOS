@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.notification
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateDpAsState
@@ -166,7 +167,7 @@ internal fun NotificationTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

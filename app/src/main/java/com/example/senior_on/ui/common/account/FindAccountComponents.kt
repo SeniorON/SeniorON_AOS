@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.common.account
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,7 +53,7 @@ internal fun FindAccountTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .background(SeniorOnColors.White),
         contentAlignment = Alignment.Center
     ) {

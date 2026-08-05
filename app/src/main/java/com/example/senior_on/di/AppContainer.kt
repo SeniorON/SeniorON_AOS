@@ -28,7 +28,7 @@ import com.example.senior_on.data.repository.impl.UserSettingsRepositoryImpl
 import com.example.senior_on.data.source.auth.AccountRecoveryDataSource
 import com.example.senior_on.data.source.auth.AuthDataSource
 import com.example.senior_on.data.source.auth.MockAuthDataSource
-import com.example.senior_on.data.source.auth.MockSessionDataSource
+import com.example.senior_on.data.source.auth.PersistedSessionDataSource
 import com.example.senior_on.data.source.auth.SocialAuthDataSource
 import com.example.senior_on.data.source.family.MockFamilyDataSource
 import com.example.senior_on.data.source.family.MockFamilyPhotoStore
@@ -133,7 +133,12 @@ class DefaultAppContainer(
     override val seniorRepository: SeniorRepository =
         SeniorRepositoryImpl(seniorDataSource)
     override val sessionRepository: SessionRepository =
-        SessionRepositoryImpl(MockSessionDataSource())
+        SessionRepositoryImpl(
+            PersistedSessionDataSource(
+                context = context,
+                userSettingsDataSource = userSettingsDataSource,
+            )
+        )
     override val deviceRegistrationRepository: DeviceRegistrationRepository =
         DeviceRegistrationRepositoryImpl(
             fcmTokenDataSource = FirebaseFcmTokenDataSource(FcmTokenStore(context)),

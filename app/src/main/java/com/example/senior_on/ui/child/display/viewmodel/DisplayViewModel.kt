@@ -10,7 +10,6 @@ import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
-import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
@@ -287,19 +286,7 @@ class DisplayViewModel(
     }
 
     private fun shareParentInfo(parentInfo: ParentInfo) {
-        val relationship = CaregiverRelationship.fromDisplayLabel(
-            parentInfo.relationshipLabel,
-        )
         parentInfoRepository.saveParentInfo(parentInfo)
-        if (
-            parentInfo.seniorId > 0L &&
-            parentInfo.seniorId == initialParentInfo?.seniorId
-        ) {
-            caregiverRelationshipRepository.saveRelationship(
-                seniorId = parentInfo.seniorId,
-                relationship = relationship,
-            )
-        }
     }
 
     private fun refreshWeather() {

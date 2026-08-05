@@ -2,6 +2,7 @@ package com.example.senior_on
 
 import android.app.Application
 import android.util.Log
+import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.api.SeniorOnNetwork
 import com.example.senior_on.data.source.auth.RemoteAccountRecoveryDataSource
 import com.example.senior_on.data.source.auth.RemoteAuthDataSource
@@ -24,6 +25,7 @@ import com.kakao.vectormap.KakaoMapSdk
 class SeniorOnApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        AccessTokenStore.initialize(this)
         SeniorOnNotificationManager.createAlertChannel(this)
         if (
             BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank() &&

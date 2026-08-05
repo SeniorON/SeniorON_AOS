@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.family
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoDetailUiState
 
 import com.example.senior_on.ui.child.family.viewmodel.toFamilyPhotoUiModel
@@ -148,7 +149,7 @@ private fun FamilyPhotoDetailTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .background(SeniorOnColors.White)
     ) {
         Icon(

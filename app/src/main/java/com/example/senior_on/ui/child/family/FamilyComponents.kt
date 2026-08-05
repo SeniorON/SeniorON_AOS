@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.family
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -62,7 +63,7 @@ internal fun FamilyBackTopAppBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .background(SeniorOnColors.White),
     ) {
         Icon(

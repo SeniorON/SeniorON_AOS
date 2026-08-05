@@ -10,7 +10,8 @@ data class FoundLoginId(
 )
 
 data class AuthSession(
-    val role: AppUserMode
+    val role: AppUserMode,
+    val userId: String,
 )
 
 fun isValidPassword(password: String): Boolean {

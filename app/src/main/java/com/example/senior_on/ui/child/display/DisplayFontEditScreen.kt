@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.display
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -144,7 +145,7 @@ private fun FontEditTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .background(SeniorOnColors.White),
         contentAlignment = Alignment.Center,
     ) {

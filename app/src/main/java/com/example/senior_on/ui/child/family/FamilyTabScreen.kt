@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.family
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import com.example.senior_on.ui.child.family.viewmodel.toFamilyTabUiState
 
 import androidx.compose.foundation.Image
@@ -210,7 +211,7 @@ private fun FamilyTopBar() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp)
+                .height(SeniorOnDimensions.TopBarHeight)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart
         ) {

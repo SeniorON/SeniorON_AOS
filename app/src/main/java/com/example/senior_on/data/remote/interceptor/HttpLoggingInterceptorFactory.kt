@@ -30,11 +30,11 @@ object HttpLoggingInterceptorFactory {
     }
 
     private val SensitiveJsonValueRegex = Regex(
-        pattern = """("(?:password|passwordCheck|currentPassword|newPassword|newPasswordCheck|verificationCode|fcmToken|deviceIdentifier|kakaoAccessToken)"\s*:\s*)"[^"]*"""",
+        pattern = """("(?:password|passwordCheck|currentPassword|newPassword|newPasswordCheck|verificationCode|fcmToken|deviceIdentifier|kakaoAccessToken|accessToken|refreshToken)"\s*:\s*)"[^"]*"""",
         option = RegexOption.IGNORE_CASE,
     )
     private val SensitiveQueryValueRegex = Regex(
-        pattern = """([?&](?:code|token|accessToken))=[^&\s]+""",
+        pattern = """([?&](?:code|token|accessToken|refreshToken))=[^&\s]+""",
         option = RegexOption.IGNORE_CASE,
     )
     private const val RedactedValue = "██"

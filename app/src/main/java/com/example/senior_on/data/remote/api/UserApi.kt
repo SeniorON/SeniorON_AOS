@@ -4,6 +4,8 @@ import com.example.senior_on.data.remote.dto.ApiResponse
 import com.example.senior_on.data.remote.dto.CheckLoginIdResponse
 import com.example.senior_on.data.remote.dto.LoginRequest
 import com.example.senior_on.data.remote.dto.LoginResponse
+import com.example.senior_on.data.remote.dto.TokenRefreshRequest
+import com.example.senior_on.data.remote.dto.TokenRefreshResponse
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeResponse
 import com.example.senior_on.data.remote.dto.SignupRequest
@@ -18,6 +20,7 @@ import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.Call
 
 interface UserApi {
     @POST("api/users/signup")
@@ -39,6 +42,11 @@ interface UserApi {
     suspend fun login(
         @Body request: LoginRequest
     ): ApiResponse<LoginResponse>
+
+    @POST("api/users/token/refresh")
+    fun refreshToken(
+        @Body request: TokenRefreshRequest
+    ): Call<ApiResponse<TokenRefreshResponse>>
 
     @PATCH("api/users/me/role")
     suspend fun updateRole(

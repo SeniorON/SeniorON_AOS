@@ -64,6 +64,7 @@ class AuthViewModel(
     fun login(
         loginId: String,
         password: String,
+        mode: AppUserMode,
         onResult: (LoginResult?) -> Unit
     ) {
         launchRequest(
@@ -79,8 +80,29 @@ class AuthViewModel(
                     deviceIdentifier = deviceRegistration.deviceIdentifier
                 )
             )
-            accessToken = result?.accessToken
-            onResult(result)
+            when {
+                result == null || result.mode == null -> {
+                    accessToken = null
+                    sessionRepository.clearSession()
+                    onResult(null)
+                }
+                result.mode != mode -> {
+                    accessToken = null
+                    sessionRepository.clearSession()
+                    onResult(result)
+                }
+                else -> {
+                    accessToken = result.accessToken
+                    sessionRepository.saveLoginSession(
+                        accessToken = result.accessToken,
+                        refreshToken = result.refreshToken,
+                        deviceIdentifier = deviceRegistration.deviceIdentifier,
+                        userId = result.loginId,
+                        mode = result.mode,
+                    )
+                    onResult(result)
+                }
+            }
         }
     }
 
@@ -189,6 +211,13 @@ class AuthViewModel(
             )
 
             accessToken = loginResult.accessToken
+            sessionRepository.saveLoginSession(
+                accessToken = loginResult.accessToken,
+                refreshToken = loginResult.refreshToken,
+                deviceIdentifier = deviceRegistration.deviceIdentifier,
+                userId = loginResult.loginId,
+                mode = mode,
+            )
             signupDraft = SignupDraft()
             onResult(loginResult.copy(mode = mode))
         }
@@ -203,6 +232,13 @@ class AuthViewModel(
         ) {
             val result = socialAuthRepository.loginWithKakao(kakaoAccessToken)
             accessToken = result.accessToken
+            result.mode?.let { mode ->
+                sessionRepository.saveSession(
+                    accessToken = result.accessToken,
+                    userId = result.usersId.toString(),
+                    mode = mode,
+                )
+            }
             onResult(result)
         }
     }

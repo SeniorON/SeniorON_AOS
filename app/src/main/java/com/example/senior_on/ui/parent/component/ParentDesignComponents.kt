@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.parent.component
 
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -52,7 +53,7 @@ fun ParentDetailTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .height(SeniorOnDimensions.TopBarHeight)
             .then(
                 if (showShadow) {
                     Modifier.dropShadow(
@@ -115,7 +116,7 @@ fun Modifier.parentCardShadow(
     showBackground = true,
     backgroundColor = 0xFFF2F2F2,
     widthDp = 360,
-    heightDp = 54
+    heightDp = 62
 )
 @Composable
 private fun ParentDetailTopBarPreview() {
@@ -132,7 +133,7 @@ private fun ParentDetailTopBarPreview() {
     showBackground = true,
     backgroundColor = 0xFFFF575A,
     widthDp = 360,
-    heightDp = 54
+    heightDp = 62
 )
 @Composable
 private fun ParentEmergencyTopBarPreview() {
