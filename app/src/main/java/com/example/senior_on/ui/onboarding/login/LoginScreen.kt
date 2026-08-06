@@ -104,7 +104,7 @@ fun LoginScreen(
     var keepLoggedIn by rememberSaveable { mutableStateOf(false) }
     var loginError by rememberSaveable { mutableStateOf(LoginFieldError.None) }
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
-    var isLoggingIn by rememberSaveable { mutableStateOf(false) }
+    var isLoggingIn by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val density = LocalDensity.current
     val imeBottomPx = WindowInsets.ime.getBottom(density)

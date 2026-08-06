@@ -56,24 +56,32 @@ object AccessTokenStore {
         accessToken: String,
         newRefreshToken: String?,
         newDeviceIdentifier: String,
-    ) {
+    ): Boolean {
         val normalizedToken = accessToken.removePrefix(BEARER_PREFIX)
             .trim()
             .takeIf(String::isNotEmpty)
         val normalizedRefreshToken = newRefreshToken?.trim()?.takeIf(String::isNotEmpty)
         val normalizedDeviceIdentifier = newDeviceIdentifier.trim().takeIf(String::isNotEmpty)
 
-        writeSecureValues(
-            mapOf(
-                ACCESS_TOKEN_KEY to normalizedToken,
-                REFRESH_TOKEN_KEY to normalizedRefreshToken,
-                DEVICE_IDENTIFIER_KEY to normalizedDeviceIdentifier,
-            )
-        )
         token = normalizedToken
         refreshToken = normalizedRefreshToken
         deviceIdentifier = normalizedDeviceIdentifier
-        persistTokens = true
+
+        val persisted = runCatching {
+            writeSecureValues(
+                mapOf(
+                    ACCESS_TOKEN_KEY to normalizedToken,
+                    REFRESH_TOKEN_KEY to normalizedRefreshToken,
+                    DEVICE_IDENTIFIER_KEY to normalizedDeviceIdentifier,
+                )
+            )
+        }.isSuccess
+
+        persistTokens = persisted
+        if (!persisted) {
+            clearPersistedValues()
+        }
+        return persisted
     }
 
     @Synchronized
@@ -106,12 +114,18 @@ object AccessTokenStore {
         val normalizedRefreshToken = newRefreshToken.trim().takeIf(String::isNotEmpty)
 
         if (persistTokens) {
-            writeSecureValues(
-                mapOf(
-                    ACCESS_TOKEN_KEY to normalizedToken,
-                    REFRESH_TOKEN_KEY to normalizedRefreshToken,
+            val persisted = runCatching {
+                writeSecureValues(
+                    mapOf(
+                        ACCESS_TOKEN_KEY to normalizedToken,
+                        REFRESH_TOKEN_KEY to normalizedRefreshToken,
+                    )
                 )
-            )
+            }.isSuccess
+            if (!persisted) {
+                persistTokens = false
+                clearPersistedValues()
+            }
         }
         token = normalizedToken
         refreshToken = normalizedRefreshToken

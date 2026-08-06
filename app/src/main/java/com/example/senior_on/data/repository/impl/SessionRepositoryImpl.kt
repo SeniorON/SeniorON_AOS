@@ -48,20 +48,30 @@ class SessionRepositoryImpl(
         keepLoggedIn: Boolean,
     ) {
         if (keepLoggedIn) {
-            AccessTokenStore.saveLoginTokens(
+            val tokensPersisted = AccessTokenStore.saveLoginTokens(
                 accessToken = accessToken,
                 newRefreshToken = refreshToken,
                 newDeviceIdentifier = deviceIdentifier,
             )
-            dataSource.saveSession(
-                SavedSession(
-                    role = when (mode) {
-                        AppUserMode.Child -> UserRole.CHILD
-                        AppUserMode.Senior -> UserRole.PARENT
-                    },
-                    userId = userId,
+
+            if (tokensPersisted) {
+                dataSource.saveSession(
+                    SavedSession(
+                        role = when (mode) {
+                            AppUserMode.Child -> UserRole.CHILD
+                            AppUserMode.Senior -> UserRole.PARENT
+                        },
+                        userId = userId,
+                    )
                 )
-            )
+            } else {
+                dataSource.clearSession()
+                AccessTokenStore.saveTransientLoginTokens(
+                    accessToken = accessToken,
+                    newRefreshToken = refreshToken,
+                    newDeviceIdentifier = deviceIdentifier,
+                )
+            }
         } else {
             dataSource.clearSession()
             AccessTokenStore.saveTransientLoginTokens(
