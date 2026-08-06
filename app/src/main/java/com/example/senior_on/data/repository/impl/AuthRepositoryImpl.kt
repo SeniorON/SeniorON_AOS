@@ -2,14 +2,17 @@ package com.example.senior_on.data.repository.impl
 
 import com.example.senior_on.data.source.auth.AuthDataSource
 import com.example.senior_on.data.remote.dto.LoginRequest
+import com.example.senior_on.data.remote.dto.ManagerType
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UserRole
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.domain.model.auth.LoginCredentials
 import com.example.senior_on.domain.model.auth.LoginResult
+import com.example.senior_on.domain.model.auth.OnboardingStatus
 import com.example.senior_on.domain.model.auth.RoleUpdateResult
 import com.example.senior_on.domain.model.auth.SignupCredentials
 import com.example.senior_on.domain.model.auth.SignupResult
@@ -74,6 +77,22 @@ class AuthRepositoryImpl(
             accessToken = response.accessToken,
             mode = response.role?.toAppUserMode(),
             refreshToken = response.refreshToken,
+        )
+    }
+
+    override suspend fun getOnboardingStatus(): OnboardingStatus {
+        val response = dataSource.getOnboardingStatus()
+        return OnboardingStatus(
+            hasFamily = response.hasFamily,
+            managerType = when (response.managerType) {
+                ManagerType.PRIMARY -> CareManagerType.Primary
+                ManagerType.SUB -> CareManagerType.Sub
+                ManagerType.NONE, null -> CareManagerType.None
+            },
+            seniorId = response.seniorId,
+            seniorProfileCompleted = response.seniorProfileCompleted,
+            relationRegistered = response.relation != null,
+            onboardingCompleted = response.onboardingCompleted,
         )
     }
 

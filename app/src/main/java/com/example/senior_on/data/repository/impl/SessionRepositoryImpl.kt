@@ -45,21 +45,31 @@ class SessionRepositoryImpl(
         deviceIdentifier: String,
         userId: String,
         mode: AppUserMode,
+        keepLoggedIn: Boolean,
     ) {
-        AccessTokenStore.saveLoginTokens(
-            accessToken = accessToken,
-            newRefreshToken = refreshToken,
-            newDeviceIdentifier = deviceIdentifier,
-        )
-        dataSource.saveSession(
-            SavedSession(
-                role = when (mode) {
-                    AppUserMode.Child -> UserRole.CHILD
-                    AppUserMode.Senior -> UserRole.PARENT
-                },
-                userId = userId,
+        if (keepLoggedIn) {
+            AccessTokenStore.saveLoginTokens(
+                accessToken = accessToken,
+                newRefreshToken = refreshToken,
+                newDeviceIdentifier = deviceIdentifier,
             )
-        )
+            dataSource.saveSession(
+                SavedSession(
+                    role = when (mode) {
+                        AppUserMode.Child -> UserRole.CHILD
+                        AppUserMode.Senior -> UserRole.PARENT
+                    },
+                    userId = userId,
+                )
+            )
+        } else {
+            dataSource.clearSession()
+            AccessTokenStore.saveTransientLoginTokens(
+                accessToken = accessToken,
+                newRefreshToken = refreshToken,
+                newDeviceIdentifier = deviceIdentifier,
+            )
+        }
     }
 
     override fun clearSession() = dataSource.clearSession()

@@ -4,6 +4,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockAuthFixtures
 import com.example.senior_on.data.remote.dto.CheckLoginIdResponse
 import com.example.senior_on.data.remote.dto.LoginRequest
 import com.example.senior_on.data.remote.dto.LoginResponse
+import com.example.senior_on.data.remote.dto.ManagerType
+import com.example.senior_on.data.remote.dto.OnboardingStatusResponse
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeResponse
 import com.example.senior_on.data.remote.dto.SignupRequest
@@ -73,6 +75,18 @@ class MockAuthDataSource : AuthDataSource {
             },
             accessToken = MOCK_ACCESS_TOKEN,
             refreshToken = MOCK_REFRESH_TOKEN,
+        )
+    }
+
+    override suspend fun getOnboardingStatus(): OnboardingStatusResponse {
+        delay(MOCK_NETWORK_DELAY_MILLIS)
+        return OnboardingStatusResponse(
+            hasFamily = true,
+            managerType = ManagerType.PRIMARY,
+            seniorId = 1L,
+            seniorProfileCompleted = true,
+            relation = null,
+            onboardingCompleted = true,
         )
     }
 

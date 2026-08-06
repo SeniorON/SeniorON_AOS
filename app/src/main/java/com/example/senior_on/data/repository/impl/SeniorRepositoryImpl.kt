@@ -28,7 +28,9 @@ class SeniorRepositoryImpl(
                 birth = registration.birth,
                 phoneNumber = registration.phoneNumber.trim(),
                 address = registration.address.trim(),
-                detailAddress = registration.detailAddress.trim()
+                detailAddress = registration.detailAddress.trim(),
+                latitude = registration.latitude,
+                longitude = registration.longitude
             )
         )
 

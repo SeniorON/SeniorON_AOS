@@ -7,7 +7,9 @@ data class CreateSeniorRequest(
     val birth: String,
     val phoneNumber: String,
     val address: String,
-    val detailAddress: String
+    val detailAddress: String,
+    val latitude: Double?,
+    val longitude: Double?
 )
 
 data class UpdateSeniorRelationRequest(

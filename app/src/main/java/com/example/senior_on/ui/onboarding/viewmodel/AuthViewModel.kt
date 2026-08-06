@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.AuthSession
-import com.example.senior_on.domain.model.auth.KakaoLoginResult
+import com.example.senior_on.domain.model.auth.SocialLoginResult
+import com.example.senior_on.domain.model.auth.SocialProvider
+import com.example.senior_on.domain.model.auth.SocialSignupCredentials
 import com.example.senior_on.domain.model.auth.LoginCredentials
 import com.example.senior_on.domain.model.auth.LoginResult
+import com.example.senior_on.domain.model.auth.OnboardingStatus
 import com.example.senior_on.domain.model.auth.SignupCredentials
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
@@ -41,6 +44,12 @@ data class SignupAgreements(
     val marketing: Boolean
 )
 
+private data class PendingSocialSignup(
+    val provider: SocialProvider,
+    val socialToken: String,
+    val keepLoggedIn: Boolean,
+)
+
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val socialAuthRepository: SocialAuthRepository,
@@ -51,6 +60,7 @@ class AuthViewModel(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     private var signupDraft = SignupDraft()
+    private var pendingSocialSignup: PendingSocialSignup? = null
 
     var accessToken: String? = null
         private set
@@ -65,6 +75,7 @@ class AuthViewModel(
         loginId: String,
         password: String,
         mode: AppUserMode,
+        keepLoggedIn: Boolean,
         onResult: (LoginResult?) -> Unit
     ) {
         launchRequest(
@@ -99,6 +110,7 @@ class AuthViewModel(
                         deviceIdentifier = deviceRegistration.deviceIdentifier,
                         userId = result.loginId,
                         mode = result.mode,
+                        keepLoggedIn = keepLoggedIn,
                     )
                     onResult(result)
                 }
@@ -177,6 +189,16 @@ class AuthViewModel(
         launchRequest(
             onFailure = { _ -> onResult(null) }
         ) {
+            pendingSocialSignup?.let { pendingSocial ->
+                onResult(
+                    completeSocialSignup(
+                        pendingSocial = pendingSocial,
+                        mode = mode,
+                        agreements = agreements,
+                    )
+                )
+                return@launchRequest
+            }
             val draft = signupDraft
             authRepository.signup(
                 SignupCredentials(
@@ -217,27 +239,180 @@ class AuthViewModel(
                 deviceIdentifier = deviceRegistration.deviceIdentifier,
                 userId = loginResult.loginId,
                 mode = mode,
+                keepLoggedIn = true,
             )
             signupDraft = SignupDraft()
             onResult(loginResult.copy(mode = mode))
         }
     }
 
+    fun loadOnboardingStatus(onResult: (OnboardingStatus?) -> Unit) {
+        launchRequest(onFailure = { onResult(null) }) {
+            onResult(authRepository.getOnboardingStatus())
+        }
+    }
+
+    private suspend fun completeSocialSignup(
+        pendingSocial: PendingSocialSignup,
+        mode: AppUserMode,
+        agreements: SignupAgreements,
+    ): LoginResult {
+        val draft = signupDraft
+        val deviceRegistration =
+            deviceRegistrationRepository.getDeviceRegistration()
+        val socialResult = socialAuthRepository.signup(
+            SocialSignupCredentials(
+                provider = pendingSocial.provider,
+                socialToken = pendingSocial.socialToken,
+                name = draft.name,
+                birth = draft.birth,
+                serviceTermsAgreed = agreements.serviceTerms,
+                privacyPolicyAgreed = agreements.privacyPolicy,
+                ageOver14Agreed = agreements.ageOver14,
+                marketingAgreed = agreements.marketing,
+                fcmToken = deviceRegistration.fcmToken,
+                deviceIdentifier = deviceRegistration.deviceIdentifier,
+            )
+        )
+        val resultAccessToken = requireNotNull(socialResult.accessToken) {
+            "소셜 회원가입 응답에 액세스 토큰이 없습니다."
+        }
+        val resultUsersId = requireNotNull(socialResult.usersId) {
+            "소셜 회원가입 응답에 사용자 ID가 없습니다."
+        }
+        // TODO: 소셜 회원가입 요청에서 role을 함께 받게 되면 이 후속 호출을 제거합니다.
+        val roleUpdateResult = authRepository.updateRole(
+            accessToken = resultAccessToken,
+            mode = mode,
+        )
+        val resultMode = roleUpdateResult.mode
+
+        accessToken = resultAccessToken
+        sessionRepository.saveLoginSession(
+            accessToken = resultAccessToken,
+            refreshToken = socialResult.refreshToken,
+            deviceIdentifier = deviceRegistration.deviceIdentifier,
+            userId = resultUsersId.toString(),
+            mode = resultMode,
+            keepLoggedIn = pendingSocial.keepLoggedIn,
+        )
+        pendingSocialSignup = null
+        signupDraft = SignupDraft()
+        return LoginResult(
+            usersId = resultUsersId,
+            name = socialResult.name,
+            loginId = resultUsersId.toString(),
+            accessToken = resultAccessToken,
+            mode = resultMode,
+            refreshToken = socialResult.refreshToken,
+        )
+    }
+
     fun loginWithKakao(
         kakaoAccessToken: String,
-        onResult: (KakaoLoginResult?) -> Unit
+        mode: AppUserMode,
+        keepLoggedIn: Boolean,
+        onResult: (SocialLoginResult?) -> Unit,
     ) {
-        launchRequest(
-            onFailure = { _ -> onResult(null) }
-        ) {
-            val result = socialAuthRepository.loginWithKakao(kakaoAccessToken)
-            accessToken = result.accessToken
-            result.mode?.let { mode ->
-                sessionRepository.saveSession(
-                    accessToken = result.accessToken,
-                    userId = result.usersId.toString(),
-                    mode = mode,
+        loginWithSocial(
+            provider = SocialProvider.Kakao,
+            socialToken = kakaoAccessToken,
+            mode = mode,
+            keepLoggedIn = keepLoggedIn,
+            onResult = onResult,
+        ) { fcmToken, deviceIdentifier ->
+            socialAuthRepository.loginWithKakao(
+                kakaoAccessToken = kakaoAccessToken,
+                fcmToken = fcmToken,
+                deviceIdentifier = deviceIdentifier,
+            )
+        }
+    }
+
+    fun loginWithGoogle(
+        firebaseIdToken: String,
+        mode: AppUserMode,
+        keepLoggedIn: Boolean,
+        onResult: (SocialLoginResult?) -> Unit,
+    ) {
+        loginWithSocial(
+            provider = SocialProvider.Google,
+            socialToken = firebaseIdToken,
+            mode = mode,
+            keepLoggedIn = keepLoggedIn,
+            onResult = onResult,
+        ) { fcmToken, deviceIdentifier ->
+            socialAuthRepository.loginWithGoogle(
+                firebaseIdToken = firebaseIdToken,
+                fcmToken = fcmToken,
+                deviceIdentifier = deviceIdentifier,
+            )
+        }
+    }
+
+    fun hasPendingSocialSignup(): Boolean = pendingSocialSignup != null
+
+    fun resetSignupFlow() {
+        signupDraft = SignupDraft()
+        pendingSocialSignup = null
+        _uiState.value = AuthUiState()
+    }
+
+    private fun loginWithSocial(
+        provider: SocialProvider,
+        socialToken: String,
+        mode: AppUserMode,
+        keepLoggedIn: Boolean,
+        onResult: (SocialLoginResult?) -> Unit,
+        request: suspend (
+            fcmToken: String,
+            deviceIdentifier: String,
+        ) -> SocialLoginResult,
+    ) {
+        launchRequest(onFailure = { _ -> onResult(null) }) {
+            val deviceRegistration =
+                deviceRegistrationRepository.getDeviceRegistration()
+            val result = request(
+                deviceRegistration.fcmToken,
+                deviceRegistration.deviceIdentifier,
+            )
+
+            if (result.isNewUser) {
+                pendingSocialSignup = PendingSocialSignup(
+                    provider = provider,
+                    socialToken = socialToken,
+                    keepLoggedIn = keepLoggedIn,
                 )
+                signupDraft = SignupDraft(name = result.name)
+                accessToken = null
+                onResult(result)
+                return@launchRequest
+            }
+
+            pendingSocialSignup = null
+            val resultMode = requireNotNull(result.mode) {
+                "소셜 로그인 응답에 사용자 역할이 없습니다."
+            }
+            val resultAccessToken = requireNotNull(result.accessToken) {
+                "소셜 로그인 응답에 액세스 토큰이 없습니다."
+            }
+            val resultUsersId = requireNotNull(result.usersId) {
+                "소셜 로그인 응답에 사용자 ID가 없습니다."
+            }
+
+            if (resultMode == mode) {
+                accessToken = resultAccessToken
+                sessionRepository.saveLoginSession(
+                    accessToken = resultAccessToken,
+                    refreshToken = result.refreshToken,
+                    deviceIdentifier = deviceRegistration.deviceIdentifier,
+                    userId = resultUsersId.toString(),
+                    mode = resultMode,
+                    keepLoggedIn = keepLoggedIn,
+                )
+            } else {
+                accessToken = null
+                sessionRepository.clearSession()
             }
             onResult(result)
         }

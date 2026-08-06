@@ -40,3 +40,18 @@ data class RoleUpdateResult(
     val name: String,
     val mode: AppUserMode
 )
+
+enum class CareManagerType {
+    Primary,
+    Sub,
+    None,
+}
+
+data class OnboardingStatus(
+    val hasFamily: Boolean,
+    val managerType: CareManagerType,
+    val seniorId: Long?,
+    val seniorProfileCompleted: Boolean,
+    val relationRegistered: Boolean,
+    val onboardingCompleted: Boolean,
+)

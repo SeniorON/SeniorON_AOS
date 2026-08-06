@@ -29,7 +29,9 @@ class SeniorRepositoryImplTest {
                 birth = "1950-01-02",
                 phoneNumber = " 010-1234-5678 ",
                 address = " 서울시 ",
-                detailAddress = " 101호 "
+                detailAddress = " 101호 ",
+                latitude = 37.5665,
+                longitude = 126.9780
             )
         )
 
@@ -42,7 +44,9 @@ class SeniorRepositoryImplTest {
                 birth = "1950-01-02",
                 phoneNumber = "010-1234-5678",
                 address = "서울시",
-                detailAddress = "101호"
+                detailAddress = "101호",
+                latitude = 37.5665,
+                longitude = 126.9780
             ),
             dataSource.createRequest
         )

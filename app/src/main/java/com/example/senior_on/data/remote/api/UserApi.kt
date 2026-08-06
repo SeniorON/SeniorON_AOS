@@ -4,6 +4,7 @@ import com.example.senior_on.data.remote.dto.ApiResponse
 import com.example.senior_on.data.remote.dto.CheckLoginIdResponse
 import com.example.senior_on.data.remote.dto.LoginRequest
 import com.example.senior_on.data.remote.dto.LoginResponse
+import com.example.senior_on.data.remote.dto.OnboardingStatusResponse
 import com.example.senior_on.data.remote.dto.TokenRefreshRequest
 import com.example.senior_on.data.remote.dto.TokenRefreshResponse
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
@@ -42,6 +43,9 @@ interface UserApi {
     suspend fun login(
         @Body request: LoginRequest
     ): ApiResponse<LoginResponse>
+
+    @GET("api/users/me/onboarding-status")
+    suspend fun getOnboardingStatus(): ApiResponse<OnboardingStatusResponse>
 
     @POST("api/users/token/refresh")
     fun refreshToken(

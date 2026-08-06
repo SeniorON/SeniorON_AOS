@@ -4,6 +4,7 @@ import com.example.senior_on.data.remote.api.UserApi
 import com.example.senior_on.data.remote.dto.CheckLoginIdResponse
 import com.example.senior_on.data.remote.dto.LoginRequest
 import com.example.senior_on.data.remote.dto.LoginResponse
+import com.example.senior_on.data.remote.dto.OnboardingStatusResponse
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeResponse
 import com.example.senior_on.data.remote.dto.SignupRequest
@@ -41,6 +42,10 @@ class RemoteAuthDataSource(
 
     override suspend fun login(request: LoginRequest): LoginResponse {
         return userApi.login(request).requireData()
+    }
+
+    override suspend fun getOnboardingStatus(): OnboardingStatusResponse {
+        return userApi.getOnboardingStatus().requireData()
     }
 
     override suspend fun updateRole(

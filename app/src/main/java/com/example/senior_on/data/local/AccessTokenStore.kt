@@ -10,28 +10,45 @@ object AccessTokenStore {
     private var refreshToken: String? = null
     @Volatile
     private var deviceIdentifier: String? = null
+    @Volatile
+    private var persistTokens: Boolean = false
     private var preferences: SharedPreferences? = null
+    private var tokenCipher: KeystoreTokenCipher? = null
 
+    @Synchronized
     fun initialize(context: Context) {
         preferences = context.applicationContext.getSharedPreferences(
             TOKEN_PREFERENCES,
             Context.MODE_PRIVATE,
         )
-        token = preferences?.getString(ACCESS_TOKEN_KEY, null)
-            ?.removePrefix(BEARER_PREFIX)
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-        refreshToken = preferences?.getString(REFRESH_TOKEN_KEY, null)
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-        deviceIdentifier = preferences?.getString(DEVICE_IDENTIFIER_KEY, null)
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
+        tokenCipher = runCatching { KeystoreTokenCipher() }.getOrNull()
+
+        if (tokenCipher == null) {
+            clearPersistedValues()
+            clearMemoryValues()
+            return
+        }
+
+        token = readSecureValue(ACCESS_TOKEN_KEY) {
+            removePrefix(BEARER_PREFIX).trim().takeIf(String::isNotEmpty)
+        }
+        refreshToken = readSecureValue(REFRESH_TOKEN_KEY) {
+            trim().takeIf(String::isNotEmpty)
+        }
+        deviceIdentifier = readSecureValue(DEVICE_IDENTIFIER_KEY) {
+            trim().takeIf(String::isNotEmpty)
+        }
+        persistTokens = token != null
     }
 
+    @Synchronized
     fun save(accessToken: String) {
-        token = accessToken.removePrefix(BEARER_PREFIX).trim().takeIf(String::isNotEmpty)
-        preferences?.edit()?.putString(ACCESS_TOKEN_KEY, token)?.apply()
+        val normalizedToken = accessToken.removePrefix(BEARER_PREFIX)
+            .trim()
+            .takeIf(String::isNotEmpty)
+        writeSecureValues(mapOf(ACCESS_TOKEN_KEY to normalizedToken))
+        token = normalizedToken
+        persistTokens = true
     }
 
     @Synchronized
@@ -40,15 +57,42 @@ object AccessTokenStore {
         newRefreshToken: String?,
         newDeviceIdentifier: String,
     ) {
-        token = accessToken.removePrefix(BEARER_PREFIX).trim().takeIf(String::isNotEmpty)
-        refreshToken = newRefreshToken?.trim()?.takeIf(String::isNotEmpty)
-        deviceIdentifier = newDeviceIdentifier.trim().takeIf(String::isNotEmpty)
+        val normalizedToken = accessToken.removePrefix(BEARER_PREFIX)
+            .trim()
+            .takeIf(String::isNotEmpty)
+        val normalizedRefreshToken = newRefreshToken?.trim()?.takeIf(String::isNotEmpty)
+        val normalizedDeviceIdentifier = newDeviceIdentifier.trim().takeIf(String::isNotEmpty)
 
-        preferences?.edit()
-            ?.putString(ACCESS_TOKEN_KEY, token)
-            ?.putString(REFRESH_TOKEN_KEY, refreshToken)
-            ?.putString(DEVICE_IDENTIFIER_KEY, deviceIdentifier)
-            ?.apply()
+        writeSecureValues(
+            mapOf(
+                ACCESS_TOKEN_KEY to normalizedToken,
+                REFRESH_TOKEN_KEY to normalizedRefreshToken,
+                DEVICE_IDENTIFIER_KEY to normalizedDeviceIdentifier,
+            )
+        )
+        token = normalizedToken
+        refreshToken = normalizedRefreshToken
+        deviceIdentifier = normalizedDeviceIdentifier
+        persistTokens = true
+    }
+
+    @Synchronized
+    fun saveTransientLoginTokens(
+        accessToken: String,
+        newRefreshToken: String?,
+        newDeviceIdentifier: String,
+    ) {
+        val normalizedToken = accessToken.removePrefix(BEARER_PREFIX)
+            .trim()
+            .takeIf(String::isNotEmpty)
+        val normalizedRefreshToken = newRefreshToken?.trim()?.takeIf(String::isNotEmpty)
+        val normalizedDeviceIdentifier = newDeviceIdentifier.trim().takeIf(String::isNotEmpty)
+
+        clearPersistedValues()
+        token = normalizedToken
+        refreshToken = normalizedRefreshToken
+        deviceIdentifier = normalizedDeviceIdentifier
+        persistTokens = false
     }
 
     @Synchronized
@@ -56,12 +100,21 @@ object AccessTokenStore {
         accessToken: String,
         newRefreshToken: String,
     ) {
-        token = accessToken.removePrefix(BEARER_PREFIX).trim().takeIf(String::isNotEmpty)
-        refreshToken = newRefreshToken.trim().takeIf(String::isNotEmpty)
-        preferences?.edit()
-            ?.putString(ACCESS_TOKEN_KEY, token)
-            ?.putString(REFRESH_TOKEN_KEY, refreshToken)
-            ?.apply()
+        val normalizedToken = accessToken.removePrefix(BEARER_PREFIX)
+            .trim()
+            .takeIf(String::isNotEmpty)
+        val normalizedRefreshToken = newRefreshToken.trim().takeIf(String::isNotEmpty)
+
+        if (persistTokens) {
+            writeSecureValues(
+                mapOf(
+                    ACCESS_TOKEN_KEY to normalizedToken,
+                    REFRESH_TOKEN_KEY to normalizedRefreshToken,
+                )
+            )
+        }
+        token = normalizedToken
+        refreshToken = normalizedRefreshToken
     }
 
     fun getBearerToken(): String? = token?.let { "$BEARER_PREFIX$it" }
@@ -70,15 +123,66 @@ object AccessTokenStore {
 
     fun getDeviceIdentifier(): String? = deviceIdentifier
 
+    @Synchronized
     fun clear() {
+        clearMemoryValues()
+        clearPersistedValues()
+    }
+
+    private fun readSecureValue(
+        key: String,
+        normalize: String.() -> String?,
+    ): String? {
+        val storedValue = preferences?.getString(key, null) ?: return null
+        val cipher = tokenCipher ?: return null
+        val isEncrypted = cipher.isEncrypted(storedValue)
+        val plaintext = runCatching {
+            if (isEncrypted) cipher.decrypt(storedValue) else storedValue
+        }.getOrNull()
+        val normalizedValue = plaintext?.normalize()
+
+        if (normalizedValue == null) {
+            preferences?.edit()?.remove(key)?.commit()
+            return null
+        }
+
+        if (!isEncrypted) {
+            val migrated = runCatching {
+                writeSecureValues(mapOf(key to normalizedValue))
+            }.isSuccess
+            if (!migrated) {
+                preferences?.edit()?.remove(key)?.commit()
+                return null
+            }
+        }
+        return normalizedValue
+    }
+
+    private fun writeSecureValues(values: Map<String, String?>) {
+        val cipher = checkNotNull(tokenCipher) { "Keystore token cipher is not initialized" }
+        val encryptedValues = values.mapValues { (_, value) ->
+            value?.let(cipher::encrypt)
+        }
+        val editor = checkNotNull(preferences) { "Token preferences are not initialized" }.edit()
+        encryptedValues.forEach { (key, encryptedValue) ->
+            if (encryptedValue == null) editor.remove(key) else editor.putString(key, encryptedValue)
+        }
+        check(editor.commit()) { "Failed to persist encrypted authentication tokens" }
+    }
+
+    private fun clearMemoryValues() {
         token = null
         refreshToken = null
         deviceIdentifier = null
+        persistTokens = false
+    }
+
+    private fun clearPersistedValues() {
         preferences?.edit()
             ?.remove(ACCESS_TOKEN_KEY)
             ?.remove(REFRESH_TOKEN_KEY)
             ?.remove(DEVICE_IDENTIFIER_KEY)
-            ?.apply()
+            ?.commit()
     }
 
     private const val BEARER_PREFIX = "Bearer "

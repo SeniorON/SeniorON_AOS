@@ -9,6 +9,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.domain.model.auth.CareManagerType
+import com.example.senior_on.domain.model.auth.OnboardingStatus
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeOption
 import com.example.senior_on.ui.common.account.FindAccountTab
@@ -59,6 +61,23 @@ private const val InvalidFamilyShareCodeMessage =
 
 private val InitialRoute = SeniorOnRoute.Splash
 
+private val SignupStateRoutes = setOf(
+    SeniorOnRoute.SignupModeGuide,
+    SeniorOnRoute.SignupNameBirth,
+    SeniorOnRoute.SignupEmailVerification,
+    SeniorOnRoute.SignupAccountInfo,
+    SeniorOnRoute.SignupTermsAgreement,
+)
+
+private val OnboardingDraftRoutes = SignupStateRoutes + setOf(
+    SeniorOnRoute.FamilyShareCode,
+    SeniorOnRoute.FamilyShareCodeInput,
+    SeniorOnRoute.CaregiverRelationshipInput,
+    SeniorOnRoute.FamilyShareCodeCreated,
+    SeniorOnRoute.ParentInfoInput,
+    SeniorOnRoute.AddressSearch,
+)
+
 @Composable
 fun OnboardingRoute(
     appContainer: AppContainer,
@@ -69,11 +88,73 @@ fun OnboardingRoute(
     var authenticatedUserId by rememberSaveable {
         mutableStateOf("")
     }
+    var connectedSeniorId by rememberSaveable {
+        mutableStateOf<Long?>(null)
+    }
     var findAccountInitialTab by rememberSaveable { mutableStateOf(FindAccountTab.Id) }
     var selectedHomeAddress by rememberSaveable { mutableStateOf("") }
     var selectedHomeLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     val saveableStateHolder = rememberSaveableStateHolder()
+    val authViewModel = onboardingAuthViewModel(appContainer)
+
+    fun clearSavedRouteStates(routes: Set<SeniorOnRoute>) {
+        routes.forEach { route ->
+            saveableStateHolder.removeState(route.name)
+        }
+    }
+
+    fun resetOnboardingDraft() {
+        authViewModel.resetSignupFlow()
+        clearSavedRouteStates(OnboardingDraftRoutes)
+        authenticatedUserId = ""
+        connectedSeniorId = null
+        selectedHomeAddress = ""
+        selectedHomeLatitude = null
+        selectedHomeLongitude = null
+    }
+
+    fun navigateFromOnboardingStatus(
+        mode: AppUserMode,
+        userId: String,
+        status: OnboardingStatus?,
+    ) {
+        selectedUserMode = mode
+        authenticatedUserId = userId
+        connectedSeniorId = status?.seniorId
+
+        if (status == null || status.onboardingCompleted) {
+            onAuthenticated(mode, userId)
+            return
+        }
+        if (!status.hasFamily) {
+            currentRoute = SeniorOnRoute.FamilyShareCode
+            return
+        }
+        if (mode == AppUserMode.Senior) {
+            onAuthenticated(mode, userId)
+            return
+        }
+
+        currentRoute = when {
+            status.managerType == CareManagerType.Primary &&
+                !status.seniorProfileCompleted -> SeniorOnRoute.ParentInfoInput
+            status.seniorId == null -> SeniorOnRoute.FamilyShareCode
+            status.managerType == CareManagerType.Sub &&
+                !status.relationRegistered ->
+                SeniorOnRoute.CaregiverRelationshipInput
+            else -> {
+                onAuthenticated(mode, userId)
+                return
+            }
+        }
+    }
+
+    fun resolveOnboardingStatus(mode: AppUserMode, userId: String) {
+        authViewModel.loadOnboardingStatus { status ->
+            navigateFromOnboardingStatus(mode, userId, status)
+        }
+    }
 
     fun navigateAfterFamilyConnected() {
         onAuthenticated(selectedUserMode, authenticatedUserId)
@@ -99,8 +180,7 @@ fun OnboardingRoute(
                     if (session == null) {
                         currentRoute = SeniorOnRoute.ModeSelection
                     } else {
-                        authenticatedUserId = session.userId
-                        onAuthenticated(session.role, session.userId)
+                        resolveOnboardingStatus(session.role, session.userId)
                     }
                 }
             )
@@ -118,8 +198,7 @@ fun OnboardingRoute(
                 appContainer = appContainer,
                 selectedMode = selectedUserMode,
                 onLoginSuccess = { userId ->
-                    authenticatedUserId = userId
-                    onAuthenticated(selectedUserMode, authenticatedUserId)
+                    resolveOnboardingStatus(selectedUserMode, userId)
                 },
                 onBackClick = { currentRoute = SeniorOnRoute.ModeSelection },
                 onFindIdClick = {
@@ -130,7 +209,14 @@ fun OnboardingRoute(
                     findAccountInitialTab = FindAccountTab.Password
                     currentRoute = SeniorOnRoute.FindAccount
                 },
-                onSignUpClick = { currentRoute = SeniorOnRoute.Signup }
+                onSignUpClick = {
+                    resetOnboardingDraft()
+                    currentRoute = SeniorOnRoute.Signup
+                },
+                onSocialSignupRequired = {
+                    clearSavedRouteStates(SignupStateRoutes)
+                    currentRoute = SeniorOnRoute.SignupModeGuide
+                },
             )
             SeniorOnRoute.FindAccount -> FindAccountRoute(
                 appContainer = appContainer,
@@ -170,22 +256,46 @@ fun OnboardingRoute(
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
             SeniorOnRoute.Signup -> SignupEntryRoute(
-                onBackClick = { currentRoute = SeniorOnRoute.Login },
-                onKakaoClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onGoogleClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onEmailClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onLoginClick = { currentRoute = SeniorOnRoute.Login }
+                appContainer = appContainer,
+                selectedMode = selectedUserMode,
+                onBackClick = {
+                    resetOnboardingDraft()
+                    currentRoute = SeniorOnRoute.Login
+                },
+                onEmailClick = {
+                    resetOnboardingDraft()
+                    currentRoute = SeniorOnRoute.SignupModeGuide
+                },
+                onLoginClick = {
+                    resetOnboardingDraft()
+                    currentRoute = SeniorOnRoute.Login
+                },
+                onSocialLoginSuccess = { userId ->
+                    clearSavedRouteStates(SignupStateRoutes)
+                    resolveOnboardingStatus(selectedUserMode, userId)
+                },
+                onSocialSignupRequired = {
+                    clearSavedRouteStates(SignupStateRoutes)
+                    currentRoute = SeniorOnRoute.SignupModeGuide
+                },
             )
             SeniorOnRoute.SignupModeGuide -> SignupModeGuideRoute(
                 onBackClick = { currentRoute = SeniorOnRoute.Signup },
-                onReselectClick = { currentRoute = SeniorOnRoute.ModeSelection },
+                onReselectClick = {
+                    resetOnboardingDraft()
+                    currentRoute = SeniorOnRoute.ModeSelection
+                },
                 onContinueClick = { currentRoute = SeniorOnRoute.SignupNameBirth }
             )
             SeniorOnRoute.SignupNameBirth -> SignupNameBirthRoute(
                 appContainer = appContainer,
                 onBackClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
-                onNextClick = {
-                    currentRoute = SeniorOnRoute.SignupEmailVerification
+                onNextClick = { isSocialSignup ->
+                    currentRoute = if (isSocialSignup) {
+                        SeniorOnRoute.SignupTermsAgreement
+                    } else {
+                        SeniorOnRoute.SignupEmailVerification
+                    }
                 }
             )
             SeniorOnRoute.SignupEmailVerification -> SignupEmailVerificationRoute(
@@ -205,8 +315,15 @@ fun OnboardingRoute(
             SeniorOnRoute.SignupTermsAgreement -> SignupTermsRoute(
                 appContainer = appContainer,
                 selectedMode = selectedUserMode,
-                onBackClick = { currentRoute = SeniorOnRoute.SignupAccountInfo },
+                onBackClick = { isSocialSignup ->
+                    currentRoute = if (isSocialSignup) {
+                        SeniorOnRoute.SignupNameBirth
+                    } else {
+                        SeniorOnRoute.SignupAccountInfo
+                    }
+                },
                 onSignupSuccess = { userId ->
+                    clearSavedRouteStates(SignupStateRoutes)
                     authenticatedUserId = userId
                     currentRoute = SeniorOnRoute.FamilyShareCode
                 }
@@ -242,6 +359,7 @@ fun OnboardingRoute(
             SeniorOnRoute.CaregiverRelationshipInput -> CaregiverRelationshipRoute(
                 appContainer = appContainer,
                 userId = authenticatedUserId,
+                seniorId = connectedSeniorId,
                 onBackClick = {
                     currentRoute = SeniorOnRoute.FamilyShareCodeInput
                 },
