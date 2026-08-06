@@ -3,7 +3,6 @@ package com.example.senior_on.ui.onboarding.signup
 import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,8 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
@@ -58,11 +57,7 @@ internal fun SignupStepScaffold(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.SupportWhite100)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    focusManager.clearFocus()
-                })
-            }
+            .clearFocusOnBackgroundTap(focusManager)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {

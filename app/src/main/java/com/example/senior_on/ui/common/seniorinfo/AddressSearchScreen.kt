@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,6 +62,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.ContextCompat
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.address.AddressSearchResult
+import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -182,10 +184,13 @@ private fun AddressSearchScreenContent(
     onAddressSelected: (AddressSearchResult) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val focusManager = LocalFocusManager.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
+            .clearFocusOnBackgroundTap(focusManager)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {

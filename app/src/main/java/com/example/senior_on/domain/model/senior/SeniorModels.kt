@@ -9,7 +9,9 @@ data class SeniorRegistration(
     val birth: String,
     val phoneNumber: String,
     val address: String,
-    val detailAddress: String
+    val detailAddress: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class SeniorInfo(

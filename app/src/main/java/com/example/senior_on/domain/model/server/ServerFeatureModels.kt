@@ -13,6 +13,7 @@ data class HomeSnapshot(
     val battery: Int?, val buttons: List<ServerButton>,
     val seniorAddress: String? = null,
     val seniorId: Long? = null,
+    val seniorName: String? = null,
 )
 data class ServerMusicCard(
     val enabled: Boolean,

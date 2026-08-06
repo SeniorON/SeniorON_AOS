@@ -18,11 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -36,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -43,7 +42,6 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupNameBirthScreen(
     onBackClick: () -> Unit,
@@ -53,7 +51,6 @@ fun SignupNameBirthScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var birthDate by rememberSaveable { mutableStateOf("") }
     var isBirthSheetVisible by rememberSaveable { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val canGoNext = name.isNotBlank() && birthDate.isNotBlank()
 
     SignupStepScaffold(
@@ -102,49 +99,58 @@ fun SignupNameBirthScreen(
             onConfirm = { selectedBirthDate ->
                 birthDate = selectedBirthDate
                 isBirthSheetVisible = false
-            },
-            sheetState = sheetState
+            }
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SignupBirthDateModalBottomSheet(
     initialBirthDate: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    sheetState: androidx.compose.material3.SheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
 ) {
     val initialDate = remember(initialBirthDate) {
         initialBirthDate.toSignupBirthDateOrNull()
             ?: LocalDate.of(1933, 5, 12)
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = SeniorOnColors.SupportWhite100,
-        scrimColor = Color(0x80000000),
-        dragHandle = null,
-        shape = RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomStart = 0.dp,
-            bottomEnd = 0.dp
-        )
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+        ),
     ) {
-        SignupBirthDateBottomSheet(
-            selectedYear = initialDate.year,
-            selectedMonth = initialDate.monthValue,
-            selectedDay = initialDate.dayOfMonth,
-            onCloseClick = onDismiss,
-            onConfirmClick = { year, month, day ->
-                onConfirm("%04d.%02d.%02d".format(year, month, day))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0x80000000)),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = SeniorOnColors.SupportWhite100,
+                        shape = RoundedCornerShape(
+                            topStart = 24.dp,
+                            topEnd = 24.dp,
+                        ),
+                    ),
+            ) {
+                SignupBirthDateBottomSheet(
+                    selectedYear = initialDate.year,
+                    selectedMonth = initialDate.monthValue,
+                    selectedDay = initialDate.dayOfMonth,
+                    onCloseClick = onDismiss,
+                    onConfirmClick = { year, month, day ->
+                        onConfirm("%04d.%02d.%02d".format(year, month, day))
+                    },
+                )
             }
-        )
+        }
     }
 }
 

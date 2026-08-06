@@ -3,6 +3,7 @@ package com.example.senior_on.data.source.auth
 import com.example.senior_on.data.remote.dto.CheckLoginIdResponse
 import com.example.senior_on.data.remote.dto.LoginRequest
 import com.example.senior_on.data.remote.dto.LoginResponse
+import com.example.senior_on.data.remote.dto.OnboardingStatusResponse
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeResponse
 import com.example.senior_on.data.remote.dto.SignupRequest
@@ -26,6 +27,8 @@ interface AuthDataSource {
     suspend fun signup(request: SignupRequest): SignupResponse
 
     suspend fun login(request: LoginRequest): LoginResponse?
+
+    suspend fun getOnboardingStatus(): OnboardingStatusResponse
 
     suspend fun updateRole(
         authorization: String,

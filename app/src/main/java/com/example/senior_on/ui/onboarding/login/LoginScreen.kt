@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -57,6 +58,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.LoginResult
+import com.example.senior_on.domain.model.auth.SocialLoginResult
+import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -76,6 +79,7 @@ fun LoginScreen(
     onLoginRequest: (
         loginId: String,
         password: String,
+        keepLoggedIn: Boolean,
         onResult: (LoginResult?) -> Unit
     ) -> Unit,
     onLoginClick: (userId: String) -> Unit = {},
@@ -83,8 +87,15 @@ fun LoginScreen(
     onFindIdClick: () -> Unit = {},
     onFindPasswordClick: () -> Unit = {},
     onSignUpClick: () -> Unit = {},
-    onKakaoClick: () -> Unit = {},
-    onGoogleClick: () -> Unit = {},
+    onKakaoLoginRequest: (
+        keepLoggedIn: Boolean,
+        onResult: (SocialLoginResult?) -> Unit,
+    ) -> Unit = { _, _ -> },
+    onGoogleLoginRequest: (
+        keepLoggedIn: Boolean,
+        onResult: (SocialLoginResult?) -> Unit,
+    ) -> Unit = { _, _ -> },
+    onSocialSignupRequired: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var userId by rememberSaveable { mutableStateOf("") }
@@ -93,7 +104,8 @@ fun LoginScreen(
     var keepLoggedIn by rememberSaveable { mutableStateOf(false) }
     var loginError by rememberSaveable { mutableStateOf(LoginFieldError.None) }
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
-    var isLoggingIn by rememberSaveable { mutableStateOf(false) }
+    var isLoggingIn by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     val density = LocalDensity.current
     val imeBottomPx = WindowInsets.ime.getBottom(density)
     var rootHeightPx by remember { mutableIntStateOf(0) }
@@ -126,7 +138,7 @@ fun LoginScreen(
 
         if (loginError == LoginFieldError.None && !isLoggingIn) {
             isLoggingIn = true
-            onLoginRequest(userId, password) { loginResult ->
+            onLoginRequest(userId, password, keepLoggedIn) { loginResult ->
                 isLoggingIn = false
 
                 if (loginResult == null) {
@@ -142,12 +154,28 @@ fun LoginScreen(
             }
         }
     }
+    val handleSocialLoginResult: (SocialLoginResult?) -> Unit = { result ->
+        isLoggingIn = false
+        when {
+            result == null -> loginError = LoginFieldError.InvalidCredentials
+            result.isNewUser -> onSocialSignupRequired()
+            result.mode != null && result.mode != selectedMode -> {
+                wrongModeDialogType = when (result.mode) {
+                    AppUserMode.Senior -> LoginWrongModeDialogType.SeniorAccount
+                    AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
+                }
+            }
+            result.usersId != null -> onLoginClick(result.usersId.toString())
+            else -> loginError = LoginFieldError.InvalidCredentials
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .onSizeChanged { rootHeightPx = it.height }
             .background(SeniorOnColors.White)
+            .clearFocusOnBackgroundTap(focusManager)
     ) {
         Column(
             modifier = Modifier
@@ -262,7 +290,13 @@ fun LoginScreen(
                 contentDescription = "카카오 로그인",
                 modifier = Modifier
                     .size(width = 55.dp, height = 54.dp)
-                    .clickable(onClick = onKakaoClick)
+                    .clickable(enabled = !isLoggingIn) {
+                        isLoggingIn = true
+                        onKakaoLoginRequest(
+                            keepLoggedIn,
+                            handleSocialLoginResult,
+                        )
+                    }
             )
 
             Spacer(modifier = Modifier.size(10.dp))
@@ -272,7 +306,13 @@ fun LoginScreen(
                 contentDescription = "구글 로그인",
                 modifier = Modifier
                     .size(54.dp)
-                    .clickable(onClick = onGoogleClick)
+                    .clickable(enabled = !isLoggingIn) {
+                        isLoggingIn = true
+                        onGoogleLoginRequest(
+                            keepLoggedIn,
+                            handleSocialLoginResult,
+                        )
+                    }
             )
         }
         }
@@ -623,7 +663,7 @@ private fun LoginScreenDefaultPreview() {
     SENIOR_ONTheme {
         LoginScreen(
             selectedMode = AppUserMode.Child,
-            onLoginRequest = { _, _, onResult -> onResult(null) }
+            onLoginRequest = { _, _, _, onResult -> onResult(null) }
         )
     }
 }
@@ -639,7 +679,7 @@ private fun LoginScreenCompactPreview() {
     SENIOR_ONTheme {
         LoginScreen(
             selectedMode = AppUserMode.Child,
-            onLoginRequest = { _, _, onResult -> onResult(null) }
+            onLoginRequest = { _, _, _, onResult -> onResult(null) }
         )
     }
 }

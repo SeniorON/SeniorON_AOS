@@ -34,6 +34,7 @@ class HomeServerRepositoryImpl(
             buttons = it.buttons.orEmpty().map(HomeButtonResponse::toDomain),
             seniorAddress = it.senior_profile?.address,
             seniorId = it.senior_profile?.senior_id,
+            seniorName = it.senior_profile?.name,
         )
     }
     override suspend fun getSeniorHome() = source.getSeniorHome().let {

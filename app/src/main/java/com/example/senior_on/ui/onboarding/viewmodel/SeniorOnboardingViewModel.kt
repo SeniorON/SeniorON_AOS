@@ -11,6 +11,7 @@ import com.example.senior_on.domain.model.senior.SeniorRelationUpdate
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
+import com.example.senior_on.domain.repository.server.HomeServerRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,12 +22,15 @@ data class SeniorOnboardingUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val registeredSenior: SeniorInfo? = null,
-    val parentInfo: ParentInfo? = null
+    val parentInfo: ParentInfo? = null,
+    val connectedSeniorId: Long? = null,
+    val connectedSeniorName: String = "",
 )
 
 class SeniorOnboardingViewModel(
     private val seniorRepository: SeniorRepository,
     private val parentInfoRepository: ParentInfoRepository,
+    private val homeRepository: HomeServerRepository,
     private val caregiverRelationshipRepositoryFor:
         (userId: String) -> CaregiverRelationshipRepository
 ) : ViewModel() {
@@ -39,6 +43,25 @@ class SeniorOnboardingViewModel(
                 _uiState.value = _uiState.value.copy(parentInfo = parentInfo)
             }
         }
+    }
+
+    fun loadConnectedSenior() {
+        if (_uiState.value.isLoading || _uiState.value.connectedSeniorId != null) return
+
+        launchRequest(onFailure = {}) {
+            val home = homeRepository.getHome()
+            val seniorId = requireNotNull(home.seniorId) {
+                "연결된 시니어 정보를 찾을 수 없습니다."
+            }
+            _uiState.value = _uiState.value.copy(
+                connectedSeniorId = seniorId,
+                connectedSeniorName = home.seniorName.orEmpty(),
+            )
+        }
+    }
+
+    fun setConnectedSenior(seniorId: Long) {
+        _uiState.value = _uiState.value.copy(connectedSeniorId = seniorId)
     }
 
     fun createSenior(
@@ -108,6 +131,7 @@ class SeniorOnboardingViewModel(
     class Factory(
         private val seniorRepository: SeniorRepository,
         private val parentInfoRepository: ParentInfoRepository,
+        private val homeRepository: HomeServerRepository,
         private val caregiverRelationshipRepositoryFor:
             (userId: String) -> CaregiverRelationshipRepository
     ) : ViewModelProvider.Factory {
@@ -117,6 +141,7 @@ class SeniorOnboardingViewModel(
             return SeniorOnboardingViewModel(
                 seniorRepository = seniorRepository,
                 parentInfoRepository = parentInfoRepository,
+                homeRepository = homeRepository,
                 caregiverRelationshipRepositoryFor =
                     caregiverRelationshipRepositoryFor
             ) as T

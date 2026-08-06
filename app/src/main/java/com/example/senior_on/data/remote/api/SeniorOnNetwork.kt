@@ -13,6 +13,8 @@ object SeniorOnNetwork {
 
     private val refreshOkHttpClient by lazy {
         configuredClientBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
             .addInterceptor(
                 HttpLoggingInterceptorFactory.create(tag = "SeniorOnHttp")
             )

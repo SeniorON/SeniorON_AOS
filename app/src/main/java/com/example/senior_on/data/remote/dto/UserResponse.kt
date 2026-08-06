@@ -41,6 +41,40 @@ data class CheckLoginIdResponse(
     val available: Boolean
 )
 
+data class OnboardingStatusResponse(
+    val hasFamily: Boolean,
+    val managerType: ManagerType?,
+    val seniorId: Long?,
+    val seniorProfileCompleted: Boolean,
+    val relation: OnboardingRelation?,
+    val onboardingCompleted: Boolean,
+)
+
+enum class ManagerType {
+    @SerializedName("PRIMARY")
+    PRIMARY,
+
+    @SerializedName("SUB")
+    SUB,
+
+    @SerializedName("NONE")
+    NONE,
+}
+
+enum class OnboardingRelation {
+    @SerializedName("MOTHER")
+    MOTHER,
+
+    @SerializedName("FATHER")
+    FATHER,
+
+    @SerializedName("GRANDPARENT")
+    GRANDPARENT,
+
+    @SerializedName("OTHER")
+    OTHER,
+}
+
 enum class UserRole {
     @SerializedName("PARENT")
     PARENT,

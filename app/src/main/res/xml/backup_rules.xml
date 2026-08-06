@@ -8,6 +8,8 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="device_registration.xml"/>
     <exclude domain="sharedpref" path="fcm_registration.xml"/>
+    <exclude domain="sharedpref" path="auth_token.xml"/>
+    <exclude domain="sharedpref" path="refresh_token.xml"/>
     <!--
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>
