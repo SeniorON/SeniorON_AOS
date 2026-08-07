@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.id)
     implementation(libs.kakao.user)
+    implementation(libs.kakao.share)
     implementation(libs.kakao.maps)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

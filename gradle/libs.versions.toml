@@ -54,6 +54,7 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 google-id = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
 kakao-user = { group = "com.kakao.sdk", name = "v2-user", version.ref = "kakaoSdk" }
+kakao-share = { group = "com.kakao.sdk", name = "v2-share", version.ref = "kakaoSdk" }
 kakao-maps = { group = "com.kakao.maps.open", name = "android", version.ref = "kakaoMaps" }
 
 [plugins]

@@ -13,6 +13,7 @@ fun ChildMainRoute(
     onWithdrawClick: () -> Unit,
 ) {
     ChildMainScreen(
+        authenticatedUserId = userId,
         userProfile = appContainer.userProfileFor(userId),
         sessionInstance = sessionInstance,
         familyServerRepository = appContainer.familyServerRepository,

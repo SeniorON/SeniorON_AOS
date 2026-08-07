@@ -85,6 +85,7 @@ private enum class ChildFamilyDestination {
 
 @Composable
 fun ChildMainScreen(
+    authenticatedUserId: String,
     userProfile: AppUserProfile,
     sessionInstance: Int,
     familyServerRepository: FamilyServerRepository,
@@ -118,7 +119,7 @@ fun ChildMainScreen(
     var selectedPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedPhotoSessionId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    val childSessionViewModelKey = "${userProfile.userId}:$sessionInstance"
+    val childSessionViewModelKey = "$authenticatedUserId:$sessionInstance"
     val familyViewModel: FamilyViewModel = viewModel(
         key = "family:$childSessionViewModelKey",
         factory = FamilyViewModel.factory(familyServerRepository),
