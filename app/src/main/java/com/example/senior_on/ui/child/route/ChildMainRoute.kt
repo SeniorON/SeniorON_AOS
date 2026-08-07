@@ -8,12 +8,15 @@ import com.example.senior_on.ui.child.ChildMainScreen
 fun ChildMainRoute(
     appContainer: AppContainer,
     userId: String,
+    sessionInstance: Int,
     onLogoutClick: () -> Unit,
     onWithdrawClick: () -> Unit,
 ) {
     ChildMainScreen(
+        authenticatedUserId = userId,
         userProfile = appContainer.userProfileFor(userId),
-        familyRepository = appContainer.familyRepositoryFor(userId),
+        sessionInstance = sessionInstance,
+        familyServerRepository = appContainer.familyServerRepository,
         familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
         displayRepository = appContainer.displayRepository,
         parentInfoRepository = appContainer.parentInfoRepository,
@@ -21,7 +24,6 @@ fun ChildMainRoute(
             appContainer.caregiverRelationshipRepositoryFor(userId),
         notificationRepository = appContainer.notificationRepository,
         medicationRepository = appContainer.medicationRepository,
-        familyServerRepository = appContainer.familyServerRepository,
         homeServerRepository = appContainer.homeServerRepository,
         eventRepository = appContainer.eventRepository,
         onLogoutClick = onLogoutClick,

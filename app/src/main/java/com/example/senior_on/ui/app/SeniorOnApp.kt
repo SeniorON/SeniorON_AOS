@@ -25,6 +25,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
         mutableStateOf(AppDestination.Onboarding)
     }
     var authenticatedUserId by rememberSaveable { mutableStateOf("") }
+    var authenticatedSessionInstance by rememberSaveable { mutableIntStateOf(0) }
     var onboardingInstance by rememberSaveable { mutableIntStateOf(0) }
 
     fun openOnboarding() {
@@ -40,6 +41,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 appContainer = appContainer,
                 onAuthenticated = { mode, userId ->
                     authenticatedUserId = userId
+                    authenticatedSessionInstance += 1
                     destination = when (mode) {
                         AppUserMode.Child -> AppDestination.ChildMain
                         AppUserMode.Senior -> AppDestination.ParentLauncher
@@ -51,6 +53,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
         AppDestination.ChildMain -> ChildMainRoute(
             appContainer = appContainer,
             userId = authenticatedUserId,
+            sessionInstance = authenticatedSessionInstance,
             onLogoutClick = ::openOnboarding,
             onWithdrawClick = ::openOnboarding,
         )

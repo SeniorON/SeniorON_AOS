@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.family
 import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +26,10 @@ fun FamilyTabRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isPhotoSourceSheetVisible by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadLatestFamilyOverview()
+    }
+
     FamilyTabScreen(
         modifier = modifier,
         uiState = uiState,
@@ -35,6 +40,12 @@ fun FamilyTabRoute(
         onUploadPhotoClick = { isPhotoSourceSheetVisible = true },
         onPhotoClick = onPhotoClick,
         onRetryClick = viewModel::loadFamilyOverview,
+        sharedPhotoImage = { photo ->
+            SharedFamilyPhotoImage(
+                photo = photo,
+                onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
+            )
+        },
     )
 
     if (isPhotoSourceSheetVisible) {

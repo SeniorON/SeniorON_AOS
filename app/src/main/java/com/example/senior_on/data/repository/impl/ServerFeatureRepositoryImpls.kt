@@ -173,24 +173,96 @@ class FamilyServerRepositoryImpl(
     override suspend fun getCode() = source.getCode().let {
         FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
     }
-    override suspend fun getHome() = source.getHome().let {
-        ServerFamilyHome(it.members.orEmpty().map(FamilyMemberResponse::toDomain), it.recentPhotos.orEmpty().map(FamilyPhotoItemResponse::toDomain))
+    override suspend fun getHome() = source.getHome().let { response ->
+        ServerFamilyHome(
+            members = response.members.orEmpty().map(
+                FamilyMemberResponse::toServerFamilyMember,
+            ),
+            recentPhotos = response.recentPhotos.orEmpty().map(
+                FamilyPhotoItemResponse::toServerFamilyPhoto,
+            ),
+        )
     }
-    override suspend fun getMembers() = source.getMembers().map(FamilyMemberResponse::toDomain)
+    override suspend fun getMembers() = source.getMembers().map(
+        FamilyMemberResponse::toServerFamilyMember,
+    )
     override suspend fun changePrimaryManager(userId: Long) {
         source.changePrimaryManager(FamilyPrimaryManagerUpdateRequest(userId))
     }
     override suspend fun deleteMember(userId: Long) = source.deleteMember(userId)
-    override suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?) =
-        source.getPhotos(uploaderId, cursorAt, cursorId, size).photos.orEmpty().map(FamilyPhotoItemResponse::toDomain)
-    override suspend fun uploadPhoto(photo: PreparedFamilyPhoto, description: String): ServerFamilyPhoto {
+    override suspend fun getPhotos(
+        uploaderId: Long?,
+        cursorAt: String?,
+        cursorId: Long?,
+        size: Int?,
+    ) = source.getPhotos(uploaderId, cursorAt, cursorId, size).let { response ->
+        ServerFamilyPhotoPage(
+            photos = response.photos.orEmpty().map(
+                FamilyPhotoItemResponse::toServerFamilyPhoto,
+            ),
+            totalCount = response.totalCount ?: 0,
+            nextCursor = response.nextCursor?.let { cursor ->
+                val createdAt = cursor.createdAt
+                val photoId = cursor.familyPhotoId
+                if (createdAt.isNullOrBlank() || photoId == null) {
+                    null
+                } else {
+                    ServerFamilyPhotoCursor(
+                        createdAt = createdAt,
+                        photoId = photoId,
+                    )
+                }
+            },
+            hasNext = response.hasNext == true,
+        )
+    }
+    override suspend fun uploadPhoto(
+        photo: PreparedFamilyPhoto,
+        description: String,
+        idempotencyKey: String,
+    ): ServerFamilyPhoto {
         val body = photo.file.asRequestBody(photo.mimeType.toMediaType())
         val part = MultipartBody.Part.createFormData("image", photo.displayName, body)
-        val descriptionBody = description.trim().toRequestBody("text/plain".toMediaType())
-        return source.uploadPhoto(part, descriptionBody).toDomain()
+        val descriptionBody = description.trim()
+            .takeIf(String::isNotEmpty)
+            ?.toRequestBody("text/plain".toMediaType())
+        return source.uploadPhoto(
+            idempotencyKey = idempotencyKey,
+            image = part,
+            description = descriptionBody,
+        ).toServerFamilyPhoto()
     }
+    override suspend fun getPhoto(photoId: Long) =
+        source.getPhoto(photoId).toServerFamilyPhoto()
     override suspend fun markPhotoViewed(photoId: Long) = source.markViewed(photoId)
     override suspend fun deletePhoto(photoId: Long) = source.deletePhoto(photoId)
+}
+
+private fun FamilyMemberResponse.toServerFamilyMember() = ServerFamilyMember(
+    id = usersId.requirePositiveFamilyId("usersId"),
+    name = name.orEmpty(),
+    role = role.orEmpty(),
+    managerType = managerType.orEmpty(),
+    canBecomePrimary = canBecomePrimary == true,
+    isMe = me == true,
+    profileImageUrl = profileImageUrl,
+)
+
+private fun FamilyPhotoItemResponse.toServerFamilyPhoto() = ServerFamilyPhoto(
+    id = familyPhotoId.requirePositiveFamilyId("familyPhotoId"),
+    imageUrl = imageUrl.orEmpty(),
+    uploaderId = uploaderUserId.requirePositiveFamilyId("uploaderUserId"),
+    uploaderName = uploaderName.orEmpty(),
+    description = description.orEmpty(),
+    createdAt = createdAt.orEmpty(),
+    canDelete = canDelete == true,
+    isNew = newPhoto == true,
+)
+
+private fun Long?.requirePositiveFamilyId(fieldName: String): Long {
+    val id = requireNotNull(this) { "Family response is missing $fieldName" }
+    require(id > 0L) { "Family response has invalid $fieldName: $id" }
+    return id
 }
 
 class HospitalRepositoryImpl(
@@ -424,13 +496,6 @@ private fun HomeButtonResponse.toDomain() = ServerButton(
     action_type,
     action_value,
     package_name,
-)
-private fun FamilyMemberResponse.toDomain() = ServerFamilyMember(
-    usersId ?: 0, name.orEmpty(), role.orEmpty(), managerType.orEmpty(), me == true, profileImageUrl
-)
-private fun FamilyPhotoItemResponse.toDomain() = ServerFamilyPhoto(
-    familyPhotoId ?: 0, imageUrl.orEmpty(), uploaderUserId ?: 0, uploaderName.orEmpty(),
-    description.orEmpty(), createdAt.orEmpty(), canDelete == true, newPhoto == true
 )
 private fun HospitalListResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
