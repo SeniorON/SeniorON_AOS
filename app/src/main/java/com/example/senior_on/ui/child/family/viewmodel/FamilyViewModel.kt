@@ -294,7 +294,10 @@ class FamilyViewModel(
     }
 
     fun loadPhotoGallery(force: Boolean = false) {
-        if (photoLoadJob?.isActive == true) return
+        if (photoLoadJob?.isActive == true) {
+            if (!force) return
+            photoLoadJob?.cancel()
+        }
         if (isPhotoGalleryLoaded && !force) return
 
         photoLoadJob = viewModelScope.launch {
@@ -503,6 +506,12 @@ class FamilyViewModel(
                         },
                     )
                 }
+            }.onFailure { exception ->
+                if (exception is CancellationException) throw exception
+                lastRetriedImageUrlByPhotoId.remove(
+                    normalizedPhotoId,
+                    normalizedFailedUrl,
+                )
             }
         }
         photoUrlRefreshJobs[normalizedPhotoId] = refreshJob

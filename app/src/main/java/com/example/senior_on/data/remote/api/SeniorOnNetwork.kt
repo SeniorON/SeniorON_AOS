@@ -10,6 +10,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object SeniorOnNetwork {
     private const val BASE_URL = "https://senioron.site/"
+    private const val FAMILY_PHOTO_UPLOAD_WRITE_TIMEOUT_SECONDS = 120L
+    private const val FAMILY_PHOTO_UPLOAD_CALL_TIMEOUT_SECONDS = 150L
 
     private val refreshOkHttpClient by lazy {
         configuredClientBuilder()
@@ -68,6 +70,18 @@ object SeniorOnNetwork {
             .build()
     }
 
+    private val familyPhotoUploadRetrofit by lazy {
+        val uploadClient = okHttpClient.newBuilder()
+            .writeTimeout(FAMILY_PHOTO_UPLOAD_WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .callTimeout(FAMILY_PHOTO_UPLOAD_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(uploadClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
     val userApi: UserApi by lazy {
         retrofit.create(UserApi::class.java)
     }
@@ -86,6 +100,9 @@ object SeniorOnNetwork {
 
     val homeApi: HomeApi by lazy { retrofit.create(HomeApi::class.java) }
     val familyApi: FamilyApi by lazy { retrofit.create(FamilyApi::class.java) }
+    val familyPhotoUploadApi: FamilyPhotoUploadApi by lazy {
+        familyPhotoUploadRetrofit.create(FamilyPhotoUploadApi::class.java)
+    }
     val hospitalApi: HospitalApi by lazy { retrofit.create(HospitalApi::class.java) }
     val medicationApi: MedicationApi by lazy { retrofit.create(MedicationApi::class.java) }
     val notificationApi: NotificationApi by lazy { retrofit.create(NotificationApi::class.java) }

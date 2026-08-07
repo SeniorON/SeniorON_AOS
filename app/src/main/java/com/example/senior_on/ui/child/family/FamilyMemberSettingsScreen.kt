@@ -67,9 +67,7 @@ fun FamilyMemberSettingsScreen(
     val primaryMember = uiState.members.firstOrNull { member ->
         member.role == FamilyCaregiverRole.Primary
     }
-    val assistantMembers = uiState.members.filter { member ->
-        member.role == FamilyCaregiverRole.Assistant && member.canBecomePrimary
-    }
+    val assistantMembers = uiState.members.assistantMembersForSettings()
     var selectedMemberId by rememberSaveable { mutableStateOf<String?>(null) }
     var isPermissionGuideExpanded by rememberSaveable { mutableStateOf(false) }
     var isChangePrimaryDialogVisible by rememberSaveable { mutableStateOf(false) }
@@ -149,6 +147,7 @@ fun FamilyMemberSettingsScreen(
             FamilyMemberSettingsActions(
                 hasAssistantMember = assistantMembers.isNotEmpty(),
                 selectedMemberId = selectedMember?.id,
+                selectedMemberCanBecomePrimary = selectedMember?.canBecomePrimary == true,
                 isOperationInProgress = uiState.isMemberMutationInProgress,
                 errorMessage = uiState.memberMutationErrorMessage,
                 onAddFamilyClick = onAddFamilyClick,
@@ -520,13 +519,15 @@ private fun PermissionRoleDescription(
 private fun FamilyMemberSettingsActions(
     hasAssistantMember: Boolean,
     selectedMemberId: String?,
+    selectedMemberCanBecomePrimary: Boolean,
     isOperationInProgress: Boolean,
     errorMessage: String?,
     onAddFamilyClick: () -> Unit,
     onChangePrimaryRequest: () -> Unit,
     onDeleteMemberRequest: () -> Unit
 ) {
-    val isMemberSelected = selectedMemberId != null && !isOperationInProgress
+    val canChangePrimary = selectedMemberCanBecomePrimary && !isOperationInProgress
+    val canDeleteMember = selectedMemberId != null && !isOperationInProgress
 
     Column(
         modifier = Modifier
@@ -554,7 +555,7 @@ private fun FamilyMemberSettingsActions(
             FamilyActionButton(
                 text = "주 담당자로 변경",
                 iconResId = R.drawable.ic_change,
-                enabled = isMemberSelected,
+                enabled = canChangePrimary,
                 onClick = onChangePrimaryRequest,
                 buttonHeight = BottomActionHeight,
                 iconSpacing = 6.dp,
@@ -565,9 +566,9 @@ private fun FamilyMemberSettingsActions(
             Row(
                 modifier = Modifier
                     .height(48.dp)
-                    .alpha(if (isMemberSelected) 1f else 0.5f)
+                    .alpha(if (canDeleteMember) 1f else 0.5f)
                     .clickable(
-                        enabled = isMemberSelected,
+                        enabled = canDeleteMember,
                         onClick = onDeleteMemberRequest
                     )
                     .padding(horizontal = 12.dp),
@@ -599,6 +600,11 @@ private fun FamilyMemberSettingsActions(
         }
     }
 }
+
+internal fun List<FamilyMemberUiModel>.assistantMembersForSettings():
+    List<FamilyMemberUiModel> = filter { member ->
+        member.role == FamilyCaregiverRole.Assistant
+    }
 
 @Composable
 private fun DeleteMemberConfirmationDialog(

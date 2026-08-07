@@ -20,7 +20,7 @@ fun FamilyPhotoGalleryRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
-        viewModel.loadPhotoGallery(force = true)
+        viewModel.loadPhotoGallery()
     }
 
     FamilyPhotoGalleryScreen(

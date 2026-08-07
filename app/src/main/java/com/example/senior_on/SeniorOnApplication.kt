@@ -55,7 +55,10 @@ class SeniorOnApplication : Application() {
             ),
             seniorDataSource = RemoteSeniorDataSource(SeniorOnNetwork.seniorApi),
             homeDataSource = RemoteHomeDataSource(SeniorOnNetwork.homeApi),
-            remoteFamilySource = RemoteFamilyDataSource(SeniorOnNetwork.familyApi),
+            remoteFamilySource = RemoteFamilyDataSource(
+                api = SeniorOnNetwork.familyApi,
+                uploadApi = SeniorOnNetwork.familyPhotoUploadApi,
+            ),
             hospitalDataSource = RemoteHospitalDataSource(SeniorOnNetwork.hospitalApi),
             medicationDataSource = RemoteMedicationDataSource(SeniorOnNetwork.medicationApi),
             notificationDataSource = RemoteNotificationDataSource(SeniorOnNetwork.notificationApi),

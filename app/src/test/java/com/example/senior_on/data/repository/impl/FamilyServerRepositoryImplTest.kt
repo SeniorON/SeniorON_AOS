@@ -122,6 +122,55 @@ class FamilyServerRepositoryImplTest {
             uploadFile.delete()
         }
     }
+
+    @Test
+    fun `family home rejects a member without a required id`() = runBlocking {
+        val source = FakeRemoteFamilySource(
+            home = FamilyHomeResponse(
+                members = listOf(
+                    FamilyMemberResponse(
+                        usersId = null,
+                        name = "잘못된 구성원",
+                        role = "CHILD",
+                        canBecomePrimary = false,
+                        managerType = "SUB",
+                        me = false,
+                        profileImageUrl = null,
+                    ),
+                ),
+                recentUploaderProfileImageUrls = emptyList(),
+                recentPhotos = emptyList(),
+            ),
+        )
+
+        val exception = runCatching {
+            FamilyServerRepositoryImpl(source).getHome()
+        }.exceptionOrNull()
+
+        assertTrue(exception is IllegalArgumentException)
+    }
+
+    @Test
+    fun `photo page rejects a photo without required ids`() = runBlocking {
+        val source = FakeRemoteFamilySource(
+            photos = FamilyPhotoListResponse(
+                photos = listOf(
+                    familyPhoto(id = 91, canDelete = false).copy(
+                        uploaderUserId = null,
+                    ),
+                ),
+                totalCount = 1,
+                nextCursor = null,
+                hasNext = false,
+            ),
+        )
+
+        val exception = runCatching {
+            FamilyServerRepositoryImpl(source).getPhotos(size = 20)
+        }.exceptionOrNull()
+
+        assertTrue(exception is IllegalArgumentException)
+    }
 }
 
 private fun familyPhoto(
