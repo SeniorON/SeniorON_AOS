@@ -7,8 +7,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.notification.NotificationNavigationEventStore
+import com.example.senior_on.location.tracking.ParentOutingTrackingController
 import com.example.senior_on.ui.child.route.ChildMainRoute
 import com.example.senior_on.ui.onboarding.route.OnboardingRoute
 import com.example.senior_on.ui.parent.route.ParentLauncherRoute
@@ -21,6 +25,9 @@ private enum class AppDestination {
 
 @Composable
 fun SeniorOnApp(appContainer: AppContainer) {
+    val context = LocalContext.current
+    val notificationNavigationEvent by
+        NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
     var destination by rememberSaveable {
         mutableStateOf(AppDestination.Onboarding)
     }
@@ -28,6 +35,7 @@ fun SeniorOnApp(appContainer: AppContainer) {
     var onboardingInstance by rememberSaveable { mutableIntStateOf(0) }
 
     fun openOnboarding() {
+        ParentOutingTrackingController.reset(context)
         appContainer.sessionRepository.clearSession()
         authenticatedUserId = ""
         onboardingInstance += 1
@@ -53,6 +61,9 @@ fun SeniorOnApp(appContainer: AppContainer) {
             userId = authenticatedUserId,
             onLogoutClick = ::openOnboarding,
             onWithdrawClick = ::openOnboarding,
+            notificationNavigationEvent = notificationNavigationEvent,
+            onNotificationNavigationConsumed =
+                NotificationNavigationEventStore::consume,
         )
 
         AppDestination.ParentLauncher -> ParentLauncherRoute(

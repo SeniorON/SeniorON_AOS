@@ -90,5 +90,10 @@ interface UserSettingsRepository {
 
 interface DeviceRepository {
     suspend fun updateStatus()
+    suspend fun updateFcmToken(token: String)
     suspend fun disconnect()
+    suspend fun getLatestLocation(): DeviceLocation
+    suspend fun updateLocation(latitude: Double, longitude: Double)
+    suspend fun getHomeLocation(): SeniorHomeLocation
+    fun getBatteryLevel(): Int
 }

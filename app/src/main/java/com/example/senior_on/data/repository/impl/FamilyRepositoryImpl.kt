@@ -12,7 +12,7 @@ class FamilyRepositoryImpl(
     private val dataSource: FamilyDataSource
 ) : FamilyRepository {
     override suspend fun joinFamily(familyCode: String): FamilyJoinResult =
-        dataSource.joinFamily(familyCode.trim())
+        dataSource.joinFamily(normalizeFamilyCodeForRequest(familyCode))
 
     override fun observeFamilyOverview(): Flow<FamilyOverview> =
         dataSource.observeFamilyOverview()

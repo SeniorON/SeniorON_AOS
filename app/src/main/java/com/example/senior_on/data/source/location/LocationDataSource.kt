@@ -26,16 +26,7 @@ class AndroidLocationDataSource(
     private val locationClient: FusedLocationProviderClient,
 ) : LocationDataSource {
     override suspend fun getCurrentLocation(): GeoLocation {
-        if (isEmulator()) {
-            Log.w(
-                LOG_TAG,
-                "Using hardcoded Seongdong-gu Office location on emulator",
-            )
-            return GeoLocation(
-                latitude = EMULATOR_LATITUDE,
-                longitude = EMULATOR_LONGITUDE,
-            )
-        }
+        val runningOnEmulator = isEmulator()
 
         check(context.hasLocationPermission()) {
             "현재 위치를 전송하려면 위치 권한이 필요합니다."
@@ -47,7 +38,12 @@ class AndroidLocationDataSource(
             }
             .getOrNull()
         if (currentLocation != null) {
-            Log.d(LOG_TAG, "Using fresh location, accuracy=${currentLocation.accuracy}m")
+            Log.d(
+                LOG_TAG,
+                "Using fresh location=${currentLocation.latitude},${currentLocation.longitude}, " +
+                    "accuracy=${currentLocation.accuracy}m, provider=${currentLocation.provider}, " +
+                    "age=${currentLocation.ageMillis()}ms, mock=${currentLocation.isMockLocation()}",
+            )
             return currentLocation.toDomain()
         }
 
@@ -61,9 +57,22 @@ class AndroidLocationDataSource(
             Log.w(
                 LOG_TAG,
                 "Using recent cached location, age=${lastLocation.ageMillis()}ms, " +
-                    "accuracy=${lastLocation.accuracy}m",
+                    "location=${lastLocation.latitude},${lastLocation.longitude}, " +
+                    "accuracy=${lastLocation.accuracy}m, provider=${lastLocation.provider}, " +
+                    "mock=${lastLocation.isMockLocation()}",
             )
             return lastLocation.toDomain()
+        }
+
+        if (runningOnEmulator) {
+            Log.w(
+                LOG_TAG,
+                "No emulator location was configured; using Seongdong-gu Office fallback",
+            )
+            return GeoLocation(
+                latitude = EMULATOR_LATITUDE,
+                longitude = EMULATOR_LONGITUDE,
+            )
         }
 
         Log.e(LOG_TAG, "No recent location is available")
@@ -118,6 +127,10 @@ private fun Location.toDomain(): GeoLocation = GeoLocation(
 private fun Location.ageMillis(): Long =
     ((SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos) / 1_000_000L)
         .coerceAtLeast(0L)
+
+@Suppress("DEPRECATION")
+private fun Location.isMockLocation(): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isMock else isFromMockProvider
 
 private fun Context.hasLocationPermission(): Boolean =
     ContextCompat.checkSelfPermission(

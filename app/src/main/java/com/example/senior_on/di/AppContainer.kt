@@ -3,6 +3,7 @@ package com.example.senior_on.di
 import android.content.Context
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.repository.impl.AccountRecoveryRepositoryImpl
+import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.data.repository.impl.AuthRepositoryImpl
 import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
 import com.example.senior_on.data.repository.impl.ChatBuddyRepositoryImpl
@@ -93,6 +94,7 @@ interface AppContainer {
     val userSettingsRepository: UserSettingsRepository
     val deviceRepository: DeviceRepository
     val locationRepository: LocationRepository
+    val addressSearchRepository: AddressSearchRepository
     fun userProfileFor(userId: String): AppUserProfile
     val familyRepository: FamilyRepository
     fun familyRepositoryFor(userId: String): FamilyRepository
@@ -165,6 +167,8 @@ class DefaultAppContainer(
            ),
        ),
     )
+    override val addressSearchRepository: AddressSearchRepository =
+        AddressSearchRepository()
 
     private val familyPhotoStore = MockFamilyPhotoStore(
         initialPhotos = MockFamilyPhotoFixtures.initialPhotos()

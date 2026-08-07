@@ -2,7 +2,11 @@ package com.example.senior_on.ui.parent.route
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,11 +16,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
@@ -24,7 +30,9 @@ import com.example.senior_on.ui.parent.chat.ParentChatBuddyRoute
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyRoute
 import com.example.senior_on.ui.parent.home.ParentHomeRoute
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
-import com.example.senior_on.ui.parent.launcher.viewmodel.ParentDeviceStatusViewModel
+import com.example.senior_on.ui.parent.launcher.viewmodel.ParentLocationTrackingViewModel
+import com.example.senior_on.location.tracking.hasBackgroundLocationPermission
+import com.example.senior_on.location.tracking.hasForegroundLocationPermission
 import com.example.senior_on.ui.parent.medication.ParentMedicationRoute
 import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
 import com.example.senior_on.domain.model.parent.ParentMedication
@@ -92,18 +100,30 @@ private fun ParentLauncherContent(
     appContainer: AppContainer,
     modifier: Modifier = Modifier,
 ) {
-    RequestNotificationPermissionOnParentEntry()
-    val deviceStatusViewModel: ParentDeviceStatusViewModel = viewModel(
-        factory = ParentDeviceStatusViewModel.factory(
-            repository = appContainer.deviceRepository,
+    val context = LocalContext.current
+    var notificationPermissionHandled by rememberSaveable {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
         )
+    }
+    RequestNotificationPermissionOnParentEntry(
+        onPermissionHandled = { notificationPermissionHandled = true },
     )
-
-    LifecycleStartEffect(deviceStatusViewModel) {
-        deviceStatusViewModel.startStatusUpdates()
-        onStopOrDispose {
-            deviceStatusViewModel.stopStatusUpdates()
-        }
+    val locationTrackingViewModel: ParentLocationTrackingViewModel = viewModel(
+        factory = ParentLocationTrackingViewModel.factory(
+            context = context,
+            repository = appContainer.deviceRepository,
+            locationRepository = appContainer.locationRepository,
+        ),
+    )
+    if (notificationPermissionHandled) {
+        RequestParentLocationPermissions(
+            onPermissionsReady = locationTrackingViewModel::initialize,
+        )
     }
 
     var destination by rememberSaveable {
@@ -185,19 +205,130 @@ private fun ParentLauncherContent(
 
 }
 
+@Composable
+private fun RequestParentLocationPermissions(
+    onPermissionsReady: () -> Unit,
+) {
+    if (LocalInspectionMode.current) return
+    val context = LocalContext.current
+    var showBackgroundPermissionGuide by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val settingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        Log.d(
+            LocationPermissionLogTag,
+            "Returned from settings: foreground=${context.hasForegroundLocationPermission()}, " +
+                "background=${context.hasBackgroundLocationPermission()}",
+        )
+        if (
+            context.hasForegroundLocationPermission() &&
+            context.hasBackgroundLocationPermission()
+        ) {
+            onPermissionsReady()
+        }
+    }
+    val backgroundPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        Log.d(LocationPermissionLogTag, "Background location permission result=$granted")
+        if (granted) onPermissionsReady()
+    }
+    val foregroundPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        Log.d(LocationPermissionLogTag, "Foreground location permission result=$granted")
+        if (!granted) return@rememberLauncherForActivityResult
+        when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> onPermissionsReady()
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ->
+                backgroundPermissionLauncher.launch(
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                )
+            context.hasBackgroundLocationPermission() -> onPermissionsReady()
+            else -> showBackgroundPermissionGuide = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        Log.d(
+            LocationPermissionLogTag,
+            "Checking location permissions: " +
+                "foreground=${context.hasForegroundLocationPermission()}, " +
+                "background=${context.hasBackgroundLocationPermission()}",
+        )
+        when {
+            !context.hasForegroundLocationPermission() ->
+                foregroundPermissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                    )
+                )
+            context.hasBackgroundLocationPermission() -> onPermissionsReady()
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ->
+                backgroundPermissionLauncher.launch(
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                )
+            else -> showBackgroundPermissionGuide = true
+        }
+    }
+
+    if (showBackgroundPermissionGuide) {
+        AlertDialog(
+            onDismissRequest = { showBackgroundPermissionGuide = false },
+            title = { Text("외출·귀가 감지 권한") },
+            text = {
+                Text("화면이 꺼져도 외출과 귀가를 감지하려면 위치 권한을 '항상 허용'으로 설정해 주세요.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showBackgroundPermissionGuide = false
+                        settingsLauncher.launch(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}"),
+                            )
+                        )
+                    }
+                ) {
+                    Text("설정 열기")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showBackgroundPermissionGuide = false }
+                ) {
+                    Text("나중에")
+                }
+            },
+        )
+    }
+}
+
 private const val ParentFamilyConnectionViewModelKey = "parent-family-connection"
+private const val LocationPermissionLogTag = "SeniorOnLocationPermission"
 
 @Composable
-private fun RequestNotificationPermissionOnParentEntry() {
+private fun RequestNotificationPermissionOnParentEntry(
+    onPermissionHandled: () -> Unit,
+) {
     if (
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         LocalInspectionMode.current
-    ) return
+    ) {
+        LaunchedEffect(Unit) { onPermissionHandled() }
+        return
+    }
 
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = {},
+        onResult = { onPermissionHandled() },
     )
 
     LaunchedEffect(Unit) {
@@ -208,6 +339,8 @@ private fun RequestNotificationPermissionOnParentEntry() {
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            onPermissionHandled()
         }
     }
 }

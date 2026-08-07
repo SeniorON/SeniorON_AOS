@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.id)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kakao.user)
     implementation(libs.kakao.maps)
     testImplementation(libs.junit)

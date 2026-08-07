@@ -53,6 +53,15 @@ data class DeviceInfo(
     val batteryLevel: Int?, val networkConnected: Boolean,
     val lastConnectedAt: String?, val lastLocationUpdatedAt: String?
 )
+data class DeviceLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val lastLocationUpdatedAt: String?,
+)
+data class SeniorHomeLocation(
+    val latitude: Double,
+    val longitude: Double,
+)
 data class FamilyCodeInfo(val familyId: Long?, val code: String, val memberCount: Int? = null)
 data class ServerFamilyMember(
     val id: Long, val name: String, val role: String, val managerType: String,
