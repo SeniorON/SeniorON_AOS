@@ -34,6 +34,12 @@ fun FamilyPhotoGalleryRoute(
             viewModel.loadPhotoGallery(force = true)
         },
         onLoadMore = viewModel::loadMorePhotos,
+        sharedPhotoImage = { photo ->
+            SharedFamilyPhotoImage(
+                photo = photo,
+                onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
+            )
+        },
         modifier = modifier,
     )
 }

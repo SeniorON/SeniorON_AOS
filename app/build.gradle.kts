@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.kakao.user)
     implementation(libs.kakao.maps)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

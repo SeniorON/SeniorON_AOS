@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.family
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -15,11 +16,17 @@ fun FamilyInvitationRoute(
     onKakaoShareClick: () -> Unit = {},
     onMessageShareClick: () -> Unit = {},
     repository: FamilyServerRepository,
+    viewModelKey: String,
 ) {
     val viewModel: FamilyInvitationViewModel = viewModel(
+        key = viewModelKey,
         factory = FamilyInvitationViewModel.factory(repository),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.refresh()
+    }
 
     FamilyInvitationScreen(
         uiState = uiState,

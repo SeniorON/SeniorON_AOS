@@ -39,7 +39,12 @@ interface FamilyServerRepository {
         cursorId: Long? = null,
         size: Int? = null,
     ): ServerFamilyPhotoPage
-    suspend fun uploadPhoto(photo: PreparedFamilyPhoto, description: String): ServerFamilyPhoto
+    suspend fun uploadPhoto(
+        photo: PreparedFamilyPhoto,
+        description: String,
+        idempotencyKey: String,
+    ): ServerFamilyPhoto
+    suspend fun getPhoto(photoId: Long): ServerFamilyPhoto
     suspend fun markPhotoViewed(photoId: Long)
     suspend fun deletePhoto(photoId: Long)
 }

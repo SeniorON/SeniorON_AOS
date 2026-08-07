@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 class FamilyViewModel(
     private val repository: FamilyServerRepository,
@@ -33,24 +34,19 @@ class FamilyViewModel(
     private var homeLoadJob: Job? = null
     private var photoLoadJob: Job? = null
     private var detailLoadJob: Job? = null
-    private var lastHomeLoadedAtMillis: Long? = null
     private var isPhotoGalleryLoaded = false
     private var nextPhotoCursorAt: String? = null
     private var nextPhotoCursorId: Long? = null
     private var hasNextPhotoPage = false
+    private val photoUrlRefreshJobs = mutableMapOf<String, Job>()
+    private val lastRetriedImageUrlByPhotoId = mutableMapOf<String, String>()
 
     init {
         loadFamilyOverview()
     }
 
-    fun loadFamilyOverviewIfNeeded() {
+    fun loadLatestFamilyOverview() {
         if (homeLoadJob?.isActive == true) return
-
-        val lastLoadedAt = lastHomeLoadedAtMillis
-        val hasFreshHome = lastLoadedAt != null &&
-            System.currentTimeMillis() - lastLoadedAt < HOME_REFRESH_INTERVAL_MILLIS
-        if (hasFreshHome) return
-
         loadFamilyOverview()
     }
 
@@ -119,7 +115,6 @@ class FamilyViewModel(
                         errorMessage = null,
                     )
                 }
-                lastHomeLoadedAtMillis = System.currentTimeMillis()
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
@@ -331,6 +326,7 @@ class FamilyViewModel(
                     it.copy(
                         sharedPhotos = photos,
                         isPhotoLoading = false,
+                        hasLoadedPhotoGallery = true,
                         photoErrorMessage = null,
                         hasMorePhotos = hasNextPhotoPage,
                     )
@@ -420,48 +416,29 @@ class FamilyViewModel(
                 )
             }
             runCatching {
-                val loadedPhotos = mutableListOf<SharedFamilyPhotoUiModel>()
-                var cursorAt: String? = null
-                var cursorId: Long? = null
-                var hasNext = true
-                while (hasNext && loadedPhotos.none { it.id == serverPhotoId.toString() }) {
-                    val page = repository.getPhotos(
-                        cursorAt = cursorAt,
-                        cursorId = cursorId,
-                        size = MAX_PHOTO_PAGE_SIZE,
-                    )
-                    loadedPhotos += page.photos.mapNotNull { photo ->
-                        if (photo.id <= 0L) return@mapNotNull null
-                        SharedFamilyPhotoUiModel(
-                            id = photo.id.toString(),
-                            authorName = photo.uploaderName,
-                            createdAt = photo.createdAt.toFamilyPhotoInstant(),
-                            canDelete = photo.canDelete,
-                            imageSource = photo.imageUrl
-                                .trim()
-                                .takeIf(String::isNotEmpty)
-                                ?.let(FamilyImageSource::Remote),
-                            message = photo.description,
-                        )
-                    }
-                    cursorAt = page.nextCursor?.createdAt
-                    cursorId = page.nextCursor?.photoId
-                    hasNext = page.hasNext && cursorAt != null && cursorId != null
+                val photo = repository.getPhoto(serverPhotoId)
+                require(photo.id == serverPhotoId) {
+                    "Family photo response id must match the requested id"
                 }
-                loadedPhotos
-            }.onSuccess { photos ->
-                val found = photos.any { it.id == photoId }
+                SharedFamilyPhotoUiModel(
+                    id = photo.id.toString(),
+                    authorName = photo.uploaderName,
+                    createdAt = photo.createdAt.toFamilyPhotoInstant(),
+                    canDelete = photo.canDelete,
+                    imageSource = photo.imageUrl
+                        .trim()
+                        .takeIf(String::isNotEmpty)
+                        ?.let(FamilyImageSource::Remote),
+                    message = photo.description,
+                )
+            }.onSuccess { photo ->
                 _uiState.update { state ->
                     state.copy(
-                        sharedPhotos = (state.sharedPhotos + photos)
+                        sharedPhotos = (state.sharedPhotos + photo)
                             .distinctBy(SharedFamilyPhotoUiModel::id)
                             .sortedByDescending(SharedFamilyPhotoUiModel::createdAt),
                         loadingPhotoId = null,
-                        photoMutationErrorMessage = if (found) {
-                            null
-                        } else {
-                            "사진을 찾을 수 없어요."
-                        },
+                        photoMutationErrorMessage = null,
                     )
                 }
             }.onFailure { exception ->
@@ -469,10 +446,68 @@ class FamilyViewModel(
                 _uiState.update {
                     it.copy(
                         loadingPhotoId = null,
-                        photoMutationErrorMessage = "사진을 불러오지 못했어요.",
+                        photoMutationErrorMessage = if (
+                            exception is HttpException && exception.code() == 404
+                        ) {
+                            "사진을 찾을 수 없어요."
+                        } else {
+                            "사진을 불러오지 못했어요."
+                        },
                     )
                 }
             }
+        }
+    }
+
+    fun refreshPhotoUrlAfterLoadFailure(photoId: String, failedUrl: String) {
+        val normalizedPhotoId = photoId.trim()
+        val normalizedFailedUrl = failedUrl.trim()
+        if (normalizedPhotoId.isEmpty() || normalizedFailedUrl.isEmpty()) return
+        if (photoUrlRefreshJobs[normalizedPhotoId]?.isActive == true) return
+
+        val currentPhoto = _uiState.value.sharedPhotos
+            .firstOrNull { it.id == normalizedPhotoId }
+            ?: return
+        val currentUrl = (currentPhoto.imageSource as? FamilyImageSource.Remote)
+            ?.url
+            ?.trim()
+            ?: return
+        if (currentUrl != normalizedFailedUrl) return
+        if (lastRetriedImageUrlByPhotoId[normalizedPhotoId] == normalizedFailedUrl) return
+
+        val serverPhotoId = normalizedPhotoId.toLongOrNull() ?: return
+        lastRetriedImageUrlByPhotoId[normalizedPhotoId] = normalizedFailedUrl
+
+        val refreshJob = viewModelScope.launch {
+            runCatching {
+                val photo = repository.getPhoto(serverPhotoId)
+                require(photo.id == serverPhotoId) {
+                    "Family photo response id must match the requested id"
+                }
+                SharedFamilyPhotoUiModel(
+                    id = photo.id.toString(),
+                    authorName = photo.uploaderName,
+                    createdAt = photo.createdAt.toFamilyPhotoInstant(),
+                    canDelete = photo.canDelete,
+                    imageSource = photo.imageUrl
+                        .trim()
+                        .takeIf(String::isNotEmpty)
+                        ?.let(FamilyImageSource::Remote),
+                    message = photo.description,
+                )
+            }.onSuccess { refreshedPhoto ->
+                _uiState.update { state ->
+                    state.copy(
+                        sharedPhotos = state.sharedPhotos.map { photo ->
+                            if (photo.id == normalizedPhotoId) refreshedPhoto else photo
+                        },
+                    )
+                }
+            }
+        }
+        photoUrlRefreshJobs[normalizedPhotoId] = refreshJob
+        refreshJob.invokeOnCompletion {
+            photoUrlRefreshJobs.remove(normalizedPhotoId, refreshJob)
         }
     }
 
@@ -517,6 +552,7 @@ class FamilyViewModel(
         nextPhotoCursorAt = null
         nextPhotoCursorId = null
         hasNextPhotoPage = false
+        _uiState.update { it.copy(hasLoadedPhotoGallery = false) }
         loadFamilyOverview()
         loadPhotoGallery(force = true)
     }
@@ -526,8 +562,6 @@ class FamilyViewModel(
         private const val PRIMARY_MANAGER = "PRIMARY"
         private const val SUB_MANAGER = "SUB"
         private const val PHOTO_PAGE_SIZE = 20
-        private const val MAX_PHOTO_PAGE_SIZE = 50
-        private const val HOME_REFRESH_INTERVAL_MILLIS = 5 * 60 * 1000L
 
         fun factory(repository: FamilyServerRepository) = viewModelFactory {
             initializer {

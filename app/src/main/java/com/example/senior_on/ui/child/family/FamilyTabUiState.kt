@@ -51,6 +51,7 @@ data class FamilyTabUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isPhotoLoading: Boolean = false,
+    val hasLoadedPhotoGallery: Boolean = false,
     val photoErrorMessage: String? = null,
     val hasMorePhotos: Boolean = false,
     val changingPrimaryMemberId: String? = null,

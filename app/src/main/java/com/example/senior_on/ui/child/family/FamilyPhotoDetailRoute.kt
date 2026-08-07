@@ -124,6 +124,12 @@ fun FamilyPhotoDetailRoute(
             viewModel.deletePhoto(photoId)
         },
         onRetryClick = { viewModel.ensurePhotoLoaded(photoId) },
+        sharedPhotoImage = { photo ->
+            SharedFamilyPhotoImage(
+                photo = photo,
+                onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
+            )
+        },
         modifier = modifier
     )
 }

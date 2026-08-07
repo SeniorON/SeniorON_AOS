@@ -27,7 +27,7 @@ fun FamilyTabRoute(
     var isPhotoSourceSheetVisible by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(viewModel) {
-        viewModel.loadFamilyOverviewIfNeeded()
+        viewModel.loadLatestFamilyOverview()
     }
 
     FamilyTabScreen(
@@ -40,6 +40,12 @@ fun FamilyTabRoute(
         onUploadPhotoClick = { isPhotoSourceSheetVisible = true },
         onPhotoClick = onPhotoClick,
         onRetryClick = viewModel::loadFamilyOverview,
+        sharedPhotoImage = { photo ->
+            SharedFamilyPhotoImage(
+                photo = photo,
+                onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
+            )
+        },
     )
 
     if (isPhotoSourceSheetVisible) {

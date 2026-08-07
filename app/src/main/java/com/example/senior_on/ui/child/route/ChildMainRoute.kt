@@ -8,11 +8,13 @@ import com.example.senior_on.ui.child.ChildMainScreen
 fun ChildMainRoute(
     appContainer: AppContainer,
     userId: String,
+    sessionInstance: Int,
     onLogoutClick: () -> Unit,
     onWithdrawClick: () -> Unit,
 ) {
     ChildMainScreen(
         userProfile = appContainer.userProfileFor(userId),
+        sessionInstance = sessionInstance,
         familyServerRepository = appContainer.familyServerRepository,
         familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
         displayRepository = appContainer.displayRepository,

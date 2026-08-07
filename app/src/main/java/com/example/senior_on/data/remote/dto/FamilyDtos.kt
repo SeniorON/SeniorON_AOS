@@ -32,4 +32,4 @@ data class FamilyHomeResponse(
     val recentUploaderProfileImageUrls: List<String>?,
     val recentPhotos: List<FamilyPhotoItemResponse>?
 )
-data class FamilyCodeResponse(val familyCode: String?, val familyMemberCount: Int?)
+data class FamilyCodeResponse(val familyCode: String?, val familyMemberCount: Long?)

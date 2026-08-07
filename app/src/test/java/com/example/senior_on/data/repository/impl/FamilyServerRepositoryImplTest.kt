@@ -13,6 +13,8 @@ import com.example.senior_on.data.remote.dto.FamilyPhotoListResponse
 import com.example.senior_on.data.remote.dto.FamilyPrimaryManagerUpdateRequest
 import com.example.senior_on.data.remote.dto.FamilyPrimaryManagerUpdateResponse
 import com.example.senior_on.data.source.family.RemoteFamilySource
+import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -82,6 +84,44 @@ class FamilyServerRepositoryImplTest {
         assertEquals(91L, page.nextCursor?.photoId)
         assertTrue(page.hasNext)
     }
+
+    @Test
+    fun `single photo response is mapped without loading a page`() = runBlocking {
+        val source = FakeRemoteFamilySource(
+            photo = familyPhoto(id = 93, canDelete = true),
+        )
+
+        val photo = FamilyServerRepositoryImpl(source).getPhoto(93)
+
+        assertEquals(93L, source.requestedPhotoId)
+        assertEquals(93L, photo.id)
+        assertTrue(photo.canDelete)
+    }
+
+    @Test
+    fun `photo upload forwards the idempotency key`() = runBlocking {
+        val source = FakeRemoteFamilySource()
+        val uploadFile = File.createTempFile("family-photo", ".jpg")
+
+        try {
+            FamilyServerRepositoryImpl(source).uploadPhoto(
+                photo = PreparedFamilyPhoto(
+                    file = uploadFile,
+                    mimeType = "image/jpeg",
+                    displayName = "family-photo.jpg",
+                ),
+                description = "함께 본 사진",
+                idempotencyKey = "123e4567-e89b-12d3-a456-426614174000",
+            )
+
+            assertEquals(
+                "123e4567-e89b-12d3-a456-426614174000",
+                source.uploadedIdempotencyKey,
+            )
+        } finally {
+            uploadFile.delete()
+        }
+    }
 }
 
 private fun familyPhoto(
@@ -110,7 +150,13 @@ private class FakeRemoteFamilySource(
         nextCursor = null,
         hasNext = false,
     ),
+    private val photo: FamilyPhotoItemResponse = familyPhoto(id = 92, canDelete = true),
 ) : RemoteFamilySource {
+    var requestedPhotoId: Long? = null
+        private set
+    var uploadedIdempotencyKey: String? = null
+        private set
+
     override suspend fun join(request: FamilyJoinRequest) =
         FamilyJoinResponse(familyId = 1, familyCode = request.familyCode)
 
@@ -142,9 +188,18 @@ private class FakeRemoteFamilySource(
     ) = photos
 
     override suspend fun uploadPhoto(
+        idempotencyKey: String,
         image: MultipartBody.Part,
         description: RequestBody?,
-    ) = familyPhoto(id = 92, canDelete = true)
+    ): FamilyPhotoItemResponse {
+        uploadedIdempotencyKey = idempotencyKey
+        return photo
+    }
+
+    override suspend fun getPhoto(photoId: Long): FamilyPhotoItemResponse {
+        requestedPhotoId = photoId
+        return photo
+    }
 
     override suspend fun getAlbums(): List<FamilyPhotoAlbumResponse> = emptyList()
 

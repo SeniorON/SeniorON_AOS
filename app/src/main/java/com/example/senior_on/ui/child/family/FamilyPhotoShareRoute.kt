@@ -21,6 +21,7 @@ private const val TooltipVisibleDurationMillis = 2_000L
 @Composable
 fun FamilyPhotoShareRoute(
     photoUri: String,
+    uploadSessionId: String,
     onBackClick: () -> Unit,
     onReselectClick: () -> Unit,
     onShareSuccess: () -> Unit,
@@ -31,28 +32,33 @@ fun FamilyPhotoShareRoute(
     val preferences = remember(context) {
         FamilyPhotoSharePreferences(context)
     }
-    val shouldShowTooltip = remember(photoUri) {
+    val shouldShowTooltip = remember(uploadSessionId) {
         preferences.shouldShowMessageTooltip()
     }
-    var message by rememberSaveable(photoUri) { mutableStateOf("") }
-    var isTooltipVisible by rememberSaveable(photoUri) { mutableStateOf(false) }
-    var hasUserInteracted by rememberSaveable(photoUri) { mutableStateOf(false) }
-    var isSuccessDialogVisible by rememberSaveable(photoUri) { mutableStateOf(false) }
-    var isSelectionInitialized by remember(photoUri) { mutableStateOf(false) }
+    var message by rememberSaveable(uploadSessionId) { mutableStateOf("") }
+    var isTooltipVisible by rememberSaveable(uploadSessionId) { mutableStateOf(false) }
+    var hasUserInteracted by rememberSaveable(uploadSessionId) { mutableStateOf(false) }
+    var isSuccessDialogVisible by rememberSaveable(uploadSessionId) {
+        mutableStateOf(false)
+    }
     val uploadUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isCurrentUploadSession = uploadUiState.sessionId == uploadSessionId
 
-    LaunchedEffect(photoUri) {
-        viewModel.selectPhoto(photoUri)
-        isSelectionInitialized = true
+    LaunchedEffect(uploadSessionId, photoUri) {
+        viewModel.startUploadSession(uploadSessionId, photoUri)
     }
 
-    LaunchedEffect(isSelectionInitialized, uploadUiState.isUploaded) {
-        if (isSelectionInitialized && uploadUiState.isUploaded) {
+    LaunchedEffect(
+        uploadSessionId,
+        uploadUiState.sessionId,
+        uploadUiState.isUploaded,
+    ) {
+        if (isCurrentUploadSession && uploadUiState.isUploaded) {
             isSuccessDialogVisible = true
         }
     }
 
-    LaunchedEffect(photoUri, shouldShowTooltip) {
+    LaunchedEffect(uploadSessionId, shouldShowTooltip) {
         if (!shouldShowTooltip) return@LaunchedEffect
 
         preferences.markMessageTooltipShown()
@@ -77,8 +83,10 @@ fun FamilyPhotoShareRoute(
         onBackClick = onBackClick,
         onReselectClick = onReselectClick,
         onShareClick = { viewModel.uploadPhoto(message) },
-        isUploading = uploadUiState.isUploading,
-        uploadErrorMessage = uploadUiState.errorMessage,
+        isUploading = isCurrentUploadSession && uploadUiState.isUploading,
+        uploadErrorMessage = uploadUiState.errorMessage.takeIf {
+            isCurrentUploadSession
+        },
         modifier = modifier
     )
 
@@ -86,6 +94,7 @@ fun FamilyPhotoShareRoute(
         FamilyPhotoShareSuccessDialog(
             onConfirmClick = {
                 isSuccessDialogVisible = false
+                viewModel.consumeUploadSuccess(uploadSessionId)
                 onShareSuccess()
             },
         )

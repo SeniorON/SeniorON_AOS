@@ -53,7 +53,7 @@ data class DeviceInfo(
     val batteryLevel: Int?, val networkConnected: Boolean,
     val lastConnectedAt: String?, val lastLocationUpdatedAt: String?
 )
-data class FamilyCodeInfo(val familyId: Long?, val code: String, val memberCount: Int? = null)
+data class FamilyCodeInfo(val familyId: Long?, val code: String, val memberCount: Long? = null)
 data class ServerFamilyMember(
     val id: Long, val name: String, val role: String, val managerType: String,
     val canBecomePrimary: Boolean, val isMe: Boolean, val profileImageUrl: String?

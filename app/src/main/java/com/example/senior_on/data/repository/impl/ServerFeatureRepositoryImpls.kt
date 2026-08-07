@@ -250,28 +250,38 @@ class FamilyServerRepositoryImpl(
             hasNext = response.hasNext == true,
         )
     }
-    override suspend fun uploadPhoto(photo: PreparedFamilyPhoto, description: String): ServerFamilyPhoto {
+    override suspend fun uploadPhoto(
+        photo: PreparedFamilyPhoto,
+        description: String,
+        idempotencyKey: String,
+    ): ServerFamilyPhoto {
         val body = photo.file.asRequestBody(photo.mimeType.toMediaType())
         val part = MultipartBody.Part.createFormData("image", photo.displayName, body)
         val descriptionBody = description.trim()
             .takeIf(String::isNotEmpty)
             ?.toRequestBody("text/plain".toMediaType())
-        return source.uploadPhoto(part, descriptionBody).let { uploaded ->
-            ServerFamilyPhoto(
-                id = uploaded.familyPhotoId ?: 0,
-                imageUrl = uploaded.imageUrl.orEmpty(),
-                uploaderId = uploaded.uploaderUserId ?: 0,
-                uploaderName = uploaded.uploaderName.orEmpty(),
-                description = uploaded.description.orEmpty(),
-                createdAt = uploaded.createdAt.orEmpty(),
-                canDelete = uploaded.canDelete == true,
-                isNew = uploaded.newPhoto == true,
-            )
-        }
+        return source.uploadPhoto(
+            idempotencyKey = idempotencyKey,
+            image = part,
+            description = descriptionBody,
+        ).toServerFamilyPhoto()
     }
+    override suspend fun getPhoto(photoId: Long) =
+        source.getPhoto(photoId).toServerFamilyPhoto()
     override suspend fun markPhotoViewed(photoId: Long) = source.markViewed(photoId)
     override suspend fun deletePhoto(photoId: Long) = source.deletePhoto(photoId)
 }
+
+private fun FamilyPhotoItemResponse.toServerFamilyPhoto() = ServerFamilyPhoto(
+    id = familyPhotoId ?: 0,
+    imageUrl = imageUrl.orEmpty(),
+    uploaderId = uploaderUserId ?: 0,
+    uploaderName = uploaderName.orEmpty(),
+    description = description.orEmpty(),
+    createdAt = createdAt.orEmpty(),
+    canDelete = canDelete == true,
+    isNew = newPhoto == true,
+)
 
 class HospitalRepositoryImpl(
     private val source: HospitalDataSource

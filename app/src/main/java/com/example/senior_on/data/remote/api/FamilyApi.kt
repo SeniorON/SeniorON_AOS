@@ -22,7 +22,13 @@ interface FamilyApi {
         @Query("size") size: Int? = null
     ): ApiResponse<FamilyPhotoListResponse>
     @Multipart @POST("api/family/photos") suspend fun uploadPhoto(
-        @Part image: MultipartBody.Part, @Part("description") description: RequestBody?
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Part image: MultipartBody.Part,
+        @Part("description") description: RequestBody?,
+    ): ApiResponse<FamilyPhotoItemResponse>
+    @GET("api/family/photos/{familyPhotoId}")
+    suspend fun getPhoto(
+        @Path("familyPhotoId") familyPhotoId: Long,
     ): ApiResponse<FamilyPhotoItemResponse>
     @GET("api/family/photos/albums")
     suspend fun getAlbums(): ApiResponse<List<FamilyPhotoAlbumResponse>>
