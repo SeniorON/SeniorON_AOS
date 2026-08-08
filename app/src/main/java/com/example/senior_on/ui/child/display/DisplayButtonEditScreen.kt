@@ -556,7 +556,15 @@ private fun EditableButtonRow(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(SeniorOnColors.Gray300),
+                    .background(SeniorOnColors.Gray300)
+                    .combinedClickable(
+                        interactionSource = remember {
+                            MutableInteractionSource()
+                        },
+                        indication = null,
+                        onClick = onMoreClick,
+                        onLongClick = onMoreClick,
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
