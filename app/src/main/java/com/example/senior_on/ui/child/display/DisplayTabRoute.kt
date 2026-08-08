@@ -12,8 +12,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -26,6 +24,7 @@ private enum class DisplayDestination {
     Overview,
     DeviceConnection,
     SeniorAppInstallGuide,
+    ConnectionGuide,
     ParentInfoEdit,
     AddressSearch,
     FontEdit,
@@ -53,11 +52,6 @@ fun DisplayTabRoute(
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var showInternetRequiredDialog by remember { mutableStateOf(false) }
     var showLargePreview by rememberSaveable { mutableStateOf(false) }
-    var installGuidePhoneNumber by rememberSaveable(
-        stateSaver = TextFieldValue.Saver
-    ) {
-        mutableStateOf(TextFieldValue())
-    }
     var buttonEditDraftNames by rememberSaveable {
         mutableStateOf(arrayListOf<String>())
     }
@@ -72,6 +66,7 @@ fun DisplayTabRoute(
     fun navigateBack() {
         destination = when (destination) {
             DisplayDestination.AddressSearch -> DisplayDestination.ParentInfoEdit
+            DisplayDestination.ConnectionGuide -> DisplayDestination.SeniorAppInstallGuide
             DisplayDestination.ButtonOrder -> DisplayDestination.ButtonAdd
             DisplayDestination.ButtonAdd -> DisplayDestination.ButtonEditSelected
             DisplayDestination.ButtonEditSelected -> DisplayDestination.ButtonEditGuide
@@ -85,7 +80,6 @@ fun DisplayTabRoute(
     }
 
     fun navigateToSeniorAppInstallGuide() {
-        installGuidePhoneNumber = TextFieldValue()
         destination = DisplayDestination.SeniorAppInstallGuide
     }
 
@@ -119,7 +113,8 @@ fun DisplayTabRoute(
         when (destination) {
             DisplayDestination.Overview -> DisplayTabScreen(
                 uiState = uiState,
-                canEditScreen = uiState.canEditScreen &&
+                canEditScreen = uiState.canEditScreen,
+                showScreenEditActions = uiState.canEditScreen &&
                     !uiState.isEditPermissionLoading &&
                     !uiState.isLoading &&
                     !uiState.isSaving,
@@ -184,13 +179,20 @@ fun DisplayTabRoute(
             )
 
             DisplayDestination.SeniorAppInstallGuide -> SeniorAppInstallGuideScreen(
-                phoneNumber = installGuidePhoneNumber,
-                onPhoneNumberChange = { value ->
-                    installGuidePhoneNumber = value.toInstallGuidePhoneNumber()
-                },
                 modifier = modifier,
                 onBackClick = ::navigateBack,
-                onSendInstallLinkClick = onInstallGuideClick,
+                onKakaoSendClick = onInstallGuideClick,
+                onAppInstallMethodClick = {
+                    saveableStateHolder.removeState(
+                        DisplayDestination.ConnectionGuide.name
+                    )
+                    destination = DisplayDestination.ConnectionGuide
+                },
+            )
+
+            DisplayDestination.ConnectionGuide -> ConnectionGuideScreen(
+                modifier = modifier,
+                onBackClick = ::navigateBack,
             )
 
             DisplayDestination.ParentInfoEdit -> ParentInfoEditScreen(
@@ -395,25 +397,6 @@ fun DisplayTabRoute(
             todaySchedule = uiState.todaySchedule,
         )
     }
-}
-
-private fun TextFieldValue.toInstallGuidePhoneNumber(): TextFieldValue {
-    val filteredText = text.filter(Char::isDigit).take(11)
-    if (filteredText == text) return this
-
-    fun filteredOffset(offset: Int): Int = text
-        .take(offset)
-        .count(Char::isDigit)
-        .coerceAtMost(filteredText.length)
-
-    return copy(
-        text = filteredText,
-        selection = TextRange(
-            start = filteredOffset(selection.start),
-            end = filteredOffset(selection.end),
-        ),
-        composition = null,
-    )
 }
 
 internal fun createInitialButtonOrder(

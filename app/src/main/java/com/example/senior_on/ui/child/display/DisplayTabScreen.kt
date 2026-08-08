@@ -65,6 +65,7 @@ fun DisplayTabScreen(
     uiState: DisplayTabUiState,
     modifier: Modifier = Modifier,
     canEditScreen: Boolean = true,
+    showScreenEditActions: Boolean = canEditScreen,
     onDeviceClick: () -> Unit = {},
     onParentInfoClick: () -> Unit = {},
     onLargePreviewClick: () -> Unit = {},
@@ -112,6 +113,7 @@ fun DisplayTabScreen(
                     isWeatherLoading = uiState.isWeatherLoading,
                     todaySchedule = uiState.todaySchedule,
                     canEditScreen = canEditScreen,
+                    showScreenEditActions = showScreenEditActions,
                     onLargePreviewClick = onLargePreviewClick,
                     onFontEditClick = onFontEditClick,
                     onButtonEditClick = onButtonEditClick,
@@ -429,6 +431,7 @@ private fun ScreenEditSection(
     isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
     canEditScreen: Boolean,
+    showScreenEditActions: Boolean,
     onLargePreviewClick: () -> Unit,
     onFontEditClick: () -> Unit,
     onButtonEditClick: () -> Unit,
@@ -438,27 +441,39 @@ private fun ScreenEditSection(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 24.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_phone1),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.Gray800,
+        if (canEditScreen) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_phone1),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = SeniorOnColors.Gray800,
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Text(
+                    text = "화면 편집",
+                    style = SeniorOnTextStyles.HeadingS,
+                    color = SeniorOnColors.Gray800,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        } else {
+            SeniorScreenPreviewHeader(
+                onLargePreviewClick = onLargePreviewClick,
             )
 
-            Spacer(modifier = Modifier.width(4.dp))
-
-            Text(
-                text = "화면 편집",
-                style = SeniorOnTextStyles.HeadingS,
-                color = SeniorOnColors.Gray800,
-            )
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
         SeniorScreenPreviewCard(
-            phoneLabel = "${relationshipLabel ?: "부모님"} 폰",
+            phoneLabel = if (canEditScreen) {
+                "${relationshipLabel ?: "부모님"} 폰"
+            } else {
+                null
+            },
             configuration = configuration,
             weather = weather,
             isWeatherLoading = isWeatherLoading,
@@ -466,7 +481,7 @@ private fun ScreenEditSection(
             onLargePreviewClick = onLargePreviewClick,
         )
 
-        if (canEditScreen) {
+        if (showScreenEditActions) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -494,8 +509,50 @@ private fun ScreenEditSection(
 }
 
 @Composable
+private fun SeniorScreenPreviewHeader(
+    onLargePreviewClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_phone2),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified,
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Text(
+                    text = "시니어 화면",
+                    style = SeniorOnTextStyles.HeadingS,
+                    color = SeniorOnColors.Gray800,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = "현재 적용 중인 화면이에요",
+                style = SeniorOnTextStyles.BodySMedium,
+                color = SeniorOnColors.Gray500,
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        LargePreviewButton(onClick = onLargePreviewClick)
+    }
+}
+
+@Composable
 private fun SeniorScreenPreviewCard(
-    phoneLabel: String,
+    phoneLabel: String?,
     configuration: SeniorScreenConfiguration,
     weather: DisplayWeather?,
     isWeatherLoading: Boolean,
@@ -514,49 +571,21 @@ private fun SeniorScreenPreviewCard(
         val phonePreviewHeight = (263f * previewScale).dp
         val phonePreviewBottomPadding = (20f * previewScale).dp
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, top = 22.dp, end = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = phoneLabel,
-                modifier = Modifier.weight(1f),
-                style = SeniorOnTextStyles.BodyMBold,
-                color = SeniorOnColors.Gray700,
-            )
-
+        phoneLabel?.let { label ->
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(31.dp))
-                    .border(
-                        width = 1.dp,
-                        color = SeniorOnColors.Primary600,
-                        shape = RoundedCornerShape(31.dp),
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onLargePreviewClick,
-                    )
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, top = 22.dp, end = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_sm_preview),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = SeniorOnColors.Primary600,
-                )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
                 Text(
-                    text = "크게 보기",
-                    style = SeniorOnTextStyles.CaptionMedium,
-                    color = SeniorOnColors.Primary600,
+                    text = label,
+                    modifier = Modifier.weight(1f),
+                    style = SeniorOnTextStyles.BodyMBold,
+                    color = SeniorOnColors.Gray700,
                 )
+
+                LargePreviewButton(onClick = onLargePreviewClick)
             }
         }
 
@@ -574,6 +603,43 @@ private fun SeniorScreenPreviewCard(
                 todaySchedule = todaySchedule,
             )
         }
+    }
+}
+
+@Composable
+private fun LargePreviewButton(
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(31.dp))
+            .border(
+                width = 1.dp,
+                color = SeniorOnColors.Primary600,
+                shape = RoundedCornerShape(31.dp),
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_sm_preview),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = SeniorOnColors.Primary600,
+        )
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Text(
+            text = "크게 보기",
+            style = SeniorOnTextStyles.CaptionMedium,
+            color = SeniorOnColors.Primary600,
+        )
     }
 }
 

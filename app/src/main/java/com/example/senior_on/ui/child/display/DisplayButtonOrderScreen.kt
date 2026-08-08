@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -46,9 +48,12 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
@@ -57,8 +62,18 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import kotlin.math.roundToInt
 
 private const val FixedEmergencyGridIndex = 7
+
+private data class ButtonOrderDragState(
+    val buttonName: String,
+    val pointerPosition: Offset,
+    val touchOffset: Offset,
+    val widthPx: Float,
+    val featured: Boolean,
+    val showDescription: Boolean,
+)
 
 internal fun List<SeniorHomeButtonType>.withEmergencyAtFixedGridSlot():
     List<SeniorHomeButtonType> {
@@ -90,85 +105,133 @@ fun DisplayButtonOrderScreen(
             )
         )
     }
-    var draggedButtonName by remember { mutableStateOf<String?>(null) }
+    var dragState by remember { mutableStateOf<ButtonOrderDragState?>(null) }
     var contentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var containerBounds by remember { mutableStateOf<Rect?>(null) }
     val buttonBounds = remember { mutableMapOf<String, Rect>() }
     val latestOrderedButtonNames = rememberUpdatedState(orderedButtonNames)
     val hapticFeedback = LocalHapticFeedback.current
+    val density = LocalDensity.current
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
-            .background(SeniorOnColors.Background1),
+            .onGloballyPositioned { containerBounds = it.boundsInRoot() },
     ) {
-        ButtonOrderTopBar(
-            onBackClick = onBackClick,
-            onSaveClick = {
-                onSaveClick(
-                    orderedButtonNames.map(SeniorHomeButtonType::valueOf)
-                )
-            },
-        )
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .onGloballyPositioned { contentCoordinates = it }
-                .pointerInput(Unit) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { position ->
-                            val rootPosition = contentCoordinates
-                                ?.localToRoot(position)
-                                ?: return@detectDragGesturesAfterLongPress
-                            draggedButtonName = buttonBounds.entries
-                                .firstOrNull { (_, bounds) ->
-                                    bounds.contains(rootPosition)
-                                }
-                                ?.key
-                            if (draggedButtonName != null) {
+                .fillMaxSize()
+                .statusBarsPadding()
+                .background(SeniorOnColors.Background1),
+        ) {
+            ButtonOrderTopBar(
+                onBackClick = onBackClick,
+                onSaveClick = {
+                    onSaveClick(
+                        orderedButtonNames.map(SeniorHomeButtonType::valueOf)
+                    )
+                },
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .onGloballyPositioned { contentCoordinates = it }
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { position ->
+                                val rootPosition = contentCoordinates
+                                    ?.localToRoot(position)
+                                    ?: return@detectDragGesturesAfterLongPress
+                                val containerTopLeft = containerBounds
+                                    ?.topLeft
+                                    ?: return@detectDragGesturesAfterLongPress
+                                val (draggedName, draggedBounds) =
+                                    buttonBounds.entries
+                                        .firstOrNull { (_, bounds) ->
+                                            bounds.contains(rootPosition)
+                                        }
+                                        ?: return@detectDragGesturesAfterLongPress
+                                val buttonsAtDragStart =
+                                    latestOrderedButtonNames.value.map(
+                                        SeniorHomeButtonType::valueOf
+                                    )
+                                val draggedButton =
+                                    SeniorHomeButtonType.valueOf(draggedName)
+                                val featuredAtDragStart =
+                                    buttonsAtDragStart.firstOrNull() == draggedButton
+                                val wideScheduleAtDragStart =
+                                    buttonsAtDragStart.firstOrNull()
+                                        .isMusicButton() &&
+                                        buttonsAtDragStart.getOrNull(1) ==
+                                        SeniorHomeButtonType.Schedule
+
+                                dragState = ButtonOrderDragState(
+                                    buttonName = draggedName,
+                                    pointerPosition =
+                                        rootPosition - containerTopLeft,
+                                    touchOffset =
+                                        rootPosition - draggedBounds.topLeft,
+                                    widthPx = draggedBounds.width,
+                                    featured = featuredAtDragStart,
+                                    showDescription =
+                                        draggedButton ==
+                                        SeniorHomeButtonType.Schedule &&
+                                        (featuredAtDragStart ||
+                                            wideScheduleAtDragStart),
+                                )
                                 hapticFeedback.performHapticFeedback(
                                     HapticFeedbackType.LongPress
                                 )
-                            }
-                        },
-                        onDrag = { change, _ ->
-                            change.consume()
-                            val draggedName = draggedButtonName
-                                ?: return@detectDragGesturesAfterLongPress
-                            val rootPosition = contentCoordinates
-                                ?.localToRoot(change.position)
-                                ?: return@detectDragGesturesAfterLongPress
-                            val targetName = buttonBounds.entries
-                                .firstOrNull { (_, bounds) ->
-                                    bounds.contains(rootPosition)
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                val currentDragState = dragState
+                                    ?: return@detectDragGesturesAfterLongPress
+                                val rootPosition = contentCoordinates
+                                    ?.localToRoot(change.position)
+                                    ?: return@detectDragGesturesAfterLongPress
+                                val containerTopLeft = containerBounds
+                                    ?.topLeft
+                                    ?: return@detectDragGesturesAfterLongPress
+
+                                dragState = currentDragState.copy(
+                                    pointerPosition =
+                                        rootPosition - containerTopLeft,
+                                )
+
+                                val targetName = buttonBounds.entries
+                                    .firstOrNull { (_, bounds) ->
+                                        bounds.contains(rootPosition)
+                                    }
+                                    ?.key
+                                    ?: return@detectDragGesturesAfterLongPress
+                                if (targetName == currentDragState.buttonName) {
+                                    return@detectDragGesturesAfterLongPress
                                 }
-                                ?.key
-                                ?: return@detectDragGesturesAfterLongPress
-                            if (targetName == draggedName) {
-                                return@detectDragGesturesAfterLongPress
-                            }
 
-                            val currentNames = latestOrderedButtonNames.value
-                            val fromIndex = currentNames.indexOf(draggedName)
-                            val toIndex = currentNames.indexOf(targetName)
-                            if (fromIndex < 0 || toIndex < 0) {
-                                return@detectDragGesturesAfterLongPress
-                            }
+                                val currentNames = latestOrderedButtonNames.value
+                                val fromIndex = currentNames.indexOf(
+                                    currentDragState.buttonName
+                                )
+                                val toIndex = currentNames.indexOf(targetName)
+                                if (fromIndex < 0 || toIndex < 0) {
+                                    return@detectDragGesturesAfterLongPress
+                                }
 
-                            orderedButtonNames = ArrayList(currentNames).apply {
-                                add(toIndex, removeAt(fromIndex))
-                            }
-                        },
-                        onDragEnd = { draggedButtonName = null },
-                        onDragCancel = { draggedButtonName = null },
-                    )
-                }
-                .padding(horizontal = 16.dp),
-        ) {
+                                orderedButtonNames = ArrayList(currentNames).apply {
+                                    add(toIndex, removeAt(fromIndex))
+                                }
+                            },
+                            onDragEnd = { dragState = null },
+                            onDragCancel = { dragState = null },
+                        )
+                    }
+                    .padding(horizontal = 16.dp),
+            ) {
             Spacer(modifier = Modifier.height(22.dp))
 
             Text(
@@ -193,17 +256,22 @@ fun DisplayButtonOrderScreen(
             val featuredButton = orderedButtons.firstOrNull()
 
             featuredButton?.let { button ->
-                ButtonOrderCard(
-                    button = button,
-                    customLabel = customButtonLabels[button],
-                    featured = true,
-                    isDragging = draggedButtonName == button.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onGloballyPositioned {
-                            buttonBounds[button.name] = it.boundsInRoot()
-                        },
-                )
+                val cardModifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned {
+                        buttonBounds[button.name] = it.boundsInRoot()
+                    }
+                if (dragState?.buttonName == button.name) {
+                    ButtonOrderPlaceholder(modifier = cardModifier)
+                } else {
+                    ButtonOrderCard(
+                        button = button,
+                        customLabel = customButtonLabels[button],
+                        featured = true,
+                        isDragging = false,
+                        modifier = cardModifier,
+                    )
+                }
             }
 
             val showWideSchedule = featuredButton.isMusicButton() &&
@@ -211,22 +279,28 @@ fun DisplayButtonOrderScreen(
             if (showWideSchedule) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                ButtonOrderCard(
-                    button = SeniorHomeButtonType.Schedule,
-                    customLabel = customButtonLabels[
-                        SeniorHomeButtonType.Schedule
-                    ],
-                    featured = false,
-                    showDescription = true,
-                    isDragging =
-                        draggedButtonName == SeniorHomeButtonType.Schedule.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onGloballyPositioned {
-                            buttonBounds[SeniorHomeButtonType.Schedule.name] =
-                                it.boundsInRoot()
-                        },
-                )
+                val scheduleModifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned {
+                        buttonBounds[SeniorHomeButtonType.Schedule.name] =
+                            it.boundsInRoot()
+                    }
+                if (dragState?.buttonName ==
+                    SeniorHomeButtonType.Schedule.name
+                ) {
+                    ButtonOrderPlaceholder(modifier = scheduleModifier)
+                } else {
+                    ButtonOrderCard(
+                        button = SeniorHomeButtonType.Schedule,
+                        customLabel = customButtonLabels[
+                            SeniorHomeButtonType.Schedule
+                        ],
+                        featured = false,
+                        showDescription = true,
+                        isDragging = false,
+                        modifier = scheduleModifier,
+                    )
+                }
             }
 
             val gridButtons = orderedButtons
@@ -255,19 +329,25 @@ fun DisplayButtonOrderScreen(
                                     modifier = Modifier.weight(1f),
                                 )
                             } else {
-                                ButtonOrderCard(
-                                    button = button,
-                                    customLabel = customButtonLabels[button],
-                                    featured = false,
-                                    isDragging =
-                                        draggedButtonName == button.name,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .onGloballyPositioned {
-                                            buttonBounds[button.name] =
-                                                it.boundsInRoot()
-                                        },
-                                )
+                                val cardModifier = Modifier
+                                    .weight(1f)
+                                    .onGloballyPositioned {
+                                        buttonBounds[button.name] =
+                                            it.boundsInRoot()
+                                    }
+                                if (dragState?.buttonName == button.name) {
+                                    ButtonOrderPlaceholder(
+                                        modifier = cardModifier,
+                                    )
+                                } else {
+                                    ButtonOrderCard(
+                                        button = button,
+                                        customLabel = customButtonLabels[button],
+                                        featured = false,
+                                        isDragging = false,
+                                        modifier = cardModifier,
+                                    )
+                                }
                             }
                         }
 
@@ -280,7 +360,48 @@ fun DisplayButtonOrderScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+        }
+
+        dragState?.let { currentDragState ->
+            val draggedButton = SeniorHomeButtonType.valueOf(
+                currentDragState.buttonName
+            )
+            ButtonOrderCard(
+                button = draggedButton,
+                customLabel = customButtonLabels[draggedButton],
+                featured = currentDragState.featured,
+                showDescription = currentDragState.showDescription,
+                isDragging = true,
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            x = (
+                                currentDragState.pointerPosition.x -
+                                    currentDragState.touchOffset.x
+                                ).roundToInt(),
+                            y = (
+                                currentDragState.pointerPosition.y -
+                                    currentDragState.touchOffset.y
+                                ).roundToInt(),
+                        )
+                    }
+                    .width(with(density) { currentDragState.widthPx.toDp() })
+                    .zIndex(10f),
+            )
+        }
     }
+}
+
+@Composable
+private fun ButtonOrderPlaceholder(
+    modifier: Modifier = Modifier,
+) {
+    Spacer(
+        modifier = modifier
+            .height(84.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .background(SeniorOnColors.Background3),
+    )
 }
 
 @Composable
@@ -475,7 +596,9 @@ private fun ButtonOrderCard(
                     SeniorOnTextStyles.HeadingS
                 },
                 color = contentColor,
-                maxLines = 1,
+                maxLines = if (featured || showDescription) 1 else 2,
+                softWrap = !featured && !showDescription,
+                overflow = TextOverflow.Ellipsis,
             )
 
             val description = when {

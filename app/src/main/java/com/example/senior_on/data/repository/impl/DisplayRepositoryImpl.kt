@@ -424,7 +424,15 @@ private fun ConnectionResponse?.toDisplayDevice(): DisplayDevice? {
 
 private fun DeviceDetailResponse.toDisplayDevice(): DisplayDevice? {
     val resolvedName = deviceName?.trim().orEmpty()
-    if (resolvedName.isEmpty() && connected != true) return null
+    val hasConnectionHistory =
+        !lastConnectedAt.isNullOrBlank() ||
+            !lastLocationUpdatedAt.isNullOrBlank()
+    val hasKnownDevice =
+        resolvedName.isNotEmpty() ||
+            connected == true ||
+            batteryLevel != null ||
+            hasConnectionHistory
+    if (!hasKnownDevice) return null
     val normalizedStatus = connectionStatus?.trim()?.uppercase()
     val isOnline = connected == true ||
         networkConnected == true ||
