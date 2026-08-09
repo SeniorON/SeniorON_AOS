@@ -30,6 +30,7 @@ fun ChildMainRoute(
         sessionRepository = appContainer.sessionRepository,
         deviceRegistrationRepository = appContainer.deviceRegistrationRepository,
         inquiryRepository = appContainer.inquiryRepository,
+        userSettingsRepository = appContainer.userSettingsRepository,
         onLogoutClick = onLogoutClick,
         onWithdrawClick = onWithdrawClick,
     )

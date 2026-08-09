@@ -1,7 +1,9 @@
 package com.example.senior_on.ui.child.settings
 
-import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -51,10 +54,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import coil3.compose.AsyncImage
 import com.example.senior_on.R
+import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
@@ -62,18 +70,25 @@ import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
 import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.domain.repository.server.UserSettingsRepository
+import com.example.senior_on.ui.child.settings.viewmodel.ProfileImageViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import java.io.File
+import com.example.senior_on.ui.theme.SeniorOnDimensions
 
 data class SettingsProfileUiState(
     val name: String,
     val accountTypeLabel: String,
     val email: String,
-    val hasCustomProfileImage: Boolean = false,
-)
+    val profileImageUrl: String? = null,
+) {
+    val hasCustomProfileImage: Boolean
+        get() = !profileImageUrl.isNullOrBlank()
+}
 
 private enum class SettingsDestination {
     Main,
@@ -103,6 +118,8 @@ fun SettingsTabRoute(
     sessionRepository: SessionRepository,
     deviceRegistrationRepository: DeviceRegistrationRepository,
     inquiryRepository: InquiryRepository,
+    userSettingsRepository: UserSettingsRepository,
+    familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     modifier: Modifier = Modifier,
     onLogoutConfirm: () -> Unit = {},
     onWithdrawConfirm: () -> Unit = {},
@@ -114,8 +131,20 @@ fun SettingsTabRoute(
             deviceRegistrationRepository = deviceRegistrationRepository,
         ),
     )
+    val profileImageViewModel: ProfileImageViewModel = viewModel(
+        factory = ProfileImageViewModel.factory(
+            userSettingsRepository = userSettingsRepository,
+            photoUploadPreparer = familyPhotoUploadPreparer,
+        ),
+    )
     val settingsUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val profileImageUiState by profileImageViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        profileImageViewModel.loadProfileImage()
+    }
 
     LaunchedEffect(settingsUiState.logoutErrorMessage) {
         val message = settingsUiState.logoutErrorMessage ?: return@LaunchedEffect
@@ -141,20 +170,64 @@ fun SettingsTabRoute(
         onWithdrawConfirm()
     }
 
+    LaunchedEffect(profileImageUiState.loadErrorMessage) {
+        val message = profileImageUiState.loadErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        profileImageViewModel.consumeLoadError()
+    }
+
+    LaunchedEffect(profileImageUiState.uploadErrorMessage) {
+        val message = profileImageUiState.uploadErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        profileImageViewModel.consumeUploadError()
+    }
+
+    val albumLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.toString()?.let(profileImageViewModel::updateProfileImage)
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { isCaptured ->
+        val photoUri = pendingCameraPhotoUri
+        pendingCameraPhotoUri = null
+        if (isCaptured && photoUri != null) {
+            profileImageViewModel.updateProfileImage(photoUri)
+        } else if (photoUri != null) {
+            runCatching {
+                context.contentResolver.delete(Uri.parse(photoUri), null, null)
+            }
+        }
+    }
+    val launchAlbum = {
+        albumLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+    val launchCamera = {
+        runCatching { createSettingsProfileCaptureUri(context) }
+            .onSuccess { uri ->
+                pendingCameraPhotoUri = uri.toString()
+                cameraLauncher.launch(uri)
+            }
+            .onFailure {
+                Toast.makeText(context, "카메라를 열 수 없습니다.", Toast.LENGTH_SHORT).show()
+            }
+        Unit
+    }
+
     var destination by rememberSaveable { mutableStateOf(SettingsDestination.Main) }
     var profileName by rememberSaveable { mutableStateOf(initialProfile.name) }
     var profileAccountType by rememberSaveable {
         mutableStateOf(initialProfile.accountTypeLabel)
     }
     var profileEmail by rememberSaveable { mutableStateOf(initialProfile.email) }
-    var hasCustomProfileImage by rememberSaveable {
-        mutableStateOf(initialProfile.hasCustomProfileImage)
-    }
     val profile = SettingsProfileUiState(
         name = profileName,
         accountTypeLabel = profileAccountType,
         email = profileEmail,
-        hasCustomProfileImage = hasCustomProfileImage,
+        profileImageUrl = profileImageUiState.profileImageUrl,
     )
 
     val navigateBack = {
@@ -184,9 +257,9 @@ fun SettingsTabRoute(
             onConnectedDevicesClick = { destination = SettingsDestination.ConnectedDevices },
             onHelpClick = { destination = SettingsDestination.HelpInquiry },
             onFeedbackClick = { destination = SettingsDestination.Feedback },
-            onSelectAlbumClick = { hasCustomProfileImage = true },
-            onTakePhotoClick = { hasCustomProfileImage = true },
-            onApplyDefaultImageClick = { hasCustomProfileImage = false },
+            onSelectAlbumClick = launchAlbum,
+            onTakePhotoClick = launchCamera,
+            onApplyDefaultImageClick = profileImageViewModel::clearLocalProfileImage,
             onLogoutConfirm = viewModel::logout,
             onWithdrawConfirm = viewModel::withdraw,
             isLoggingOut = settingsUiState.isLoggingOut,
@@ -198,25 +271,26 @@ fun SettingsTabRoute(
             onBackClick = navigateBack,
             onChangeNameClick = { destination = SettingsDestination.ChangeName },
             onChangePasswordClick = { destination = SettingsDestination.ChangePassword },
-            onSelectAlbumClick = { hasCustomProfileImage = true },
-            onTakePhotoClick = { hasCustomProfileImage = true },
-            onApplyDefaultImageClick = { hasCustomProfileImage = false },
+            onSelectAlbumClick = launchAlbum,
+            onTakePhotoClick = launchCamera,
+            onApplyDefaultImageClick = profileImageViewModel::clearLocalProfileImage,
             modifier = modifier
         )
 
-        SettingsDestination.ChangeName -> ChangeNameScreen(
-            currentName = profile.name,
+        SettingsDestination.ChangeName -> ChangeNameRoute(
+            userSettingsRepository = userSettingsRepository,
             onBackClick = navigateBack,
-            onSaveClick = { newName ->
+            onNameChanged = { newName ->
                 profileName = newName
                 destination = SettingsDestination.MyAccount
             },
             modifier = modifier
         )
 
-        SettingsDestination.ChangePassword -> ChangePasswordScreen(
+        SettingsDestination.ChangePassword -> ChangePasswordRoute(
+            userSettingsRepository = userSettingsRepository,
             onBackClick = navigateBack,
-            onCompleteClick = { _, _ ->
+            onPasswordChanged = {
                 destination = SettingsDestination.MyAccount
             },
             modifier = modifier
@@ -633,12 +707,22 @@ private fun SettingsProfileSection(
                     .border(1.dp, SeniorOnColors.Gray200, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_dependent2),
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = SeniorOnColors.Gray300
-                )
+                val imageUrl = profile.profileImageUrl
+                if (!imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_dependent2),
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = SeniorOnColors.Gray300
+                    )
+                }
             }
 
             Icon(
@@ -1004,6 +1088,7 @@ internal fun SettingsProfileAvatar(
     borderWidth: Dp = 0.dp,
     borderColor: Color = SeniorOnColors.Gray200,
     editIconSize: Dp = 30.dp,
+    imageUrl: String? = null,
 ) {
     val editOverflow = if (onEditClick != null) 8.dp else 0.dp
     Box(
@@ -1027,12 +1112,21 @@ internal fun SettingsProfileAvatar(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_dependent),
-                contentDescription = null,
-                modifier = Modifier.size(minOf(width, height) * 0.5f),
-                tint = SeniorOnColors.Gray300
-            )
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_dependent),
+                    contentDescription = null,
+                    modifier = Modifier.size(minOf(width, height) * 0.5f),
+                    tint = SeniorOnColors.Gray300
+                )
+            }
         }
 
         if (onEditClick != null) {
@@ -1051,6 +1145,22 @@ internal fun SettingsProfileAvatar(
             )
         }
     }
+}
+
+private fun createSettingsProfileCaptureUri(context: Context): Uri {
+    val photoDirectory = File(context.cacheDir, "settings_profile").apply {
+        mkdirs()
+    }
+    val photoFile = File.createTempFile(
+        "settings_profile_",
+        ".jpg",
+        photoDirectory
+    )
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        photoFile
+    )
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)

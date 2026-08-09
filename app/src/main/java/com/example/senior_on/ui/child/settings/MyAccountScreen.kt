@@ -17,16 +17,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.model.auth.isValidPassword
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
+import com.example.senior_on.domain.repository.server.UserSettingsRepository
+import com.example.senior_on.ui.child.settings.viewmodel.ChangeNameViewModel
+import com.example.senior_on.ui.child.settings.viewmodel.ChangePasswordViewModel
 import com.example.senior_on.ui.common.account.FindAccountPasswordTextField
 import com.example.senior_on.ui.common.account.FindAccountTextField
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -101,17 +109,62 @@ fun MyAccountScreen(
 }
 
 @Composable
+fun ChangeNameRoute(
+    userSettingsRepository: UserSettingsRepository,
+    onBackClick: () -> Unit,
+    onNameChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel: ChangeNameViewModel = viewModel(
+        factory = ChangeNameViewModel.factory(userSettingsRepository),
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadCurrentName()
+    }
+
+    LaunchedEffect(uiState.loadErrorMessage) {
+        val message = uiState.loadErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeLoadError()
+    }
+
+    LaunchedEffect(uiState.saveErrorMessage) {
+        val message = uiState.saveErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeSaveError()
+    }
+
+    LaunchedEffect(uiState.savedName) {
+        val savedName = uiState.savedName ?: return@LaunchedEffect
+        viewModel.consumeSavedName()
+        onNameChanged(savedName)
+    }
+
+    ChangeNameScreen(
+        currentName = uiState.currentName,
+        onBackClick = onBackClick,
+        onSaveClick = viewModel::saveName,
+        isSaving = uiState.isSaving,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun ChangeNameScreen(
     currentName: String,
     onBackClick: () -> Unit,
     onSaveClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
 ) {
     var newName by rememberSaveable { mutableStateOf("") }
     val trimmedNewName = newName.trim()
     val isSameAsCurrent = trimmedNewName.isNotEmpty() &&
         trimmedNewName == currentName.trim()
-    val canSave = trimmedNewName.isNotEmpty() && !isSameAsCurrent
+    val canSave = trimmedNewName.isNotEmpty() && !isSameAsCurrent && !isSaving
 
     Column(
         modifier = modifier
@@ -190,12 +243,53 @@ fun ChangeNameScreen(
 }
 
 @Composable
+fun ChangePasswordRoute(
+    userSettingsRepository: UserSettingsRepository,
+    onBackClick: () -> Unit,
+    onPasswordChanged: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel: ChangePasswordViewModel = viewModel(
+        factory = ChangePasswordViewModel.factory(userSettingsRepository),
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.saveErrorMessage) {
+        val message = uiState.saveErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeSaveError()
+    }
+
+    LaunchedEffect(uiState.changeCompleted) {
+        if (!uiState.changeCompleted) return@LaunchedEffect
+        viewModel.consumeChangeCompleted()
+        onPasswordChanged()
+    }
+
+    ChangePasswordScreen(
+        onBackClick = onBackClick,
+        onCompleteClick = viewModel::changePassword,
+        isSaving = uiState.isSaving,
+        currentPasswordErrorMessage = uiState.currentPasswordErrorMessage,
+        onClearCurrentPasswordError = viewModel::consumeCurrentPasswordError,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun ChangePasswordScreen(
     onBackClick: () -> Unit,
-    onCompleteClick: (currentPassword: String, newPassword: String) -> Unit,
+    onCompleteClick: (
+        currentPassword: String,
+        newPassword: String,
+        newPasswordCheck: String,
+    ) -> Unit,
     modifier: Modifier = Modifier,
-    currentPasswordVerifier: (String) -> Boolean = { it.isNotBlank() },
-    isValidPassword: (String) -> Boolean = ::isValidPassword
+    isSaving: Boolean = false,
+    currentPasswordErrorMessage: String? = null,
+    onClearCurrentPasswordError: () -> Unit = {},
+    isValidPassword: (String) -> Boolean = ::isValidPassword,
 ) {
     var currentPassword by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
@@ -203,12 +297,10 @@ fun ChangePasswordScreen(
     var isCurrentVisible by rememberSaveable { mutableStateOf(false) }
     var isNewVisible by rememberSaveable { mutableStateOf(false) }
     var isConfirmVisible by rememberSaveable { mutableStateOf(false) }
-    var showValidation by rememberSaveable { mutableStateOf(false) }
 
     val isSameAsCurrent = newPassword.isNotEmpty() && newPassword == currentPassword
     val isNewPasswordFormatValid = newPassword.isEmpty() || isValidPassword(newPassword)
     val isConfirmValid = confirmPassword.isEmpty() || confirmPassword == newPassword
-    val isCurrentValid = currentPassword.isEmpty() || currentPasswordVerifier(currentPassword)
 
     val newPasswordError = when {
         newPassword.isEmpty() -> null
@@ -222,7 +314,7 @@ fun ChangePasswordScreen(
         !isSameAsCurrent &&
         confirmPassword.isNotEmpty() &&
         confirmPassword == newPassword &&
-        currentPasswordVerifier(currentPassword)
+        !isSaving
 
     Column(
         modifier = modifier
@@ -248,17 +340,15 @@ fun ChangePasswordScreen(
                 value = currentPassword,
                 onValueChange = {
                     currentPassword = it.take(30)
-                    showValidation = false
+                    if (currentPasswordErrorMessage != null) {
+                        onClearCurrentPasswordError()
+                    }
                 },
                 placeholder = "비밀번호 입력",
                 isVisible = isCurrentVisible,
                 onVisibilityToggle = { isCurrentVisible = !isCurrentVisible },
-                isError = showValidation && !isCurrentValid,
-                errorMessage = if (showValidation && !isCurrentValid) {
-                    "비밀번호가 일치하지 않아요."
-                } else {
-                    null
-                }
+                isError = currentPasswordErrorMessage != null,
+                errorMessage = currentPasswordErrorMessage
             )
 
             Spacer(modifier = Modifier.height(58.dp))
@@ -297,11 +387,7 @@ fun ChangePasswordScreen(
             text = "변경 완료",
             enabled = canComplete,
             onClick = {
-                if (!currentPasswordVerifier(currentPassword)) {
-                    showValidation = true
-                    return@SettingsPrimaryButton
-                }
-                onCompleteClick(currentPassword, newPassword)
+                onCompleteClick(currentPassword, newPassword, confirmPassword)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -330,6 +416,7 @@ private fun MyAccountProfileHeader(
             height = 60.dp,
             borderWidth = 1.dp,
             editIconSize = 24.dp,
+            imageUrl = profile.profileImageUrl,
             onEditClick = onEditClick
         )
 
@@ -384,7 +471,7 @@ private fun ChangePasswordScreenPreview() {
     SENIOR_ONTheme {
         ChangePasswordScreen(
             onBackClick = {},
-            onCompleteClick = { _, _ -> }
+            onCompleteClick = { _, _, _ -> }
         )
     }
 }

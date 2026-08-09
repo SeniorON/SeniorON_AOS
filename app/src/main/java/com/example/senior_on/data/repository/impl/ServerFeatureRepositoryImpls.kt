@@ -459,10 +459,19 @@ class UserSettingsRepositoryImpl(
 ) : UserSettingsRepository {
     override suspend fun getSettings() =
         UserAccountSettings(source.getName().name.orEmpty(), source.getProfileImage().profileImageUrl)
+
+    override suspend fun getName(): String =
+        source.getName().name.orEmpty()
+
     override suspend fun updateName(name: String) =
         source.updateName(NameUpdateRequest(name.trim())).name.orEmpty()
+
     override suspend fun changePassword(current: String, new: String, confirmation: String) =
         source.changePassword(PasswordChangeRequest(current, new, confirmation)).changed == true
+
+    override suspend fun getProfileImageUrl(): String? =
+        source.getProfileImage().profileImageUrl
+
     override suspend fun updateProfileImage(photo: PreparedFamilyPhoto): String? {
         val part = MultipartBody.Part.createFormData(
             "image", photo.displayName, photo.file.asRequestBody(photo.mimeType.toMediaType())
