@@ -303,7 +303,7 @@ private fun OneOnOneInquiryWriteContent(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_information3),
                     contentDescription = null,
-                    modifier = Modifier.size(16.67.dp),
+                    modifier = Modifier.size(24.dp),
                     tint = SeniorOnColors.Gray500
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -624,7 +624,7 @@ private fun OneOnOneInquiryHistoryContent(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "시니어 ON에 궁금한 부분이 있다면 문의를 남겨주세요",
+                    text = "시니어 ON에 궁금한 부분이 있다면\n 문의를 남겨주세요",
                     style = SeniorOnTextStyles.BodySMedium,
                     color = SeniorOnColors.Gray500,
                     textAlign = TextAlign.Center
@@ -687,7 +687,7 @@ private fun InquiryHistoryCard(
     ) {
         InquiryStatusBadge(status = item.status)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = item.createdAtLabel,
@@ -778,8 +778,8 @@ private fun InquiryStatusBadge(
             Box(
                 modifier = modifier
                     .size(width = 69.dp, height = 25.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SeniorOnColors.Primary600)
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .background(SeniorOnColors.Primary500)
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {

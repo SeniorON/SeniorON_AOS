@@ -62,6 +62,7 @@ data class SettingsProfileUiState(
     val name: String,
     val accountTypeLabel: String,
     val email: String,
+    val hasCustomProfileImage: Boolean = false,
 )
 
 private enum class SettingsDestination {
@@ -72,7 +73,8 @@ private enum class SettingsDestination {
     ConnectedDevices,
     EditConnectedDeviceInfo,
     HelpInquiry,
-    OneOnOneInquiry
+    OneOnOneInquiry,
+    Feedback
 }
 
 private data class SettingsMenuItem(
@@ -97,10 +99,14 @@ fun SettingsTabRoute(
         mutableStateOf(initialProfile.accountTypeLabel)
     }
     var profileEmail by rememberSaveable { mutableStateOf(initialProfile.email) }
+    var hasCustomProfileImage by rememberSaveable {
+        mutableStateOf(initialProfile.hasCustomProfileImage)
+    }
     val profile = SettingsProfileUiState(
         name = profileName,
         accountTypeLabel = profileAccountType,
-        email = profileEmail
+        email = profileEmail,
+        hasCustomProfileImage = hasCustomProfileImage,
     )
 
     val navigateBack = {
@@ -110,7 +116,8 @@ fun SettingsTabRoute(
             SettingsDestination.EditConnectedDeviceInfo -> SettingsDestination.ConnectedDevices
             SettingsDestination.MyAccount,
             SettingsDestination.ConnectedDevices,
-            SettingsDestination.HelpInquiry -> SettingsDestination.Main
+            SettingsDestination.HelpInquiry,
+            SettingsDestination.Feedback -> SettingsDestination.Main
             SettingsDestination.OneOnOneInquiry -> SettingsDestination.HelpInquiry
             SettingsDestination.Main -> SettingsDestination.Main
         }
@@ -128,6 +135,10 @@ fun SettingsTabRoute(
             onMyAccountClick = { destination = SettingsDestination.MyAccount },
             onConnectedDevicesClick = { destination = SettingsDestination.ConnectedDevices },
             onHelpClick = { destination = SettingsDestination.HelpInquiry },
+            onFeedbackClick = { destination = SettingsDestination.Feedback },
+            onSelectAlbumClick = { hasCustomProfileImage = true },
+            onTakePhotoClick = { hasCustomProfileImage = true },
+            onApplyDefaultImageClick = { hasCustomProfileImage = false },
             onLogoutConfirm = onLogoutConfirm,
             onWithdrawConfirm = onWithdrawConfirm
         )
@@ -137,6 +148,9 @@ fun SettingsTabRoute(
             onBackClick = navigateBack,
             onChangeNameClick = { destination = SettingsDestination.ChangeName },
             onChangePasswordClick = { destination = SettingsDestination.ChangePassword },
+            onSelectAlbumClick = { hasCustomProfileImage = true },
+            onTakePhotoClick = { hasCustomProfileImage = true },
+            onApplyDefaultImageClick = { hasCustomProfileImage = false },
             modifier = modifier
         )
 
@@ -194,6 +208,11 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryScreen(
+            onBackClick = navigateBack,
+            modifier = modifier
+        )
+
+        SettingsDestination.Feedback -> OneOnOneInquiryScreen(
             onBackClick = navigateBack,
             modifier = modifier
         )
@@ -293,6 +312,7 @@ fun SettingsScreen(
 
     if (showProfilePhotoSheet) {
         SettingsProfilePhotoBottomSheet(
+            showApplyDefaultOption = profile.hasCustomProfileImage,
             onDismiss = { showProfilePhotoSheet = false },
             onSelectAlbumClick = {
                 showProfilePhotoSheet = false
@@ -345,6 +365,7 @@ private fun SettingsLogoutDialog(
         },
         description = "로그인 화면으로 이동해요",
         descriptionAnnotated = null,
+        titleToDescriptionSpacing = 24.dp,
         cancelText = "취소",
         confirmText = "로그아웃",
         confirmBackgroundColor = SeniorOnColors.Primary600,
@@ -373,6 +394,7 @@ private fun SettingsWithdrawDialog(
                 append("모든 데이터가\n 복구되지 않아요")
             }
         },
+        titleToDescriptionSpacing = 24.dp,
         cancelText = "취소",
         confirmText = "탈퇴",
         confirmBackgroundColor = SeniorOnColors.Red400,
@@ -389,7 +411,8 @@ private fun SettingsConfirmBottomDialog(
     cancelText: String,
     confirmText: String,
     confirmBackgroundColor: Color,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    titleToDescriptionSpacing: Dp = 12.dp,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -432,7 +455,7 @@ private fun SettingsConfirmBottomDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(titleToDescriptionSpacing))
 
                 if (descriptionAnnotated != null) {
                     Text(
@@ -546,28 +569,19 @@ private fun SettingsProfileSection(
                 )
             }
 
-            Box(
+            Icon(
+                painter = painterResource(id = R.drawable.ic_pencil2),
+                contentDescription = "프로필 사진 수정",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .size(30.dp)
-                    .clip(CircleShape)
-                    .background(SeniorOnColors.Primary600)
-                    .border(1.dp, SeniorOnColors.White, CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onEditClick
-                    )
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_sm_pencil),
-                    contentDescription = "프로필 사진 수정",
-                    modifier = Modifier
-                        .padding(start = 9.23.dp, top = 8.08.dp)
-                        .size(12.69.dp),
-                    tint = SeniorOnColors.White
-                )
-            }
+                    ),
+                tint = Color.Unspecified
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -664,6 +678,7 @@ private fun SettingsMenuRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsProfilePhotoBottomSheet(
+    showApplyDefaultOption: Boolean,
     onDismiss: () -> Unit,
     onSelectAlbumClick: () -> Unit,
     onTakePhotoClick: () -> Unit,
@@ -684,7 +699,6 @@ internal fun SettingsProfilePhotoBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(200.dp)
                 .padding(start = 16.dp, end = 16.dp, bottom = 20.dp)
         ) {
             Spacer(modifier = Modifier.height(26.dp))
@@ -714,13 +728,15 @@ internal fun SettingsProfilePhotoBottomSheet(
                 onClick = onTakePhotoClick
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (showApplyDefaultOption) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            SettingsProfilePhotoOption(
-                text = "기본 이미지 적용",
-                iconResId = R.drawable.ic_dependent,
-                onClick = onApplyDefaultImageClick
-            )
+                SettingsProfilePhotoOption(
+                    text = "기본 이미지 적용",
+                    iconResId = R.drawable.ic_dependent,
+                    onClick = onApplyDefaultImageClick
+                )
+            }
         }
     }
 }
@@ -908,51 +924,59 @@ internal fun SettingsAccountMenuRow(
 
 @Composable
 internal fun SettingsProfileAvatar(
-    size: Dp,
-    editButtonSize: Dp = 28.dp,
+    size: Dp = 64.dp,
     onEditClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    width: Dp = size,
+    height: Dp = size,
+    borderWidth: Dp = 0.dp,
+    borderColor: Color = SeniorOnColors.Gray200,
+    editIconSize: Dp = 30.dp,
 ) {
+    val editOverflow = if (onEditClick != null) 8.dp else 0.dp
     Box(
-        modifier = modifier.size(size + if (onEditClick != null) 8.dp else 0.dp),
+        modifier = modifier.size(
+            width = width + editOverflow,
+            height = height + editOverflow
+        ),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(size)
+                .size(width = width, height = height)
                 .clip(CircleShape)
-                .background(SeniorOnColors.Gray100),
+                .background(SeniorOnColors.Gray100)
+                .then(
+                    if (borderWidth > 0.dp) {
+                        Modifier.border(borderWidth, borderColor, CircleShape)
+                    } else {
+                        Modifier
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_dependent),
                 contentDescription = null,
-                modifier = Modifier.size(size * 0.5f),
+                modifier = Modifier.size(minOf(width, height) * 0.5f),
                 tint = SeniorOnColors.Gray300
             )
         }
 
         if (onEditClick != null) {
-            Box(
+            Icon(
+                painter = painterResource(id = R.drawable.ic_pencil2),
+                contentDescription = "프로필 사진 수정",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(editButtonSize)
-                    .clip(CircleShape)
-                    .background(SeniorOnColors.Primary600)
+                    .size(editIconSize)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onEditClick
                     ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_sm_pencil),
-                    contentDescription = "프로필 사진 수정",
-                    modifier = Modifier.size(editButtonSize * 0.55f),
-                    tint = SeniorOnColors.White
-                )
-            }
+                tint = Color.Unspecified
+            )
         }
     }
 }
