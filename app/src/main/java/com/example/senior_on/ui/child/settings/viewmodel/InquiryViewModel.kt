@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.settings.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.domain.model.inquiry.InquiryDetail
 import com.example.senior_on.domain.model.inquiry.InquiryStatus
 import com.example.senior_on.domain.model.inquiry.InquirySummary
 import com.example.senior_on.domain.repository.inquiry.InquiryRepository
@@ -22,12 +23,15 @@ data class InquiryHistoryUiItem(
     val isAnswered: Boolean,
     val createdAtLabel: String,
     val question: String,
+    val answer: String? = null,
+    val isDetailLoading: Boolean = false,
 )
 
 data class InquiryUiState(
     val historyItems: List<InquiryHistoryUiItem> = emptyList(),
     val isHistoryLoading: Boolean = false,
     val historyErrorMessage: String? = null,
+    val detailErrorMessage: String? = null,
 )
 
 class InquiryViewModel(
@@ -36,9 +40,13 @@ class InquiryViewModel(
     private val _uiState = MutableStateFlow(InquiryUiState())
     val uiState: StateFlow<InquiryUiState> = _uiState.asStateFlow()
 
+    private val detailLoadingIds = mutableSetOf<String>()
+
     fun loadInquiries() {
         if (_uiState.value.isHistoryLoading) return
         viewModelScope.launch {
+            val previousAnswers = _uiState.value.historyItems
+                .associate { it.id to it.answer }
             _uiState.update {
                 it.copy(
                     isHistoryLoading = true,
@@ -51,7 +59,9 @@ class InquiryViewModel(
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
-                        historyItems = inquiries.map { summary -> summary.toUiItem() },
+                        historyItems = inquiries.map { summary ->
+                            summary.toUiItem(previousAnswer = previousAnswers[summary.id.toString()])
+                        },
                     )
                 }
             }.onFailure { throwable ->
@@ -66,17 +76,87 @@ class InquiryViewModel(
         }
     }
 
+    fun loadInquiryDetail(inquiryId: String) {
+        val current = _uiState.value.historyItems.firstOrNull { it.id == inquiryId } ?: return
+        if (!current.isAnswered) return
+        if (!current.answer.isNullOrBlank()) return
+        if (!detailLoadingIds.add(inquiryId)) return
+
+        val parsedId = inquiryId.toLongOrNull() ?: run {
+            detailLoadingIds.remove(inquiryId)
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { state ->
+                state.copy(
+                    historyItems = state.historyItems.map { item ->
+                        if (item.id == inquiryId) item.copy(isDetailLoading = true) else item
+                    },
+                    detailErrorMessage = null,
+                )
+            }
+            runCatching {
+                inquiryRepository.getInquiry(parsedId)
+            }.onSuccess { detail ->
+                _uiState.update { state ->
+                    state.copy(
+                        historyItems = state.historyItems.map { item ->
+                            if (item.id == inquiryId) {
+                                item.copy(
+                                    answer = detail.toAnswerText(),
+                                    question = detail.title.ifBlank { item.question },
+                                    isDetailLoading = false,
+                                )
+                            } else {
+                                item
+                            }
+                        },
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update { state ->
+                    state.copy(
+                        historyItems = state.historyItems.map { item ->
+                            if (item.id == inquiryId) {
+                                item.copy(isDetailLoading = false)
+                            } else {
+                                item
+                            }
+                        },
+                        detailErrorMessage = throwable.message
+                            ?: "문의 상세를 불러오지 못했습니다.",
+                    )
+                }
+            }
+            detailLoadingIds.remove(inquiryId)
+        }
+    }
+
     fun consumeHistoryError() {
         _uiState.update { it.copy(historyErrorMessage = null) }
     }
 
-    private fun InquirySummary.toUiItem(): InquiryHistoryUiItem =
+    fun consumeDetailError() {
+        _uiState.update { it.copy(detailErrorMessage = null) }
+    }
+
+    private fun InquirySummary.toUiItem(previousAnswer: String?): InquiryHistoryUiItem =
         InquiryHistoryUiItem(
             id = id.toString(),
             isAnswered = status == InquiryStatus.Completed,
             createdAtLabel = formatCreatedAt(createdAt),
             question = title,
+            answer = previousAnswer,
         )
+
+    private fun InquiryDetail.toAnswerText(): String? {
+        val joined = answers
+            .map { it.content.trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(separator = "\n\n")
+        return joined.ifBlank { null }
+    }
 
     private fun formatCreatedAt(raw: String): String {
         if (raw.isBlank()) return raw

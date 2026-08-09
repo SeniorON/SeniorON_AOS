@@ -6,3 +6,19 @@ data class InquiryListItemResponse(
     val status: String?,
     val createdAt: String?,
 )
+
+data class InquiryDetailResponse(
+    val inquiryId: Long,
+    val title: String?,
+    val content: String?,
+    val status: String?,
+    val createdAt: String?,
+    val images: List<String>? = null,
+    val answers: List<InquiryAnswerResponse>? = null,
+)
+
+data class InquiryAnswerResponse(
+    val answerId: Long,
+    val content: String?,
+    val createdAt: String?,
+)

@@ -120,10 +120,17 @@ fun OneOnOneInquiryRoute(
         viewModel.consumeHistoryError()
     }
 
+    LaunchedEffect(uiState.detailErrorMessage) {
+        val message = uiState.detailErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeDetailError()
+    }
+
     OneOnOneInquiryScreen(
         onBackClick = onBackClick,
         historyItems = uiState.historyItems.map { it.toHistoryItem() },
         onHistoryTabSelected = viewModel::loadInquiries,
+        onInquiryExpand = viewModel::loadInquiryDetail,
         modifier = modifier,
     )
 }
@@ -134,6 +141,7 @@ private fun OneOnOneInquiryScreen(
     modifier: Modifier = Modifier,
     historyItems: List<InquiryHistoryItem> = emptyList(),
     onHistoryTabSelected: () -> Unit = {},
+    onInquiryExpand: (String) -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(OneOnOneInquiryTab.Write) }
     var title by rememberSaveable { mutableStateOf("") }
@@ -216,6 +224,7 @@ private fun OneOnOneInquiryScreen(
 
                 OneOnOneInquiryTab.History -> OneOnOneInquiryHistoryContent(
                     items = historyItems,
+                    onInquiryExpand = onInquiryExpand,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -245,7 +254,7 @@ private fun InquiryHistoryUiItem.toHistoryItem(): InquiryHistoryItem =
         },
         createdAtLabel = createdAtLabel,
         question = question,
-        answer = null,
+        answer = answer,
     )
 
 @Composable
@@ -645,7 +654,8 @@ private fun OneOnOneInquiryScreenPreview() {
 @Composable
 private fun OneOnOneInquiryHistoryContent(
     items: List<InquiryHistoryItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onInquiryExpand: (String) -> Unit = {},
 ) {
     if (items.isEmpty()) {
         Box(
@@ -689,8 +699,11 @@ private fun OneOnOneInquiryHistoryContent(
                 item = item,
                 expanded = expandedId == item.id,
                 onToggle = {
-                    if (item.status == InquiryAnswerStatus.Answered) {
-                        expandedId = if (expandedId == item.id) null else item.id
+                    if (item.status != InquiryAnswerStatus.Answered) return@InquiryHistoryCard
+                    val willExpand = expandedId != item.id
+                    expandedId = if (willExpand) item.id else null
+                    if (willExpand) {
+                        onInquiryExpand(item.id)
                     }
                 }
             )
@@ -705,7 +718,8 @@ private fun InquiryHistoryCard(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val canExpand = item.status == InquiryAnswerStatus.Answered && !item.answer.isNullOrBlank()
+    val canExpand = item.status == InquiryAnswerStatus.Answered
+    val showAnswer = expanded && !item.answer.isNullOrBlank()
 
     Column(
         modifier = modifier
@@ -770,7 +784,7 @@ private fun InquiryHistoryCard(
         }
 
         AnimatedVisibility(
-            visible = expanded && canExpand,
+            visible = showAnswer,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {

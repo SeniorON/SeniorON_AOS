@@ -11,3 +11,19 @@ data class InquirySummary(
     val status: InquiryStatus,
     val createdAt: String,
 )
+
+data class InquiryAnswer(
+    val id: Long,
+    val content: String,
+    val createdAt: String,
+)
+
+data class InquiryDetail(
+    val id: Long,
+    val title: String,
+    val content: String,
+    val status: InquiryStatus,
+    val createdAt: String,
+    val imageUrls: List<String>,
+    val answers: List<InquiryAnswer>,
+)
