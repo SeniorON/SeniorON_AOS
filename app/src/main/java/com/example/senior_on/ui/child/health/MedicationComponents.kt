@@ -37,7 +37,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -145,24 +144,18 @@ data class TodayMedicationUiState(
 internal fun TodayMedicationSection(
     selectedDate: LocalDate,
     todayMedications: List<TodayMedicationUiState>,
-    markedDates: Set<LocalDate>,
     showCalendar: Boolean,
     onYearClick: () -> Unit,
     onPreviousDayClick: () -> Unit,
     onNextDayClick: () -> Unit,
-    onDayClick: (Int) -> Unit,
-    onPreviousMonthClick: () -> Unit,
-    onNextMonthClick: () -> Unit,
     onAddTodayMedicationClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val displayedMonth = YearMonth.from(selectedDate)
     val filteredMedications = todayMedications.filter { it.date == selectedDate }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .zIndex(if (showCalendar) 1f else 0f)
             .background(SeniorOnColors.Primary600)
             .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 24.dp)
     ) {
@@ -174,44 +167,25 @@ internal fun TodayMedicationSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                HealthDateNavigator(
-                    selectedDate = selectedDate,
-                    onPreviousDayClick = onPreviousDayClick,
-                    onNextDayClick = onNextDayClick
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+        HealthDateNavigator(
+            selectedDate = selectedDate,
+            onPreviousDayClick = onPreviousDayClick,
+            onNextDayClick = onNextDayClick
+        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-                HealthGreenSectionTitle(
-                    title = "오늘 복약 현황",
-                    iconResId = R.drawable.ic_illust_medication,
-                    actionLabel = "오늘 복약 추가",
-                    onActionClick = onAddTodayMedicationClick
-                )
+        HealthGreenSectionTitle(
+            title = "오늘 복약 현황",
+            iconResId = R.drawable.ic_illust_medication,
+            actionLabel = "오늘 복약 추가",
+            onActionClick = onAddTodayMedicationClick
+        )
 
-                Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-                TodayMedicationStatusCard(
-                    medications = filteredMedications
-                )
-            }
-
-            if (showCalendar) {
-                HealthCalendarCard(
-                    displayedMonth = displayedMonth,
-                    selectedDay = selectedDate.dayOfMonth,
-                    markedDates = markedDates,
-                    onDayClick = onDayClick,
-                    onPreviousMonthClick = onPreviousMonthClick,
-                    onNextMonthClick = onNextMonthClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .zIndex(1f)
-                )
-            }
-        }
+        TodayMedicationStatusCard(
+            medications = filteredMedications
+        )
     }
 }
 
@@ -288,7 +262,7 @@ private fun HealthDateNavigator(
 }
 
 @Composable
-private fun HealthCalendarCard(
+internal fun HealthCalendarCard(
     displayedMonth: YearMonth,
     selectedDay: Int,
     markedDates: Set<LocalDate>,
@@ -301,7 +275,8 @@ private fun HealthCalendarCard(
 
     Surface(
         modifier = modifier
-            .fillMaxWidth()
+            .width(HealthCalendarCardWidth)
+            .height(HealthCalendarCardHeight)
             .dropShadow(
                 shape = shape,
                 shadow = Shadow(
@@ -326,11 +301,17 @@ private fun HealthCalendarCard(
             onDayClick = onDayClick,
             onPreviousMonthClick = onPreviousMonthClick,
             onNextMonthClick = onNextMonthClick,
-            mode = ScheduleCalendarMode.Hospital,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 18.dp)
+            mode = ScheduleCalendarMode.HealthOverlay,
+            modifier = Modifier.padding(HealthCalendarCardPadding)
         )
     }
 }
+
+internal val HealthCalendarCardWidth = 296.dp
+internal val HealthCalendarCardHeight = 258.dp
+internal val HealthCalendarCardPadding = 16.dp
+internal val HealthCalendarCardTopOffset = 52.dp
+internal val HealthCalendarCardStartOffset = 32.dp
 
 @Composable
 private fun HealthGreenSectionTitle(
@@ -764,14 +745,10 @@ private fun TodayMedicationSectionPreview() {
         TodayMedicationSection(
             selectedDate = LocalDate.of(2026, 6, 12),
             todayMedications = previewTodayMedications(),
-            markedDates = previewMedicationMarkedDates(),
             showCalendar = false,
             onYearClick = {},
             onPreviousDayClick = {},
             onNextDayClick = {},
-            onDayClick = {},
-            onPreviousMonthClick = {},
-            onNextMonthClick = {},
             onAddTodayMedicationClick = {}
         )
     }
@@ -784,14 +761,10 @@ private fun EmptyTodayMedicationSectionPreview() {
         TodayMedicationSection(
             selectedDate = LocalDate.of(2026, 6, 12),
             todayMedications = emptyList(),
-            markedDates = emptySet(),
             showCalendar = false,
             onYearClick = {},
             onPreviousDayClick = {},
             onNextDayClick = {},
-            onDayClick = {},
-            onPreviousMonthClick = {},
-            onNextMonthClick = {},
             onAddTodayMedicationClick = {}
         )
     }
