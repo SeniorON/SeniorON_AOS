@@ -82,6 +82,7 @@ fun MyAccountScreen(
 
     if (showProfilePhotoSheet) {
         SettingsProfilePhotoBottomSheet(
+            showApplyDefaultOption = profile.hasCustomProfileImage,
             onDismiss = { showProfilePhotoSheet = false },
             onSelectAlbumClick = {
                 showProfilePhotoSheet = false
@@ -260,7 +261,7 @@ fun ChangePasswordScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(58.dp))
 
             FindAccountPasswordTextField(
                 label = "새 비밀번호",
@@ -274,7 +275,7 @@ fun ChangePasswordScreen(
                 supportMessage = "영문, 숫자 포함 8자 이상"
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             FindAccountPasswordTextField(
                 label = "새 비밀번호 확인",
@@ -325,8 +326,10 @@ private fun MyAccountProfileHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         SettingsProfileAvatar(
-            size = 64.dp,
-            editButtonSize = 24.dp,
+            width = 65.dp,
+            height = 60.dp,
+            borderWidth = 1.dp,
+            editIconSize = 24.dp,
             onEditClick = onEditClick
         )
 

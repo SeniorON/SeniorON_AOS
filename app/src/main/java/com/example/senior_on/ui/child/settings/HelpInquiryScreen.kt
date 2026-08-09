@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -122,33 +124,28 @@ fun HelpInquiryScreen(
         ) {
             Text(
                 text = "무엇을\n도와드릴까요?",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp),
                 style = SeniorOnTextStyles.HeadingM,
                 color = SeniorOnColors.Gray800
             )
 
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                    .background(SeniorOnColors.Background2)
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = "자주 묻는 질문",
-                    style = SeniorOnTextStyles.BodyLBold,
-                    color = SeniorOnColors.Gray800
-                )
-            }
+            Spacer(modifier = Modifier.height(34.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "자주 묻는 질문",
+                modifier = Modifier.padding(start = 26.dp),
+                style = SeniorOnTextStyles.BodyLBold,
+                color = SeniorOnColors.Gray800
+            )
 
-            HelpFaqItems.forEach { item ->
+            Spacer(modifier = Modifier.height(26.dp))
+
+            HelpFaqItems.forEachIndexed { index, item ->
                 HelpFaqRow(
                     question = item.question,
                     answer = item.answer,
                     expanded = expandedFaqId == item.id,
+                    topPadding = if (index == 0) 0.dp else 14.dp,
                     onClick = {
                         expandedFaqId = if (expandedFaqId == item.id) null else item.id
                     }
@@ -214,7 +211,8 @@ private fun HelpFaqRow(
     answer: String,
     expanded: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    topPadding: Dp = 14.dp,
 ) {
     Column(
         modifier = modifier
@@ -224,7 +222,8 @@ private fun HelpFaqRow(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = topPadding, bottom = 14.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -321,16 +320,12 @@ private fun HelpGuideRow(
             )
 
             Icon(
-                painter = painterResource(
-                    id = if (expanded) {
-                        R.drawable.ic_sm_fold
-                    } else {
-                        R.drawable.ic_sm_chevron_down_2
-                    }
-                ),
+                painter = painterResource(id = R.drawable.ic_arrow_back),
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = SeniorOnColors.Gray300
+                modifier = Modifier
+                    .size(24.dp)
+                    .rotate(180f),
+                tint = SeniorOnColors.Gray500
             )
         }
 
