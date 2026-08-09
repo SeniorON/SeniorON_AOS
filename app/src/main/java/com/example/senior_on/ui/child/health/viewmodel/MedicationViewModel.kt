@@ -12,6 +12,7 @@ import com.example.senior_on.ui.child.health.MedicationDraft
 import com.example.senior_on.ui.child.health.MedicationEditorMode
 import com.example.senior_on.ui.child.health.RegisteredMedicationUiState
 import com.example.senior_on.ui.child.health.TodayMedicationUiState
+import com.example.senior_on.ui.child.health.buildTodayMedicationsFromRegistered
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -56,7 +57,13 @@ class MedicationViewModel(
         if (date == currentDate) return
         val monthChanged = YearMonth.from(date) != YearMonth.from(currentDate)
         _uiState.update { state ->
-            state.copy(selectedDate = date)
+            state.copy(
+                selectedDate = date,
+                todayMedications = buildTodayMedicationsFromRegistered(
+                    date = date,
+                    registered = state.registeredMedications,
+                ),
+            )
         }
         loadSchedules(date, refreshMonthly = monthChanged)
     }
@@ -223,7 +230,11 @@ class MedicationViewModel(
                     } else {
                         state.copy(
                             isLoading = false,
-                            todayMedications = schedules,
+                            todayMedications = buildTodayMedicationsFromRegistered(
+                                date = date,
+                                registered = state.registeredMedications,
+                                remoteSchedules = schedules,
+                            ),
                             medicationMarkedDates = markedDates
                                 ?: state.medicationMarkedDates,
                         )
@@ -259,9 +270,14 @@ class MedicationViewModel(
         closeEditor: Boolean = false,
     ) {
         _uiState.update { state ->
+            val selectedDate = state.selectedDate
             state.copy(
                 registeredMedications = result.medications,
-                todayMedications = result.schedules,
+                todayMedications = buildTodayMedicationsFromRegistered(
+                    date = selectedDate,
+                    registered = result.medications,
+                    remoteSchedules = result.schedules,
+                ),
                 medicationMarkedDates = result.markedDates,
                 editorMode = if (closeEditor) null else state.editorMode,
                 editingMedication = if (closeEditor) null else state.editingMedication,
@@ -307,8 +323,22 @@ private fun MedicationInfo.toUiState(): RegisteredMedicationUiState =
         category = name,
         name = ingredient.orEmpty(),
         times = times.mapNotNull(String::toLocalTimeOrNull).distinct().sorted(),
-        weekdays = days.mapNotNull(String::toWeekdayIndexOrNull).toSet(),
+        weekdays = days.toWeekdayIndexSet(),
     )
+
+private fun List<String>.toWeekdayIndexSet(): Set<Int> {
+    if (isEmpty()) return emptySet()
+    if (any { value ->
+            value.trim().equals("매일", ignoreCase = true) ||
+                value.trim().equals("EVERYDAY", ignoreCase = true) ||
+                value.trim().equals("EVERY_DAY", ignoreCase = true) ||
+                value.trim().equals("DAILY", ignoreCase = true)
+        }
+    ) {
+        return (0..6).toSet()
+    }
+    return mapNotNull(String::toWeekdayIndexOrNull).toSet()
+}
 
 private fun MedicationSchedule.toUiState(
     date: LocalDate,
@@ -377,13 +407,13 @@ private fun String.toKoreanLocalTimeOrNull(): LocalTime? {
 }
 
 private fun String.toWeekdayIndexOrNull(): Int? = when (trim().uppercase()) {
-    "SUNDAY", "SUN", "일", "일요일" -> 0
-    "MONDAY", "MON", "월", "월요일" -> 1
-    "TUESDAY", "TUE", "화", "화요일" -> 2
-    "WEDNESDAY", "WED", "수", "수요일" -> 3
-    "THURSDAY", "THU", "목", "목요일" -> 4
-    "FRIDAY", "FRI", "금", "금요일" -> 5
-    "SATURDAY", "SAT", "토", "토요일" -> 6
+    "SUNDAY", "SUN", "일", "일요일", "0" -> 0
+    "MONDAY", "MON", "월", "월요일", "1" -> 1
+    "TUESDAY", "TUE", "화", "화요일", "2" -> 2
+    "WEDNESDAY", "WED", "수", "수요일", "3" -> 3
+    "THURSDAY", "THU", "목", "목요일", "4" -> 4
+    "FRIDAY", "FRI", "금", "금요일", "5" -> 5
+    "SATURDAY", "SAT", "토", "토요일", "6" -> 6
     else -> null
 }
 

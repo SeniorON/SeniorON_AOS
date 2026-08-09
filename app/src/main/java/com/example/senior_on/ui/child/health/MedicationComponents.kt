@@ -2,7 +2,6 @@ package com.example.senior_on.ui.child.health
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
@@ -37,12 +37,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -59,7 +61,8 @@ data class RegisteredMedicationUiState(
     val category: String,
     val name: String,
     val times: List<LocalTime>,
-    val weekdays: Set<Int>
+    val weekdays: Set<Int>,
+    val startDate: LocalDate? = null
 ) {
     val time: LocalTime
         get() = times.firstOrNull() ?: LocalTime.of(8, 0)
@@ -67,8 +70,18 @@ data class RegisteredMedicationUiState(
     val scheduleLabel: String
         get() = weekdays.toMedicationScheduleLabel()
 
+    val startDateLabel: String
+        get() = startDate?.toMedicationStartDateLabel().orEmpty()
+
     val isEveryday: Boolean
         get() = weekdays.size == MedicationWeekdayLabels.size
+
+    fun isScheduledOn(date: LocalDate): Boolean {
+        if (weekdays.isEmpty()) return false
+        if (startDate != null && date.isBefore(startDate)) return false
+        val weekdayIndex = date.dayOfWeek.value % 7
+        return weekdayIndex in weekdays
+    }
 }
 
 internal val MedicationWeekdayLabels = listOf("일", "월", "화", "수", "목", "금", "토")
@@ -77,6 +90,46 @@ internal fun Set<Int>.toMedicationScheduleLabel(): String {
     if (isEmpty()) return ""
     if (size == MedicationWeekdayLabels.size) return "매일"
     return sorted().joinToString(", ") { MedicationWeekdayLabels[it] }
+}
+
+internal fun buildTodayMedicationsFromRegistered(
+    date: LocalDate,
+    registered: List<RegisteredMedicationUiState>,
+    remoteSchedules: List<TodayMedicationUiState> = emptyList(),
+): List<TodayMedicationUiState> {
+    return registered
+        .asSequence()
+        .filter { medication -> medication.isScheduledOn(date) }
+        .flatMap { medication ->
+            val doseTimes = medication.times.ifEmpty { listOf(medication.time) }
+            doseTimes.asSequence().map { doseTime ->
+                val remote = remoteSchedules.find { schedule ->
+                    schedule.date == date &&
+                        schedule.category == medication.category &&
+                        schedule.name == medication.name &&
+                        schedule.time == doseTime
+                }
+                TodayMedicationUiState(
+                    date = date,
+                    category = medication.category,
+                    name = medication.name.ifBlank { medication.category },
+                    time = doseTime,
+                    status = remote?.status ?: defaultDoseStatus(date, doseTime),
+                    medicationLogId = remote?.medicationLogId ?: 0L,
+                )
+            }
+        }
+        .sortedWith(compareBy({ it.time }, { it.category }, { it.name }))
+        .toList()
+}
+
+private fun defaultDoseStatus(date: LocalDate, time: LocalTime): MedicationDoseStatus {
+    val dateTime = LocalDateTime.of(date, time)
+    return if (dateTime.isBefore(LocalDateTime.now())) {
+        MedicationDoseStatus.Missed
+    } else {
+        MedicationDoseStatus.Scheduled
+    }
 }
 
 data class TodayMedicationUiState(
@@ -109,6 +162,7 @@ internal fun TodayMedicationSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .zIndex(if (showCalendar) 1f else 0f)
             .background(SeniorOnColors.Primary600)
             .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 24.dp)
     ) {
@@ -120,37 +174,44 @@ internal fun TodayMedicationSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (showCalendar) {
-            HealthCalendarCard(
-                displayedMonth = displayedMonth,
-                selectedDay = selectedDate.dayOfMonth,
-                markedDates = markedDates,
-                onDayClick = onDayClick,
-                onPreviousMonthClick = onPreviousMonthClick,
-                onNextMonthClick = onNextMonthClick
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-        } else {
-            HealthDateNavigator(
-                selectedDate = selectedDate,
-                onPreviousDayClick = onPreviousDayClick,
-                onNextDayClick = onNextDayClick
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                HealthDateNavigator(
+                    selectedDate = selectedDate,
+                    onPreviousDayClick = onPreviousDayClick,
+                    onNextDayClick = onNextDayClick
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                HealthGreenSectionTitle(
+                    title = "오늘 복약 현황",
+                    iconResId = R.drawable.ic_illust_medication,
+                    actionLabel = "오늘 복약 추가",
+                    onActionClick = onAddTodayMedicationClick
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TodayMedicationStatusCard(
+                    medications = filteredMedications
+                )
+            }
+
+            if (showCalendar) {
+                HealthCalendarCard(
+                    displayedMonth = displayedMonth,
+                    selectedDay = selectedDate.dayOfMonth,
+                    markedDates = markedDates,
+                    onDayClick = onDayClick,
+                    onPreviousMonthClick = onPreviousMonthClick,
+                    onNextMonthClick = onNextMonthClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .zIndex(1f)
+                )
+            }
         }
-
-        HealthGreenSectionTitle(
-            title = "오늘 복약 현황",
-            iconResId = R.drawable.ic_illust_medication,
-            actionLabel = "오늘 복약 추가",
-            onActionClick = onAddTodayMedicationClick
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        TodayMedicationStatusCard(
-            medications = filteredMedications
-        )
     }
 }
 
@@ -180,16 +241,12 @@ private fun HealthYearSelector(
         )
         Spacer(modifier = Modifier.width(4.dp))
         Icon(
-            painter = painterResource(
-                id = if (expanded) {
-                    R.drawable.ic_sm_chevron_down_2
-                } else {
-                    R.drawable.ic_sm_chevron_down_1
-                }
-            ),
+            painter = painterResource(id = R.drawable.ic_sm_chevron_down_1),
             contentDescription = null,
             tint = SeniorOnColors.SupportWhite100,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier
+                .size(18.dp)
+                .rotate(if (expanded) 180f else 0f)
         )
     }
 }
@@ -237,12 +294,13 @@ private fun HealthCalendarCard(
     markedDates: Set<LocalDate>,
     onDayClick: (Int) -> Unit,
     onPreviousMonthClick: () -> Unit,
-    onNextMonthClick: () -> Unit
+    onNextMonthClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .dropShadow(
                 shape = shape,
@@ -310,13 +368,16 @@ private fun HealthGreenOutlineAddButton(
     label: String,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(22.dp)
     Row(
         modifier = Modifier
+            .width(120.dp)
             .height(28.dp)
-            .clip(RoundedCornerShape(45.dp))
-            .border(1.dp, SeniorOnColors.SupportWhite100, RoundedCornerShape(45.dp))
+            .clip(shape)
+            .background(SeniorOnColors.SupportWhite100.copy(alpha = 0.2f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp),
+            .padding(start = 8.dp, top = 4.dp, end = 10.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -325,11 +386,11 @@ private fun HealthGreenOutlineAddButton(
             tint = SeniorOnColors.SupportWhite100,
             modifier = Modifier.size(18.dp)
         )
-        Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
             style = SeniorOnTextStyles.BodySMedium,
-            color = SeniorOnColors.SupportWhite100
+            color = SeniorOnColors.SupportWhite100,
+            maxLines = 1
         )
     }
 }
@@ -350,15 +411,19 @@ private fun TodayMedicationStatusCard(
             .fillMaxWidth()
             .clip(shape)
             .background(backgroundColor)
-            .padding(horizontal = 16.dp, vertical = if (medications.isEmpty()) 28.dp else 16.dp),
-        horizontalAlignment = if (medications.isEmpty()) Alignment.CenterHorizontally else Alignment.Start
+            .padding(
+                start = if (medications.isEmpty()) 14.dp else 16.dp,
+                top = if (medications.isEmpty()) 31.dp else 16.dp,
+                end = if (medications.isEmpty()) 14.dp else 16.dp,
+                bottom = if (medications.isEmpty()) 31.dp else 16.dp
+            ),
+        horizontalAlignment = Alignment.Start
     ) {
         if (medications.isEmpty()) {
             Text(
                 text = "오늘 복용할 약이 없어요",
-                style = SeniorOnTextStyles.BodyMMedium,
-                color = SeniorOnColors.Gray400,
-                textAlign = TextAlign.Center
+                style = SeniorOnTextStyles.BodyMSemiBold,
+                color = SeniorOnColors.Gray500
             )
         } else {
             medications.forEachIndexed { index, medication ->
@@ -429,13 +494,15 @@ internal fun RegisteredMedicationsSection(
                     style = SeniorOnTextStyles.BodyLBold,
                     color = SeniorOnColors.Gray800
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 RegisteredMedicationCountText(count = medications.size)
             }
-            OutlineAddButton(
-                label = "복약 추가",
-                onClick = onAddMedicationClick
-            )
+            if (medications.isNotEmpty()) {
+                OutlineAddButton(
+                    label = "복약 추가",
+                    onClick = onAddMedicationClick
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -489,22 +556,14 @@ private fun EmptyRegisteredMedicationsContent(
             .padding(top = 24.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .background(SeniorOnColors.Gray100),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_illust_medication_scheduled),
-                contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+        Icon(
+            painter = painterResource(id = R.drawable.ic_illust_medication_scheduled),
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = Modifier.size(60.dp)
+        )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         Text(
             text = "등록된 약이 없어요",
@@ -512,16 +571,16 @@ private fun EmptyRegisteredMedicationsContent(
             color = SeniorOnColors.Gray600
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = "복용 중인 약을 등록하면\n시간에 맞춰 부모님께 알림을 드려요",
-            style = SeniorOnTextStyles.BodyMMedium,
+            style = SeniorOnTextStyles.CaptionMedium,
             color = SeniorOnColors.Gray300,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(36.dp))
 
         HospitalFilledActionButton(
             label = "약 추가하기",
@@ -579,7 +638,7 @@ private fun RegisteredMedicationCard(
             )
             RegisteredMedicationMetaRow(
                 iconResId = R.drawable.ic_calendar,
-                label = medication.scheduleLabel
+                label = medication.scheduleLabel.ifBlank { medication.startDateLabel }
             )
         }
 
@@ -639,27 +698,33 @@ internal fun LocalTime.toMedicationHourLabel(): String {
     }
 }
 
+internal fun LocalDate.toMedicationStartDateLabel(): String =
+    DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN).format(this)
+
 internal fun previewRegisteredMedications() = listOf(
     RegisteredMedicationUiState(
         id = "1",
         category = "혈압약",
         name = "아암로디핀",
         times = listOf(LocalTime.of(8, 0), LocalTime.of(14, 0)),
-        weekdays = setOf(1, 2, 3, 4)
+        weekdays = setOf(1, 2, 3, 4),
+        startDate = LocalDate.of(2026, 8, 11)
     ),
     RegisteredMedicationUiState(
         id = "2",
         category = "혈압약",
         name = "아암로디핀",
         times = listOf(LocalTime.of(8, 0)),
-        weekdays = (0..6).toSet()
+        weekdays = (0..6).toSet(),
+        startDate = LocalDate.of(2026, 6, 12)
     ),
     RegisteredMedicationUiState(
         id = "3",
         category = "혈압약",
         name = "아암로디핀",
         times = listOf(LocalTime.of(8, 0)),
-        weekdays = setOf(1, 2, 3, 4, 5, 6)
+        weekdays = setOf(1, 2, 3, 4, 5, 6),
+        startDate = LocalDate.of(2026, 8, 11)
     )
 )
 
