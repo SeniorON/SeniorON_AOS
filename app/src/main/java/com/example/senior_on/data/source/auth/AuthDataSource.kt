@@ -10,6 +10,7 @@ import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.SignupResponse
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleResponse
+import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeResponse
 
@@ -34,4 +35,6 @@ interface AuthDataSource {
         authorization: String,
         request: UpdateRoleRequest
     ): UpdateRoleResponse
+
+    suspend fun withdraw(request: UserWithdrawalRequest)
 }

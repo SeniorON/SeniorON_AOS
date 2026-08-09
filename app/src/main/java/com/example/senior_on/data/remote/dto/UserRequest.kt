@@ -37,3 +37,7 @@ data class TokenRefreshRequest(
 data class UpdateRoleRequest(
     val role: UserRole
 )
+
+data class UserWithdrawalRequest(
+    val confirmation: String
+)

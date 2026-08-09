@@ -13,9 +13,11 @@ import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.SignupResponse
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleResponse
+import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeResponse
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
@@ -57,6 +59,11 @@ interface UserApi {
         @Header("Authorization") authorization: String,
         @Body request: UpdateRoleRequest
     ): ApiResponse<UpdateRoleResponse>
+
+    @DELETE("api/users/me")
+    suspend fun withdraw(
+        @Body request: UserWithdrawalRequest
+    ): ApiResponse<Unit>
 
     @GET("api/users/check-login-id")
     suspend fun checkLoginId(

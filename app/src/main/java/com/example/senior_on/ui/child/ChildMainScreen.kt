@@ -53,6 +53,8 @@ import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
@@ -94,6 +96,8 @@ fun ChildMainScreen(
     parentInfoRepository: ParentInfoRepository,
     caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationRepository: NotificationRepository,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
     medicationRepository: MedicationRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -252,6 +256,8 @@ fun ChildMainScreen(
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
                     displayViewModel.saveParentInfo(
@@ -319,6 +325,8 @@ private fun ChildMainTabContent(
     familyServerRepository: FamilyServerRepository,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -433,6 +441,8 @@ private fun ChildMainTabContent(
             connectedDevice = connectedDevice,
             onConnectedDeviceInfoSave = onConnectedDeviceInfoSave,
             onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,
             onWithdrawConfirm = onWithdrawClick

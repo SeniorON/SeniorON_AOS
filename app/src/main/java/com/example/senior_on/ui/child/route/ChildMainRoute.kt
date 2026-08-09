@@ -26,6 +26,8 @@ fun ChildMainRoute(
         medicationRepository = appContainer.medicationRepository,
         homeServerRepository = appContainer.homeServerRepository,
         eventRepository = appContainer.eventRepository,
+        authRepository = appContainer.authRepository,
+        sessionRepository = appContainer.sessionRepository,
         onLogoutClick = onLogoutClick,
         onWithdrawClick = onWithdrawClick,
     )

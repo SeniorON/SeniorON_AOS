@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -49,10 +51,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
 import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -89,10 +97,33 @@ fun SettingsTabRoute(
     connectedDevice: ConnectedSeniorDeviceUiState?,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
     modifier: Modifier = Modifier,
     onLogoutConfirm: () -> Unit = {},
-    onWithdrawConfirm: () -> Unit = {}
+    onWithdrawConfirm: () -> Unit = {},
 ) {
+    val viewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModel.factory(
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
+        ),
+    )
+    val settingsUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(settingsUiState.withdrawErrorMessage) {
+        val message = settingsUiState.withdrawErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeWithdrawError()
+    }
+
+    LaunchedEffect(settingsUiState.withdrawCompleted) {
+        if (!settingsUiState.withdrawCompleted) return@LaunchedEffect
+        viewModel.consumeWithdrawCompleted()
+        onWithdrawConfirm()
+    }
+
     var destination by rememberSaveable { mutableStateOf(SettingsDestination.Main) }
     var profileName by rememberSaveable { mutableStateOf(initialProfile.name) }
     var profileAccountType by rememberSaveable {
@@ -140,7 +171,8 @@ fun SettingsTabRoute(
             onTakePhotoClick = { hasCustomProfileImage = true },
             onApplyDefaultImageClick = { hasCustomProfileImage = false },
             onLogoutConfirm = onLogoutConfirm,
-            onWithdrawConfirm = onWithdrawConfirm
+            onWithdrawConfirm = viewModel::withdraw,
+            isWithdrawing = settingsUiState.isWithdrawing,
         )
 
         SettingsDestination.MyAccount -> MyAccountScreen(
@@ -232,7 +264,8 @@ fun SettingsScreen(
     onWithdrawConfirm: () -> Unit = {},
     onSelectAlbumClick: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
-    onApplyDefaultImageClick: () -> Unit = {}
+    onApplyDefaultImageClick: () -> Unit = {},
+    isWithdrawing: Boolean = false,
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
@@ -341,11 +374,13 @@ fun SettingsScreen(
 
     if (showWithdrawDialog) {
         SettingsWithdrawDialog(
-            onDismiss = { showWithdrawDialog = false },
-            onConfirm = {
-                showWithdrawDialog = false
-                onWithdrawConfirm()
-            }
+            onDismiss = {
+                if (!isWithdrawing) {
+                    showWithdrawDialog = false
+                }
+            },
+            onConfirm = onWithdrawConfirm,
+            isConfirmEnabled = !isWithdrawing,
         )
     }
 }
@@ -376,7 +411,8 @@ private fun SettingsLogoutDialog(
 @Composable
 private fun SettingsWithdrawDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    isConfirmEnabled: Boolean = true,
 ) {
     SettingsConfirmBottomDialog(
         onDismiss = onDismiss,
@@ -398,7 +434,8 @@ private fun SettingsWithdrawDialog(
         cancelText = "취소",
         confirmText = "탈퇴",
         confirmBackgroundColor = SeniorOnColors.Red400,
-        onConfirm = onConfirm
+        onConfirm = onConfirm,
+        isConfirmEnabled = isConfirmEnabled,
     )
 }
 
@@ -413,6 +450,7 @@ private fun SettingsConfirmBottomDialog(
     confirmBackgroundColor: Color,
     onConfirm: () -> Unit,
     titleToDescriptionSpacing: Dp = 12.dp,
+    isConfirmEnabled: Boolean = true,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -506,8 +544,17 @@ private fun SettingsConfirmBottomDialog(
                             .weight(1f)
                             .height(48.dp)
                             .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                            .background(confirmBackgroundColor)
-                            .clickable(onClick = onConfirm),
+                            .background(
+                                if (isConfirmEnabled) {
+                                    confirmBackgroundColor
+                                } else {
+                                    confirmBackgroundColor.copy(alpha = 0.5f)
+                                }
+                            )
+                            .clickable(
+                                enabled = isConfirmEnabled,
+                                onClick = onConfirm
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -985,14 +1032,9 @@ internal fun SettingsProfileAvatar(
 @Composable
 private fun SettingsTabRoutePreview() {
     SENIOR_ONTheme {
-        SettingsTabRoute(
-            initialProfile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
-            connectedDevice = MockSeniorFixtures.mother.toConnectedSeniorDeviceUiState(
-                deviceName = MockDisplayFixtures.CONNECTED_DEVICE_NAME,
-                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
-            ),
-            onConnectedDeviceInfoSave = {},
-            onDisconnectDeviceConfirm = {},
+        SettingsScreen(
+            profile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

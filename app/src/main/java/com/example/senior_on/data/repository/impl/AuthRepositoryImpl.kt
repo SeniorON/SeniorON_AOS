@@ -7,6 +7,7 @@ import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequ
 import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UserRole
+import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.CareManagerType
@@ -108,6 +109,12 @@ class AuthRepositoryImpl(
             usersId = response.usersId,
             name = response.name,
             mode = response.role.toAppUserMode()
+        )
+    }
+
+    override suspend fun withdraw(confirmation: String) {
+        dataSource.withdraw(
+            UserWithdrawalRequest(confirmation = confirmation)
         )
     }
 
