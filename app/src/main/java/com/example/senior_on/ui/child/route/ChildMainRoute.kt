@@ -28,6 +28,7 @@ fun ChildMainRoute(
         eventRepository = appContainer.eventRepository,
         authRepository = appContainer.authRepository,
         sessionRepository = appContainer.sessionRepository,
+        inquiryRepository = appContainer.inquiryRepository,
         onLogoutClick = onLogoutClick,
         onWithdrawClick = onWithdrawClick,
     )

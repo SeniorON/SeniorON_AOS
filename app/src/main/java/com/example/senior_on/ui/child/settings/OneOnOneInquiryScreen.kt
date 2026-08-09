@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -54,8 +56,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.widget.Toast
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.senior_on.R
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryHistoryUiItem
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -95,17 +103,49 @@ private val SampleAnsweredInquiry = InquiryHistoryItem(
 )
 
 @Composable
-fun OneOnOneInquiryScreen(
+fun OneOnOneInquiryRoute(
+    inquiryRepository: InquiryRepository,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+) {
+    val viewModel: InquiryViewModel = viewModel(
+        factory = InquiryViewModel.factory(inquiryRepository),
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.historyErrorMessage) {
+        val message = uiState.historyErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeHistoryError()
+    }
+
+    OneOnOneInquiryScreen(
+        onBackClick = onBackClick,
+        historyItems = uiState.historyItems.map { it.toHistoryItem() },
+        onHistoryTabSelected = viewModel::loadInquiries,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun OneOnOneInquiryScreen(
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    historyItems: List<InquiryHistoryItem> = emptyList(),
+    onHistoryTabSelected: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(OneOnOneInquiryTab.Write) }
     var title by rememberSaveable { mutableStateOf("") }
     var content by rememberSaveable { mutableStateOf("") }
     var imageUris by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var showSuccessDialog by rememberSaveable { mutableStateOf(false) }
-    var historyItems by remember { mutableStateOf(emptyList<InquiryHistoryItem>()) }
-    var pendingSubmitQuestion by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == OneOnOneInquiryTab.History) {
+            onHistoryTabSelected()
+        }
+    }
 
     val remainingSlots = (MaxInquiryImages - imageUris.size).coerceAtLeast(0)
     val multiImagePicker = rememberLauncherForActivityResult(
@@ -169,7 +209,6 @@ fun OneOnOneInquiryScreen(
                     },
                     canSubmit = canSubmit,
                     onSubmitClick = {
-                        pendingSubmitQuestion = title.trim()
                         showSuccessDialog = true
                     },
                     modifier = Modifier.weight(1f)
@@ -185,19 +224,7 @@ fun OneOnOneInquiryScreen(
         if (showSuccessDialog) {
             InquirySubmitSuccessDialog(
                 onConfirmClick = {
-                    val question = pendingSubmitQuestion.orEmpty().ifBlank { title.trim() }
-                    if (question.isNotBlank()) {
-                        historyItems = listOf(
-                            InquiryHistoryItem(
-                                id = "inquiry-${System.currentTimeMillis()}",
-                                status = InquiryAnswerStatus.Waiting,
-                                createdAtLabel = LocalDateTime.now().format(InquiryDateTimeFormatter),
-                                question = question
-                            )
-                        ) + historyItems
-                    }
                     showSuccessDialog = false
-                    pendingSubmitQuestion = null
                     title = ""
                     content = ""
                     imageUris = emptyList()
@@ -207,6 +234,19 @@ fun OneOnOneInquiryScreen(
         }
     }
 }
+
+private fun InquiryHistoryUiItem.toHistoryItem(): InquiryHistoryItem =
+    InquiryHistoryItem(
+        id = id,
+        status = if (isAnswered) {
+            InquiryAnswerStatus.Answered
+        } else {
+            InquiryAnswerStatus.Waiting
+        },
+        createdAtLabel = createdAtLabel,
+        question = question,
+        answer = null,
+    )
 
 @Composable
 private fun OneOnOneInquiryTabRow(

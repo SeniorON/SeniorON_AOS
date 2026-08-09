@@ -55,6 +55,7 @@ import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
@@ -98,6 +99,7 @@ fun ChildMainScreen(
     notificationRepository: NotificationRepository,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
+    inquiryRepository: InquiryRepository,
     medicationRepository: MedicationRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -258,6 +260,7 @@ fun ChildMainScreen(
             eventRepository = eventRepository,
             authRepository = authRepository,
             sessionRepository = sessionRepository,
+            inquiryRepository = inquiryRepository,
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
                     displayViewModel.saveParentInfo(
@@ -327,6 +330,7 @@ private fun ChildMainTabContent(
     eventRepository: EventRepository?,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
+    inquiryRepository: InquiryRepository,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -443,6 +447,7 @@ private fun ChildMainTabContent(
             onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
             authRepository = authRepository,
             sessionRepository = sessionRepository,
+            inquiryRepository = inquiryRepository,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,
             onWithdrawConfirm = onWithdrawClick

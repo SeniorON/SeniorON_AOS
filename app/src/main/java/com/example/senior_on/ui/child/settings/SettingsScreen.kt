@@ -60,6 +60,7 @@ import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -99,6 +100,7 @@ fun SettingsTabRoute(
     onDisconnectDeviceConfirm: () -> Unit,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
+    inquiryRepository: InquiryRepository,
     modifier: Modifier = Modifier,
     onLogoutConfirm: () -> Unit = {},
     onWithdrawConfirm: () -> Unit = {},
@@ -239,12 +241,14 @@ fun SettingsTabRoute(
             modifier = modifier
         )
 
-        SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryScreen(
+        SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryRoute(
+            inquiryRepository = inquiryRepository,
             onBackClick = navigateBack,
             modifier = modifier
         )
 
-        SettingsDestination.Feedback -> OneOnOneInquiryScreen(
+        SettingsDestination.Feedback -> OneOnOneInquiryRoute(
+            inquiryRepository = inquiryRepository,
             onBackClick = navigateBack,
             modifier = modifier
         )
