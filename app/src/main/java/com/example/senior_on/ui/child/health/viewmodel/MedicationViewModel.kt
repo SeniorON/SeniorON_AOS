@@ -111,7 +111,7 @@ class MedicationViewModel(
         if (_uiState.value.isSaving) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            runCatching {
+            val remoteSaved = runCatching {
                 val parentId = resolveParentUserId()
                 val current = _uiState.value.editingMedication
                 val domain = draft.toDomain(current)
@@ -121,12 +121,13 @@ class MedicationViewModel(
                     medicationRepository.create(parentId, domain)
                 }
                 loadRemoteData(parentId, _uiState.value.selectedDate)
-            }.onSuccess { result ->
-                applyRemoteData(result, closeEditor = true)
-            }.onFailure { throwable ->
-                _uiState.update {
-                    it.copy(isSaving = false, errorMessage = throwable.message)
-                }
+            }.getOrNull()
+
+            if (remoteSaved != null) {
+                applyRemoteData(remoteSaved, closeEditor = true)
+            } else {
+                // API 미연동/실패 시에도 UI 흐름은 유지. 연동 후엔 위 성공 경로만 타면 됨.
+                applyLocalSave(draft)
             }
         }
     }
@@ -136,16 +137,16 @@ class MedicationViewModel(
         if (_uiState.value.isSaving) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            runCatching {
+            val remoteDeleted = runCatching {
                 val parentId = resolveParentUserId()
                 medicationRepository.delete(parentId, medication.id)
                 loadRemoteData(parentId, _uiState.value.selectedDate)
-            }.onSuccess { result ->
-                applyRemoteData(result, closeEditor = true)
-            }.onFailure { throwable ->
-                _uiState.update {
-                    it.copy(isSaving = false, errorMessage = throwable.message)
-                }
+            }.getOrNull()
+
+            if (remoteDeleted != null) {
+                applyRemoteData(remoteDeleted, closeEditor = true)
+            } else {
+                applyLocalDelete(medication.id)
             }
         }
     }
@@ -288,6 +289,65 @@ class MedicationViewModel(
         }
     }
 
+    private fun applyLocalSave(draft: MedicationDraft) {
+        val current = _uiState.value.editingMedication
+        val isEdit = _uiState.value.editorMode == MedicationEditorMode.Edit && current != null
+        val saved = draft.toUiState(
+            id = if (isEdit) current.id else "local-${System.currentTimeMillis()}",
+        )
+        _uiState.update { state ->
+            val registered = if (isEdit) {
+                state.registeredMedications.map { medication ->
+                    if (medication.id == current.id) saved else medication
+                }
+            } else {
+                state.registeredMedications + saved
+            }
+            val selectedDate = state.selectedDate
+            state.copy(
+                registeredMedications = registered,
+                todayMedications = buildTodayMedicationsFromRegistered(
+                    date = selectedDate,
+                    registered = registered,
+                ),
+                medicationMarkedDates = markedDatesFor(
+                    registered = registered,
+                    month = YearMonth.from(selectedDate),
+                    existing = state.medicationMarkedDates,
+                ),
+                editorMode = null,
+                editingMedication = null,
+                isLoading = false,
+                isSaving = false,
+                errorMessage = null,
+            )
+        }
+    }
+
+    private fun applyLocalDelete(medicationId: String) {
+        _uiState.update { state ->
+            val registered = state.registeredMedications.filterNot { it.id == medicationId }
+            val selectedDate = state.selectedDate
+            state.copy(
+                registeredMedications = registered,
+                todayMedications = buildTodayMedicationsFromRegistered(
+                    date = selectedDate,
+                    registered = registered,
+                ),
+                medicationMarkedDates = markedDatesFor(
+                    registered = registered,
+                    month = YearMonth.from(selectedDate),
+                    existing = state.medicationMarkedDates,
+                ),
+                editorMode = null,
+                editingMedication = null,
+                isLoading = false,
+                isSaving = false,
+                errorMessage = null,
+            )
+        }
+    }
+
     private suspend fun resolveParentUserId(): Long {
         parentUserId?.let { return it }
         val id = familyRepository.getMembers()
@@ -366,6 +426,28 @@ private fun MedicationSchedule.toUiState(
         status = uiStatus,
         medicationLogId = logId,
     )
+}
+
+private fun MedicationDraft.toUiState(id: String): RegisteredMedicationUiState =
+    RegisteredMedicationUiState(
+        id = id,
+        category = category.trim(),
+        name = name.trim(),
+        times = times.sorted().distinct(),
+        weekdays = weekdays,
+        startDate = startDate,
+    )
+
+private fun markedDatesFor(
+    registered: List<RegisteredMedicationUiState>,
+    month: YearMonth,
+    existing: Set<LocalDate>,
+): Set<LocalDate> {
+    val monthDates = (1..month.lengthOfMonth()).mapNotNull { day ->
+        val date = month.atDay(day)
+        date.takeIf { registered.any { medication -> medication.isScheduledOn(date) } }
+    }.toSet()
+    return existing.filterNot { YearMonth.from(it) == month }.toSet() + monthDates
 }
 
 private fun MedicationDraft.toDomain(

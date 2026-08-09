@@ -308,7 +308,7 @@ internal fun HealthCalendarCard(
 }
 
 internal val HealthCalendarCardWidth = 296.dp
-internal val HealthCalendarCardHeight = 258.dp
+internal val HealthCalendarCardHeight = 320.dp
 internal val HealthCalendarCardPadding = 16.dp
 internal val HealthCalendarCardTopOffset = 52.dp
 internal val HealthCalendarCardStartOffset = 32.dp
