@@ -37,8 +37,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
-import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
+import com.example.senior_on.data.source.parent.InMemoryParentInfoDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
@@ -203,7 +203,7 @@ class DefaultAppContainer(
     override val hospitalSpecialtyRepository: HospitalSpecialtyRepository =
         HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
     override val parentInfoRepository: ParentInfoRepository = ParentInfoRepositoryImpl(
-        MockParentInfoDataSource(initialParentInfo = MockSeniorFixtures.mother)
+        InMemoryParentInfoDataSource()
     )
     override val chatBuddyRepository: ChatBuddyRepository =
         ChatBuddyRepositoryImpl(MockChatBuddyDataSource())

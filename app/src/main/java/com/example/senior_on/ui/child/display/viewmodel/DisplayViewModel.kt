@@ -12,9 +12,9 @@ import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.repository.display.DisplayRepository
-import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.ui.child.display.DisplayTabUiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,13 +25,16 @@ import kotlinx.coroutines.launch
 class DisplayViewModel(
     private val parentInfoRepository: ParentInfoRepository,
     private val displayRepository: DisplayRepository,
-    private val caregiverRelationshipRepository: CaregiverRelationshipRepository,
+    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val initialParentInfo = parentInfoRepository.parentInfo.value
-    private val initialRelationshipLabel =
-        caregiverRelationshipRepository.relationship.value?.displayLabel
-            ?: initialParentInfo?.relationshipLabel
+    private val initialRelationshipLabel = initialParentInfo?.relationshipLabel
     private var isInitialButtonSetupInProgress = false
+    private var initialLoadJob: Job? = null
+    private var homeRefreshJob: Job? = null
+    private var deviceRefreshJob: Job? = null
+    private var weatherRefreshJob: Job? = null
+    private var lastWeatherUpdatedAtMillis: Long? = null
 
     private val _uiState = MutableStateFlow(
         DisplayTabUiState(
@@ -47,7 +50,12 @@ class DisplayViewModel(
     }
 
     fun loadOverview() {
-        viewModelScope.launch {
+        if (
+            initialLoadJob?.isActive == true ||
+            homeRefreshJob?.isActive == true
+        ) return
+
+        initialLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isLoading = true,
@@ -67,10 +75,7 @@ class DisplayViewModel(
                     )
                 }
             }
-            val deviceRequest = async {
-                runCatching { displayRepository.getDevice() }
-            }
-            refreshWeather()
+            refreshWeatherIfStale()
 
             val canEditScreen = editPermissionRequest.await().getOrDefault(false)
             _uiState.update {
@@ -87,46 +92,51 @@ class DisplayViewModel(
                     )
                 }
                 .onSuccess { overview ->
-                    val parentInfo = overview.parentInfo
-                        ?: parentInfoRepository.parentInfo.value
-                    parentInfo?.let(::shareParentInfo)
-                    _uiState.update {
-                        it.copy(
-                            parentInfo = parentInfo,
-                            relationshipLabel = parentInfo?.relationshipLabel,
-                            device = overview.device,
-                            todaySchedule = overview.todaySchedule,
-                            screenConfiguration = overview.screenConfiguration,
-                            availableButtonTypes = overview.availableButtonTypes,
-                            isLoading = false,
-                        )
-                    }
+                    applyOverview(overview)
                 }
                 .onFailure(::handleLoadFailure)
-
-            deviceRequest.await()
-                .onSuccess { device ->
-                    if (device != null) {
-                        _uiState.update { it.copy(device = device) }
-                    }
-                }
         }
     }
 
-    fun refreshEditPermission() {
-        if (_uiState.value.isEditPermissionLoading) return
+    fun refreshOnScreenTabReentry() {
+        refreshHomeSilently()
+        refreshWeatherIfStale()
+    }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isEditPermissionLoading = true) }
-            val canEditScreen = runCatching {
-                displayRepository.canCurrentUserEditScreen()
-            }.getOrDefault(false)
-            _uiState.update {
-                it.copy(
-                    canEditScreen = canEditScreen,
-                    isEditPermissionLoading = false,
+    private fun refreshHomeSilently(force: Boolean = false) {
+        if (initialLoadJob?.isActive == true) return
+        if (homeRefreshJob?.isActive == true) {
+            if (!force) return
+            homeRefreshJob?.cancel()
+        }
+
+        homeRefreshJob = viewModelScope.launch {
+            runCatching {
+                displayRepository.getOverview(
+                    parentInfoRepository.parentInfo.value
                 )
-            }
+            }.onSuccess(::applyOverview)
+        }
+    }
+
+    private fun applyOverview(overview: DisplayOverview) {
+        val parentInfo = overview.parentInfo
+        if (parentInfo == null) {
+            parentInfoRepository.clearParentInfo()
+        } else {
+            shareParentInfo(parentInfo)
+        }
+        _uiState.update {
+            it.copy(
+                parentInfo = parentInfo,
+                relationshipLabel = parentInfo?.relationshipLabel,
+                device = overview.device,
+                todaySchedule = overview.todaySchedule,
+                screenConfiguration = overview.screenConfiguration,
+                availableButtonTypes = overview.availableButtonTypes,
+                isLoading = false,
+                hasLoadedOverview = true,
+            )
         }
     }
 
@@ -159,9 +169,9 @@ class DisplayViewModel(
     }
 
     fun refreshDevice() {
-        if (_uiState.value.isRefreshingDevice) return
+        if (deviceRefreshJob?.isActive == true) return
 
-        viewModelScope.launch {
+        deviceRefreshJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isRefreshingDevice = true,
@@ -208,8 +218,13 @@ class DisplayViewModel(
     fun disconnectDevice(onSuccess: () -> Unit = {}) {
         launchMutation(onSuccess) {
             displayRepository.disconnectDevice()
-            val device = displayRepository.getDevice()
-            _uiState.update { it.copy(device = device) }
+            _uiState.update {
+                it.copy(
+                    device = null,
+                    isRefreshingDevice = false,
+                )
+            }
+            refreshHomeSilently(force = true)
         }
     }
 
@@ -289,8 +304,22 @@ class DisplayViewModel(
         parentInfoRepository.saveParentInfo(parentInfo)
     }
 
+    private fun refreshWeatherIfStale() {
+        val now = currentTimeMillis()
+        val lastUpdatedAt = lastWeatherUpdatedAtMillis
+        if (
+            lastUpdatedAt != null &&
+            now >= lastUpdatedAt &&
+            now - lastUpdatedAt < WeatherRefreshIntervalMillis
+        ) return
+
+        refreshWeather()
+    }
+
     private fun refreshWeather() {
-        viewModelScope.launch {
+        if (weatherRefreshJob?.isActive == true) return
+
+        weatherRefreshJob = viewModelScope.launch {
             _uiState.update { it.copy(isWeatherLoading = true) }
             runCatching {
                 displayRepository.getWeather(
@@ -298,6 +327,7 @@ class DisplayViewModel(
                     longitude = DefaultWeatherCoordinates.LONGITUDE,
                 )
             }.onSuccess { weather ->
+                lastWeatherUpdatedAtMillis = currentTimeMillis()
                 _uiState.update {
                     it.copy(
                         weather = weather,
@@ -307,7 +337,6 @@ class DisplayViewModel(
             }.onFailure {
                 _uiState.update {
                     it.copy(
-                        weather = null,
                         isWeatherLoading = false,
                     )
                 }
@@ -325,16 +354,16 @@ class DisplayViewModel(
     }
 
     companion object {
+        private const val WeatherRefreshIntervalMillis = 10 * 60 * 1_000L
+
         fun factory(
             parentInfoRepository: ParentInfoRepository,
             displayRepository: DisplayRepository,
-            caregiverRelationshipRepository: CaregiverRelationshipRepository,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 DisplayViewModel(
                     parentInfoRepository = parentInfoRepository,
                     displayRepository = displayRepository,
-                    caregiverRelationshipRepository = caregiverRelationshipRepository,
                 )
             }
         }

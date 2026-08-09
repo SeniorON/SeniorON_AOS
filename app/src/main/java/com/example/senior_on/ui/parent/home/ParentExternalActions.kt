@@ -29,8 +29,22 @@ internal fun openSeniorHomeButton(
             openAppOrPlayStore(context, "com.google.android.youtube")
         SeniorHomeButtonType.Melon ->
             openAppOrPlayStore(context, "com.iloen.melon")
+        SeniorHomeButtonType.Genie ->
+            openAppOrPlayStore(context, "com.ktmusic.geniemusic")
+        SeniorHomeButtonType.YouTubeMusic ->
+            openAppOrPlayStore(context, "com.google.android.apps.youtube.music")
         SeniorHomeButtonType.Spotify ->
             openAppOrPlayStore(context, "com.spotify.music")
+        SeniorHomeButtonType.Flo ->
+            openAppOrPlayStore(context, "skplanet.musicmate")
+        SeniorHomeButtonType.Vibe ->
+            openAppOrPlayStore(context, "com.naver.vibe")
+        SeniorHomeButtonType.Bugs ->
+            openAppOrPlayStore(context, "com.neowiz.android.bugs")
+        SeniorHomeButtonType.SamsungMusic ->
+            openAppOrPlayStore(context, "com.sec.android.app.music")
+        SeniorHomeButtonType.KakaoMusic ->
+            openAppOrPlayStore(context, "com.kakao.music")
         SeniorHomeButtonType.NaverMap ->
             openAppOrPlayStore(context, "com.nhn.android.nmap")
         SeniorHomeButtonType.KakaoMap ->

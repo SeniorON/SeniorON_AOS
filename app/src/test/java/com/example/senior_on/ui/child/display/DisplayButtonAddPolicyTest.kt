@@ -9,6 +9,25 @@ import org.junit.Test
 
 class DisplayButtonAddPolicyTest {
     @Test
+    fun musicSectionContainsAllSupportedMusicAppsInRequestedOrder() {
+        assertEquals(
+            listOf(
+                SeniorHomeButtonType.Melon,
+                SeniorHomeButtonType.Genie,
+                SeniorHomeButtonType.YouTubeMusic,
+                SeniorHomeButtonType.Spotify,
+                SeniorHomeButtonType.Flo,
+                SeniorHomeButtonType.Vibe,
+                SeniorHomeButtonType.Bugs,
+                SeniorHomeButtonType.SamsungMusic,
+                SeniorHomeButtonType.KakaoMusic,
+            ),
+            MusicButtons,
+        )
+        assertTrue(MusicButtons.all(SeniorHomeButtonType::isMusicButton))
+    }
+
+    @Test
     fun counterIncludesAllFourRequiredGeneralButtons() {
         assertEquals(9, buttonAddSelectedCount(selectedAppCount = 5))
     }

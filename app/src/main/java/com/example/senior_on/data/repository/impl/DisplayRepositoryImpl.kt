@@ -358,7 +358,7 @@ private fun TodayScheduleResponse?.toDisplayTodaySchedule(): DisplayTodaySchedul
 }
 
 private fun SeniorProfileResponse?.toParentInfo(current: ParentInfo?): ParentInfo? {
-    if (this == null) return current
+    if (this == null || isEmptyProfile()) return null
 
     val resolvedName = name?.trim()?.takeIf(String::isNotEmpty)
         ?: current?.name
@@ -385,6 +385,15 @@ private fun SeniorProfileResponse?.toParentInfo(current: ParentInfo?): ParentInf
         addressLongitude = current?.addressLongitude,
     )
 }
+
+private fun SeniorProfileResponse.isEmptyProfile(): Boolean =
+    senior_id == null &&
+        name.isNullOrBlank() &&
+        relation.isNullOrBlank() &&
+        birth.isNullOrBlank() &&
+        address.isNullOrBlank() &&
+        phone.isNullOrBlank() &&
+        detail_address.isNullOrBlank()
 
 private fun SeniorProfileUpdateResponse.toParentInfo(current: ParentInfo): ParentInfo =
     ParentInfo(
@@ -486,10 +495,17 @@ private fun resolveButtonType(
         "kakaopay" in actionKey -> SeniorHomeButtonType.KakaoPay
         "naverpay" in actionKey -> SeniorHomeButtonType.NaverPay
         "samsungpay" in actionKey -> SeniorHomeButtonType.SamsungPay
+        "samsungmusic" in actionKey -> SeniorHomeButtonType.SamsungMusic
+        "kakaomusic" in actionKey -> SeniorHomeButtonType.KakaoMusic
+        "youtubemusic" in actionKey -> SeniorHomeButtonType.YouTubeMusic
         "youtube" in actionKey -> SeniorHomeButtonType.YouTube
         "netflix" in actionKey -> SeniorHomeButtonType.Netflix
         "spotify" in actionKey -> SeniorHomeButtonType.Spotify
         "melon" in actionKey -> SeniorHomeButtonType.Melon
+        "genie" in actionKey -> SeniorHomeButtonType.Genie
+        "flo" in actionKey -> SeniorHomeButtonType.Flo
+        "vibe" in actionKey -> SeniorHomeButtonType.Vibe
+        "bugs" in actionKey -> SeniorHomeButtonType.Bugs
         else -> null
     }
 }
@@ -508,12 +524,18 @@ private fun String?.toSeniorFontSize(): SeniorFontSize = when (
     else -> SeniorFontSize.Large
 }
 
-private fun SeniorHomeButtonType.isMusic(): Boolean =
-    this == SeniorHomeButtonType.Melon || this == SeniorHomeButtonType.Spotify
+private fun SeniorHomeButtonType.isMusic(): Boolean = this in MUSIC_BUTTON_TYPES
 
 private fun SeniorHomeButtonType.toMusicAppValue(): String = when (this) {
     SeniorHomeButtonType.Melon -> "MELON"
+    SeniorHomeButtonType.Genie -> "GENIE"
+    SeniorHomeButtonType.YouTubeMusic -> "YOUTUBE_MUSIC"
     SeniorHomeButtonType.Spotify -> "SPOTIFY"
+    SeniorHomeButtonType.Flo -> "FLO"
+    SeniorHomeButtonType.Vibe -> "VIBE"
+    SeniorHomeButtonType.Bugs -> "BUGS"
+    SeniorHomeButtonType.SamsungMusic -> "SAMSUNG_MUSIC"
+    SeniorHomeButtonType.KakaoMusic -> "KAKAO_MUSIC"
     else -> error("$name 버튼은 음악 앱이 아닙니다.")
 }
 
@@ -521,7 +543,14 @@ private fun String?.toMusicButtonType(): SeniorHomeButtonType? = when (
     this?.trim()?.uppercase()
 ) {
     "MELON" -> SeniorHomeButtonType.Melon
+    "GENIE" -> SeniorHomeButtonType.Genie
+    "YOUTUBE_MUSIC" -> SeniorHomeButtonType.YouTubeMusic
     "SPOTIFY" -> SeniorHomeButtonType.Spotify
+    "FLO" -> SeniorHomeButtonType.Flo
+    "VIBE" -> SeniorHomeButtonType.Vibe
+    "BUGS" -> SeniorHomeButtonType.Bugs
+    "SAMSUNG_MUSIC" -> SeniorHomeButtonType.SamsungMusic
+    "KAKAO_MUSIC" -> SeniorHomeButtonType.KakaoMusic
     else -> null
 }
 
@@ -591,7 +620,14 @@ private fun String?.toButtonKey(): String =
 
 private val MUSIC_BUTTON_TYPES = setOf(
     SeniorHomeButtonType.Melon,
+    SeniorHomeButtonType.Genie,
+    SeniorHomeButtonType.YouTubeMusic,
     SeniorHomeButtonType.Spotify,
+    SeniorHomeButtonType.Flo,
+    SeniorHomeButtonType.Vibe,
+    SeniorHomeButtonType.Bugs,
+    SeniorHomeButtonType.SamsungMusic,
+    SeniorHomeButtonType.KakaoMusic,
 )
 
 private val REQUIRED_GRID_BUTTON_TYPES = listOf(
@@ -896,7 +932,19 @@ private val BUTTON_TYPE_BY_KEY: Map<String, SeniorHomeButtonType> = buildMap {
     register(SeniorHomeButtonType.HomeShopping, "홈쇼핑")
     register(SeniorHomeButtonType.GoStop, "고스톱·맞고", "고스톱", "맞고")
     register(SeniorHomeButtonType.Melon, "멜론", "멜론(Melon)")
+    register(SeniorHomeButtonType.Genie, "지니뮤직", "지니", "Genie")
+    register(
+        SeniorHomeButtonType.YouTubeMusic,
+        "유튜브 뮤직",
+        "YouTube Music",
+        "YOUTUBE_MUSIC",
+    )
     register(SeniorHomeButtonType.Spotify, "스포티파이", "스포티파이(Spotify)")
+    register(SeniorHomeButtonType.Flo, "플로", "FLO")
+    register(SeniorHomeButtonType.Vibe, "바이브", "VIBE")
+    register(SeniorHomeButtonType.Bugs, "벅스", "Bugs", "Bugs!")
+    register(SeniorHomeButtonType.SamsungMusic, "삼성 뮤직", "Samsung Music")
+    register(SeniorHomeButtonType.KakaoMusic, "카카오뮤직", "KakaoMusic")
     register(SeniorHomeButtonType.Photo, "사진", "갤러리")
     register(SeniorHomeButtonType.Camera, "카메라")
     register(SeniorHomeButtonType.Emergency, "긴급알림", "긴급 알림", "SOS")

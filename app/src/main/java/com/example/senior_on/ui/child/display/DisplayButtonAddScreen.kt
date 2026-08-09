@@ -55,9 +55,16 @@ private val ProvidedFeatureButtons = listOf(
     SeniorHomeButtonType.Photo,
 )
 
-private val MusicButtons = listOf(
+internal val MusicButtons = listOf(
     SeniorHomeButtonType.Melon,
+    SeniorHomeButtonType.Genie,
+    SeniorHomeButtonType.YouTubeMusic,
     SeniorHomeButtonType.Spotify,
+    SeniorHomeButtonType.Flo,
+    SeniorHomeButtonType.Vibe,
+    SeniorHomeButtonType.Bugs,
+    SeniorHomeButtonType.SamsungMusic,
+    SeniorHomeButtonType.KakaoMusic,
 )
 
 private val CommunicationAppButtons = listOf(

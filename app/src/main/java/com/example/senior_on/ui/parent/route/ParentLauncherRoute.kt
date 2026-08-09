@@ -109,8 +109,18 @@ private fun ParentLauncherContent(
     var destination by rememberSaveable {
         mutableStateOf(ParentDestination.Home)
     }
+    var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
+    val isDeviceDisconnected by deviceStatusViewModel.isDeviceDisconnected
+        .collectAsStateWithLifecycle()
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
+
+    LaunchedEffect(isDeviceDisconnected) {
+        if (isDeviceDisconnected) {
+            destination = ParentDestination.Home
+            homeRefreshRequest += 1
+        }
+    }
 
     fun openHome() {
         destination = ParentDestination.Home
@@ -123,6 +133,7 @@ private fun ParentLauncherContent(
     when (destination) {
         ParentDestination.Home -> ParentHomeRoute(
             repository = appContainer.homeServerRepository,
+            refreshRequest = homeRefreshRequest,
             onScheduleClick = { destination = ParentDestination.Schedule },
             onChatBuddyClick = { destination = ParentDestination.ChatBuddy },
             onMedicationClick = { destination = ParentDestination.Medication },

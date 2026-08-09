@@ -24,4 +24,5 @@ data class DisplayTabUiState(
     val isRefreshingDevice: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
+    val hasLoadedOverview: Boolean = false,
 )

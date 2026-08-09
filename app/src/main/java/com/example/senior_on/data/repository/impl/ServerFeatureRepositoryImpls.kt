@@ -476,7 +476,7 @@ class DeviceRepositoryImpl(
     private val identifierSource: DeviceIdentifierDataSource,
     private val localStatusSource: LocalDeviceStatusDataSource,
 ) : DeviceRepository {
-    override suspend fun updateStatus() = source.updateStatus(
+    override suspend fun updateStatus(): Boolean = source.updateStatus(
         DeviceStatusUpdateRequest(
             deviceIdentifier = identifierSource.getOrCreateIdentifier(),
             deviceName = localStatusSource.getDeviceName(),

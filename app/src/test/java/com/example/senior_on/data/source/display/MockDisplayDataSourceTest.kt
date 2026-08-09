@@ -92,14 +92,14 @@ class MockDisplayDataSourceTest {
     }
 
     @Test
-    fun disconnectingDeviceKeepsScreenConfigurationAndClearsDevice() {
+    fun disconnectingDeviceUsesDisconnectedScreenConfigurationAndClearsDevice() {
         val repository = MockDisplayDataSource(MockDisplayScenario.Connected)
 
         repository.disconnectDevice()
 
         assertNull(repository.overview.value.device)
         assertEquals(
-            MockDisplayFixtures.defaultScreenConfiguration,
+            MockDisplayFixtures.disconnectedScreenConfiguration,
             repository.overview.value.screenConfiguration,
         )
     }

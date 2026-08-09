@@ -2,9 +2,9 @@ package com.example.senior_on.ui.child.display
 
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -19,6 +20,8 @@ import com.example.senior_on.ui.child.notification.ParentPhoneInternetRequiredDi
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
+import com.example.senior_on.ui.common.share.KakaoShareLauncher
+import com.example.senior_on.ui.common.share.ShareLaunchResult
 
 private enum class DisplayDestination {
     Overview,
@@ -44,6 +47,7 @@ fun DisplayTabRoute(
     onFontEditClick: () -> Unit = {},
     onButtonEditClick: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val saveableStateHolder = rememberSaveableStateHolder()
     var destination by rememberSaveable { mutableStateOf(DisplayDestination.Overview) }
@@ -57,10 +61,6 @@ fun DisplayTabRoute(
     }
     var buttonEditDraftCustomLabels by rememberSaveable {
         mutableStateOf(hashMapOf<String, String>())
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.refreshEditPermission()
     }
 
     fun navigateBack() {
@@ -111,59 +111,74 @@ fun DisplayTabRoute(
 
     saveableStateHolder.SaveableStateProvider(destination.name) {
         when (destination) {
-            DisplayDestination.Overview -> DisplayTabScreen(
-                uiState = uiState,
-                canEditScreen = uiState.canEditScreen,
-                showScreenEditActions = uiState.canEditScreen &&
-                    !uiState.isEditPermissionLoading &&
-                    !uiState.isLoading &&
-                    !uiState.isSaving,
-                modifier = modifier,
-                onDeviceClick = {
-                    if (uiState.device == null) {
-                        navigateToSeniorAppInstallGuide()
-                    } else {
-                        destination = DisplayDestination.DeviceConnection
-                    }
-                },
-                onParentInfoClick = {
-                    if (uiState.device == null) {
-                        navigateToSeniorAppInstallGuide()
-                    } else {
-                        saveableStateHolder.removeState(
-                            DisplayDestination.ParentInfoEdit.name
-                        )
-                        selectedAddress = uiState.parentInfo?.address.orEmpty()
-                        selectedAddressLatitude = uiState.parentInfo?.addressLatitude
-                        selectedAddressLongitude = uiState.parentInfo?.addressLongitude
-                        destination = DisplayDestination.ParentInfoEdit
-                    }
-                },
-                onLargePreviewClick = {
-                    runWhenParentPhoneOnline {
-                        showLargePreview = true
-                        onLargePreviewClick()
-                    }
-                },
-                onFontEditClick = {
-                    runWhenParentPhoneOnline {
-                        saveableStateHolder.removeState(DisplayDestination.FontEdit.name)
-                        destination = DisplayDestination.FontEdit
-                        onFontEditClick()
-                    }
-                },
-                onButtonEditClick = {
-                    runWhenParentPhoneOnline {
-                        saveableStateHolder.removeState(
-                            DisplayDestination.ButtonEditGuide.name
-                        )
-                        buttonEditDraftNames = arrayListOf()
-                        buttonEditDraftCustomLabels = hashMapOf()
-                        destination = DisplayDestination.ButtonEditGuide
-                        onButtonEditClick()
-                    }
-                },
-            )
+            DisplayDestination.Overview -> when {
+                uiState.isLoading && !uiState.hasLoadedOverview ->
+                    DisplayTabLoadingScreen(modifier = modifier)
+
+                uiState.errorMessage != null && !uiState.hasLoadedOverview ->
+                    DisplayTabErrorScreen(
+                        message = uiState.errorMessage.orEmpty(),
+                        onRetryClick = viewModel::loadOverview,
+                        modifier = modifier,
+                    )
+
+                else -> DisplayTabScreen(
+                    uiState = uiState,
+                    canEditScreen = uiState.canEditScreen,
+                    showScreenEditActions = uiState.canEditScreen &&
+                        !uiState.isEditPermissionLoading &&
+                        !uiState.isLoading &&
+                        !uiState.isSaving,
+                    modifier = modifier,
+                    onDeviceClick = {
+                        if (uiState.device == null) {
+                            navigateToSeniorAppInstallGuide()
+                        } else {
+                            viewModel.refreshDevice()
+                            destination = DisplayDestination.DeviceConnection
+                        }
+                    },
+                    onParentInfoClick = {
+                        if (uiState.device == null) {
+                            navigateToSeniorAppInstallGuide()
+                        } else {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.ParentInfoEdit.name
+                            )
+                            selectedAddress = uiState.parentInfo?.address.orEmpty()
+                            selectedAddressLatitude = uiState.parentInfo?.addressLatitude
+                            selectedAddressLongitude = uiState.parentInfo?.addressLongitude
+                            destination = DisplayDestination.ParentInfoEdit
+                        }
+                    },
+                    onLargePreviewClick = {
+                        runWhenParentPhoneOnline {
+                            showLargePreview = true
+                            onLargePreviewClick()
+                        }
+                    },
+                    onFontEditClick = {
+                        runWhenParentPhoneOnline {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.FontEdit.name
+                            )
+                            destination = DisplayDestination.FontEdit
+                            onFontEditClick()
+                        }
+                    },
+                    onButtonEditClick = {
+                        runWhenParentPhoneOnline {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.ButtonEditGuide.name
+                            )
+                            buttonEditDraftNames = arrayListOf()
+                            buttonEditDraftCustomLabels = hashMapOf()
+                            destination = DisplayDestination.ButtonEditGuide
+                            onButtonEditClick()
+                        }
+                    },
+                )
+            }
 
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
                 device = uiState.device,
@@ -174,14 +189,37 @@ fun DisplayTabRoute(
                     viewModel.refreshDevice()
                     onRefreshClick()
                 },
-                onDisconnectClick = { viewModel.disconnectDevice() },
+                onDisconnectClick = {
+                    viewModel.disconnectDevice(
+                        onSuccess = {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.DeviceConnection.name
+                            )
+                            destination = DisplayDestination.Overview
+                        },
+                    )
+                },
                 onInstallGuideClick = onInstallGuideClick,
             )
 
             DisplayDestination.SeniorAppInstallGuide -> SeniorAppInstallGuideScreen(
                 modifier = modifier,
                 onBackClick = ::navigateBack,
-                onKakaoSendClick = onInstallGuideClick,
+                onKakaoSendClick = {
+                    KakaoShareLauncher.launch(
+                        context = context,
+                        content = seniorAppInstallShareContent(),
+                        onResult = { result ->
+                            if (result is ShareLaunchResult.Failure) {
+                                Toast.makeText(
+                                    context,
+                                    result.userMessage,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        },
+                    )
+                },
                 onAppInstallMethodClick = {
                     saveableStateHolder.removeState(
                         DisplayDestination.ConnectionGuide.name
@@ -322,10 +360,7 @@ fun DisplayTabRoute(
                 initialMusicButton = buttonEditDraftNames
                     .map(SeniorHomeButtonType::valueOf)
                     .ifEmpty { uiState.screenConfiguration.buttons }
-                    .firstOrNull {
-                        it == SeniorHomeButtonType.Melon ||
-                            it == SeniorHomeButtonType.Spotify
-                    },
+                    .firstOrNull(SeniorHomeButtonType::isMusicButton),
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onSaveClick = { musicButton, appButtons ->

@@ -650,8 +650,7 @@ private fun ButtonOrderDragHandle(
 }
 
 internal fun SeniorHomeButtonType?.isMusicButton(): Boolean =
-    this == SeniorHomeButtonType.Melon ||
-        this == SeniorHomeButtonType.Spotify
+    this in MusicButtons
 
 @Preview(
     name = "Button Order With Music",

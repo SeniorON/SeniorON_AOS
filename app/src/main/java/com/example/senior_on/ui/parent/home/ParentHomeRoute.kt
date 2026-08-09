@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.parent.home
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,6 +19,7 @@ import com.example.senior_on.ui.parent.photo.ParentPhotoSourceBottomSheet
 @Composable
 fun ParentHomeRoute(
     repository: HomeServerRepository,
+    refreshRequest: Int = 0,
     onScheduleClick: () -> Unit,
     onChatBuddyClick: () -> Unit,
     onMedicationClick: () -> Unit,
@@ -31,6 +33,12 @@ fun ParentHomeRoute(
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhotoSource by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(refreshRequest) {
+        if (refreshRequest > 0) {
+            viewModel.refresh()
+        }
+    }
 
     ParentHomeScreen(
         configuration = uiState.screenConfiguration,

@@ -11,6 +11,7 @@ import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
 import com.example.senior_on.data.remote.dto.HomeButtonUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
+import com.example.senior_on.data.remote.dto.MusicCardResponse
 import com.example.senior_on.data.remote.dto.SeniorHomeResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
@@ -34,6 +35,71 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisplayRepositoryImplTest {
+    @Test
+    fun allSupportedMusicAppsUseBackendEnumValuesAndMapBackToButtons() = runBlocking {
+        val musicCases = listOf(
+            SeniorHomeButtonType.Melon to "MELON",
+            SeniorHomeButtonType.Genie to "GENIE",
+            SeniorHomeButtonType.YouTubeMusic to "YOUTUBE_MUSIC",
+            SeniorHomeButtonType.Spotify to "SPOTIFY",
+            SeniorHomeButtonType.Flo to "FLO",
+            SeniorHomeButtonType.Vibe to "VIBE",
+            SeniorHomeButtonType.Bugs to "BUGS",
+            SeniorHomeButtonType.SamsungMusic to "SAMSUNG_MUSIC",
+            SeniorHomeButtonType.KakaoMusic to "KAKAO_MUSIC",
+        )
+
+        musicCases.forEach { (button, apiValue) ->
+            val savingHomeDataSource = FakeHomeDataSource()
+            val savingRepository = DisplayRepositoryImpl(
+                homeDataSource = savingHomeDataSource,
+                deviceDataSource = FakeDeviceDataSource(),
+            )
+
+            savingRepository.saveButtons(
+                buttons = listOf(button) + InitialSeniorHomeGridButtons,
+                customButtonLabels = emptyMap(),
+            )
+
+            assertEquals(
+                apiValue,
+                savingHomeDataSource.savedButtonRequests.single().musicApp,
+            )
+
+            val loadingRepository = DisplayRepositoryImpl(
+                homeDataSource = FakeHomeDataSource(
+                    homeResponse = HomeResponse(
+                        connection = null,
+                        buttons = emptyList(),
+                        user_name = null,
+                        senior_profile = null,
+                        font_size = "MEDIUM",
+                        music_card = MusicCardResponse(
+                            enabled = true,
+                            icon = null,
+                            music_app = apiValue,
+                            app_name = button.name,
+                            action_type = "APP",
+                            action_value = apiValue.lowercase(),
+                            package_name = null,
+                        ),
+                        today_schedule = null,
+                    )
+                ),
+                deviceDataSource = FakeDeviceDataSource(),
+            )
+
+            assertEquals(
+                button,
+                loadingRepository
+                    .getOverview(currentParentInfo = null)
+                    .screenConfiguration
+                    .buttons
+                    .first(),
+            )
+        }
+    }
+
     @Test
     fun offlineDeviceWithConnectionHistoryIsKept() = runBlocking {
         val lastConnectedAt = "2026-08-07T18:05:57.484865"
@@ -73,7 +139,7 @@ class DisplayRepositoryImplTest {
     }
 
     @Test
-    fun getOverviewUsesSeniorIdFromHomeSeniorProfile() = runBlocking {
+    fun disconnectedOverviewStillUsesSeniorProfileFromServer() = runBlocking {
         val homeDataSource = FakeHomeDataSource(
             homeResponse = HomeResponse(
                 connection = null,
@@ -108,14 +174,54 @@ class DisplayRepositoryImplTest {
             addressDetail = "",
         )
 
-        val parentInfo = repository
-            .getOverview(staleLocalParentInfo)
-            .parentInfo
+        val overview = repository.getOverview(staleLocalParentInfo)
+        val parentInfo = overview.parentInfo
 
+        assertNull(overview.device)
         assertEquals(77L, parentInfo?.seniorId)
         assertEquals("김영희", parentInfo?.name)
         assertEquals("서울시 강남구", parentInfo?.address)
         assertEquals("101동 202호", parentInfo?.addressDetail)
+    }
+
+    @Test
+    fun emptyServerProfileDoesNotReuseStaleParentInfo() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = HomeResponse(
+                    connection = null,
+                    buttons = emptyList(),
+                    user_name = null,
+                    senior_profile = SeniorProfileResponse(
+                        senior_id = null,
+                        name = null,
+                        relation = null,
+                        birth = null,
+                        age = null,
+                        address = null,
+                        phone = null,
+                        detail_address = null,
+                    ),
+                    font_size = "MEDIUM",
+                    music_card = null,
+                    today_schedule = null,
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+        val staleParentInfo = ParentInfo(
+            seniorId = 1L,
+            name = "이전에 표시된 시니어",
+            relationshipLabel = "어머니",
+            birthDate = LocalDate.of(1960, 1, 2),
+            phoneNumber = "010-0000-0000",
+            address = "서울시",
+            addressDetail = "101동",
+        )
+
+        val parentInfo = repository.getOverview(staleParentInfo).parentInfo
+
+        assertNull(parentInfo)
     }
 
     @Test
@@ -719,6 +825,6 @@ private class FakeHomeDataSource(
 }
 
 private class FakeDeviceDataSource : DeviceDataSource {
-    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) = Unit
+    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) = true
     override suspend fun disconnect() = Unit
 }
