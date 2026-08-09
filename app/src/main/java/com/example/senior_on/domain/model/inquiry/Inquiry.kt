@@ -27,3 +27,11 @@ data class InquiryDetail(
     val imageUrls: List<String>,
     val answers: List<InquiryAnswer>,
 )
+
+data class InquiryCreateResult(
+    val id: Long,
+    val title: String,
+    val status: InquiryStatus,
+    val createdAt: String,
+    val imageUrls: List<String>,
+)

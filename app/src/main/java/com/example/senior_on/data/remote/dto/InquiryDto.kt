@@ -22,3 +22,16 @@ data class InquiryAnswerResponse(
     val content: String?,
     val createdAt: String?,
 )
+
+data class InquiryCreateRequest(
+    val title: String,
+    val content: String,
+)
+
+data class InquiryCreateResponse(
+    val inquiryId: Long,
+    val title: String?,
+    val status: String?,
+    val createdAt: String?,
+    val imageUrls: List<String>? = null,
+)

@@ -155,8 +155,12 @@ class DefaultAppContainer(
         identifierSource = deviceIdentifierDataSource,
         localStatusSource = AndroidDeviceStatusDataSource(context),
     )
+    override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
     override val inquiryRepository: InquiryRepository =
-        InquiryRepositoryImpl(inquiryDataSource)
+        InquiryRepositoryImpl(
+            dataSource = inquiryDataSource,
+            photoUploadPreparer = familyPhotoUploadPreparer,
+        )
 
     override val locationRepository: LocationRepository = LocationRepositoryImpl(
         AndroidLocationDataSource(
@@ -200,7 +204,6 @@ class DefaultAppContainer(
             else -> primaryCaregiverRelationshipRepository
         }
     }
-    override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
     override val displayRepository: DisplayRepository =
         DisplayRepositoryImpl(
             homeDataSource = homeDataSource,

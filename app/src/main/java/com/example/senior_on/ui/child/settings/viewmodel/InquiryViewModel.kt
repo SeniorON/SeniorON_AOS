@@ -32,6 +32,9 @@ data class InquiryUiState(
     val isHistoryLoading: Boolean = false,
     val historyErrorMessage: String? = null,
     val detailErrorMessage: String? = null,
+    val isSubmitting: Boolean = false,
+    val submitErrorMessage: String? = null,
+    val submitCompleted: Boolean = false,
 )
 
 class InquiryViewModel(
@@ -133,12 +136,63 @@ class InquiryViewModel(
         }
     }
 
+    fun submitInquiry(
+        title: String,
+        content: String,
+        imageUris: List<String>,
+    ) {
+        if (_uiState.value.isSubmitting) return
+        val trimmedTitle = title.trim()
+        val trimmedContent = content.trim()
+        if (trimmedTitle.isBlank() || trimmedContent.isBlank()) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSubmitting = true,
+                    submitErrorMessage = null,
+                    submitCompleted = false,
+                )
+            }
+            runCatching {
+                inquiryRepository.createInquiry(
+                    title = trimmedTitle,
+                    content = trimmedContent,
+                    imageUris = imageUris,
+                )
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        submitCompleted = true,
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        submitErrorMessage = throwable.message
+                            ?: "문의 등록에 실패했습니다.",
+                    )
+                }
+            }
+        }
+    }
+
     fun consumeHistoryError() {
         _uiState.update { it.copy(historyErrorMessage = null) }
     }
 
     fun consumeDetailError() {
         _uiState.update { it.copy(detailErrorMessage = null) }
+    }
+
+    fun consumeSubmitError() {
+        _uiState.update { it.copy(submitErrorMessage = null) }
+    }
+
+    fun consumeSubmitCompleted() {
+        _uiState.update { it.copy(submitCompleted = false) }
     }
 
     private fun InquirySummary.toUiItem(previousAnswer: String?): InquiryHistoryUiItem =

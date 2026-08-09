@@ -126,11 +126,21 @@ fun OneOnOneInquiryRoute(
         viewModel.consumeDetailError()
     }
 
+    LaunchedEffect(uiState.submitErrorMessage) {
+        val message = uiState.submitErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeSubmitError()
+    }
+
     OneOnOneInquiryScreen(
         onBackClick = onBackClick,
         historyItems = uiState.historyItems.map { it.toHistoryItem() },
         onHistoryTabSelected = viewModel::loadInquiries,
         onInquiryExpand = viewModel::loadInquiryDetail,
+        isSubmitting = uiState.isSubmitting,
+        submitCompleted = uiState.submitCompleted,
+        onSubmitInquiry = viewModel::submitInquiry,
+        onConsumeSubmitCompleted = viewModel::consumeSubmitCompleted,
         modifier = modifier,
     )
 }
@@ -142,6 +152,11 @@ private fun OneOnOneInquiryScreen(
     historyItems: List<InquiryHistoryItem> = emptyList(),
     onHistoryTabSelected: () -> Unit = {},
     onInquiryExpand: (String) -> Unit = {},
+    isSubmitting: Boolean = false,
+    submitCompleted: Boolean = false,
+    onSubmitInquiry: (title: String, content: String, imageUris: List<String>) -> Unit =
+        { _, _, _ -> },
+    onConsumeSubmitCompleted: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(OneOnOneInquiryTab.Write) }
     var title by rememberSaveable { mutableStateOf("") }
@@ -153,6 +168,12 @@ private fun OneOnOneInquiryScreen(
         if (selectedTab == OneOnOneInquiryTab.History) {
             onHistoryTabSelected()
         }
+    }
+
+    LaunchedEffect(submitCompleted) {
+        if (!submitCompleted) return@LaunchedEffect
+        onConsumeSubmitCompleted()
+        showSuccessDialog = true
     }
 
     val remainingSlots = (MaxInquiryImages - imageUris.size).coerceAtLeast(0)
@@ -173,7 +194,7 @@ private fun OneOnOneInquiryScreen(
             .take(MaxInquiryImages)
     }
 
-    val canSubmit = title.isNotBlank() && content.isNotBlank()
+    val canSubmit = title.isNotBlank() && content.isNotBlank() && !isSubmitting
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -217,7 +238,7 @@ private fun OneOnOneInquiryScreen(
                     },
                     canSubmit = canSubmit,
                     onSubmitClick = {
-                        showSuccessDialog = true
+                        onSubmitInquiry(title, content, imageUris)
                     },
                     modifier = Modifier.weight(1f)
                 )
