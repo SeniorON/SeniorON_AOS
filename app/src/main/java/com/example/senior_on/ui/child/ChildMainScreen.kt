@@ -55,6 +55,7 @@ import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
 import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
@@ -99,6 +100,7 @@ fun ChildMainScreen(
     notificationRepository: NotificationRepository,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
     inquiryRepository: InquiryRepository,
     medicationRepository: MedicationRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
@@ -260,6 +262,7 @@ fun ChildMainScreen(
             eventRepository = eventRepository,
             authRepository = authRepository,
             sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
             inquiryRepository = inquiryRepository,
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
@@ -330,6 +333,7 @@ private fun ChildMainTabContent(
     eventRepository: EventRepository?,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
     inquiryRepository: InquiryRepository,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
@@ -447,6 +451,7 @@ private fun ChildMainTabContent(
             onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
             authRepository = authRepository,
             sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
             inquiryRepository = inquiryRepository,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,

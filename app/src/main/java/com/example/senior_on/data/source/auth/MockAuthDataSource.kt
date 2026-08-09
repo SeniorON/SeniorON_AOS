@@ -12,6 +12,7 @@ import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.SignupResponse
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleResponse
+import com.example.senior_on.data.remote.dto.UserLogoutRequest
 import com.example.senior_on.data.remote.dto.UserRole
 import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
@@ -101,6 +102,13 @@ class MockAuthDataSource : AuthDataSource {
             name = "",
             role = request.role
         )
+    }
+
+    override suspend fun logout(request: UserLogoutRequest) {
+        delay(MOCK_NETWORK_DELAY_MILLIS)
+        require(request.deviceIdentifier.isNotBlank()) {
+            "기기 식별자가 필요합니다."
+        }
     }
 
     override suspend fun withdraw(request: UserWithdrawalRequest) {

@@ -60,6 +60,7 @@ import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
 import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -100,6 +101,7 @@ fun SettingsTabRoute(
     onDisconnectDeviceConfirm: () -> Unit,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
     inquiryRepository: InquiryRepository,
     modifier: Modifier = Modifier,
     onLogoutConfirm: () -> Unit = {},
@@ -109,10 +111,23 @@ fun SettingsTabRoute(
         factory = SettingsViewModel.factory(
             authRepository = authRepository,
             sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
         ),
     )
     val settingsUiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(settingsUiState.logoutErrorMessage) {
+        val message = settingsUiState.logoutErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeLogoutError()
+    }
+
+    LaunchedEffect(settingsUiState.logoutCompleted) {
+        if (!settingsUiState.logoutCompleted) return@LaunchedEffect
+        viewModel.consumeLogoutCompleted()
+        onLogoutConfirm()
+    }
 
     LaunchedEffect(settingsUiState.withdrawErrorMessage) {
         val message = settingsUiState.withdrawErrorMessage ?: return@LaunchedEffect
@@ -172,8 +187,9 @@ fun SettingsTabRoute(
             onSelectAlbumClick = { hasCustomProfileImage = true },
             onTakePhotoClick = { hasCustomProfileImage = true },
             onApplyDefaultImageClick = { hasCustomProfileImage = false },
-            onLogoutConfirm = onLogoutConfirm,
+            onLogoutConfirm = viewModel::logout,
             onWithdrawConfirm = viewModel::withdraw,
+            isLoggingOut = settingsUiState.isLoggingOut,
             isWithdrawing = settingsUiState.isWithdrawing,
         )
 
@@ -269,6 +285,7 @@ fun SettingsScreen(
     onSelectAlbumClick: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
     onApplyDefaultImageClick: () -> Unit = {},
+    isLoggingOut: Boolean = false,
     isWithdrawing: Boolean = false,
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
@@ -368,11 +385,13 @@ fun SettingsScreen(
 
     if (showLogoutDialog) {
         SettingsLogoutDialog(
-            onDismiss = { showLogoutDialog = false },
-            onConfirm = {
-                showLogoutDialog = false
-                onLogoutConfirm()
-            }
+            onDismiss = {
+                if (!isLoggingOut) {
+                    showLogoutDialog = false
+                }
+            },
+            onConfirm = onLogoutConfirm,
+            isConfirmEnabled = !isLoggingOut,
         )
     }
 
@@ -392,7 +411,8 @@ fun SettingsScreen(
 @Composable
 private fun SettingsLogoutDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    isConfirmEnabled: Boolean = true,
 ) {
     SettingsConfirmBottomDialog(
         onDismiss = onDismiss,
@@ -408,6 +428,7 @@ private fun SettingsLogoutDialog(
         cancelText = "취소",
         confirmText = "로그아웃",
         confirmBackgroundColor = SeniorOnColors.Primary600,
+        isConfirmEnabled = isConfirmEnabled,
         onConfirm = onConfirm
     )
 }

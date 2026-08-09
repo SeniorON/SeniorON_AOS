@@ -6,6 +6,7 @@ import com.example.senior_on.data.remote.dto.ManagerType
 import com.example.senior_on.data.remote.dto.SendSignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
+import com.example.senior_on.data.remote.dto.UserLogoutRequest
 import com.example.senior_on.data.remote.dto.UserRole
 import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
@@ -109,6 +110,12 @@ class AuthRepositoryImpl(
             usersId = response.usersId,
             name = response.name,
             mode = response.role.toAppUserMode()
+        )
+    }
+
+    override suspend fun logout(deviceIdentifier: String) {
+        dataSource.logout(
+            UserLogoutRequest(deviceIdentifier = deviceIdentifier.trim())
         )
     }
 

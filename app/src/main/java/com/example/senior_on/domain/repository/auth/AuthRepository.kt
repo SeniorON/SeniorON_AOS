@@ -29,6 +29,8 @@ interface AuthRepository {
         mode: AppUserMode
     ): RoleUpdateResult
 
+    suspend fun logout(deviceIdentifier: String)
+
     suspend fun withdraw(confirmation: String = DEFAULT_WITHDRAWAL_CONFIRMATION)
 
     companion object {

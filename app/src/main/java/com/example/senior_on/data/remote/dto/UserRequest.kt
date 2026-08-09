@@ -41,3 +41,7 @@ data class UpdateRoleRequest(
 data class UserWithdrawalRequest(
     val confirmation: String
 )
+
+data class UserLogoutRequest(
+    val deviceIdentifier: String
+)
