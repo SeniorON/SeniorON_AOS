@@ -1,9 +1,13 @@
 package com.example.senior_on.data.local
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import androidx.annotation.DrawableRes
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import java.io.File
@@ -74,6 +78,44 @@ class FamilyPhotoUploadPreparer(context: Context) {
             }
         }
 
+    suspend fun prepareDrawable(
+        @DrawableRes drawableResId: Int,
+        displayName: String,
+    ): PreparedFamilyPhoto = withContext(Dispatchers.IO) {
+        val drawable = requireNotNull(ContextCompat.getDrawable(appContext, drawableResId)) {
+            "Unable to load the default profile image"
+        }
+        val uploadDirectory = File(appContext.cacheDir, UploadDirectory).apply {
+            mkdirs()
+        }
+        val uploadFile = File.createTempFile(
+            "profile_default_",
+            ".png",
+            uploadDirectory,
+        )
+
+        try {
+            val bitmap = drawable.toBitmap(
+                width = DefaultProfileImageSize,
+                height = DefaultProfileImageSize,
+                config = Bitmap.Config.ARGB_8888,
+            )
+            uploadFile.outputStream().use { output ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                    "Unable to encode the default profile image"
+                }
+            }
+            PreparedFamilyPhoto(
+                file = uploadFile,
+                mimeType = "image/png",
+                displayName = displayName,
+            )
+        } catch (exception: Exception) {
+            uploadFile.delete()
+            throw exception
+        }
+    }
+
     suspend fun deleteOwnedSource(photoUri: String) = withContext(Dispatchers.IO) {
         val uri = photoUri.toUri()
         if (uri.authority == "${appContext.packageName}.fileprovider") {
@@ -100,6 +142,7 @@ class FamilyPhotoUploadPreparer(context: Context) {
         const val DefaultBufferSize = 8 * 1024
         const val MaxUploadBytes = 10L * 1024L * 1024L
         const val MaxDisplayNameLength = 120
+        const val DefaultProfileImageSize = 256
     }
 }
 

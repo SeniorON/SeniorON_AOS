@@ -94,8 +94,10 @@ interface EventRepository {
 
 interface UserSettingsRepository {
     suspend fun getSettings(): UserAccountSettings
+    suspend fun getName(): String
     suspend fun updateName(name: String): String
     suspend fun changePassword(current: String, new: String, confirmation: String): Boolean
+    suspend fun getProfileImageUrl(): String?
     suspend fun updateProfileImage(photo: PreparedFamilyPhoto): String?
 }
 

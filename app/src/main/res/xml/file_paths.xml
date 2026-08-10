@@ -3,4 +3,7 @@
     <cache-path
         name="family_photos"
         path="family_photos/" />
+    <cache-path
+        name="settings_profile"
+        path="settings_profile/" />
 </paths>

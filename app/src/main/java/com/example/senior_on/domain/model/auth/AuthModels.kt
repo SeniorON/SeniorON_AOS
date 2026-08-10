@@ -7,6 +7,7 @@ data class SignupCredentials(
     val passwordCheck: String,
     val name: String,
     val birth: String,
+    val mode: AppUserMode,
     val agreeServiceTerms: Boolean,
     val agreePrivacyPolicy: Boolean,
     val agreeAgeOver14: Boolean,
@@ -16,7 +17,8 @@ data class SignupCredentials(
 data class SignupResult(
     val usersId: Long,
     val name: String,
-    val loginId: String
+    val loginId: String,
+    val mode: AppUserMode,
 )
 
 data class LoginCredentials(

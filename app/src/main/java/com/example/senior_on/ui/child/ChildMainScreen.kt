@@ -53,6 +53,11 @@ import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
@@ -96,6 +101,11 @@ fun ChildMainScreen(
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
     notificationRepository: NotificationRepository,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
+    inquiryRepository: InquiryRepository,
+    userSettingsRepository: UserSettingsRepository,
     medicationRepository: MedicationRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -263,6 +273,12 @@ fun ChildMainScreen(
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
+            inquiryRepository = inquiryRepository,
+            userSettingsRepository = userSettingsRepository,
+            familyPhotoUploadPreparer = familyPhotoUploadPreparer,
             deviceRepository = deviceRepository,
             locationRepository = locationRepository,
             addressSearchRepository = addressSearchRepository,
@@ -340,6 +356,12 @@ private fun ChildMainTabContent(
     familyServerRepository: FamilyServerRepository,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
+    inquiryRepository: InquiryRepository,
+    userSettingsRepository: UserSettingsRepository,
+    familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     deviceRepository: DeviceRepository?,
     locationRepository: LocationRepository?,
     addressSearchRepository: AddressSearchRepository?,
@@ -464,6 +486,12 @@ private fun ChildMainTabContent(
             connectedDevice = connectedDevice,
             onConnectedDeviceInfoSave = onConnectedDeviceInfoSave,
             onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
+            inquiryRepository = inquiryRepository,
+            userSettingsRepository = userSettingsRepository,
+            familyPhotoUploadPreparer = familyPhotoUploadPreparer,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,
             onWithdrawConfirm = onWithdrawClick

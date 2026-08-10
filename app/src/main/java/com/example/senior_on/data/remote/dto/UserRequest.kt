@@ -7,10 +7,11 @@ data class SignupRequest(
     val passwordCheck: String,
     val name: String,
     val birth: String,
+    val role: UserRole,
     val agreeServiceTerms: Boolean,
     val agreePrivacyPolicy: Boolean,
     val agreeAgeOver14: Boolean,
-    val agreeMarketing: Boolean
+    val agreeMarketing: Boolean,
 )
 
 data class SendSignupEmailVerificationCodeRequest(
@@ -36,4 +37,12 @@ data class TokenRefreshRequest(
 
 data class UpdateRoleRequest(
     val role: UserRole
+)
+
+data class UserWithdrawalRequest(
+    val confirmation: String
+)
+
+data class UserLogoutRequest(
+    val deviceIdentifier: String
 )

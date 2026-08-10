@@ -30,9 +30,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -54,8 +57,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.widget.Toast
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.senior_on.R
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryHistoryUiItem
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -78,7 +87,8 @@ private data class InquiryHistoryItem(
     val status: InquiryAnswerStatus,
     val createdAtLabel: String,
     val question: String,
-    val answer: String? = null
+    val answer: String? = null,
+    val isDetailLoading: Boolean = false,
 )
 
 private const val MaxInquiryImages = 5
@@ -95,17 +105,78 @@ private val SampleAnsweredInquiry = InquiryHistoryItem(
 )
 
 @Composable
-fun OneOnOneInquiryScreen(
+fun OneOnOneInquiryRoute(
+    inquiryRepository: InquiryRepository,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+) {
+    val viewModel: InquiryViewModel = viewModel(
+        factory = InquiryViewModel.factory(inquiryRepository),
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.historyErrorMessage) {
+        val message = uiState.historyErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeHistoryError()
+    }
+
+    LaunchedEffect(uiState.detailErrorMessage) {
+        val message = uiState.detailErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeDetailError()
+    }
+
+    LaunchedEffect(uiState.submitErrorMessage) {
+        val message = uiState.submitErrorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeSubmitError()
+    }
+
+    OneOnOneInquiryScreen(
+        onBackClick = onBackClick,
+        historyItems = uiState.historyItems.map { it.toHistoryItem() },
+        onHistoryTabSelected = viewModel::loadInquiries,
+        onInquiryExpand = viewModel::loadInquiryDetail,
+        isSubmitting = uiState.isSubmitting,
+        submitCompleted = uiState.submitCompleted,
+        onSubmitInquiry = viewModel::submitInquiry,
+        onConsumeSubmitCompleted = viewModel::consumeSubmitCompleted,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun OneOnOneInquiryScreen(
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    historyItems: List<InquiryHistoryItem> = emptyList(),
+    onHistoryTabSelected: () -> Unit = {},
+    onInquiryExpand: (String) -> Unit = {},
+    isSubmitting: Boolean = false,
+    submitCompleted: Boolean = false,
+    onSubmitInquiry: (title: String, content: String, imageUris: List<String>) -> Unit =
+        { _, _, _ -> },
+    onConsumeSubmitCompleted: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(OneOnOneInquiryTab.Write) }
     var title by rememberSaveable { mutableStateOf("") }
     var content by rememberSaveable { mutableStateOf("") }
     var imageUris by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var showSuccessDialog by rememberSaveable { mutableStateOf(false) }
-    var historyItems by remember { mutableStateOf(emptyList<InquiryHistoryItem>()) }
-    var pendingSubmitQuestion by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == OneOnOneInquiryTab.History) {
+            onHistoryTabSelected()
+        }
+    }
+
+    LaunchedEffect(submitCompleted) {
+        if (!submitCompleted) return@LaunchedEffect
+        onConsumeSubmitCompleted()
+        showSuccessDialog = true
+    }
 
     val remainingSlots = (MaxInquiryImages - imageUris.size).coerceAtLeast(0)
     val multiImagePicker = rememberLauncherForActivityResult(
@@ -125,7 +196,7 @@ fun OneOnOneInquiryScreen(
             .take(MaxInquiryImages)
     }
 
-    val canSubmit = title.isNotBlank() && content.isNotBlank()
+    val canSubmit = title.isNotBlank() && content.isNotBlank() && !isSubmitting
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -169,14 +240,14 @@ fun OneOnOneInquiryScreen(
                     },
                     canSubmit = canSubmit,
                     onSubmitClick = {
-                        pendingSubmitQuestion = title.trim()
-                        showSuccessDialog = true
+                        onSubmitInquiry(title, content, imageUris)
                     },
                     modifier = Modifier.weight(1f)
                 )
 
                 OneOnOneInquiryTab.History -> OneOnOneInquiryHistoryContent(
                     items = historyItems,
+                    onInquiryExpand = onInquiryExpand,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -185,19 +256,7 @@ fun OneOnOneInquiryScreen(
         if (showSuccessDialog) {
             InquirySubmitSuccessDialog(
                 onConfirmClick = {
-                    val question = pendingSubmitQuestion.orEmpty().ifBlank { title.trim() }
-                    if (question.isNotBlank()) {
-                        historyItems = listOf(
-                            InquiryHistoryItem(
-                                id = "inquiry-${System.currentTimeMillis()}",
-                                status = InquiryAnswerStatus.Waiting,
-                                createdAtLabel = LocalDateTime.now().format(InquiryDateTimeFormatter),
-                                question = question
-                            )
-                        ) + historyItems
-                    }
                     showSuccessDialog = false
-                    pendingSubmitQuestion = null
                     title = ""
                     content = ""
                     imageUris = emptyList()
@@ -207,6 +266,20 @@ fun OneOnOneInquiryScreen(
         }
     }
 }
+
+private fun InquiryHistoryUiItem.toHistoryItem(): InquiryHistoryItem =
+    InquiryHistoryItem(
+        id = id,
+        status = if (isAnswered) {
+            InquiryAnswerStatus.Answered
+        } else {
+            InquiryAnswerStatus.Waiting
+        },
+        createdAtLabel = createdAtLabel,
+        question = question,
+        answer = answer,
+        isDetailLoading = isDetailLoading,
+    )
 
 @Composable
 private fun OneOnOneInquiryTabRow(
@@ -605,7 +678,8 @@ private fun OneOnOneInquiryScreenPreview() {
 @Composable
 private fun OneOnOneInquiryHistoryContent(
     items: List<InquiryHistoryItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onInquiryExpand: (String) -> Unit = {},
 ) {
     if (items.isEmpty()) {
         Box(
@@ -649,8 +723,11 @@ private fun OneOnOneInquiryHistoryContent(
                 item = item,
                 expanded = expandedId == item.id,
                 onToggle = {
-                    if (item.status == InquiryAnswerStatus.Answered) {
-                        expandedId = if (expandedId == item.id) null else item.id
+                    if (item.status != InquiryAnswerStatus.Answered) return@InquiryHistoryCard
+                    val willExpand = expandedId != item.id
+                    expandedId = if (willExpand) item.id else null
+                    if (willExpand) {
+                        onInquiryExpand(item.id)
                     }
                 }
             )
@@ -665,7 +742,9 @@ private fun InquiryHistoryCard(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val canExpand = item.status == InquiryAnswerStatus.Answered && !item.answer.isNullOrBlank()
+    val canExpand = item.status == InquiryAnswerStatus.Answered
+    val showAnswer = expanded && !item.answer.isNullOrBlank()
+    val showDetailLoading = expanded && item.isDetailLoading && item.answer.isNullOrBlank()
 
     Column(
         modifier = modifier
@@ -730,7 +809,29 @@ private fun InquiryHistoryCard(
         }
 
         AnimatedVisibility(
-            visible = expanded && canExpand,
+            visible = showDetailLoading,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .background(SeniorOnColors.White)
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = SeniorOnColors.Primary600,
+                    strokeWidth = 2.dp,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showAnswer,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {

@@ -14,6 +14,7 @@ import com.example.senior_on.data.source.family.RemoteFamilyDataSource
 import com.example.senior_on.data.source.health.RemoteHospitalDataSource
 import com.example.senior_on.data.source.home.RemoteHomeDataSource
 import com.example.senior_on.data.source.medication.RemoteMedicationDataSource
+import com.example.senior_on.data.source.inquiry.RemoteInquiryDataSource
 import com.example.senior_on.data.source.notification.RemoteNotificationDataSource
 import com.example.senior_on.data.source.settings.RemoteUserSettingsDataSource
 import com.example.senior_on.di.AppContainer
@@ -66,7 +67,8 @@ class SeniorOnApplication : Application() {
             notificationDataSource = RemoteNotificationDataSource(SeniorOnNetwork.notificationApi),
             eventDataSource = RemoteEventDataSource(SeniorOnNetwork.eventApi),
             userSettingsDataSource = RemoteUserSettingsDataSource(SeniorOnNetwork.userSettingsApi),
-            deviceDataSource = RemoteDeviceDataSource(SeniorOnNetwork.deviceApi)
+            deviceDataSource = RemoteDeviceDataSource(SeniorOnNetwork.deviceApi),
+            inquiryDataSource = RemoteInquiryDataSource(SeniorOnNetwork.inquiryApi),
         )
     }
 }

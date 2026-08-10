@@ -21,6 +21,7 @@ import com.example.senior_on.data.repository.impl.EventRepositoryImpl
 import com.example.senior_on.data.repository.impl.FamilyServerRepositoryImpl
 import com.example.senior_on.data.repository.impl.HomeServerRepositoryImpl
 import com.example.senior_on.data.repository.impl.HospitalRepositoryImpl
+import com.example.senior_on.data.repository.impl.InquiryRepositoryImpl
 import com.example.senior_on.data.repository.impl.MedicationRepositoryImpl
 import com.example.senior_on.data.repository.impl.NotificationRepositoryImpl
 import com.example.senior_on.data.repository.impl.LocationRepositoryImpl
@@ -52,6 +53,7 @@ import com.example.senior_on.data.source.health.HospitalDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.data.source.medication.MedicationDataSource
 import com.example.senior_on.data.source.location.AndroidLocationDataSource
+import com.example.senior_on.data.source.inquiry.InquiryDataSource
 import com.example.senior_on.data.source.notification.NotificationDataSource
 import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import com.example.senior_on.domain.model.auth.AppUserProfile
@@ -63,6 +65,7 @@ import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.auth.SocialAuthRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
@@ -89,6 +92,7 @@ interface AppContainer {
     val eventRepository: EventRepository
     val userSettingsRepository: UserSettingsRepository
     val deviceRepository: DeviceRepository
+    val inquiryRepository: InquiryRepository
     val locationRepository: LocationRepository
     val addressSearchRepository: AddressSearchRepository
     fun userProfileFor(userId: String): AppUserProfile
@@ -117,7 +121,8 @@ class DefaultAppContainer(
     notificationDataSource: NotificationDataSource,
     eventDataSource: EventDataSource,
     userSettingsDataSource: UserSettingsDataSource,
-    deviceDataSource: DeviceDataSource
+    deviceDataSource: DeviceDataSource,
+    inquiryDataSource: InquiryDataSource,
 ) : AppContainer {
     private val deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
     private val localDeviceStatusDataSource = AndroidDeviceStatusDataSource(context)
@@ -153,6 +158,12 @@ class DefaultAppContainer(
         identifierSource = deviceIdentifierDataSource,
         localStatusSource = localDeviceStatusDataSource,
     )
+    override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
+    override val inquiryRepository: InquiryRepository =
+        InquiryRepositoryImpl(
+            dataSource = inquiryDataSource,
+            photoUploadPreparer = familyPhotoUploadPreparer,
+        )
 
     override val locationRepository: LocationRepository = LocationRepositoryImpl(
         AndroidLocationDataSource(
@@ -198,7 +209,6 @@ class DefaultAppContainer(
             else -> primaryCaregiverRelationshipRepository
         }
     }
-    override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
     override val displayRepository: DisplayRepository =
         DisplayRepositoryImpl(
             homeDataSource = homeDataSource,

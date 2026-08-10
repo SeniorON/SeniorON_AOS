@@ -208,6 +208,7 @@ class AuthViewModel(
                     passwordCheck = draft.passwordCheck,
                     name = draft.name,
                     birth = draft.birth,
+                    mode = mode,
                     agreeServiceTerms = agreements.serviceTerms,
                     agreePrivacyPolicy = agreements.privacyPolicy,
                     agreeAgeOver14 = agreements.ageOver14,
@@ -227,11 +228,6 @@ class AuthViewModel(
                     )
                 )
             )
-            authRepository.updateRole(
-                accessToken = loginResult.accessToken,
-                mode = mode
-            )
-
             accessToken = loginResult.accessToken
             sessionRepository.saveLoginSession(
                 accessToken = loginResult.accessToken,
