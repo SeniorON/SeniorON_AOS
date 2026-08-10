@@ -99,6 +99,9 @@ interface UserSettingsRepository {
 }
 
 interface DeviceRepository {
-    suspend fun updateStatus()
+    /**
+     * @return `false` when the server reports that this device was explicitly disconnected.
+     */
+    suspend fun updateStatus(): Boolean
     suspend fun disconnect()
 }

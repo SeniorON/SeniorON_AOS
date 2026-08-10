@@ -93,8 +93,8 @@ fun SeniorAppInstallGuideScreen(
             Spacer(modifier = Modifier.height(13.dp))
 
             Text(
-                text = "시니어 기기에 카카오톡으로 설치 링크를 전송하여,\n" +
-                    "시니어ON 설치 후 로그인 해주세요.",
+                text = "시니어 기기에 카카오톡으로 설치 안내를 전송한 후,\n" +
+                    "안내에 따라 시니어ON을 설치하고 로그인해 주세요.",
                 modifier = Modifier.fillMaxWidth(),
                 style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray600,

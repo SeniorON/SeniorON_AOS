@@ -7,4 +7,5 @@ interface ParentInfoRepository {
     val parentInfo: StateFlow<ParentInfo?>
 
     fun saveParentInfo(parentInfo: ParentInfo)
+    fun clearParentInfo()
 }

@@ -5,10 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class MockParentInfoDataSource(
-    initialParentInfo: ParentInfo? = null,
-) : ParentInfoDataSource {
-    private val _parentInfo = MutableStateFlow(initialParentInfo)
+class InMemoryParentInfoDataSource : ParentInfoDataSource {
+    private val _parentInfo = MutableStateFlow<ParentInfo?>(null)
     override val parentInfo: StateFlow<ParentInfo?> = _parentInfo.asStateFlow()
 
     override fun saveParentInfo(parentInfo: ParentInfo) {

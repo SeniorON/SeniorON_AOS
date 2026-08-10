@@ -171,7 +171,7 @@ private fun ServerTodaySchedule?.toUiState() = ParentHomeScheduleUiState(
 private fun ServerMusicCard.toUiModel() = ParentHomeButtonUiModel(
     id = 0,
     type = resolveButtonType(actionValue, packageName),
-    label = "음악 듣기",
+    label = "노래 듣기",
     actionType = actionType,
     actionValue = actionValue,
     packageName = packageName,
@@ -208,7 +208,7 @@ private fun resolveButtonType(
         "CALENDAR" -> SeniorHomeButtonType.Calendar
         "ALARM" -> SeniorHomeButtonType.Alarm
         "MEMO" -> SeniorHomeButtonType.Memo
-        "RECORDER" -> SeniorHomeButtonType.Recorder
+        "VOICE_MEMO", "RECORDER", "VOICE_RECORDER" -> SeniorHomeButtonType.Recorder
         "CALCULATOR" -> SeniorHomeButtonType.Calculator
         "SETTINGS" -> SeniorHomeButtonType.Settings
         "FLASHLIGHT" -> SeniorHomeButtonType.Flashlight
@@ -245,14 +245,28 @@ private fun resolveButtonType(
         "HOME_SHOPPING" -> SeniorHomeButtonType.HomeShopping
         "GO_STOP" -> SeniorHomeButtonType.GoStop
         "MELON" -> SeniorHomeButtonType.Melon
+        "GENIE" -> SeniorHomeButtonType.Genie
+        "YOUTUBE_MUSIC" -> SeniorHomeButtonType.YouTubeMusic
         "SPOTIFY" -> SeniorHomeButtonType.Spotify
+        "FLO" -> SeniorHomeButtonType.Flo
+        "VIBE" -> SeniorHomeButtonType.Vibe
+        "BUGS" -> SeniorHomeButtonType.Bugs
+        "SAMSUNG_MUSIC" -> SeniorHomeButtonType.SamsungMusic
+        "KAKAO_MUSIC" -> SeniorHomeButtonType.KakaoMusic
         "PHOTO", "GALLERY" -> SeniorHomeButtonType.Photo
         "CAMERA" -> SeniorHomeButtonType.Camera
         "EMERGENCY", "SOS" -> SeniorHomeButtonType.Emergency
         else -> when (packageValue) {
             "com.google.android.youtube" -> SeniorHomeButtonType.YouTube
             "com.iloen.melon" -> SeniorHomeButtonType.Melon
+            "com.ktmusic.geniemusic" -> SeniorHomeButtonType.Genie
+            "com.google.android.apps.youtube.music" -> SeniorHomeButtonType.YouTubeMusic
             "com.spotify.music" -> SeniorHomeButtonType.Spotify
+            "skplanet.musicmate" -> SeniorHomeButtonType.Flo
+            "com.naver.vibe" -> SeniorHomeButtonType.Vibe
+            "com.neowiz.android.bugs" -> SeniorHomeButtonType.Bugs
+            "com.sec.android.app.music" -> SeniorHomeButtonType.SamsungMusic
+            "com.kakao.music" -> SeniorHomeButtonType.KakaoMusic
             "com.kakao.talk" -> SeniorHomeButtonType.KakaoTalk
             "com.nhn.android.nmap" -> SeniorHomeButtonType.NaverMap
             "net.daum.android.map" -> SeniorHomeButtonType.KakaoMap

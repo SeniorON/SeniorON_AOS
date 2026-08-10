@@ -260,7 +260,7 @@ private fun ParentMusicCard(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "음악 듣기",
+                text = "노래 듣기",
                 style = SeniorOnTextStyles.HeadingL,
                 color = SeniorOnColors.SupportWhite100,
                 maxLines = 1,
@@ -268,7 +268,7 @@ private fun ParentMusicCard(
         }
         Icon(
             painter = painterResource(R.drawable.ic_big_play),
-            contentDescription = "음악 듣기 실행",
+            contentDescription = "노래 듣기 실행",
             modifier = Modifier.size(42.dp),
             tint = SeniorOnColors.White,
         )
@@ -460,7 +460,7 @@ private fun ParentHomeGridButton(
             color = if (isEmergency) SeniorOnColors.White else SeniorOnColors.Gray800,
             textAlign = TextAlign.Center,
             maxLines = 2,
-            overflow = TextOverflow.Clip,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -528,7 +528,7 @@ private fun ParentHomeScreenPreview() {
             musicButton = ParentHomeButtonUiModel(
                 id = 0,
                 type = SeniorHomeButtonType.Melon,
-                label = "음악 듣기",
+                label = "노래 듣기",
                 actionType = "APP",
                 actionValue = "MELON",
                 packageName = "com.iloen.melon",

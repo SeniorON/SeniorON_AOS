@@ -2,23 +2,31 @@ package com.example.senior_on.ui.child.display
 
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.ui.child.notification.ParentPhoneInternetRequiredDialog
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
+import com.example.senior_on.ui.common.share.KakaoShareLauncher
+import com.example.senior_on.ui.common.share.ShareLaunchResult
 
 private enum class DisplayDestination {
     Overview,
@@ -44,6 +52,7 @@ fun DisplayTabRoute(
     onFontEditClick: () -> Unit = {},
     onButtonEditClick: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val saveableStateHolder = rememberSaveableStateHolder()
     var destination by rememberSaveable { mutableStateOf(DisplayDestination.Overview) }
@@ -52,18 +61,42 @@ fun DisplayTabRoute(
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var showInternetRequiredDialog by remember { mutableStateOf(false) }
     var showLargePreview by rememberSaveable { mutableStateOf(false) }
-    var buttonEditDraftNames by rememberSaveable {
-        mutableStateOf(arrayListOf<String>())
+    var buttonEditDraftItems by remember {
+        mutableStateOf<List<DisplayHomeButton>>(emptyList())
     }
-    var buttonEditDraftCustomLabels by rememberSaveable {
-        mutableStateOf(hashMapOf<String, String>())
+    var transientImportedButtons by remember {
+        mutableStateOf<List<DisplayHomeButton>>(emptyList())
     }
+    var autoSelectKey by remember { mutableStateOf<String?>(null) }
+    var autoSelectEvent by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshEditPermission()
+    val selectableDefaultButtons = uiState.availableButtonOptions
+        .filter(DisplayHomeButton::isSelectableDefaultOption)
+    val appPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val pickedApp = readPickedInstalledApp(context, result.data)
+            ?: return@rememberLauncherForActivityResult
+        val importedButton = pickedApp.toDisplayHomeButton(
+            context = context,
+            defaultButtons = uiState.availableButtonOptions,
+        )
+        if (importedButton.actionType.equals("APP", ignoreCase = true)) {
+            transientImportedButtons = (
+                transientImportedButtons + importedButton
+                ).distinctBy(DisplayHomeButton::stableKey)
+        }
+        autoSelectKey = importedButton.stableKey
+        autoSelectEvent += 1
     }
 
     fun navigateBack() {
+        if (destination == DisplayDestination.ButtonAdd) {
+            transientImportedButtons = emptyList()
+            autoSelectKey = null
+            saveableStateHolder.removeState(DisplayDestination.ButtonAdd.name)
+        }
         destination = when (destination) {
             DisplayDestination.AddressSearch -> DisplayDestination.ParentInfoEdit
             DisplayDestination.ConnectionGuide -> DisplayDestination.SeniorAppInstallGuide
@@ -92,8 +125,9 @@ fun DisplayTabRoute(
     }
 
     fun clearButtonEditFlowState() {
-        buttonEditDraftNames = arrayListOf()
-        buttonEditDraftCustomLabels = hashMapOf()
+        buttonEditDraftItems = emptyList()
+        transientImportedButtons = emptyList()
+        autoSelectKey = null
         listOf(
             DisplayDestination.ButtonEditGuide,
             DisplayDestination.ButtonEditSelected,
@@ -111,59 +145,75 @@ fun DisplayTabRoute(
 
     saveableStateHolder.SaveableStateProvider(destination.name) {
         when (destination) {
-            DisplayDestination.Overview -> DisplayTabScreen(
-                uiState = uiState,
-                canEditScreen = uiState.canEditScreen,
-                showScreenEditActions = uiState.canEditScreen &&
-                    !uiState.isEditPermissionLoading &&
-                    !uiState.isLoading &&
-                    !uiState.isSaving,
-                modifier = modifier,
-                onDeviceClick = {
-                    if (uiState.device == null) {
-                        navigateToSeniorAppInstallGuide()
-                    } else {
-                        destination = DisplayDestination.DeviceConnection
-                    }
-                },
-                onParentInfoClick = {
-                    if (uiState.device == null) {
-                        navigateToSeniorAppInstallGuide()
-                    } else {
-                        saveableStateHolder.removeState(
-                            DisplayDestination.ParentInfoEdit.name
-                        )
-                        selectedAddress = uiState.parentInfo?.address.orEmpty()
-                        selectedAddressLatitude = uiState.parentInfo?.addressLatitude
-                        selectedAddressLongitude = uiState.parentInfo?.addressLongitude
-                        destination = DisplayDestination.ParentInfoEdit
-                    }
-                },
-                onLargePreviewClick = {
-                    runWhenParentPhoneOnline {
-                        showLargePreview = true
-                        onLargePreviewClick()
-                    }
-                },
-                onFontEditClick = {
-                    runWhenParentPhoneOnline {
-                        saveableStateHolder.removeState(DisplayDestination.FontEdit.name)
-                        destination = DisplayDestination.FontEdit
-                        onFontEditClick()
-                    }
-                },
-                onButtonEditClick = {
-                    runWhenParentPhoneOnline {
-                        saveableStateHolder.removeState(
-                            DisplayDestination.ButtonEditGuide.name
-                        )
-                        buttonEditDraftNames = arrayListOf()
-                        buttonEditDraftCustomLabels = hashMapOf()
-                        destination = DisplayDestination.ButtonEditGuide
-                        onButtonEditClick()
-                    }
-                },
-            )
+            DisplayDestination.Overview -> when {
+                uiState.isLoading && !uiState.hasLoadedOverview ->
+                    DisplayTabLoadingScreen(modifier = modifier)
+
+                uiState.errorMessage != null && !uiState.hasLoadedOverview ->
+                    DisplayTabErrorScreen(
+                        message = uiState.errorMessage.orEmpty(),
+                        onRetryClick = viewModel::loadOverview,
+                        modifier = modifier,
+                    )
+
+                else -> DisplayTabScreen(
+                    uiState = uiState,
+                    canEditScreen = uiState.canEditScreen,
+                    showScreenEditActions = uiState.canEditScreen &&
+                        !uiState.isEditPermissionLoading &&
+                        !uiState.isLoading &&
+                        !uiState.isSaving,
+                    modifier = modifier,
+                    onDeviceClick = {
+                        if (uiState.device == null) {
+                            navigateToSeniorAppInstallGuide()
+                        } else {
+                            viewModel.refreshDevice()
+                            destination = DisplayDestination.DeviceConnection
+                        }
+                    },
+                    onParentInfoClick = {
+                        if (uiState.device == null) {
+                            navigateToSeniorAppInstallGuide()
+                        } else {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.ParentInfoEdit.name
+                            )
+                            selectedAddress = uiState.parentInfo?.address.orEmpty()
+                            selectedAddressLatitude = uiState.parentInfo?.addressLatitude
+                            selectedAddressLongitude = uiState.parentInfo?.addressLongitude
+                            destination = DisplayDestination.ParentInfoEdit
+                        }
+                    },
+                    onLargePreviewClick = {
+                        runWhenParentPhoneOnline {
+                            showLargePreview = true
+                            onLargePreviewClick()
+                        }
+                    },
+                    onFontEditClick = {
+                        runWhenParentPhoneOnline {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.FontEdit.name
+                            )
+                            destination = DisplayDestination.FontEdit
+                            onFontEditClick()
+                        }
+                    },
+                    onButtonEditClick = {
+                        runWhenParentPhoneOnline {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.ButtonEditGuide.name
+                            )
+                            buttonEditDraftItems = emptyList()
+                            transientImportedButtons = emptyList()
+                            autoSelectKey = null
+                            destination = DisplayDestination.ButtonEditGuide
+                            onButtonEditClick()
+                        }
+                    },
+                )
+            }
 
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
                 device = uiState.device,
@@ -174,14 +224,37 @@ fun DisplayTabRoute(
                     viewModel.refreshDevice()
                     onRefreshClick()
                 },
-                onDisconnectClick = { viewModel.disconnectDevice() },
+                onDisconnectClick = {
+                    viewModel.disconnectDevice(
+                        onSuccess = {
+                            saveableStateHolder.removeState(
+                                DisplayDestination.DeviceConnection.name
+                            )
+                            destination = DisplayDestination.Overview
+                        },
+                    )
+                },
                 onInstallGuideClick = onInstallGuideClick,
             )
 
             DisplayDestination.SeniorAppInstallGuide -> SeniorAppInstallGuideScreen(
                 modifier = modifier,
                 onBackClick = ::navigateBack,
-                onKakaoSendClick = onInstallGuideClick,
+                onKakaoSendClick = {
+                    KakaoShareLauncher.launch(
+                        context = context,
+                        content = seniorAppInstallShareContent(),
+                        onResult = { result ->
+                            if (result is ShareLaunchResult.Failure) {
+                                Toast.makeText(
+                                    context,
+                                    result.userMessage,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        },
+                    )
+                },
                 onAppInstallMethodClick = {
                     saveableStateHolder.removeState(
                         DisplayDestination.ConnectionGuide.name
@@ -270,39 +343,24 @@ fun DisplayTabRoute(
             )
 
             DisplayDestination.ButtonEditSelected -> DisplayButtonEditSelectedScreen(
-                initialButtons = buttonEditDraftNames
-                    .map(SeniorHomeButtonType::valueOf)
-                    .ifEmpty { uiState.screenConfiguration.buttons },
-                initialCustomButtonLabels = if (buttonEditDraftNames.isEmpty()) {
-                    uiState.screenConfiguration.customButtonLabels
-                } else {
-                    buttonEditDraftCustomLabels.mapKeys { (buttonName, _) ->
-                        SeniorHomeButtonType.valueOf(buttonName)
-                    }
-                },
+                initialButtons = buttonEditDraftItems
+                    .ifEmpty { uiState.configuredButtonItems },
                 modifier = modifier,
                 onBackClick = ::navigateBack,
-                onSaveClick = { buttons, customButtonLabels ->
+                onSaveClick = { buttons ->
                     val savedButtons = buttons.withRequiredSeniorHomeButtons()
                     viewModel.saveButtons(
                         buttons = savedButtons,
-                        customButtonLabels = customButtonLabels
-                            .filterKeys(savedButtons::contains),
                         onSuccess = {
                             clearButtonEditFlowState()
                             destination = DisplayDestination.Overview
                         },
                     )
                 },
-                onAddButtonClick = { buttons, customButtonLabels ->
-                    buttonEditDraftNames = ArrayList(
-                        buttons.map(SeniorHomeButtonType::name)
-                    )
-                    buttonEditDraftCustomLabels = HashMap(
-                        customButtonLabels.mapKeys { (button, _) ->
-                            button.name
-                        }
-                    )
+                onAddButtonClick = { buttons ->
+                    buttonEditDraftItems = buttons
+                    transientImportedButtons = emptyList()
+                    autoSelectKey = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -311,33 +369,43 @@ fun DisplayTabRoute(
             )
 
             DisplayDestination.ButtonAdd -> DisplayButtonAddScreen(
-                availableAppButtons = ButtonAppCatalog.filter { button ->
-                    uiState.availableButtonTypes.isEmpty() ||
-                        button in uiState.availableButtonTypes
-                },
-                initialSelectedButtons = buttonEditDraftNames
-                    .map(SeniorHomeButtonType::valueOf)
-                    .ifEmpty { uiState.screenConfiguration.buttons }
-                    .filter(ButtonAppCatalog::contains),
-                initialMusicButton = buttonEditDraftNames
-                    .map(SeniorHomeButtonType::valueOf)
-                    .ifEmpty { uiState.screenConfiguration.buttons }
-                    .firstOrNull {
-                        it == SeniorHomeButtonType.Melon ||
-                            it == SeniorHomeButtonType.Spotify
-                    },
+                availableDefaultButtons = selectableDefaultButtons,
+                initialSelectedButtons = buttonEditDraftItems
+                    .ifEmpty { uiState.configuredButtonItems }
+                    .filter(DisplayHomeButton::isSelectableAppButton),
+                initialMusicButton = buttonEditDraftItems
+                    .ifEmpty { uiState.configuredButtonItems }
+                    .mapNotNull(DisplayHomeButton::type)
+                    .firstOrNull(SeniorHomeButtonType::isMusicButton),
+                transientImportedButtons = transientImportedButtons,
+                autoSelectKey = autoSelectKey,
+                autoSelectEvent = autoSelectEvent,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
+                onImportAppClick = {
+                    val pickerIntent = createInstalledAppPickerIntent()
+                    if (pickerIntent.resolveActivity(context.packageManager) == null) {
+                        Toast.makeText(
+                            context,
+                            "앱 선택 화면을 열 수 없어요.",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
+                        appPickerLauncher.launch(pickerIntent)
+                    }
+                },
                 onSaveClick = { musicButton, appButtons ->
-                    val currentDraftButtons = buttonEditDraftNames
-                        .map(SeniorHomeButtonType::valueOf)
-                        .ifEmpty { uiState.screenConfiguration.buttons }
-                    buttonEditDraftNames = ArrayList(
-                        createInitialButtonOrder(
-                            currentButtons = currentDraftButtons,
-                            musicButton = musicButton,
-                            appButtons = appButtons,
-                        ).map(SeniorHomeButtonType::name)
+                    val currentDraftButtons = buttonEditDraftItems
+                        .ifEmpty { uiState.configuredButtonItems }
+                    buttonEditDraftItems = createInitialButtonOrder(
+                        currentButtons = currentDraftButtons,
+                        musicButton = musicButton,
+                        appButtons = appButtons,
+                    )
+                    transientImportedButtons = emptyList()
+                    autoSelectKey = null
+                    saveableStateHolder.removeState(
+                        DisplayDestination.ButtonAdd.name
                     )
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonOrder.name
@@ -347,30 +415,14 @@ fun DisplayTabRoute(
             )
 
             DisplayDestination.ButtonOrder -> DisplayButtonOrderScreen(
-                initialButtons = buttonEditDraftNames
-                    .map(SeniorHomeButtonType::valueOf)
-                    .ifEmpty { uiState.screenConfiguration.buttons },
-                customButtonLabels = if (buttonEditDraftNames.isEmpty()) {
-                    uiState.screenConfiguration.customButtonLabels
-                } else {
-                    buttonEditDraftCustomLabels.mapKeys { (buttonName, _) ->
-                        SeniorHomeButtonType.valueOf(buttonName)
-                    }
-                },
+                initialButtons = buttonEditDraftItems
+                    .ifEmpty { uiState.configuredButtonItems },
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onSaveClick = { orderedButtons ->
-                    val savedButtons =
-                        orderedButtons.withRequiredSeniorHomeButtons()
-                    val customButtonLabels =
-                        buttonEditDraftCustomLabels.mapKeys {
-                            (buttonName, _) ->
-                            SeniorHomeButtonType.valueOf(buttonName)
-                        }
+                    val savedButtons = orderedButtons.withRequiredSeniorHomeButtons()
                     viewModel.saveButtons(
                         buttons = savedButtons,
-                        customButtonLabels = customButtonLabels
-                            .filterKeys(savedButtons::contains),
                         onSuccess = {
                             clearButtonEditFlowState()
                             destination = DisplayDestination.Overview
@@ -400,42 +452,56 @@ fun DisplayTabRoute(
 }
 
 internal fun createInitialButtonOrder(
-    currentButtons: List<SeniorHomeButtonType>,
+    currentButtons: List<DisplayHomeButton>,
     musicButton: SeniorHomeButtonType?,
-    appButtons: List<SeniorHomeButtonType>,
-): List<SeniorHomeButtonType> {
-    val leadingButtons = buildList {
-        musicButton?.let(::add)
-        add(SeniorHomeButtonType.Schedule)
+    appButtons: List<DisplayHomeButton>,
+): List<DisplayHomeButton> {
+    val musicItem = musicButton?.let { selectedMusic ->
+        currentButtons.firstOrNull { it.type == selectedMusic }
+            ?: selectedMusic.toMusicDisplayButton()
     }
-    val selectedButtons = (
-        leadingButtons +
-            appButtons +
-            SeniorHomeButtonType.ChatBuddy +
-            SeniorHomeButtonType.Medication +
-            SeniorHomeButtonType.Photo
-        ).distinct()
+    val schedule = currentButtons.firstOrNull { it.isDefaultAction("SCHEDULE") }
+        ?: requiredDisplayButton(SeniorHomeButtonType.Schedule)
+    val leadingButtons = buildList {
+        musicItem?.let(::add)
+        add(schedule)
+    }
+    val requiredButtons = listOf(
+        SeniorHomeButtonType.ChatBuddy,
+        SeniorHomeButtonType.Medication,
+        SeniorHomeButtonType.Photo,
+    ).map { type ->
+        currentButtons.firstOrNull { it.type == type }
+            ?: requiredDisplayButton(type)
+    }
+    val selectedButtons = (leadingButtons + appButtons + requiredButtons)
+        .distinctBy(DisplayHomeButton::stableKey)
+    val leadingKeys = leadingButtons.mapTo(hashSetOf(), DisplayHomeButton::stableKey)
+    val selectedKeys = selectedButtons.mapTo(hashSetOf(), DisplayHomeButton::stableKey)
     val preservedButtons = currentButtons.filter { currentButton ->
-        currentButton in selectedButtons && currentButton !in leadingButtons
+        currentButton.stableKey in selectedKeys &&
+            currentButton.stableKey !in leadingKeys
     }
     val newlySelectedButtons = selectedButtons.filter { selectedButton ->
-        selectedButton !in leadingButtons && selectedButton !in preservedButtons
+        selectedButton.stableKey !in leadingKeys &&
+            preservedButtons.none { it.stableKey == selectedButton.stableKey }
     }
 
-    return leadingButtons + preservedButtons + newlySelectedButtons
+    return (leadingButtons + preservedButtons + newlySelectedButtons)
+        .withRequiredSeniorHomeButtons()
 }
 
-internal fun List<SeniorHomeButtonType>.withRequiredSeniorHomeButtons():
-    List<SeniorHomeButtonType> {
-    val distinctButtons = distinct()
-        .filterNot { it == SeniorHomeButtonType.Emergency }
-    val musicButton = distinctButtons.firstOrNull {
-        it.isMusicButton()
-    }
+internal fun List<DisplayHomeButton>.withRequiredSeniorHomeButtons():
+    List<DisplayHomeButton> {
+    val distinctButtons = distinctBy(DisplayHomeButton::stableKey)
+        .filterNot { it.isDefaultAction("EMERGENCY") }
+    val musicButton = distinctButtons.firstOrNull(DisplayHomeButton::isMusicButton)
+    val schedule = distinctButtons.firstOrNull { it.isDefaultAction("SCHEDULE") }
+        ?: requiredDisplayButton(SeniorHomeButtonType.Schedule)
     val gridButtons = distinctButtons
         .filterNot { button ->
             button.isMusicButton() ||
-                button == SeniorHomeButtonType.Schedule
+                button.isDefaultAction("SCHEDULE")
         }
         .toMutableList()
 
@@ -443,15 +509,85 @@ internal fun List<SeniorHomeButtonType>.withRequiredSeniorHomeButtons():
         SeniorHomeButtonType.ChatBuddy,
         SeniorHomeButtonType.Medication,
         SeniorHomeButtonType.Photo,
-    ).forEach { requiredButton ->
-        if (requiredButton !in gridButtons) {
-            gridButtons.add(requiredButton)
+    ).forEach { requiredType ->
+        if (gridButtons.none { it.type == requiredType }) {
+            gridButtons.add(requiredDisplayButton(requiredType))
         }
     }
 
+    val emergency = firstOrNull { it.isDefaultAction("EMERGENCY") }
+        ?: requiredDisplayButton(SeniorHomeButtonType.Emergency)
+
     return buildList {
         musicButton?.let(::add)
-        add(SeniorHomeButtonType.Schedule)
-        addAll(gridButtons.withEmergencyAtFixedGridSlot())
+        add(schedule)
+        addAll(gridButtons.withEmergencyAtFixedGridSlot(emergency))
     }
+}
+
+private fun DisplayHomeButton.isSelectableDefaultOption(): Boolean =
+    actionType.equals("DEFAULT", ignoreCase = true) &&
+        actionValue.uppercase() !in setOf(
+            "SCHEDULE",
+            "COMPANION",
+            "MEDICATION",
+            "PHOTO",
+            "EMERGENCY",
+        )
+
+private fun DisplayHomeButton.isSelectableAppButton(): Boolean =
+    !isMusicButton() &&
+        actionValue.uppercase() !in setOf(
+            "SCHEDULE",
+            "COMPANION",
+            "MEDICATION",
+            "PHOTO",
+            "EMERGENCY",
+        )
+
+private fun requiredDisplayButton(type: SeniorHomeButtonType): DisplayHomeButton {
+    val (name, actionValue) = when (type) {
+        SeniorHomeButtonType.Schedule -> "일정" to "SCHEDULE"
+        SeniorHomeButtonType.ChatBuddy -> "말벗" to "COMPANION"
+        SeniorHomeButtonType.Medication -> "복약" to "MEDICATION"
+        SeniorHomeButtonType.Photo -> "사진" to "PHOTO"
+        SeniorHomeButtonType.Emergency -> "긴급알림" to "EMERGENCY"
+        else -> error("필수 버튼이 아닙니다: $type")
+    }
+    return DisplayHomeButton(
+        name = name,
+        actionType = "DEFAULT",
+        actionValue = actionValue,
+        type = type,
+    )
+}
+
+private fun SeniorHomeButtonType.toMusicDisplayButton(): DisplayHomeButton {
+    val (label, actionValue, packageName) = when (this) {
+        SeniorHomeButtonType.Melon -> Triple("멜론", "MELON", "com.iloen.melon")
+        SeniorHomeButtonType.Genie -> Triple("지니뮤직", "GENIE", "com.ktmusic.geniemusic")
+        SeniorHomeButtonType.YouTubeMusic -> Triple(
+            "유튜브뮤직",
+            "YOUTUBE_MUSIC",
+            "com.google.android.apps.youtube.music",
+        )
+        SeniorHomeButtonType.Spotify -> Triple("스포티파이", "SPOTIFY", "com.spotify.music")
+        SeniorHomeButtonType.Flo -> Triple("플로", "FLO", "skplanet.musicmate")
+        SeniorHomeButtonType.Vibe -> Triple("바이브", "VIBE", "com.naver.vibe")
+        SeniorHomeButtonType.Bugs -> Triple("벅스", "BUGS", "com.neowiz.android.bugs")
+        SeniorHomeButtonType.SamsungMusic -> Triple(
+            "삼성뮤직",
+            "SAMSUNG_MUSIC",
+            "com.sec.android.app.music",
+        )
+        SeniorHomeButtonType.KakaoMusic -> Triple("카카오뮤직", "KAKAO_MUSIC", "com.kakao.music")
+        else -> error("음악 버튼이 아닙니다: $this")
+    }
+    return DisplayHomeButton(
+        name = label,
+        actionType = "APP",
+        actionValue = actionValue,
+        packageName = packageName,
+        type = this,
+    )
 }
