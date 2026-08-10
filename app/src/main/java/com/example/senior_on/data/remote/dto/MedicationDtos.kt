@@ -61,13 +61,14 @@ data class MedicationReadResponse(
 )
 
 data class MedicationScheduleResponse(
-    val medicationLogId: Long?,
-    val medicineName: String?,
-    val ingredientName: String?,
-    val plannedDate: String?,
-    val plannedTime: String?,
-    val isTaken: Boolean?,
-    val status: String?,
+    val medicationLogId: Long? = null,
+    val medicineName: String? = null,
+    val ingredientName: String? = null,
+    val plannedDate: String? = null,
+    val plannedTime: String? = null,
+    val takenTime: String? = null,
+    val isTaken: Boolean? = null,
+    val status: String? = null,
 )
 
 data class MedicationMonthlyScheduleResponse(
@@ -77,7 +78,7 @@ data class MedicationMonthlyScheduleResponse(
 )
 
 data class MedicationCheckResponse(
-    val medicationLogId: Long?,
-    val isTaken: Boolean?,
-    val takenAt: String?,
+    val medicationLogId: Long? = null,
+    val isTaken: Boolean? = null,
+    val takenAt: String? = null,
 )

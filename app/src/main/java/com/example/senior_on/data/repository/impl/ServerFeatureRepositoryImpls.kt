@@ -380,15 +380,10 @@ class MedicationRepositoryImpl(
             )
         }
 
-    override suspend fun markNearestTaken() = source.checkNearest().let {
-        MedicationSchedule(
-            logId = it.medicationLogId ?: 0L,
-            name = "",
-            plannedTime = "",
-            taken = it.isTaken == true,
-            takenAt = it.takenAt,
-        )
-    }
+    override suspend fun markNearestTaken() = source.checkNearest().toDomain()
+
+    override suspend fun markTaken(medicationLogId: Long) =
+        source.check(medicationLogId).toDomain()
 }
 
 class NotificationRepositoryImpl(
@@ -598,10 +593,22 @@ private fun MedicationScheduleResponse.toDomain() =
         logId = medicationLogId ?: 0,
         name = medicineName.orEmpty(),
         plannedTime = plannedTime.orEmpty(),
-        taken = isTaken == true,
+        taken = isTaken == true || status.equals("TAKEN", ignoreCase = true),
+        takenTime = takenTime,
         ingredient = ingredientName,
         plannedDate = plannedDate,
         status = status,
     )
+
+private fun MedicationCheckResponse.toDomain() =
+    MedicationSchedule(
+        logId = medicationLogId ?: 0L,
+        name = "",
+        plannedTime = "",
+        taken = isTaken == true,
+        takenAt = takenAt,
+        status = if (isTaken == true) "TAKEN" else null,
+    )
+
 private fun InactivitySettingResponse.toDomain() =
     InactivitySetting(usersId ?: 0, thresholdHours ?: 0, isEnabled == true)

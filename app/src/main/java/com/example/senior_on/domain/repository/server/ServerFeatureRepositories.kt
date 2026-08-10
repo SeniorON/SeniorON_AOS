@@ -70,6 +70,7 @@ interface MedicationRepository {
         month: Int,
     ): MedicationMonthlySchedule
     suspend fun markNearestTaken(): MedicationSchedule
+    suspend fun markTaken(medicationLogId: Long): MedicationSchedule
 }
 
 interface NotificationRepository {

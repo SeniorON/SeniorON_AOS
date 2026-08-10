@@ -96,10 +96,15 @@ data class MedicationInfo(
     val medicationIds: List<Long> = emptyList(),
 )
 data class MedicationSchedule(
-    val logId: Long, val name: String, val plannedTime: String,
-    val taken: Boolean, val takenAt: String? = null,
-    val ingredient: String? = null, val plannedDate: String? = null,
-    val status: String? = null
+    val logId: Long,
+    val name: String,
+    val plannedTime: String,
+    val taken: Boolean,
+    val takenAt: String? = null,
+    val takenTime: String? = null,
+    val ingredient: String? = null,
+    val plannedDate: String? = null,
+    val status: String? = null,
 )
 data class MedicationMonthlySchedule(
     val year: Int,

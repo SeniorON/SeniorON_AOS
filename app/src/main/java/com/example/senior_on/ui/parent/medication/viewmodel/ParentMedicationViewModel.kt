@@ -11,7 +11,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeParseException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,19 +89,29 @@ class ParentMedicationViewModel(
     }
 
     fun markAsTaken() {
-        if (_uiState.value.medication == null) return
+        val medication = _uiState.value.medication ?: return
         if (_uiState.value.isSubmitting) return
 
         submitJob = viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
-            runCatching { repository.markNearestTaken() }
-                .onSuccess {
+            runCatching {
+                val logId = medication.id.toLongOrNull()
+                if (logId != null && logId > 0L) {
+                    repository.markTaken(logId)
+                } else {
+                    repository.markNearestTaken()
+                }
+            }
+                .onSuccess { checked ->
+                    val takenAt = checked.takenAt
+                        ?.let { value -> runCatching { Instant.parse(value) }.getOrNull() }
+                        ?: Instant.now()
                     _uiState.update {
                         it.copy(
                             content = ParentMedicationContent.Completed,
-                            medication = it.medication?.copy(takenAt = Instant.now()),
-                            isSubmitting = false
+                            medication = it.medication?.copy(takenAt = takenAt),
+                            isSubmitting = false,
                         )
                     }
                 }
@@ -113,7 +122,7 @@ class ParentMedicationViewModel(
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
-                            errorMessage = "복약 확인을 전송하지 못했어요."
+                            errorMessage = "복약 확인을 전송하지 못했어요.",
                         )
                     }
                 }
@@ -152,8 +161,11 @@ private fun MedicationSchedule.toParentMedication(
     takenAt = if (taken) Instant.EPOCH else null,
 )
 
-private fun String.toLocalTimeOrNull(): LocalTime? = try {
-    LocalTime.parse(trim())
-} catch (_: DateTimeParseException) {
-    null
+private fun String.toLocalTimeOrNull(): LocalTime? {
+    val value = trim()
+    if (value.isEmpty()) return null
+    return runCatching { LocalTime.parse(value) }.getOrNull()
+        ?: runCatching {
+            LocalTime.parse(value, java.time.format.DateTimeFormatter.ofPattern("H:mm"))
+        }.getOrNull()
 }

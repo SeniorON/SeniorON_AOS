@@ -29,4 +29,9 @@ interface MedicationApi {
     ): ApiResponse<MedicationMonthlyScheduleResponse>
     @PATCH("api/v1/medication-logs/check")
     suspend fun checkNearest(): ApiResponse<MedicationCheckResponse>
+
+    @PATCH("api/v1/medication-logs/{medicationLogId}/check")
+    suspend fun check(
+        @Path("medicationLogId") medicationLogId: Long,
+    ): ApiResponse<MedicationCheckResponse>
 }
