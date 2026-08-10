@@ -42,7 +42,7 @@ import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSou
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
 import com.example.senior_on.data.source.parent.MockParentInfoDataSource
-import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
+import com.example.senior_on.data.source.parent.RemoteParentLinkSafetyDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
@@ -126,6 +126,7 @@ class DefaultAppContainer(
     deviceDataSource: DeviceDataSource
 ) : AppContainer {
     private val deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
+    private val localDeviceStatusDataSource = AndroidDeviceStatusDataSource(context)
 
     override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource)
     override val accountRecoveryRepository: AccountRecoveryRepository =
@@ -156,7 +157,7 @@ class DefaultAppContainer(
     override val deviceRepository = DeviceRepositoryImpl(
         source = deviceDataSource,
         identifierSource = deviceIdentifierDataSource,
-        localStatusSource = AndroidDeviceStatusDataSource(context),
+        localStatusSource = localDeviceStatusDataSource,
     )
 
     override val locationRepository: LocationRepository = LocationRepositoryImpl(
@@ -244,5 +245,10 @@ class DefaultAppContainer(
             MockParentFamilyPhotoDataSource(photoStore = familyPhotoStore)
         )
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
-        ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource())
+        ParentLinkSafetyRepositoryImpl(
+            RemoteParentLinkSafetyDataSource(
+                eventDataSource = eventDataSource,
+                deviceStatusDataSource = localDeviceStatusDataSource,
+            )
+        )
 }

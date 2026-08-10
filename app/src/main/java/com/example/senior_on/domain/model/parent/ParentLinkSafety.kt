@@ -2,7 +2,8 @@ package com.example.senior_on.domain.model.parent
 
 enum class ParentLinkSafetyVerdict {
     Safe,
-    Dangerous
+    Dangerous,
+    Unknown,
 }
 
 data class ParentLinkSafetyResult(

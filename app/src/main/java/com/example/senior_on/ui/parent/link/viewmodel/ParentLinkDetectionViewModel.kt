@@ -17,6 +17,7 @@ enum class ParentLinkDetectionStatus {
     Checking,
     Safe,
     Dangerous,
+    Unknown,
     Failed
 }
 
@@ -51,6 +52,8 @@ class ParentLinkDetectionViewModel(
                                     ParentLinkDetectionStatus.Safe
                                 ParentLinkSafetyVerdict.Dangerous ->
                                     ParentLinkDetectionStatus.Dangerous
+                                ParentLinkSafetyVerdict.Unknown ->
+                                    ParentLinkDetectionStatus.Unknown
                             },
                             errorMessage = null
                         )
