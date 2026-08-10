@@ -6,6 +6,7 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.domain.model.display.DisplayDevice
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayOverview
 import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorFontSize
@@ -145,6 +146,8 @@ private class RecordingDisplayRepository : DisplayRepository {
         buttons: List<SeniorHomeButtonType>,
         customButtonLabels: Map<SeniorHomeButtonType, String>,
     ) = Unit
+
+    override suspend fun saveButtons(buttons: List<DisplayHomeButton>) = Unit
 
     override suspend fun disconnectDevice() = Unit
 }

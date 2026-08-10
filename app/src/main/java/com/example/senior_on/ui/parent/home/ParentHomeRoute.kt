@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeViewModel
@@ -85,6 +86,12 @@ private fun openParentHomeButton(
     val packageName = button.packageName?.trim().orEmpty()
     if (button.actionType.equals("APP", ignoreCase = true) && packageName.isNotEmpty()) {
         openAppOrPlayStore(context, packageName)
+    } else if (
+        button.actionType.equals("DEFAULT", ignoreCase = true) &&
+        !button.actionValue.isNullOrBlank() &&
+        startDefaultHomeButtonAction(context, button.actionValue)
+    ) {
+        return
     } else {
         button.type?.let { openSeniorHomeButton(context, it) }
     }

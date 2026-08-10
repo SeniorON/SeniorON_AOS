@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -51,6 +52,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -63,13 +65,12 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.example.senior_on.R
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
-
-private const val ButtonNameMaxLength = 6
 
 private val ProvidedButtons = listOf(
     SeniorHomeButtonType.ChatBuddy,
@@ -81,39 +82,37 @@ private val ProvidedButtonNames = ProvidedButtons.map(
     SeniorHomeButtonType::displayLabel
 )
 
-private val InitialEditableButtons = listOf(
-    SeniorHomeButtonType.Call,
-    SeniorHomeButtonType.Message,
-    SeniorHomeButtonType.Camera,
-    SeniorHomeButtonType.NaverMap,
-)
-
-private fun SeniorHomeButtonType.isProtectedFromSelectedButtonEditing(): Boolean =
-    this in ProvidedButtons ||
-        this == SeniorHomeButtonType.Schedule ||
-        this == SeniorHomeButtonType.Emergency ||
-        isMusicButton()
+private fun DisplayHomeButton.isProtectedFromSelectedButtonEditing(): Boolean =
+    type in ProvidedButtons ||
+        isDefaultAction("SCHEDULE") ||
+        isDefaultAction("EMERGENCY") ||
+        type.isMusicButton()
 
 internal fun mergeSelectedButtonEdits(
-    initialButtons: List<SeniorHomeButtonType>,
-    editableButtons: List<SeniorHomeButtonType>,
-): List<SeniorHomeButtonType> {
+    initialButtons: List<DisplayHomeButton>,
+    editableButtons: List<DisplayHomeButton>,
+): List<DisplayHomeButton> {
     val uniqueEditableButtons = editableButtons
-        .filterNot(SeniorHomeButtonType::isProtectedFromSelectedButtonEditing)
-        .distinct()
-    val editableButtonSet = uniqueEditableButtons.toSet()
+        .filterNot(DisplayHomeButton::isProtectedFromSelectedButtonEditing)
+        .distinctBy(DisplayHomeButton::stableKey)
+    val editableButtonKeys = uniqueEditableButtons
+        .mapTo(hashSetOf(), DisplayHomeButton::stableKey)
 
     return buildList {
-        initialButtons.distinct().forEach { button ->
+        initialButtons.distinctBy(DisplayHomeButton::stableKey).forEach { button ->
             if (
                 button.isProtectedFromSelectedButtonEditing() ||
-                button in editableButtonSet
+                button.stableKey in editableButtonKeys
             ) {
-                add(button)
+                add(
+                    uniqueEditableButtons.firstOrNull {
+                        it.stableKey == button.stableKey
+                    } ?: button,
+                )
             }
         }
         uniqueEditableButtons.forEach { button ->
-            if (button !in this) {
+            if (none { it.stableKey == button.stableKey }) {
                 add(button)
             }
         }
@@ -198,61 +197,29 @@ fun DisplayButtonEditGuideScreen(
 
 @Composable
 fun DisplayButtonEditSelectedScreen(
-    initialButtons: List<SeniorHomeButtonType> = InitialEditableButtons,
-    initialCustomButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
+    initialButtons: List<DisplayHomeButton>,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
-    onSaveClick: (
-        buttons: List<SeniorHomeButtonType>,
-        customButtonLabels: Map<SeniorHomeButtonType, String>,
-    ) -> Unit = { _, _ -> },
-    onAddButtonClick: (
-        buttons: List<SeniorHomeButtonType>,
-        customButtonLabels: Map<SeniorHomeButtonType, String>,
-    ) -> Unit = { _, _ -> },
+    onSaveClick: (buttons: List<DisplayHomeButton>) -> Unit = {},
+    onAddButtonClick: (buttons: List<DisplayHomeButton>) -> Unit = {},
 ) {
-    var editableButtonTypeNames by rememberSaveable(initialButtons) {
+    var editableButtons by remember(initialButtons) {
         mutableStateOf(
-            ArrayList(
-                initialButtons
-                    .filterNot { button ->
-                        button.isProtectedFromSelectedButtonEditing()
-                    }
-                    .map(SeniorHomeButtonType::name)
-            )
-        )
-    }
-    var customLabelsByButtonName by rememberSaveable(
-        initialCustomButtonLabels
-    ) {
-        mutableStateOf(
-            HashMap(
-                initialCustomButtonLabels.mapKeys { (button, _) ->
-                    button.name
-                }
-            )
+            initialButtons.filterNot(
+                DisplayHomeButton::isProtectedFromSelectedButtonEditing,
+            ),
         )
     }
     var expandedButtonIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var editingButtonIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
-    val editableButtons = editableButtonTypeNames.map(
-        SeniorHomeButtonType::valueOf
-    )
     val currentButtons = mergeSelectedButtonEdits(
         initialButtons = initialButtons,
         editableButtons = editableButtons,
     )
-    val currentCustomButtonLabels = customLabelsByButtonName
-        .mapKeys { (buttonName, _) -> SeniorHomeButtonType.valueOf(buttonName) }
-        .filterKeys(currentButtons::contains)
-    val initialRelevantCustomButtonLabels = initialCustomButtonLabels
-        .filterKeys(currentButtons::contains)
-    val hasChanges = currentButtons != initialButtons.distinct() ||
-        currentCustomButtonLabels != initialRelevantCustomButtonLabels
-    val editableButtonLabels = editableButtons.map { button ->
-        currentCustomButtonLabels[button] ?: button.displayLabel()
-    }
+    val hasChanges = currentButtons != initialButtons
+        .distinctBy(DisplayHomeButton::stableKey)
+    val editableButtonLabels = editableButtons.map(DisplayHomeButton::name)
 
     Column(
         modifier = modifier
@@ -265,10 +232,7 @@ fun DisplayButtonEditSelectedScreen(
             onBackClick = onBackClick,
             saveEnabled = hasChanges,
             onSaveClick = {
-                onSaveClick(
-                    currentButtons,
-                    currentCustomButtonLabels,
-                )
+                onSaveClick(currentButtons)
             },
         )
 
@@ -316,15 +280,9 @@ fun DisplayButtonEditSelectedScreen(
                     },
                     onDeleteClick = { index ->
                         expandedButtonIndex = null
-                        val deletedButtonName = editableButtonTypeNames[index]
-                        editableButtonTypeNames =
-                            ArrayList(editableButtonTypeNames).apply {
+                        editableButtons = editableButtons.toMutableList().apply {
                             removeAt(index)
                         }
-                        customLabelsByButtonName =
-                            HashMap(customLabelsByButtonName).apply {
-                                remove(deletedButtonName)
-                            }
                     },
                 )
 
@@ -336,10 +294,7 @@ fun DisplayButtonEditSelectedScreen(
                 leadingPlus = true,
                 buttonHeight = 48.dp,
                 onClick = {
-                    onAddButtonClick(
-                        currentButtons,
-                        currentCustomButtonLabels,
-                    )
+                    onAddButtonClick(currentButtons)
                 },
             )
 
@@ -350,17 +305,11 @@ fun DisplayButtonEditSelectedScreen(
     editingButtonIndex?.let { index ->
         val editingButton = editableButtons[index]
         ButtonNameEditBottomSheet(
-            initialName = currentCustomButtonLabels[editingButton]
-                ?: editingButton.displayLabel(),
+            initialName = editingButton.name,
             onDismiss = { editingButtonIndex = null },
             onSave = { name ->
-                customLabelsByButtonName =
-                    HashMap(customLabelsByButtonName).apply {
-                        if (name == editingButton.displayLabel()) {
-                            remove(editingButton.name)
-                        } else {
-                            this[editingButton.name] = name
-                        }
+                editableButtons = editableButtons.toMutableList().apply {
+                    this[index] = editingButton.copy(name = name)
                 }
                 editingButtonIndex = null
             },
@@ -503,7 +452,8 @@ private fun ProvidedButtonRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp),
+            .heightIn(min = 44.dp)
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SelectedButtonName(
@@ -537,13 +487,14 @@ private fun EditableButtonRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .heightIn(min = 44.dp)
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {},
                 onLongClick = onMoreClick,
-            ),
+            )
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SelectedButtonName(
@@ -596,6 +547,8 @@ private fun SelectedButtonName(
         modifier = modifier,
         style = SeniorOnTextStyles.BodyMMedium,
         color = SeniorOnColors.Gray800,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -772,8 +725,7 @@ private fun ButtonNameEditBottomSheet(
     val saveName: () -> Unit = {
         name.trim()
             .takeIf { trimmedName ->
-                trimmedName.isNotEmpty() &&
-                    trimmedName.length <= ButtonNameMaxLength
+                trimmedName.isNotEmpty()
             }
             ?.let(onSave)
     }
@@ -881,14 +833,7 @@ private fun ButtonNameEditSheetContent(
 
         BasicTextField(
             value = name,
-            onValueChange = { newValue ->
-                if (
-                    newValue.length <= ButtonNameMaxLength ||
-                    newValue.length < name.length
-                ) {
-                    onNameChange(newValue)
-                }
-            },
+            onValueChange = onNameChange,
             modifier = inputModifier
                 .fillMaxWidth()
                 .height(43.dp),
@@ -912,7 +857,7 @@ private fun ButtonNameEditSheetContent(
                     ) {
                         if (name.isEmpty()) {
                             Text(
-                                text = "이름 입력(6글자 이내)",
+                                text = "이름",
                                 style = SeniorOnTextStyles.BodyMMedium,
                                 color = SeniorOnColors.Gray300,
                             )
@@ -1051,7 +996,28 @@ private fun DisplayButtonEditGuideScreenPreview() {
 @Composable
 private fun DisplayButtonEditSelectedScreenPreview() {
     SENIOR_ONTheme {
-        DisplayButtonEditSelectedScreen()
+        DisplayButtonEditSelectedScreen(
+            initialButtons = listOf(
+                DisplayHomeButton(
+                    name = "전화",
+                    actionType = "DEFAULT",
+                    actionValue = "PHONE",
+                    type = SeniorHomeButtonType.Call,
+                ),
+                DisplayHomeButton(
+                    name = "메시지",
+                    actionType = "DEFAULT",
+                    actionValue = "MESSAGE",
+                    type = SeniorHomeButtonType.Message,
+                ),
+                DisplayHomeButton(
+                    name = "카메라",
+                    actionType = "DEFAULT",
+                    actionValue = "CAMERA",
+                    type = SeniorHomeButtonType.Camera,
+                ),
+            ),
+        )
     }
 }
 

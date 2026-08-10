@@ -22,6 +22,7 @@ import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -515,7 +516,7 @@ class DisplayRepositoryImplTest {
         }
 
     @Test
-    fun saveButtonsAllowsEighteenGeneralButtonsWithScheduleAndMusicExcluded() =
+    fun saveButtonsAllowsTwelveGeneralButtonsWithScheduleAndMusicExcluded() =
         runBlocking {
             val homeDataSource = FakeHomeDataSource()
             val repository = DisplayRepositoryImpl(
@@ -531,12 +532,6 @@ class DisplayRepositoryImplTest {
                 SeniorHomeButtonType.Recorder,
                 SeniorHomeButtonType.Calculator,
                 SeniorHomeButtonType.Settings,
-                SeniorHomeButtonType.Flashlight,
-                SeniorHomeButtonType.Camera,
-                SeniorHomeButtonType.KakaoTalk,
-                SeniorHomeButtonType.NaverBand,
-                SeniorHomeButtonType.NaverCafe,
-                SeniorHomeButtonType.Line,
             )
 
             repository.saveButtons(
@@ -549,7 +544,7 @@ class DisplayRepositoryImplTest {
 
             val request = homeDataSource.savedButtonRequests.single()
             assertEquals("MELON", request.musicApp)
-            assertEquals(18, request.buttons.size)
+            assertEquals(12, request.buttons.size)
             assertFalse(request.buttons.any { it.actionValue == "SCHEDULE" })
             assertEquals(
                 8,
@@ -574,12 +569,12 @@ class DisplayRepositoryImplTest {
             SeniorHomeButtonType.Calculator,
             SeniorHomeButtonType.Settings,
             SeniorHomeButtonType.Flashlight,
-            SeniorHomeButtonType.Camera,
             SeniorHomeButtonType.KakaoTalk,
             SeniorHomeButtonType.NaverBand,
             SeniorHomeButtonType.NaverCafe,
             SeniorHomeButtonType.Line,
             SeniorHomeButtonType.YouTube,
+            SeniorHomeButtonType.Naver,
         )
 
         val result = runCatching {
@@ -594,6 +589,42 @@ class DisplayRepositoryImplTest {
 
         assertTrue(result.exceptionOrNull() is IllegalArgumentException)
         assertTrue(homeDataSource.savedButtonRequests.isEmpty())
+    }
+
+    @Test
+    fun saveButtonsPersistsAUserSelectedPackageWithoutCatalogMetadata() = runBlocking {
+        val homeDataSource = FakeHomeDataSource()
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+        val importedApp = DisplayHomeButton(
+            name = "유튜브",
+            actionType = "APP",
+            actionValue = "com.google.android.youtube",
+            packageName = "com.google.android.youtube",
+        )
+        val defaultButtons = listOf(
+            "전화" to "PHONE",
+            "메시지" to "MESSAGE",
+            "카메라" to "CAMERA",
+            "달력" to "CALENDAR",
+        ).map { (name, actionValue) ->
+            DisplayHomeButton(
+                name = name,
+                actionType = "DEFAULT",
+                actionValue = actionValue,
+            )
+        }
+
+        repository.saveButtons(defaultButtons + importedApp)
+
+        val request = homeDataSource.savedButtonRequests.single()
+        assertEquals(
+            "com.google.android.youtube",
+            request.buttons.single { it.buttonName == "유튜브" }.packageName,
+        )
+        assertNull(request.buttons.single { it.buttonName == "전화" }.packageName)
     }
 
     @Test
@@ -666,7 +697,65 @@ class DisplayRepositoryImplTest {
                 .customButtonLabels[SeniorHomeButtonType.KakaoTalk],
         )
         assertTrue(overview.hasSavedButtonConfiguration)
-        assertEquals(0, homeDataSource.buttonOptionsRequestCount)
+        assertEquals(1, homeDataSource.buttonOptionsRequestCount)
+    }
+
+    @Test
+    fun getOverviewLoadsBackendDefaultButtonOptionsForEditing() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            buttonOptionsResponse = listOf(
+                ButtonOptionResponse(
+                    icon = null,
+                    option_id = 10L,
+                    button_name = "전화",
+                    action_type = "DEFAULT",
+                    action_value = "PHONE",
+                ),
+            ),
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val overview = repository.getOverview(currentParentInfo = null)
+
+        assertEquals(1, homeDataSource.buttonOptionsRequestCount)
+        val phoneOption = overview.availableButtonOptions.first {
+            it.actionValue == "PHONE"
+        }
+        assertEquals(10L, phoneOption.optionId)
+        assertEquals(SeniorHomeButtonType.Call, phoneOption.type)
+    }
+
+    @Test
+    fun emptyBackendOptionsFallBackToDefaultIntentButtons() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                buttonOptionsResponse = emptyList(),
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val overview = repository.getOverview(currentParentInfo = null)
+
+        assertEquals(
+            listOf(
+                "PHONE",
+                "MESSAGE",
+                "CAMERA",
+                "PHOTO",
+                "MEMO",
+                "ALARM",
+                "CALCULATOR",
+                "SETTINGS",
+                "VOICE_MEMO",
+                "TIMER",
+                "PLAY_STORE",
+                "INTERNET",
+            ),
+            overview.availableButtonOptions.map(DisplayHomeButton::actionValue),
+        )
     }
 
     @Test
@@ -749,6 +838,7 @@ private class FakeHomeDataSource(
         WeatherResponse(null, null, null, null),
     private val deviceResponse: DeviceDetailResponse =
         DeviceDetailResponse(null, false, null, null, false, null, null),
+    private val buttonOptionsResponse: List<ButtonOptionResponse>? = null,
 ) : HomeDataSource {
     val savedButtonRequests = mutableListOf<HomeButtonSaveRequest>()
     val fontSizeRequests = mutableListOf<HomeFontSizeUpdateRequest>()
@@ -779,7 +869,8 @@ private class FakeHomeDataSource(
 
     override suspend fun getButtonOptions(): List<ButtonOptionResponse> {
         buttonOptionsRequestCount += 1
-        error("화면 탭에서는 버튼 옵션 API를 호출하면 안 됩니다.")
+        return buttonOptionsResponse
+            ?: error("버튼 옵션 응답이 설정되지 않았습니다.")
     }
 
     override suspend fun saveButtons(request: HomeButtonSaveRequest) {

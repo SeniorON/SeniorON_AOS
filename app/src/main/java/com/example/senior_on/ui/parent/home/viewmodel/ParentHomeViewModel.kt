@@ -208,7 +208,7 @@ private fun resolveButtonType(
         "CALENDAR" -> SeniorHomeButtonType.Calendar
         "ALARM" -> SeniorHomeButtonType.Alarm
         "MEMO" -> SeniorHomeButtonType.Memo
-        "RECORDER" -> SeniorHomeButtonType.Recorder
+        "VOICE_MEMO", "RECORDER", "VOICE_RECORDER" -> SeniorHomeButtonType.Recorder
         "CALCULATOR" -> SeniorHomeButtonType.Calculator
         "SETTINGS" -> SeniorHomeButtonType.Settings
         "FLASHLIGHT" -> SeniorHomeButtonType.Flashlight

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.model.display.DisplayOverview
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -134,6 +135,8 @@ class DisplayViewModel(
                 todaySchedule = overview.todaySchedule,
                 screenConfiguration = overview.screenConfiguration,
                 availableButtonTypes = overview.availableButtonTypes,
+                configuredButtonItems = overview.configuredButtonItems,
+                availableButtonOptions = overview.availableButtonOptions,
                 isLoading = false,
                 hasLoadedOverview = true,
             )
@@ -266,6 +269,30 @@ class DisplayViewModel(
                         buttons = distinctButtons,
                         customButtonLabels = normalizedLabels,
                     )
+                )
+            }
+        }
+    }
+
+    fun saveButtons(
+        buttons: List<DisplayHomeButton>,
+        onSuccess: () -> Unit = {},
+    ) {
+        val distinctButtons = buttons.distinctBy(DisplayHomeButton::stableKey)
+        val knownButtons = distinctButtons.mapNotNull(DisplayHomeButton::type)
+        val knownLabels = distinctButtons.mapNotNull { button ->
+            button.type?.let { type -> type to button.name.trim() }
+        }.toMap()
+
+        launchMutation(onSuccess) {
+            displayRepository.saveButtons(distinctButtons)
+            _uiState.update {
+                it.copy(
+                    configuredButtonItems = distinctButtons,
+                    screenConfiguration = it.screenConfiguration.copy(
+                        buttons = knownButtons,
+                        customButtonLabels = knownLabels,
+                    ),
                 )
             }
         }

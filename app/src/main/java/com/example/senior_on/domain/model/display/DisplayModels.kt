@@ -78,6 +78,31 @@ enum class SeniorHomeButtonType {
     Emergency,
 }
 
+data class DisplayHomeButton(
+    val id: Long = 0L,
+    val optionId: Long? = null,
+    val order: Int = 0,
+    val name: String,
+    val icon: String? = null,
+    val actionType: String,
+    val actionValue: String,
+    val packageName: String? = null,
+    val type: SeniorHomeButtonType? = null,
+) {
+    val stableKey: String
+        get() = when {
+            actionType.equals("DEFAULT", ignoreCase = true) ->
+                "DEFAULT:${actionValue.trim().uppercase()}"
+            !packageName.isNullOrBlank() ->
+                "APP:${packageName.trim().lowercase()}"
+            else -> "APP:${actionValue.trim().lowercase()}"
+        }
+
+    fun isDefaultAction(action: String): Boolean =
+        actionType.equals("DEFAULT", ignoreCase = true) &&
+            actionValue.equals(action, ignoreCase = true)
+}
+
 val InitialSeniorHomeGridButtons = listOf(
     SeniorHomeButtonType.Call,
     SeniorHomeButtonType.Message,
@@ -123,5 +148,7 @@ data class DisplayOverview(
     val parentInfo: ParentInfo? = null,
     val todaySchedule: DisplayTodaySchedule? = null,
     val availableButtonTypes: Set<SeniorHomeButtonType> = emptySet(),
+    val configuredButtonItems: List<DisplayHomeButton> = emptyList(),
+    val availableButtonOptions: List<DisplayHomeButton> = emptyList(),
     val hasSavedButtonConfiguration: Boolean = true,
 )

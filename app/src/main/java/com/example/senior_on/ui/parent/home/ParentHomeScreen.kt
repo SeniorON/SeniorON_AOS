@@ -460,7 +460,7 @@ private fun ParentHomeGridButton(
             color = if (isEmergency) SeniorOnColors.White else SeniorOnColors.Gray800,
             textAlign = TextAlign.Center,
             maxLines = 2,
-            overflow = TextOverflow.Clip,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
