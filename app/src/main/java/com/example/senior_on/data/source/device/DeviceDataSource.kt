@@ -11,7 +11,7 @@ import retrofit2.HttpException
 import retrofit2.Response
 
 interface DeviceDataSource {
-    suspend fun updateStatus(request: DeviceStatusUpdateRequest)
+    suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean
     suspend fun updateFcmToken(request: FcmTokenUpdateRequest)
     suspend fun disconnect()
     suspend fun getLatestLocation(): DeviceLocationResponse
@@ -20,11 +20,16 @@ interface DeviceDataSource {
 }
 
 class RemoteDeviceDataSource(private val api: DeviceApi) : DeviceDataSource {
-    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) {
+    override suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean =
         remoteRequest {
-            api.updateStatus(request).requireSuccessful()
+            val response = api.updateStatus(request)
+            if (response.code() == DEVICE_NOT_CONNECTED_HTTP_STATUS) {
+                false
+            } else {
+                response.requireSuccessful()
+                true
+            }
         }
-    }
 
     override suspend fun disconnect() {
         remoteRequest {
@@ -54,3 +59,5 @@ class RemoteDeviceDataSource(private val api: DeviceApi) : DeviceDataSource {
 private fun Response<Unit>.requireSuccessful() {
     if (!isSuccessful) throw HttpException(this)
 }
+
+private const val DEVICE_NOT_CONNECTED_HTTP_STATUS = 404

@@ -8,19 +8,28 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.device.ParentInactivityMonitor
 import com.example.senior_on.domain.repository.server.DeviceRepository
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class ParentDeviceStatusViewModel(
     private val repository: DeviceRepository,
-    private val inactivityMonitor: ParentInactivityMonitor,
+    private val inactivityMonitor: ParentInactivityMonitor? = null,
+    private val statusUpdateIntervalMillis: Long = StatusUpdateIntervalMillis,
 ) : ViewModel() {
     private var foregroundUpdateJob: Job? = null
+    private val _isDeviceDisconnected = MutableStateFlow(false)
+    val isDeviceDisconnected = _isDeviceDisconnected.asStateFlow()
 
     fun updateStatusOnce() {
         viewModelScope.launch {
             runCatching { repository.updateStatus() }
+                .onSuccess { isConnected ->
+                    _isDeviceDisconnected.value = !isConnected
+                }
                 .onFailure { throwable ->
                     Log.w(
                         LogTag,
@@ -35,13 +44,19 @@ class ParentDeviceStatusViewModel(
     fun startForegroundUpdates() {
         if (foregroundUpdateJob?.isActive == true) return
         foregroundUpdateJob = viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 runCatching { repository.updateStatus() }
+                    .onSuccess { isConnected ->
+                        if (!isConnected) {
+                            _isDeviceDisconnected.value = true
+                            return@launch
+                        }
+                    }
                     .onFailure { throwable ->
                         Log.w(LogTag, "Foreground device status sync failed.", throwable)
                     }
                 checkInactivity()
-                delay(ForegroundUpdateIntervalMillis)
+                delay(statusUpdateIntervalMillis)
             }
         }
     }
@@ -52,7 +67,8 @@ class ParentDeviceStatusViewModel(
     }
 
     private suspend fun checkInactivity() {
-        runCatching { inactivityMonitor.refreshSettingAndCheck() }
+        val monitor = inactivityMonitor ?: return
+        runCatching { monitor.refreshSettingAndCheck() }
             .onFailure { throwable ->
                 Log.w(LogTag, "Foreground inactivity check failed.", throwable)
             }
@@ -60,7 +76,7 @@ class ParentDeviceStatusViewModel(
 
     companion object {
         private const val LogTag = "ParentDeviceStatus"
-        private const val ForegroundUpdateIntervalMillis = 5L * 60L * 1_000L
+        private const val StatusUpdateIntervalMillis = 5L * 60L * 1_000L
 
         fun factory(
             repository: DeviceRepository,

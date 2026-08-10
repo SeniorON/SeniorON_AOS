@@ -10,8 +10,43 @@
         <package android:name="net.daum.android.map" />
         <package android:name="com.kakao.talk" />
         <package android:name="com.nhn.android.search" />
+        <package android:name="com.android.vending" />
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.CREATE_NOTE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SHOW_ALARMS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_CALCULATOR" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_CALENDAR" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.provider.MediaStore.RECORD_SOUND" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SET_TIMER" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />

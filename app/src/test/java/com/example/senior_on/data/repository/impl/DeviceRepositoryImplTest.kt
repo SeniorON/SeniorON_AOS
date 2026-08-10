@@ -10,6 +10,7 @@ import com.example.senior_on.data.source.device.DeviceIdentifierDataSource
 import com.example.senior_on.data.source.device.LocalDeviceStatusDataSource
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DeviceRepositoryImplTest {
@@ -25,7 +26,7 @@ class DeviceRepositoryImplTest {
             ),
         )
 
-        repository.updateStatus()
+        assertTrue(repository.updateStatus())
 
         assertEquals(
             DeviceStatusUpdateRequest(
@@ -41,8 +42,9 @@ class DeviceRepositoryImplTest {
 private class RecordingDeviceDataSource : DeviceDataSource {
     val requests = mutableListOf<DeviceStatusUpdateRequest>()
 
-    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) {
+    override suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean {
         requests += request
+        return true
     }
 
     override suspend fun disconnect() = Unit

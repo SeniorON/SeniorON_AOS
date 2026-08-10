@@ -115,7 +115,6 @@ private fun ParentLauncherContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    ParentDeviceStatusLifecycleEffect(appContainer)
     var notificationPermissionHandled by rememberSaveable {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -147,8 +146,17 @@ private fun ParentLauncherContent(
     var highlightedMedicationLogId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
+    var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
+
+    ParentDeviceStatusLifecycleEffect(
+        appContainer = appContainer,
+        onDeviceDisconnected = {
+            destination = ParentDestination.Home
+            homeRefreshRequest += 1
+        },
+    )
 
     fun openHome() {
         destination = ParentDestination.Home
@@ -164,6 +172,7 @@ private fun ParentLauncherContent(
     when (destination) {
         ParentDestination.Home -> ParentHomeRoute(
             repository = appContainer.homeServerRepository,
+            refreshRequest = homeRefreshRequest,
             onScheduleClick = { destination = ParentDestination.Schedule },
             onChatBuddyClick = { destination = ParentDestination.ChatBuddy },
             onMedicationClick = {
@@ -232,7 +241,10 @@ private fun ParentLauncherContent(
 }
 
 @Composable
-private fun ParentDeviceStatusLifecycleEffect(appContainer: AppContainer) {
+private fun ParentDeviceStatusLifecycleEffect(
+    appContainer: AppContainer,
+    onDeviceDisconnected: () -> Unit,
+) {
     if (LocalInspectionMode.current) return
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -251,6 +263,12 @@ private fun ParentDeviceStatusLifecycleEffect(appContainer: AppContainer) {
             inactivityMonitor = inactivityMonitor,
         ),
     )
+    val isDeviceDisconnected by statusViewModel.isDeviceDisconnected
+        .collectAsStateWithLifecycle()
+
+    LaunchedEffect(isDeviceDisconnected) {
+        if (isDeviceDisconnected) onDeviceDisconnected()
+    }
 
     LaunchedEffect(Unit) {
         ParentDeviceStatusScheduler.schedulePeriodic(context)

@@ -47,7 +47,6 @@ import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.model.auth.AppUserProfile
-import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
@@ -96,7 +95,6 @@ fun ChildMainScreen(
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
-    caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationRepository: NotificationRepository,
     medicationRepository: MedicationRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
@@ -150,7 +148,6 @@ fun ChildMainScreen(
         factory = DisplayViewModel.factory(
             parentInfoRepository = parentInfoRepository,
             displayRepository = displayRepository,
-            caregiverRelationshipRepository = caregiverRelationshipRepository,
         )
     )
     val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
@@ -301,7 +298,12 @@ fun ChildMainScreen(
             ChildBottomNavigation(
                 selectedTab = selectedTab,
                 onTabClick = { tab ->
+                    val isScreenTabReentry =
+                        tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
                     selectedTab = tab
+                    if (isScreenTabReentry) {
+                        displayViewModel.refreshOnScreenTabReentry()
+                    }
                     selectedPhotoId = null
                     selectedPhotoUri = null
                     selectedPhotoSessionId = null

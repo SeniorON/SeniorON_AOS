@@ -15,6 +15,7 @@ import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
 import com.example.senior_on.data.remote.dto.HomeButtonUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
+import com.example.senior_on.data.remote.dto.MusicCardResponse
 import com.example.senior_on.data.remote.dto.SeniorHomeResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
@@ -25,6 +26,7 @@ import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -38,6 +40,71 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisplayRepositoryImplTest {
+    @Test
+    fun allSupportedMusicAppsUseBackendEnumValuesAndMapBackToButtons() = runBlocking {
+        val musicCases = listOf(
+            SeniorHomeButtonType.Melon to "MELON",
+            SeniorHomeButtonType.Genie to "GENIE",
+            SeniorHomeButtonType.YouTubeMusic to "YOUTUBE_MUSIC",
+            SeniorHomeButtonType.Spotify to "SPOTIFY",
+            SeniorHomeButtonType.Flo to "FLO",
+            SeniorHomeButtonType.Vibe to "VIBE",
+            SeniorHomeButtonType.Bugs to "BUGS",
+            SeniorHomeButtonType.SamsungMusic to "SAMSUNG_MUSIC",
+            SeniorHomeButtonType.KakaoMusic to "KAKAO_MUSIC",
+        )
+
+        musicCases.forEach { (button, apiValue) ->
+            val savingHomeDataSource = FakeHomeDataSource()
+            val savingRepository = DisplayRepositoryImpl(
+                homeDataSource = savingHomeDataSource,
+                deviceDataSource = FakeDeviceDataSource(),
+            )
+
+            savingRepository.saveButtons(
+                buttons = listOf(button) + InitialSeniorHomeGridButtons,
+                customButtonLabels = emptyMap(),
+            )
+
+            assertEquals(
+                apiValue,
+                savingHomeDataSource.savedButtonRequests.single().musicApp,
+            )
+
+            val loadingRepository = DisplayRepositoryImpl(
+                homeDataSource = FakeHomeDataSource(
+                    homeResponse = HomeResponse(
+                        connection = null,
+                        buttons = emptyList(),
+                        user_name = null,
+                        senior_profile = null,
+                        font_size = "MEDIUM",
+                        music_card = MusicCardResponse(
+                            enabled = true,
+                            icon = null,
+                            music_app = apiValue,
+                            app_name = button.name,
+                            action_type = "APP",
+                            action_value = apiValue.lowercase(),
+                            package_name = null,
+                        ),
+                        today_schedule = null,
+                    )
+                ),
+                deviceDataSource = FakeDeviceDataSource(),
+            )
+
+            assertEquals(
+                button,
+                loadingRepository
+                    .getOverview(currentParentInfo = null)
+                    .screenConfiguration
+                    .buttons
+                    .first(),
+            )
+        }
+    }
+
     @Test
     fun offlineDeviceWithConnectionHistoryIsKept() = runBlocking {
         val lastConnectedAt = "2026-08-07T18:05:57.484865"
@@ -77,7 +144,7 @@ class DisplayRepositoryImplTest {
     }
 
     @Test
-    fun getOverviewUsesSeniorIdFromHomeSeniorProfile() = runBlocking {
+    fun disconnectedOverviewStillUsesSeniorProfileFromServer() = runBlocking {
         val homeDataSource = FakeHomeDataSource(
             homeResponse = HomeResponse(
                 connection = null,
@@ -112,14 +179,54 @@ class DisplayRepositoryImplTest {
             addressDetail = "",
         )
 
-        val parentInfo = repository
-            .getOverview(staleLocalParentInfo)
-            .parentInfo
+        val overview = repository.getOverview(staleLocalParentInfo)
+        val parentInfo = overview.parentInfo
 
+        assertNull(overview.device)
         assertEquals(77L, parentInfo?.seniorId)
         assertEquals("김영희", parentInfo?.name)
         assertEquals("서울시 강남구", parentInfo?.address)
         assertEquals("101동 202호", parentInfo?.addressDetail)
+    }
+
+    @Test
+    fun emptyServerProfileDoesNotReuseStaleParentInfo() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = HomeResponse(
+                    connection = null,
+                    buttons = emptyList(),
+                    user_name = null,
+                    senior_profile = SeniorProfileResponse(
+                        senior_id = null,
+                        name = null,
+                        relation = null,
+                        birth = null,
+                        age = null,
+                        address = null,
+                        phone = null,
+                        detail_address = null,
+                    ),
+                    font_size = "MEDIUM",
+                    music_card = null,
+                    today_schedule = null,
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+        val staleParentInfo = ParentInfo(
+            seniorId = 1L,
+            name = "이전에 표시된 시니어",
+            relationshipLabel = "어머니",
+            birthDate = LocalDate.of(1960, 1, 2),
+            phoneNumber = "010-0000-0000",
+            address = "서울시",
+            addressDetail = "101동",
+        )
+
+        val parentInfo = repository.getOverview(staleParentInfo).parentInfo
+
+        assertNull(parentInfo)
     }
 
     @Test
@@ -413,7 +520,7 @@ class DisplayRepositoryImplTest {
         }
 
     @Test
-    fun saveButtonsAllowsEighteenGeneralButtonsWithScheduleAndMusicExcluded() =
+    fun saveButtonsAllowsTwelveGeneralButtonsWithScheduleAndMusicExcluded() =
         runBlocking {
             val homeDataSource = FakeHomeDataSource()
             val repository = DisplayRepositoryImpl(
@@ -429,12 +536,6 @@ class DisplayRepositoryImplTest {
                 SeniorHomeButtonType.Recorder,
                 SeniorHomeButtonType.Calculator,
                 SeniorHomeButtonType.Settings,
-                SeniorHomeButtonType.Flashlight,
-                SeniorHomeButtonType.Camera,
-                SeniorHomeButtonType.KakaoTalk,
-                SeniorHomeButtonType.NaverBand,
-                SeniorHomeButtonType.NaverCafe,
-                SeniorHomeButtonType.Line,
             )
 
             repository.saveButtons(
@@ -447,7 +548,7 @@ class DisplayRepositoryImplTest {
 
             val request = homeDataSource.savedButtonRequests.single()
             assertEquals("MELON", request.musicApp)
-            assertEquals(18, request.buttons.size)
+            assertEquals(12, request.buttons.size)
             assertFalse(request.buttons.any { it.actionValue == "SCHEDULE" })
             assertEquals(
                 8,
@@ -472,12 +573,12 @@ class DisplayRepositoryImplTest {
             SeniorHomeButtonType.Calculator,
             SeniorHomeButtonType.Settings,
             SeniorHomeButtonType.Flashlight,
-            SeniorHomeButtonType.Camera,
             SeniorHomeButtonType.KakaoTalk,
             SeniorHomeButtonType.NaverBand,
             SeniorHomeButtonType.NaverCafe,
             SeniorHomeButtonType.Line,
             SeniorHomeButtonType.YouTube,
+            SeniorHomeButtonType.Naver,
         )
 
         val result = runCatching {
@@ -492,6 +593,42 @@ class DisplayRepositoryImplTest {
 
         assertTrue(result.exceptionOrNull() is IllegalArgumentException)
         assertTrue(homeDataSource.savedButtonRequests.isEmpty())
+    }
+
+    @Test
+    fun saveButtonsPersistsAUserSelectedPackageWithoutCatalogMetadata() = runBlocking {
+        val homeDataSource = FakeHomeDataSource()
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+        val importedApp = DisplayHomeButton(
+            name = "유튜브",
+            actionType = "APP",
+            actionValue = "com.google.android.youtube",
+            packageName = "com.google.android.youtube",
+        )
+        val defaultButtons = listOf(
+            "전화" to "PHONE",
+            "메시지" to "MESSAGE",
+            "카메라" to "CAMERA",
+            "달력" to "CALENDAR",
+        ).map { (name, actionValue) ->
+            DisplayHomeButton(
+                name = name,
+                actionType = "DEFAULT",
+                actionValue = actionValue,
+            )
+        }
+
+        repository.saveButtons(defaultButtons + importedApp)
+
+        val request = homeDataSource.savedButtonRequests.single()
+        assertEquals(
+            "com.google.android.youtube",
+            request.buttons.single { it.buttonName == "유튜브" }.packageName,
+        )
+        assertNull(request.buttons.single { it.buttonName == "전화" }.packageName)
     }
 
     @Test
@@ -564,7 +701,65 @@ class DisplayRepositoryImplTest {
                 .customButtonLabels[SeniorHomeButtonType.KakaoTalk],
         )
         assertTrue(overview.hasSavedButtonConfiguration)
-        assertEquals(0, homeDataSource.buttonOptionsRequestCount)
+        assertEquals(1, homeDataSource.buttonOptionsRequestCount)
+    }
+
+    @Test
+    fun getOverviewLoadsBackendDefaultButtonOptionsForEditing() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            buttonOptionsResponse = listOf(
+                ButtonOptionResponse(
+                    icon = null,
+                    option_id = 10L,
+                    button_name = "전화",
+                    action_type = "DEFAULT",
+                    action_value = "PHONE",
+                ),
+            ),
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val overview = repository.getOverview(currentParentInfo = null)
+
+        assertEquals(1, homeDataSource.buttonOptionsRequestCount)
+        val phoneOption = overview.availableButtonOptions.first {
+            it.actionValue == "PHONE"
+        }
+        assertEquals(10L, phoneOption.optionId)
+        assertEquals(SeniorHomeButtonType.Call, phoneOption.type)
+    }
+
+    @Test
+    fun emptyBackendOptionsFallBackToDefaultIntentButtons() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                buttonOptionsResponse = emptyList(),
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val overview = repository.getOverview(currentParentInfo = null)
+
+        assertEquals(
+            listOf(
+                "PHONE",
+                "MESSAGE",
+                "CAMERA",
+                "PHOTO",
+                "MEMO",
+                "ALARM",
+                "CALCULATOR",
+                "SETTINGS",
+                "VOICE_MEMO",
+                "TIMER",
+                "PLAY_STORE",
+                "INTERNET",
+            ),
+            overview.availableButtonOptions.map(DisplayHomeButton::actionValue),
+        )
     }
 
     @Test
@@ -647,6 +842,7 @@ private class FakeHomeDataSource(
         WeatherResponse(null, null, null, null),
     private val deviceResponse: DeviceDetailResponse =
         DeviceDetailResponse(null, false, null, null, false, null, null),
+    private val buttonOptionsResponse: List<ButtonOptionResponse>? = null,
 ) : HomeDataSource {
     val savedButtonRequests = mutableListOf<HomeButtonSaveRequest>()
     val fontSizeRequests = mutableListOf<HomeFontSizeUpdateRequest>()
@@ -677,7 +873,8 @@ private class FakeHomeDataSource(
 
     override suspend fun getButtonOptions(): List<ButtonOptionResponse> {
         buttonOptionsRequestCount += 1
-        error("화면 탭에서는 버튼 옵션 API를 호출하면 안 됩니다.")
+        return buttonOptionsResponse
+            ?: error("버튼 옵션 응답이 설정되지 않았습니다.")
     }
 
     override suspend fun saveButtons(request: HomeButtonSaveRequest) {
@@ -723,7 +920,7 @@ private class FakeHomeDataSource(
 }
 
 private class FakeDeviceDataSource : DeviceDataSource {
-    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) = Unit
+    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) = true
     override suspend fun disconnect() = Unit
     override suspend fun updateFcmToken(request: FcmTokenUpdateRequest) = Unit
     override suspend fun getLatestLocation(): DeviceLocationResponse = error("Not used")

@@ -4,6 +4,9 @@ import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.DisplayOverview
+import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
+import com.example.senior_on.domain.model.display.SeniorFontSize
+import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 
 object MockDisplayFixtures {
@@ -11,6 +14,10 @@ object MockDisplayFixtures {
     const val CONNECTED_DEVICE_NAME = "Galaxy S24"
 
     val defaultScreenConfiguration = SeniorScreenConfiguration()
+    val disconnectedScreenConfiguration = SeniorScreenConfiguration(
+        fontSize = SeniorFontSize.Normal,
+        buttons = listOf(SeniorHomeButtonType.Schedule) + InitialSeniorHomeGridButtons,
+    )
 
     fun overview(scenario: MockDisplayScenario): DisplayOverview = DisplayOverview(
         device = when (scenario) {
@@ -34,6 +41,10 @@ object MockDisplayFixtures {
 
             MockDisplayScenario.NotConnected -> null
         },
-        screenConfiguration = defaultScreenConfiguration,
+        screenConfiguration = if (scenario == MockDisplayScenario.NotConnected) {
+            disconnectedScreenConfiguration
+        } else {
+            defaultScreenConfiguration
+        },
     )
 }
