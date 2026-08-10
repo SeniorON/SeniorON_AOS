@@ -145,7 +145,7 @@ fun SettingsTabRoute(
     var wasProfileImageUploading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        profileImageViewModel.loadProfileImage()
+        profileImageViewModel.loadSettingsProfile()
     }
 
     LaunchedEffect(profileImageUiState.isUploading) {
@@ -240,6 +240,12 @@ fun SettingsTabRoute(
         mutableStateOf(initialProfile.accountTypeLabel)
     }
     var profileEmail by rememberSaveable { mutableStateOf(initialProfile.email) }
+
+    LaunchedEffect(profileImageUiState.profileName) {
+        profileImageUiState.profileName?.let { serverName ->
+            profileName = serverName
+        }
+    }
     val profile = SettingsProfileUiState(
         name = profileName,
         accountTypeLabel = profileAccountType,
@@ -276,7 +282,7 @@ fun SettingsTabRoute(
             onFeedbackClick = { destination = SettingsDestination.Feedback },
             onSelectAlbumClick = launchAlbum,
             onTakePhotoClick = launchCamera,
-            onApplyDefaultImageClick = profileImageViewModel::clearLocalProfileImage,
+            onApplyDefaultImageClick = profileImageViewModel::applyDefaultProfileImage,
             onLogoutConfirm = viewModel::logout,
             onWithdrawConfirm = viewModel::withdraw,
             isLoggingOut = settingsUiState.isLoggingOut,
@@ -290,7 +296,7 @@ fun SettingsTabRoute(
             onChangePasswordClick = { destination = SettingsDestination.ChangePassword },
             onSelectAlbumClick = launchAlbum,
             onTakePhotoClick = launchCamera,
-            onApplyDefaultImageClick = profileImageViewModel::clearLocalProfileImage,
+            onApplyDefaultImageClick = profileImageViewModel::applyDefaultProfileImage,
             modifier = modifier
         )
 

@@ -59,14 +59,14 @@ class RemoteAuthDataSource(
 
     override suspend fun logout(request: UserLogoutRequest) {
         remoteRequest {
-            userApi.logout(request).requireData()
+            userApi.logout(request)
             Unit
         }
     }
 
     override suspend fun withdraw(request: UserWithdrawalRequest) {
         remoteRequest {
-            userApi.withdraw(request).requireData()
+            userApi.withdraw(request)
             Unit
         }
     }

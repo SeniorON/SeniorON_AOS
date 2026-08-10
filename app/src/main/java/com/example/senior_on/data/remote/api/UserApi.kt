@@ -64,12 +64,12 @@ interface UserApi {
     @POST("api/users/logout")
     suspend fun logout(
         @Body request: UserLogoutRequest
-    ): ApiResponse<String>
+    ): ApiResponse<Unit>
 
     @HTTP(method = "DELETE", path = "api/users/me", hasBody = true)
     suspend fun withdraw(
         @Body request: UserWithdrawalRequest
-    ): ApiResponse<String>
+    ): ApiResponse<Unit>
 
     @GET("api/users/check-login-id")
     suspend fun checkLoginId(
