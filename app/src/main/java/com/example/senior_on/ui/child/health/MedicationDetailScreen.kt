@@ -89,7 +89,9 @@ private val MedicationRepeatSelectionSaver = Saver<MedicationRepeatSelection, Li
     },
     restore = { saved ->
         MedicationRepeatSelection(
-            frequency = MedicationRepeatFrequency.valueOf(saved[0] as String),
+            frequency = runCatching {
+                MedicationRepeatFrequency.valueOf(saved[0] as String)
+            }.getOrDefault(MedicationRepeatFrequency.Daily),
             cycleValue = saved[1] as Int,
             weekdays = (saved[2] as List<*>).mapNotNull { it as? Int }.toSet(),
             duration = MedicationRepeatDuration.valueOf(saved[3] as String),

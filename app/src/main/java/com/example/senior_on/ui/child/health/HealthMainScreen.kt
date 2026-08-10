@@ -42,6 +42,7 @@ fun HealthMainScreen(
     onMedicationEditClick: () -> Unit = {},
     onMedicationSaveClick: (MedicationDraft) -> Unit = {},
     onMedicationDeleteClick: () -> Unit = {},
+    onConsumeMedicationError: () -> Unit = {},
     onHospitalMonthSelected: (YearMonth) -> Unit = {},
     onHospitalDateSelected: (LocalDate) -> Unit = {},
     onAddHospitalClick: (LocalDate) -> Unit = {},
@@ -62,6 +63,12 @@ fun HealthMainScreen(
         val message = hospitalUiState.errorMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         onConsumeHospitalError()
+    }
+
+    LaunchedEffect(medicationUiState.errorMessage) {
+        val message = medicationUiState.errorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        onConsumeMedicationError()
     }
 
     Column(

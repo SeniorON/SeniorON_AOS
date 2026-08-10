@@ -104,15 +104,6 @@ data class RegisteredMedicationUiState(
                 val weeks = ChronoUnit.DAYS.between(anchor, date) / 7
                 weeks % cycle == 0L
             }
-            MedicationRepeatFrequency.Monthly -> {
-                val months = ChronoUnit.MONTHS.between(
-                    anchor.withDayOfMonth(1),
-                    date.withDayOfMonth(1),
-                )
-                if (months % cycle != 0L) return false
-                val targetDay = anchor.dayOfMonth.coerceAtMost(date.lengthOfMonth())
-                date.dayOfMonth == targetDay
-            }
         }
     }
 }

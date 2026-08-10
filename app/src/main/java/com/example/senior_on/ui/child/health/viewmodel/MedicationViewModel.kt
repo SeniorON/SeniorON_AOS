@@ -114,7 +114,7 @@ class MedicationViewModel(
         if (_uiState.value.isSaving) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            val remoteSaved = runCatching {
+            runCatching {
                 val parentId = resolveParentUserId()
                 val current = _uiState.value.editingMedication
                 val domain = draft.toDomain(current)
@@ -124,14 +124,18 @@ class MedicationViewModel(
                     medicationRepository.create(parentId, domain)
                 }
                 loadRemoteData(parentId, _uiState.value.selectedDate)
-            }.getOrNull()
-
-            if (remoteSaved != null) {
-                applyRemoteData(remoteSaved, closeEditor = true)
-            } else {
-                // API 미연동/실패 시에도 UI 흐름은 유지. 연동 후엔 위 성공 경로만 타면 됨.
-                applyLocalSave(draft)
             }
+                .onSuccess { result ->
+                    applyRemoteData(result, closeEditor = true)
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = "복약 정보를 저장하지 못했습니다.",
+                        )
+                    }
+                }
         }
     }
 
@@ -140,18 +144,27 @@ class MedicationViewModel(
         if (_uiState.value.isSaving) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            val remoteDeleted = runCatching {
+            runCatching {
                 val parentId = resolveParentUserId()
                 medicationRepository.delete(parentId, medication.id)
                 loadRemoteData(parentId, _uiState.value.selectedDate)
-            }.getOrNull()
-
-            if (remoteDeleted != null) {
-                applyRemoteData(remoteDeleted, closeEditor = true)
-            } else {
-                applyLocalDelete(medication.id)
             }
+                .onSuccess { result ->
+                    applyRemoteData(result, closeEditor = true)
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = "복약 정보를 삭제하지 못했습니다.",
+                        )
+                    }
+                }
         }
+    }
+
+    fun consumeError() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 
     fun retry() {
@@ -387,7 +400,6 @@ private fun MedicationInfo.toUiState(): RegisteredMedicationUiState {
     val repeat = MedicationRepeatSelection(
         frequency = when (repeatType.trim().uppercase()) {
             "WEEKLY" -> MedicationRepeatFrequency.Weekly
-            "MONTHLY" -> MedicationRepeatFrequency.Monthly
             else -> MedicationRepeatFrequency.Daily
         },
         cycleValue = repeatInterval.coerceAtLeast(1),
@@ -483,7 +495,6 @@ private fun MedicationDraft.toDomain(
     val repeatType = when (repeat.frequency) {
         MedicationRepeatFrequency.Daily -> "DAILY"
         MedicationRepeatFrequency.Weekly -> "WEEKLY"
-        MedicationRepeatFrequency.Monthly -> "MONTHLY"
     }
     val repeatEndType = when (repeat.duration) {
         MedicationRepeatDuration.Continuous -> "ONGOING"

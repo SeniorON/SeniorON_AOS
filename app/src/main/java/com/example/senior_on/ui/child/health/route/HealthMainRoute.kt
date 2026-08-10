@@ -58,6 +58,7 @@ fun HealthMainRoute(
         onMedicationEditClick = medicationViewModel::openEditMedication,
         onMedicationSaveClick = medicationViewModel::saveMedication,
         onMedicationDeleteClick = medicationViewModel::deleteMedication,
+        onConsumeMedicationError = medicationViewModel::consumeError,
         onHospitalMonthSelected = hospitalViewModel::selectMonth,
         onHospitalDateSelected = hospitalViewModel::selectDate,
         onAddHospitalClick = hospitalViewModel::openAdd,
