@@ -56,7 +56,8 @@ class MockAuthDataSource : AuthDataSource {
         return SignupResponse(
             usersId = MOCK_SIGNUP_USER_ID,
             name = request.name,
-            loginId = request.loginId.lowercase()
+            loginId = request.loginId.lowercase(),
+            role = request.role,
         )
     }
 

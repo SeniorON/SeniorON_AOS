@@ -54,13 +54,19 @@ class AuthRepositoryImpl(
                 passwordCheck = credentials.passwordCheck,
                 name = credentials.name.trim(),
                 birth = credentials.birth,
+                role = credentials.mode.toUserRole(),
                 agreeServiceTerms = credentials.agreeServiceTerms,
                 agreePrivacyPolicy = credentials.agreePrivacyPolicy,
                 agreeAgeOver14 = credentials.agreeAgeOver14,
                 agreeMarketing = credentials.agreeMarketing
             )
         )
-        return SignupResult(response.usersId, response.name, response.loginId)
+        return SignupResult(
+            usersId = response.usersId,
+            name = response.name,
+            loginId = response.loginId,
+            mode = response.role.toAppUserMode(),
+        )
     }
 
     override suspend fun login(credentials: LoginCredentials): LoginResult? {

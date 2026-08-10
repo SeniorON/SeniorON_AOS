@@ -5,7 +5,8 @@ import com.google.gson.annotations.SerializedName
 data class SignupResponse(
     val usersId: Long,
     val name: String,
-    val loginId: String
+    val loginId: String,
+    val role: UserRole,
 )
 
 data class SendSignupEmailVerificationCodeResponse(
