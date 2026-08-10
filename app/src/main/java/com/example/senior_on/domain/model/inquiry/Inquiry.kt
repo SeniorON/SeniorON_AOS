@@ -3,6 +3,7 @@ package com.example.senior_on.domain.model.inquiry
 enum class InquiryStatus {
     Waiting,
     Completed,
+    Unknown,
 }
 
 data class InquirySummary(

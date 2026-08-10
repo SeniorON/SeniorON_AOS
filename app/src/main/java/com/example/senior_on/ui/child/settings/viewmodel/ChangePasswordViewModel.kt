@@ -45,22 +45,28 @@ class ChangePasswordViewModel(
                     confirmation = newPasswordCheck,
                 )
                 if (!changed) {
-                    error("비밀번호 변경에 실패했습니다.")
+                    return@runCatching false
                 }
-            }.onSuccess {
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        changeCompleted = true,
-                    )
+                true
+            }.onSuccess { changed ->
+                if (changed) {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            changeCompleted = true,
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            saveErrorMessage = "비밀번호 변경에 실패했습니다.",
+                        )
+                    }
                 }
             }.onFailure { throwable ->
                 val message = throwable.message.orEmpty()
-                val looksLikeCurrentPasswordError =
-                    message.contains("비밀번호", ignoreCase = true) ||
-                        message.contains("password", ignoreCase = true) ||
-                        message.contains("401") ||
-                        message.contains("403")
+                val looksLikeCurrentPasswordError = isCurrentPasswordMismatch(message)
                 _uiState.update {
                     it.copy(
                         isSaving = false,
@@ -90,6 +96,16 @@ class ChangePasswordViewModel(
 
     fun consumeChangeCompleted() {
         _uiState.update { it.copy(changeCompleted = false) }
+    }
+
+    private fun isCurrentPasswordMismatch(message: String): Boolean {
+        val normalized = message.trim()
+        if (normalized.isEmpty()) return false
+        return normalized.contains("현재 비밀번호", ignoreCase = true) ||
+            normalized.contains("current password", ignoreCase = true) ||
+            normalized.contains("비밀번호가 일치하지", ignoreCase = true) ||
+            normalized.contains("incorrect password", ignoreCase = true) ||
+            normalized.contains("wrong password", ignoreCase = true)
     }
 
     companion object {

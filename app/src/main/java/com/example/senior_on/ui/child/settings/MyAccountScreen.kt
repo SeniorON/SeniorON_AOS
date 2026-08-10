@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -235,6 +236,7 @@ fun ChangeNameScreen(
                 onClick = { onSaveClick(trimmedNewName) },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 16.dp)
                     .height(48.dp)
@@ -340,9 +342,7 @@ fun ChangePasswordScreen(
                 value = currentPassword,
                 onValueChange = {
                     currentPassword = it.take(30)
-                    if (currentPasswordErrorMessage != null) {
-                        onClearCurrentPasswordError()
-                    }
+                    onClearCurrentPasswordError()
                 },
                 placeholder = "비밀번호 입력",
                 isVisible = isCurrentVisible,
@@ -391,6 +391,7 @@ fun ChangePasswordScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
                 .height(48.dp)

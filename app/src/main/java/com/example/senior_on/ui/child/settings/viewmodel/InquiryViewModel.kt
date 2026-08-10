@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.settings.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -68,11 +69,11 @@ class InquiryViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                Log.e(Tag, "Failed to load inquiries", throwable)
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
-                        historyErrorMessage = throwable.message
-                            ?: "문의 목록을 불러오지 못했습니다.",
+                        historyErrorMessage = "문의 목록을 불러오지 못했습니다.",
                     )
                 }
             }
@@ -91,48 +92,51 @@ class InquiryViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(
-                    historyItems = state.historyItems.map { item ->
-                        if (item.id == inquiryId) item.copy(isDetailLoading = true) else item
-                    },
-                    detailErrorMessage = null,
-                )
-            }
-            runCatching {
-                inquiryRepository.getInquiry(parsedId)
-            }.onSuccess { detail ->
+            try {
                 _uiState.update { state ->
                     state.copy(
                         historyItems = state.historyItems.map { item ->
-                            if (item.id == inquiryId) {
-                                item.copy(
-                                    answer = detail.toAnswerText(),
-                                    question = detail.title.ifBlank { item.question },
-                                    isDetailLoading = false,
-                                )
-                            } else {
-                                item
-                            }
+                            if (item.id == inquiryId) item.copy(isDetailLoading = true) else item
                         },
+                        detailErrorMessage = null,
                     )
                 }
-            }.onFailure { throwable ->
-                _uiState.update { state ->
-                    state.copy(
-                        historyItems = state.historyItems.map { item ->
-                            if (item.id == inquiryId) {
-                                item.copy(isDetailLoading = false)
-                            } else {
-                                item
-                            }
-                        },
-                        detailErrorMessage = throwable.message
-                            ?: "문의 상세를 불러오지 못했습니다.",
-                    )
+                runCatching {
+                    inquiryRepository.getInquiry(parsedId)
+                }.onSuccess { detail ->
+                    _uiState.update { state ->
+                        state.copy(
+                            historyItems = state.historyItems.map { item ->
+                                if (item.id == inquiryId) {
+                                    item.copy(
+                                        answer = detail.toAnswerText(),
+                                        question = detail.title.ifBlank { item.question },
+                                        isDetailLoading = false,
+                                    )
+                                } else {
+                                    item
+                                }
+                            },
+                        )
+                    }
+                }.onFailure { throwable ->
+                    Log.e(Tag, "Failed to load inquiry detail: $inquiryId", throwable)
+                    _uiState.update { state ->
+                        state.copy(
+                            historyItems = state.historyItems.map { item ->
+                                if (item.id == inquiryId) {
+                                    item.copy(isDetailLoading = false)
+                                } else {
+                                    item
+                                }
+                            },
+                            detailErrorMessage = "문의 상세를 불러오지 못했습니다.",
+                        )
+                    }
                 }
+            } finally {
+                detailLoadingIds.remove(inquiryId)
             }
-            detailLoadingIds.remove(inquiryId)
         }
     }
 
@@ -168,11 +172,11 @@ class InquiryViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                Log.e(Tag, "Failed to submit inquiry", throwable)
                 _uiState.update {
                     it.copy(
                         isSubmitting = false,
-                        submitErrorMessage = throwable.message
-                            ?: "문의 등록에 실패했습니다.",
+                        submitErrorMessage = "문의 등록에 실패했습니다.",
                     )
                 }
             }
@@ -223,6 +227,7 @@ class InquiryViewModel(
     }
 
     companion object {
+        private const val Tag = "InquiryViewModel"
         private val InquiryDateTimeFormatter =
             DateTimeFormatter.ofPattern("yy.MM.dd HH:mm")
 

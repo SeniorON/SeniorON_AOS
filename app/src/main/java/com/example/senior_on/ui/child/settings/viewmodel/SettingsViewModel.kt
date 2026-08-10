@@ -43,7 +43,9 @@ class SettingsViewModel(
                 val deviceIdentifier = deviceRegistrationRepository
                     .getDeviceRegistration()
                     .deviceIdentifier
-                authRepository.logout(deviceIdentifier)
+                runCatching {
+                    authRepository.logout(deviceIdentifier)
+                }
                 sessionRepository.clearSession()
             }.onSuccess {
                 _uiState.update {
@@ -76,8 +78,8 @@ class SettingsViewModel(
             }
             runCatching {
                 authRepository.withdraw()
-                sessionRepository.clearSession()
             }.onSuccess {
+                runCatching { sessionRepository.clearSession() }
                 _uiState.update {
                     it.copy(
                         isWithdrawing = false,

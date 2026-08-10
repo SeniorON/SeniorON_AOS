@@ -7,6 +7,7 @@ import com.example.senior_on.data.remote.dto.InquiryCreateResponse
 import com.example.senior_on.data.remote.dto.InquiryDetailResponse
 import com.example.senior_on.data.remote.dto.InquiryListItemResponse
 import com.example.senior_on.data.source.inquiry.InquiryDataSource
+import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.inquiry.InquiryAnswer
 import com.example.senior_on.domain.model.inquiry.InquiryCreateResult
 import com.example.senior_on.domain.model.inquiry.InquiryDetail
@@ -25,7 +26,7 @@ class InquiryRepositoryImpl(
     private val gson: Gson = Gson(),
 ) : InquiryRepository {
     override suspend fun getInquiries(): List<InquirySummary> =
-        dataSource.getInquiries().mapNotNull { it.toSummaryOrNull() }
+        dataSource.getInquiries().map { it.toSummary() }
 
     override suspend fun getInquiry(inquiryId: Long): InquiryDetail =
         dataSource.getInquiry(inquiryId).toDetail()
@@ -35,11 +36,14 @@ class InquiryRepositoryImpl(
         content: String,
         imageUris: List<String>,
     ): InquiryCreateResult {
-        val preparedImages = imageUris
-            .distinct()
-            .take(MaxInquiryImages)
-            .map { photoUploadPreparer.prepare(it) }
+        val preparedImages = mutableListOf<PreparedFamilyPhoto>()
         return try {
+            imageUris
+                .distinct()
+                .take(MaxInquiryImages)
+                .forEach { uri ->
+                    preparedImages += photoUploadPreparer.prepare(uri)
+                }
             val requestJson = gson.toJson(
                 InquiryCreateRequest(
                     title = title.trim(),
@@ -65,35 +69,30 @@ class InquiryRepositoryImpl(
         }
     }
 
-    private fun InquiryListItemResponse.toSummaryOrNull(): InquirySummary? {
-        val mappedStatus = status.toInquiryStatusOrNull() ?: return null
-        return InquirySummary(
+    private fun InquiryListItemResponse.toSummary(): InquirySummary =
+        InquirySummary(
             id = inquiryId,
             title = title.orEmpty(),
-            status = mappedStatus,
+            status = status.toInquiryStatus(),
             createdAt = createdAt.orEmpty(),
         )
-    }
 
-    private fun InquiryDetailResponse.toDetail(): InquiryDetail {
-        val mappedStatus = status.toInquiryStatusOrNull()
-            ?: InquiryStatus.Waiting
-        return InquiryDetail(
+    private fun InquiryDetailResponse.toDetail(): InquiryDetail =
+        InquiryDetail(
             id = inquiryId,
             title = title.orEmpty(),
             content = content.orEmpty(),
-            status = mappedStatus,
+            status = status.toInquiryStatus(),
             createdAt = createdAt.orEmpty(),
             imageUrls = images.orEmpty().filter { it.isNotBlank() },
             answers = answers.orEmpty().map { it.toDomain() },
         )
-    }
 
     private fun InquiryCreateResponse.toCreateResult(): InquiryCreateResult =
         InquiryCreateResult(
             id = inquiryId,
             title = title.orEmpty(),
-            status = status.toInquiryStatusOrNull() ?: InquiryStatus.Waiting,
+            status = status.toInquiryStatus(),
             createdAt = createdAt.orEmpty(),
             imageUrls = imageUrls.orEmpty().filter { it.isNotBlank() },
         )
@@ -105,10 +104,10 @@ class InquiryRepositoryImpl(
             createdAt = createdAt.orEmpty(),
         )
 
-    private fun String?.toInquiryStatusOrNull(): InquiryStatus? = when (this?.trim()?.uppercase()) {
+    private fun String?.toInquiryStatus(): InquiryStatus = when (this?.trim()?.uppercase()) {
         "WAITING" -> InquiryStatus.Waiting
         "COMPLETED" -> InquiryStatus.Completed
-        else -> null
+        else -> InquiryStatus.Unknown
     }
 
     private companion object {

@@ -141,9 +141,25 @@ fun SettingsTabRoute(
     val profileImageUiState by profileImageViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingCameraCleanupUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var wasProfileImageUploading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         profileImageViewModel.loadProfileImage()
+    }
+
+    LaunchedEffect(profileImageUiState.isUploading) {
+        if (profileImageUiState.isUploading) {
+            wasProfileImageUploading = true
+            return@LaunchedEffect
+        }
+        if (!wasProfileImageUploading) return@LaunchedEffect
+        wasProfileImageUploading = false
+        val cleanupUri = pendingCameraCleanupUri ?: return@LaunchedEffect
+        pendingCameraCleanupUri = null
+        runCatching {
+            context.contentResolver.delete(Uri.parse(cleanupUri), null, null)
+        }
     }
 
     LaunchedEffect(settingsUiState.logoutErrorMessage) {
@@ -193,6 +209,7 @@ fun SettingsTabRoute(
         val photoUri = pendingCameraPhotoUri
         pendingCameraPhotoUri = null
         if (isCaptured && photoUri != null) {
+            pendingCameraCleanupUri = photoUri
             profileImageViewModel.updateProfileImage(photoUri)
         } else if (photoUri != null) {
             runCatching {
@@ -888,7 +905,7 @@ internal fun SettingsProfilePhotoBottomSheet(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsProfilePhotoOption(
-                    text = "기본 이미지 적용",
+                    text = "기본 이미지로 보기 (이 기기만)",
                     iconResId = R.drawable.ic_dependent,
                     onClick = onApplyDefaultImageClick
                 )

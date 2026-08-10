@@ -18,8 +18,8 @@ import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeResponse
 import retrofit2.http.Body
-import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -66,10 +66,10 @@ interface UserApi {
         @Body request: UserLogoutRequest
     ): ApiResponse<String>
 
-    @DELETE("api/users/me")
+    @HTTP(method = "DELETE", path = "api/users/me", hasBody = true)
     suspend fun withdraw(
         @Body request: UserWithdrawalRequest
-    ): ApiResponse<Unit>
+    ): ApiResponse<String>
 
     @GET("api/users/check-login-id")
     suspend fun checkLoginId(

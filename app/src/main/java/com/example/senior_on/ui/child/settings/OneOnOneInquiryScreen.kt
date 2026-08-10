@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -86,7 +87,8 @@ private data class InquiryHistoryItem(
     val status: InquiryAnswerStatus,
     val createdAtLabel: String,
     val question: String,
-    val answer: String? = null
+    val answer: String? = null,
+    val isDetailLoading: Boolean = false,
 )
 
 private const val MaxInquiryImages = 5
@@ -276,6 +278,7 @@ private fun InquiryHistoryUiItem.toHistoryItem(): InquiryHistoryItem =
         createdAtLabel = createdAtLabel,
         question = question,
         answer = answer,
+        isDetailLoading = isDetailLoading,
     )
 
 @Composable
@@ -741,6 +744,7 @@ private fun InquiryHistoryCard(
 ) {
     val canExpand = item.status == InquiryAnswerStatus.Answered
     val showAnswer = expanded && !item.answer.isNullOrBlank()
+    val showDetailLoading = expanded && item.isDetailLoading && item.answer.isNullOrBlank()
 
     Column(
         modifier = modifier
@@ -800,6 +804,28 @@ private fun InquiryHistoryCard(
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = SeniorOnColors.Gray300
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showDetailLoading,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .background(SeniorOnColors.White)
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = SeniorOnColors.Primary600,
+                    strokeWidth = 2.dp,
                 )
             }
         }
