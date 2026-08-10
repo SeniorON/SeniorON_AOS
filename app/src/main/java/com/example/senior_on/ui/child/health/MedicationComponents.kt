@@ -47,6 +47,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 enum class MedicationDoseStatus(val label: String) {
@@ -61,7 +62,8 @@ data class RegisteredMedicationUiState(
     val name: String,
     val times: List<LocalTime>,
     val weekdays: Set<Int>,
-    val startDate: LocalDate? = null
+    val startDate: LocalDate? = null,
+    val repeat: MedicationRepeatSelection = MedicationRepeatSelection(),
 ) {
     val time: LocalTime
         get() = times.firstOrNull() ?: LocalTime.of(8, 0)
@@ -78,8 +80,31 @@ data class RegisteredMedicationUiState(
     fun isScheduledOn(date: LocalDate): Boolean {
         if (weekdays.isEmpty()) return false
         if (startDate != null && date.isBefore(startDate)) return false
+        val effectiveEndDate = when (repeat.duration) {
+            MedicationRepeatDuration.Continuous -> null
+            MedicationRepeatDuration.Period -> {
+                val weeks = repeat.periodValue.coerceAtLeast(1).toLong()
+                (startDate ?: date).plusWeeks(weeks)
+            }
+            MedicationRepeatDuration.Date -> repeat.endDate
+        }
+        if (effectiveEndDate != null && date.isAfter(effectiveEndDate)) return false
+
+        val cycle = repeat.cycleValue.coerceAtLeast(1).toLong()
+        val anchor = startDate ?: date
         val weekdayIndex = date.dayOfWeek.value % 7
-        return weekdayIndex in weekdays
+
+        return when (repeat.frequency) {
+            MedicationRepeatFrequency.Daily -> {
+                val days = ChronoUnit.DAYS.between(anchor, date)
+                days % cycle == 0L && weekdayIndex in weekdays
+            }
+            MedicationRepeatFrequency.Weekly -> {
+                if (weekdayIndex !in weekdays) return false
+                val weeks = ChronoUnit.DAYS.between(anchor, date) / 7
+                weeks % cycle == 0L
+            }
+        }
     }
 }
 

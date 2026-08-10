@@ -87,18 +87,43 @@ data class ServerFamilyHome(
     val members: List<ServerFamilyMember>, val recentPhotos: List<ServerFamilyPhoto>
 )
 data class HospitalAppointment(
-    val id: Long, val hospitalName: String, val department: String,
-    val date: String, val time: String, val reminderType: String
+    val id: Long,
+    val hospitalName: String,
+    val department: String,
+    val date: String,
+    val time: String,
+    val reminderType: String,
+)
+
+data class HospitalUpcomingGroup(
+    val date: String,
+    val appointments: List<HospitalAppointment>,
 )
 data class MedicationInfo(
-    val id: Long?, val groupId: String, val name: String, val ingredient: String?,
-    val times: List<String>, val days: List<String>
+    val id: Long?,
+    val groupId: String,
+    val name: String,
+    val ingredient: String?,
+    val times: List<String>,
+    val days: List<String>,
+    val startDate: String? = null,
+    val repeatType: String = "DAILY",
+    val repeatInterval: Int = 1,
+    val repeatEndType: String = "ONGOING",
+    val durationWeeks: Int? = null,
+    val endDate: String? = null,
+    val medicationIds: List<Long> = emptyList(),
 )
 data class MedicationSchedule(
-    val logId: Long, val name: String, val plannedTime: String,
-    val taken: Boolean, val takenAt: String? = null,
-    val ingredient: String? = null, val plannedDate: String? = null,
-    val status: String? = null
+    val logId: Long,
+    val name: String,
+    val plannedTime: String,
+    val taken: Boolean,
+    val takenAt: String? = null,
+    val takenTime: String? = null,
+    val ingredient: String? = null,
+    val plannedDate: String? = null,
+    val status: String? = null,
 )
 data class MedicationMonthlySchedule(
     val year: Int,

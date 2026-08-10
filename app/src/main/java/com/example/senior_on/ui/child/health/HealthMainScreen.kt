@@ -1,11 +1,13 @@
 package com.example.senior_on.ui.child.health
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -13,11 +15,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.senior_on.ui.child.health.viewmodel.HospitalUiState
+import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
-import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
 import java.time.LocalDate
+import java.time.YearMonth
 
 enum class HealthSection {
     Health,
@@ -29,6 +34,7 @@ fun HealthMainScreen(
     modifier: Modifier = Modifier,
     initialSection: HealthSection = HealthSection.Health,
     medicationUiState: MedicationUiState = MedicationUiState(),
+    hospitalUiState: HospitalUiState = HospitalUiState(),
     onMedicationDateSelected: (LocalDate) -> Unit = {},
     onAddMedicationClick: () -> Unit = {},
     onMedicationClick: (RegisteredMedicationUiState) -> Unit = {},
@@ -36,32 +42,33 @@ fun HealthMainScreen(
     onMedicationEditClick: () -> Unit = {},
     onMedicationSaveClick: (MedicationDraft) -> Unit = {},
     onMedicationDeleteClick: () -> Unit = {},
+    onConsumeMedicationError: () -> Unit = {},
+    onHospitalMonthSelected: (YearMonth) -> Unit = {},
+    onHospitalDateSelected: (LocalDate) -> Unit = {},
+    onAddHospitalClick: (LocalDate) -> Unit = {},
+    onHospitalClick: (HospitalAppointmentUiState) -> Unit = {},
+    onHospitalEditClick: (HospitalAppointmentUiState) -> Unit = {},
+    onHospitalSaveClick: (HospitalAppointmentDraft) -> Unit = {},
+    onHospitalDeleteClick: (HospitalAppointmentUiState) -> Unit = {},
+    onHospitalEditorBackClick: () -> Unit = {},
+    onConsumeHospitalError: () -> Unit = {},
 ) {
     var selectedSection by rememberSaveable(initialSection) {
         mutableStateOf(initialSection)
     }
-    var editorMode by rememberSaveable { mutableStateOf<HospitalEditorMode?>(null) }
-    var editorDate by remember { mutableStateOf(LocalDate.of(2026, 6, 17)) }
-    var editingAppointment by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
     var appointmentToDelete by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
-    var appointments by remember { mutableStateOf(previewHospitalAppointments()) }
+    val context = LocalContext.current
 
-    fun openAdd(date: LocalDate) {
-        editorDate = date
-        editingAppointment = null
-        editorMode = HospitalEditorMode.Add
+    LaunchedEffect(hospitalUiState.errorMessage) {
+        val message = hospitalUiState.errorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        onConsumeHospitalError()
     }
 
-    fun openView(appointment: HospitalAppointmentUiState) {
-        editorDate = appointment.date
-        editingAppointment = appointment
-        editorMode = HospitalEditorMode.View
-    }
-
-    fun openEdit(appointment: HospitalAppointmentUiState) {
-        editorDate = appointment.date
-        editingAppointment = appointment
-        editorMode = HospitalEditorMode.Edit
+    LaunchedEffect(medicationUiState.errorMessage) {
+        val message = medicationUiState.errorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        onConsumeMedicationError()
     }
 
     Column(
@@ -69,42 +76,23 @@ fun HealthMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.SupportWhite100)
     ) {
-        val activeEditorMode = editorMode
+        val activeHospitalMode = hospitalUiState.editorMode
         val activeMedicationMode = medicationUiState.editorMode
         val activeMedication = medicationUiState.editingMedication
+        val activeHospital = hospitalUiState.editingAppointment
 
         when {
-            selectedSection == HealthSection.Hospital && activeEditorMode != null -> {
+            selectedSection == HealthSection.Hospital && activeHospitalMode != null -> {
                 HospitalAppointmentScreen(
-                    mode = activeEditorMode,
-                    initialDate = editorDate,
-                    initialDraft = editingAppointment?.toDraft(),
+                    mode = activeHospitalMode,
+                    initialDate = hospitalUiState.editorDate,
+                    initialDraft = activeHospital?.toDraft(),
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    onBackClick = { editorMode = null },
-                    onSaveClick = { draft ->
-                        val previous = editingAppointment
-                        val saved = HospitalAppointmentUiState(
-                            date = draft.date,
-                            hospitalName = draft.hospitalName,
-                            specialty = draft.specialty,
-                            time = draft.time,
-                            reminder = draft.reminder,
-                            daysLeft = previous?.daysLeft ?: 0,
-                            highlighted = previous?.highlighted ?: false
-                        )
-                        appointments = if (previous == null) {
-                            (appointments + saved).sortedBy { it.date }
-                        } else {
-                            appointments.map { if (it == previous) saved else it }
-                        }
-                        editorMode = null
-                    },
+                    onBackClick = onHospitalEditorBackClick,
+                    onSaveClick = onHospitalSaveClick,
                     onDeleteClick = {
-                        editingAppointment?.let { target ->
-                            appointments = appointments.filterNot { it == target }
-                        }
-                        editorMode = null
-                    }
+                        activeHospital?.let(onHospitalDeleteClick)
+                    },
                 )
             }
 
@@ -141,7 +129,9 @@ fun HealthMainScreen(
                     selectedSection = selectedSection,
                     onSectionClick = {
                         selectedSection = it
-                        editorMode = null
+                        if (activeHospitalMode != null) {
+                            onHospitalEditorBackClick()
+                        }
                         if (activeMedicationMode != null) {
                             onMedicationEditorBackClick()
                         }
@@ -161,12 +151,17 @@ fun HealthMainScreen(
                         onRegisteredMedicationClick = onMedicationClick,
                     )
                     HealthSection.Hospital -> HospitalScreen(
-                        appointments = appointments,
+                        appointments = hospitalUiState.monthlyAppointments,
+                        upcomingAppointments = hospitalUiState.upcomingAppointments,
+                        displayedMonth = hospitalUiState.displayedMonth,
+                        selectedDate = hospitalUiState.selectedDate,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
-                        onAddAppointmentClick = ::openAdd,
-                        onAppointmentClick = ::openView,
-                        onEditAppointmentClick = ::openEdit,
-                        onDeleteAppointmentClick = { appointmentToDelete = it }
+                        onDisplayedMonthChange = onHospitalMonthSelected,
+                        onSelectedDateChange = onHospitalDateSelected,
+                        onAddAppointmentClick = onAddHospitalClick,
+                        onAppointmentClick = onHospitalClick,
+                        onEditAppointmentClick = onHospitalEditClick,
+                        onDeleteAppointmentClick = { appointmentToDelete = it },
                     )
                 }
             }
@@ -178,7 +173,7 @@ fun HealthMainScreen(
             title = "${appointment.date.monthValue}월 ${appointment.date.dayOfMonth}일 진료를\n삭제할까요?",
             onCancel = { appointmentToDelete = null },
             onConfirm = {
-                appointments = appointments.filterNot { it == appointment }
+                onHospitalDeleteClick(appointment)
                 appointmentToDelete = null
             }
         )
@@ -190,7 +185,7 @@ private fun HospitalAppointmentUiState.toDraft() = HospitalAppointmentDraft(
     specialty = specialty,
     date = date,
     time = time,
-    reminder = reminder
+    reminder = reminder,
 )
 
 @Preview(name = "Health Tab - Health", showBackground = true, widthDp = 360, heightDp = 720)

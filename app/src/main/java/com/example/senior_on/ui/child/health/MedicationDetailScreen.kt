@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,7 +67,38 @@ data class MedicationDraft(
     val name: String,
     val times: List<LocalTime>,
     val weekdays: Set<Int>,
-    val startDate: LocalDate? = null
+    val startDate: LocalDate? = null,
+    val repeat: MedicationRepeatSelection = MedicationRepeatSelection(),
+)
+
+private val LocalDateNullableSaver = Saver<LocalDate?, String>(
+    save = { it?.toString().orEmpty() },
+    restore = { saved -> saved.takeIf(String::isNotBlank)?.let(LocalDate::parse) },
+)
+
+private val MedicationRepeatSelectionSaver = Saver<MedicationRepeatSelection, List<Any>>(
+    save = { selection ->
+        listOf(
+            selection.frequency.name,
+            selection.cycleValue,
+            ArrayList(selection.weekdays),
+            selection.duration.name,
+            selection.periodValue,
+            selection.endDate?.toString().orEmpty(),
+        )
+    },
+    restore = { saved ->
+        MedicationRepeatSelection(
+            frequency = runCatching {
+                MedicationRepeatFrequency.valueOf(saved[0] as String)
+            }.getOrDefault(MedicationRepeatFrequency.Daily),
+            cycleValue = saved[1] as Int,
+            weekdays = (saved[2] as List<*>).mapNotNull { it as? Int }.toSet(),
+            duration = MedicationRepeatDuration.valueOf(saved[3] as String),
+            periodValue = saved[4] as Int,
+            endDate = (saved[5] as String).takeIf(String::isNotBlank)?.let(LocalDate::parse),
+        )
+    },
 )
 
 @Composable
@@ -88,11 +120,21 @@ fun MedicationDetailScreen(
             initialDraft.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
         )
     }
-    var startDate by remember(initialDraft) { mutableStateOf(initialDraft.startDate) }
-    var repeatSelection by remember(initialDraft) {
+    var startDate by rememberSaveable(
+        initialDraft,
+        stateSaver = LocalDateNullableSaver,
+    ) {
+        mutableStateOf(initialDraft.startDate)
+    }
+    var repeatSelection by rememberSaveable(
+        initialDraft,
+        stateSaver = MedicationRepeatSelectionSaver,
+    ) {
         mutableStateOf(
-            MedicationRepeatSelection(
-                weekdays = initialDraft.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
+            initialDraft.repeat.copy(
+                weekdays = initialDraft.weekdays.ifEmpty {
+                    initialDraft.repeat.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
+                },
             )
         )
     }
@@ -112,7 +154,8 @@ fun MedicationDetailScreen(
             name != initialDraft.name ||
             times != initialDraft.times ||
             weekdays != initialDraft.weekdays ||
-            startDate != initialDraft.startDate
+            startDate != initialDraft.startDate ||
+            repeatSelection != initialDraft.repeat
 
     fun resolvedWeekdaysForSave(): Set<Int> =
         when (repeatSelection.frequency) {
@@ -326,7 +369,10 @@ fun MedicationDetailScreen(
                                                 name = name.trim(),
                                                 times = times,
                                                 weekdays = resolvedWeekdaysForSave(),
-                                                startDate = startDate
+                                                startDate = startDate,
+                                                repeat = repeatSelection.copy(
+                                                    weekdays = resolvedWeekdaysForSave(),
+                                                ),
                                             )
                                         )
                                     },
@@ -358,7 +404,10 @@ fun MedicationDetailScreen(
                                                 name = name.trim(),
                                                 times = times,
                                                 weekdays = resolvedWeekdaysForSave(),
-                                                startDate = startDate
+                                                startDate = startDate,
+                                                repeat = repeatSelection.copy(
+                                                    weekdays = resolvedWeekdaysForSave(),
+                                                ),
                                             )
                                         )
                                     },
@@ -871,7 +920,8 @@ internal fun RegisteredMedicationUiState.toDraft() = MedicationDraft(
     name = name,
     times = times,
     weekdays = weekdays,
-    startDate = startDate
+    startDate = startDate,
+    repeat = repeat.copy(weekdays = weekdays),
 )
 
 @Preview(name = "복약 추가하기 - Add", showBackground = true, widthDp = 360, heightDp = 800)

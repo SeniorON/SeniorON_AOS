@@ -11,6 +11,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -118,32 +119,40 @@ class ParentMedicationViewModel(
                 )
             }
 
-            runCatching { repository.markNearestTaken() }
-                .onSuccess {
-                    _uiState.update { state ->
-                        state.copy(
-                            content = ParentMedicationContent.Completed,
-                            medications = state.medications.map { item ->
-                                if (item.id == medicationId) {
-                                    item.copy(takenAt = Instant.now())
-                                } else {
-                                    item
-                                }
-                            },
-                            submittingMedicationId = null,
-                        )
-                    }
+            runCatching {
+                val medicationLogId = medication.id.toLongOrNull()
+                if (medicationLogId != null && medicationLogId > 0L) {
+                    repository.markTaken(medicationLogId)
+                } else {
+                    repository.markNearestTaken()
                 }
-                .onFailure { throwable ->
-                    if (throwable is CancellationException) return@onFailure
-                    _uiState.update {
-                        it.copy(
-                            submittingMedicationId = null,
-                            message = "복약 확인을 전송하지 못했어요.",
-                            messageType = ParentMedicationMessageType.Default,
-                        )
-                    }
+            }.onSuccess { checked ->
+                val takenAt = checked.takenAt
+                    ?.let { value -> runCatching { Instant.parse(value) }.getOrNull() }
+                    ?: Instant.now()
+                _uiState.update { state ->
+                    state.copy(
+                        content = ParentMedicationContent.Completed,
+                        medications = state.medications.map { item ->
+                            if (item.id == medicationId) {
+                                item.copy(takenAt = takenAt)
+                            } else {
+                                item
+                            }
+                        },
+                        submittingMedicationId = null,
+                    )
                 }
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) return@onFailure
+                _uiState.update {
+                    it.copy(
+                        submittingMedicationId = null,
+                        message = "복약 확인을 전송하지 못했어요.",
+                        messageType = ParentMedicationMessageType.Default,
+                    )
+                }
+            }
         }
     }
 
@@ -192,10 +201,13 @@ private fun ParentMedication.isWithinTakingWindow(now: LocalTime = LocalTime.now
     return minOf(directDifference, wrappedDifference) <= Duration.ofHours(3)
 }
 
-private fun String.toLocalTimeOrNull(): LocalTime? = try {
-    LocalTime.parse(trim())
-} catch (_: DateTimeParseException) {
-    null
+private fun String.toLocalTimeOrNull(): LocalTime? {
+    val value = trim()
+    if (value.isEmpty()) return null
+    return runCatching { LocalTime.parse(value) }.getOrNull()
+        ?: runCatching {
+            LocalTime.parse(value, DateTimeFormatter.ofPattern("H:mm"))
+        }.getOrNull()
 }
 
 private fun String?.toInstantOrNull(): Instant? = try {

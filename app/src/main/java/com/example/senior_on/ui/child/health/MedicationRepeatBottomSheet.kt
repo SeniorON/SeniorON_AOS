@@ -57,19 +57,18 @@ private val PeriodStepperIconSize = 8.333.dp
 private val PeriodStepperIconStroke = 1.667.dp
 private val PeriodStepperIconGap = 10.dp
 
-internal enum class MedicationRepeatFrequency(val label: String) {
+enum class MedicationRepeatFrequency(val label: String) {
     Daily("매일"),
-    Weekly("매주"),
-    Monthly("매월")
+    Weekly("매주")
 }
 
-internal enum class MedicationRepeatDuration(val label: String) {
+enum class MedicationRepeatDuration(val label: String) {
     Continuous("계속 복용"),
     Period("복용 기간"),
     Date("날짜 지정")
 }
 
-internal data class MedicationRepeatSelection(
+data class MedicationRepeatSelection(
     val frequency: MedicationRepeatFrequency = MedicationRepeatFrequency.Daily,
     val cycleValue: Int = 1,
     val weekdays: Set<Int> = emptySet(),
@@ -142,35 +141,38 @@ private fun MedicationRepeatSheetContent(
 
         MedicationRepeatFrequencySelector(
             selected = frequency,
-            onSelected = { frequency = it }
+            onSelected = { selected ->
+                frequency = selected
+                if (selected == MedicationRepeatFrequency.Daily) {
+                    cycleValue = 1
+                }
+            }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (frequency == MedicationRepeatFrequency.Weekly) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "반복 주기",
-                style = SeniorOnTextStyles.BodyMSemiBold,
-                color = SeniorOnColors.Gray800,
-                modifier = Modifier.weight(1f)
-            )
-            MedicationRepeatStepper(
-                label = cycleLabel(frequency, cycleValue),
-                onDecrease = { if (cycleValue > 1) cycleValue -= 1 },
-                onIncrease = { cycleValue += 1 },
-                circleSize = CycleStepperCircleSize,
-                iconSize = CycleStepperIconSize,
-                iconStroke = CycleStepperIconStroke,
-                iconGap = CycleStepperIconGap
-            )
-        }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "반복 주기",
+                    style = SeniorOnTextStyles.BodyMSemiBold,
+                    color = SeniorOnColors.Gray800,
+                    modifier = Modifier.weight(1f)
+                )
+                MedicationRepeatStepper(
+                    label = cycleLabel(frequency, cycleValue),
+                    onDecrease = { if (cycleValue > 1) cycleValue -= 1 },
+                    onIncrease = { cycleValue += 1 },
+                    circleSize = CycleStepperCircleSize,
+                    iconSize = CycleStepperIconSize,
+                    iconStroke = CycleStepperIconStroke,
+                    iconGap = CycleStepperIconGap
+                )
+            }
 
-        if (frequency == MedicationRepeatFrequency.Weekly ||
-            frequency == MedicationRepeatFrequency.Monthly
-        ) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
@@ -212,38 +214,53 @@ private fun MedicationRepeatSheetContent(
             selected = duration == MedicationRepeatDuration.Period,
             onClick = { duration = MedicationRepeatDuration.Period },
             trailing = {
-                MedicationRepeatStepper(
-                    label = "${periodValue}주",
-                    onDecrease = { if (periodValue > 1) periodValue -= 1 },
-                    onIncrease = { periodValue += 1 },
-                    circleSize = PeriodStepperCircleSize,
-                    iconSize = PeriodStepperIconSize,
-                    iconStroke = PeriodStepperIconStroke,
-                    iconGap = PeriodStepperIconGap
-                )
+                if (duration == MedicationRepeatDuration.Period) {
+                    MedicationRepeatStepper(
+                        label = "${periodValue}주",
+                        onDecrease = { if (periodValue > 1) periodValue -= 1 },
+                        onIncrease = { periodValue += 1 },
+                        circleSize = PeriodStepperCircleSize,
+                        iconSize = PeriodStepperIconSize,
+                        iconStroke = PeriodStepperIconStroke,
+                        iconGap = PeriodStepperIconGap
+                    )
+                }
             }
         )
         MedicationRepeatDurationOption(
             label = MedicationRepeatDuration.Date.label,
             selected = duration == MedicationRepeatDuration.Date,
-            onClick = { duration = MedicationRepeatDuration.Date },
+            onClick = {
+                duration = MedicationRepeatDuration.Date
+                showEndDateCalendar = true
+            },
             showDivider = false,
             trailing = {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_calendar),
-                    contentDescription = null,
-                    tint = SeniorOnColors.Gray300,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                duration = MedicationRepeatDuration.Date
-                                showEndDateCalendar = true
-                            }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (duration == MedicationRepeatDuration.Date && endDate != null) {
+                        Text(
+                            text = "${endDate!!.monthValue}월 ${endDate!!.dayOfMonth}일",
+                            style = SeniorOnTextStyles.BodyMMedium,
+                            color = SeniorOnColors.Gray700,
                         )
-                )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_calendar),
+                        contentDescription = null,
+                        tint = SeniorOnColors.Gray300,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    duration = MedicationRepeatDuration.Date
+                                    showEndDateCalendar = true
+                                }
+                            )
+                    )
+                }
             }
         )
 
@@ -369,7 +386,6 @@ private fun cycleLabel(frequency: MedicationRepeatFrequency, value: Int): String
     when (frequency) {
         MedicationRepeatFrequency.Daily -> "${value}일마다"
         MedicationRepeatFrequency.Weekly -> "${value}주마다"
-        MedicationRepeatFrequency.Monthly -> "${value}개월마다"
     }
 
 @Composable

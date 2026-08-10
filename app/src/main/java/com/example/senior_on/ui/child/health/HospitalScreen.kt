@@ -6,11 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -23,32 +19,28 @@ import java.time.YearMonth
 fun HospitalScreen(
     modifier: Modifier = Modifier,
     appointments: List<HospitalAppointmentUiState> = previewHospitalAppointments(),
-    initialMonth: YearMonth = YearMonth.of(2026, 6),
-    initialSelectedDay: Int = 17,
+    upcomingAppointments: List<HospitalAppointmentUiState> = appointments,
+    displayedMonth: YearMonth = YearMonth.now(),
+    selectedDate: LocalDate = LocalDate.now(),
+    onDisplayedMonthChange: (YearMonth) -> Unit = {},
+    onSelectedDateChange: (LocalDate) -> Unit = {},
     onAddAppointmentClick: (LocalDate) -> Unit = {},
     onAppointmentClick: (HospitalAppointmentUiState) -> Unit = {},
     onEditAppointmentClick: (HospitalAppointmentUiState) -> Unit = {},
-    onDeleteAppointmentClick: (HospitalAppointmentUiState) -> Unit = {}
+    onDeleteAppointmentClick: (HospitalAppointmentUiState) -> Unit = {},
 ) {
-    var displayedYear by rememberSaveable { mutableIntStateOf(initialMonth.year) }
-    var displayedMonthValue by rememberSaveable { mutableIntStateOf(initialMonth.monthValue) }
-    var selectedDay by rememberSaveable { mutableIntStateOf(initialSelectedDay) }
-    val displayedMonth = remember(displayedYear, displayedMonthValue) {
-        YearMonth.of(displayedYear, displayedMonthValue)
-    }
     val appointmentDays = remember(appointments, displayedMonth) {
         appointments
             .filter { YearMonth.from(it.date) == displayedMonth }
             .mapTo(mutableSetOf()) { it.date.dayOfMonth }
     }
-    val selectedDate = displayedMonth.atDay(selectedDay)
     val selectedAppointments = appointments.filter { it.date == selectedDate }
 
     fun moveMonth(monthDelta: Long) {
         val movedMonth = displayedMonth.plusMonths(monthDelta)
-        displayedYear = movedMonth.year
-        displayedMonthValue = movedMonth.monthValue
-        selectedDay = selectedDay.coerceAtMost(movedMonth.lengthOfMonth())
+        onDisplayedMonthChange(movedMonth)
+        val day = selectedDate.dayOfMonth.coerceAtMost(movedMonth.lengthOfMonth())
+        onSelectedDateChange(movedMonth.atDay(day))
     }
 
     Column(
@@ -58,15 +50,17 @@ fun HospitalScreen(
             .verticalScroll(rememberScrollState())
     ) {
         UpcomingAppointmentsSection(
-            appointments = appointments,
+            appointments = upcomingAppointments,
             onAppointmentClick = onAppointmentClick
         )
         HospitalScheduleSection(
             displayedMonth = displayedMonth,
-            selectedDay = selectedDay,
+            selectedDay = selectedDate.dayOfMonth,
             appointmentDays = appointmentDays,
             selectedAppointments = selectedAppointments,
-            onDayClick = { selectedDay = it },
+            onDayClick = { day ->
+                onSelectedDateChange(displayedMonth.atDay(day))
+            },
             onAddAppointmentClick = { onAddAppointmentClick(selectedDate) },
             onEditAppointmentClick = onEditAppointmentClick,
             onDeleteAppointmentClick = onDeleteAppointmentClick,
@@ -78,6 +72,7 @@ fun HospitalScreen(
 
 internal fun previewHospitalAppointments() = listOf(
     HospitalAppointmentUiState(
+        id = 1L,
         date = LocalDate.of(2026, 6, 22),
         hospitalName = "서울대학교병원",
         specialty = "내과",
@@ -86,6 +81,7 @@ internal fun previewHospitalAppointments() = listOf(
         highlighted = true
     ),
     HospitalAppointmentUiState(
+        id = 2L,
         date = LocalDate.of(2026, 6, 26),
         hospitalName = "연세세브란스병원",
         specialty = "정형외과",
@@ -106,6 +102,6 @@ private fun HospitalScreenPreview() {
 @Composable
 private fun HospitalSelectedAppointmentPreview() {
     SENIOR_ONTheme {
-        HospitalScreen(initialSelectedDay = 22)
+        HospitalScreen(selectedDate = LocalDate.of(2026, 6, 22))
     }
 }

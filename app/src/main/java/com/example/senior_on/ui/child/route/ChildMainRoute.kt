@@ -25,6 +25,7 @@ fun ChildMainRoute(
         parentInfoRepository = appContainer.parentInfoRepository,
         notificationRepository = appContainer.notificationRepository,
         medicationRepository = appContainer.medicationRepository,
+        hospitalRepository = appContainer.hospitalRepository,
         homeServerRepository = appContainer.homeServerRepository,
         eventRepository = appContainer.eventRepository,
         authRepository = appContainer.authRepository,
