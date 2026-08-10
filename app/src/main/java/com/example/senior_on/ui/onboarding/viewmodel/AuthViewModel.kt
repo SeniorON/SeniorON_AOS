@@ -110,7 +110,7 @@ class AuthViewModel(
                         deviceIdentifier = deviceRegistration.deviceIdentifier,
                         userId = result.loginId,
                         mode = result.mode,
-                        keepLoggedIn = keepLoggedIn,
+                        keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                     )
                     onResult(result)
                 }
@@ -379,7 +379,7 @@ class AuthViewModel(
                 pendingSocialSignup = PendingSocialSignup(
                     provider = provider,
                     socialToken = socialToken,
-                    keepLoggedIn = keepLoggedIn,
+                    keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )
                 signupDraft = SignupDraft(name = result.name)
                 accessToken = null
@@ -406,7 +406,7 @@ class AuthViewModel(
                     deviceIdentifier = deviceRegistration.deviceIdentifier,
                     userId = resultUsersId.toString(),
                     mode = resultMode,
-                    keepLoggedIn = keepLoggedIn,
+                    keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )
             } else {
                 accessToken = null
@@ -419,6 +419,11 @@ class AuthViewModel(
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
+
+    private fun shouldPersistSession(
+        mode: AppUserMode,
+        requestedByUser: Boolean,
+    ): Boolean = requestedByUser || mode == AppUserMode.Senior
 
     fun clearSignupEmailRequestError() {
         _uiState.update {
