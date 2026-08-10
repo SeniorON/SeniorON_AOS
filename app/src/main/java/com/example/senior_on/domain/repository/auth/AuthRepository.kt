@@ -28,4 +28,12 @@ interface AuthRepository {
         accessToken: String,
         mode: AppUserMode
     ): RoleUpdateResult
+
+    suspend fun logout(deviceIdentifier: String)
+
+    suspend fun withdraw(confirmation: String = DEFAULT_WITHDRAWAL_CONFIRMATION)
+
+    companion object {
+        const val DEFAULT_WITHDRAWAL_CONFIRMATION = "회원 탈퇴"
+    }
 }

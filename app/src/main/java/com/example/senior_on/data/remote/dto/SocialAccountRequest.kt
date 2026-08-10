@@ -17,6 +17,7 @@ data class SocialSignupRequest(
     val socialToken: String,
     val name: String,
     val birth: String,
+    val role: String,
     val serviceTermsAgreed: Boolean,
     val privacyPolicyAgreed: Boolean,
     val ageOver14Agreed: Boolean,

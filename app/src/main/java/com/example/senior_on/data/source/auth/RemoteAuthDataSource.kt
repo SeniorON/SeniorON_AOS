@@ -11,6 +11,8 @@ import com.example.senior_on.data.remote.dto.SignupRequest
 import com.example.senior_on.data.remote.dto.SignupResponse
 import com.example.senior_on.data.remote.dto.UpdateRoleRequest
 import com.example.senior_on.data.remote.dto.UpdateRoleResponse
+import com.example.senior_on.data.remote.dto.UserLogoutRequest
+import com.example.senior_on.data.remote.dto.UserWithdrawalRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeRequest
 import com.example.senior_on.data.remote.dto.VerifySignupEmailVerificationCodeResponse
 import com.example.senior_on.data.source.remoteRequest
@@ -53,6 +55,20 @@ class RemoteAuthDataSource(
         request: UpdateRoleRequest
     ): UpdateRoleResponse {
         return userApi.updateRole(authorization, request).requireData()
+    }
+
+    override suspend fun logout(request: UserLogoutRequest) {
+        remoteRequest {
+            userApi.logout(request)
+            Unit
+        }
+    }
+
+    override suspend fun withdraw(request: UserWithdrawalRequest) {
+        remoteRequest {
+            userApi.withdraw(request)
+            Unit
+        }
     }
 
     private fun <T> com.example.senior_on.data.remote.dto.ApiResponse<T>.requireData(): T {

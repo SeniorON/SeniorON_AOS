@@ -3,6 +3,7 @@ package com.example.senior_on.di
 import android.content.Context
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.repository.impl.AccountRecoveryRepositoryImpl
+import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.data.repository.impl.AuthRepositoryImpl
 import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
 import com.example.senior_on.data.repository.impl.ChatBuddyRepositoryImpl
@@ -20,6 +21,7 @@ import com.example.senior_on.data.repository.impl.EventRepositoryImpl
 import com.example.senior_on.data.repository.impl.FamilyServerRepositoryImpl
 import com.example.senior_on.data.repository.impl.HomeServerRepositoryImpl
 import com.example.senior_on.data.repository.impl.HospitalRepositoryImpl
+import com.example.senior_on.data.repository.impl.InquiryRepositoryImpl
 import com.example.senior_on.data.repository.impl.MedicationRepositoryImpl
 import com.example.senior_on.data.repository.impl.NotificationRepositoryImpl
 import com.example.senior_on.data.repository.impl.LocationRepositoryImpl
@@ -37,8 +39,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
-import com.example.senior_on.data.source.parent.MockParentInfoDataSource
-import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
+import com.example.senior_on.data.source.parent.InMemoryParentInfoDataSource
+import com.example.senior_on.data.source.parent.RemoteParentLinkSafetyDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
@@ -51,6 +53,7 @@ import com.example.senior_on.data.source.health.HospitalDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.data.source.medication.MedicationDataSource
 import com.example.senior_on.data.source.location.AndroidLocationDataSource
+import com.example.senior_on.data.source.inquiry.InquiryDataSource
 import com.example.senior_on.data.source.notification.NotificationDataSource
 import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import com.example.senior_on.domain.model.auth.AppUserProfile
@@ -62,6 +65,7 @@ import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.auth.SocialAuthRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
@@ -88,7 +92,9 @@ interface AppContainer {
     val eventRepository: EventRepository
     val userSettingsRepository: UserSettingsRepository
     val deviceRepository: DeviceRepository
+    val inquiryRepository: InquiryRepository
     val locationRepository: LocationRepository
+    val addressSearchRepository: AddressSearchRepository
     fun userProfileFor(userId: String): AppUserProfile
     val familyPhotoUploadPreparer: FamilyPhotoUploadPreparer
     val chatBuddyRepository: ChatBuddyRepository
@@ -115,9 +121,11 @@ class DefaultAppContainer(
     notificationDataSource: NotificationDataSource,
     eventDataSource: EventDataSource,
     userSettingsDataSource: UserSettingsDataSource,
-    deviceDataSource: DeviceDataSource
+    deviceDataSource: DeviceDataSource,
+    inquiryDataSource: InquiryDataSource,
 ) : AppContainer {
     private val deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
+    private val localDeviceStatusDataSource = AndroidDeviceStatusDataSource(context)
 
     override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource)
     override val accountRecoveryRepository: AccountRecoveryRepository =
@@ -148,8 +156,14 @@ class DefaultAppContainer(
     override val deviceRepository = DeviceRepositoryImpl(
         source = deviceDataSource,
         identifierSource = deviceIdentifierDataSource,
-        localStatusSource = AndroidDeviceStatusDataSource(context),
+        localStatusSource = localDeviceStatusDataSource,
     )
+    override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
+    override val inquiryRepository: InquiryRepository =
+        InquiryRepositoryImpl(
+            dataSource = inquiryDataSource,
+            photoUploadPreparer = familyPhotoUploadPreparer,
+        )
 
     override val locationRepository: LocationRepository = LocationRepositoryImpl(
         AndroidLocationDataSource(
@@ -159,6 +173,8 @@ class DefaultAppContainer(
            ),
        ),
     )
+    override val addressSearchRepository: AddressSearchRepository =
+        AddressSearchRepository()
 
     private val parentFamilyPhotoStore = MockFamilyPhotoStore(
         initialPhotos = MockFamilyPhotoFixtures.initialPhotos()
@@ -193,7 +209,6 @@ class DefaultAppContainer(
             else -> primaryCaregiverRelationshipRepository
         }
     }
-    override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
     override val displayRepository: DisplayRepository =
         DisplayRepositoryImpl(
             homeDataSource = homeDataSource,
@@ -203,7 +218,7 @@ class DefaultAppContainer(
     override val hospitalSpecialtyRepository: HospitalSpecialtyRepository =
         HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
     override val parentInfoRepository: ParentInfoRepository = ParentInfoRepositoryImpl(
-        MockParentInfoDataSource(initialParentInfo = MockSeniorFixtures.mother)
+        InMemoryParentInfoDataSource()
     )
     override val chatBuddyRepository: ChatBuddyRepository =
         ChatBuddyRepositoryImpl(MockChatBuddyDataSource())
@@ -212,5 +227,10 @@ class DefaultAppContainer(
             MockParentFamilyPhotoDataSource(photoStore = parentFamilyPhotoStore)
         )
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
-        ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource())
+        ParentLinkSafetyRepositoryImpl(
+            RemoteParentLinkSafetyDataSource(
+                eventDataSource = eventDataSource,
+                deviceStatusDataSource = localDeviceStatusDataSource,
+            )
+        )
 }

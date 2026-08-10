@@ -96,10 +96,15 @@ class SeniorOnboardingViewModel(
                 seniorId = seniorId,
                 relationship = relationship
             )
-            caregiverRelationshipRepositoryFor(userId).saveRelationship(
-                seniorId = seniorId,
-                relationship = relationship
-            )
+            // The server response is the source of truth for onboarding completion.
+            // A best-effort local cache write must not turn a successful API request
+            // into a failed onboarding result.
+            runCatching {
+                caregiverRelationshipRepositoryFor(userId).saveRelationship(
+                    seniorId = seniorId,
+                    relationship = relationship
+                )
+            }
             onResult(result)
         }
     }

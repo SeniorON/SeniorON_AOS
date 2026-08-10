@@ -167,7 +167,7 @@ private fun NotificationCategory.outingMovementFrom(
     }
 }
 
-private fun String?.toNotificationCategory(): NotificationCategory? =
+internal fun String?.toNotificationCategory(): NotificationCategory? =
     when (this?.trim()?.uppercase()) {
         "SOS" -> NotificationCategory.Sos
         "INACTIVITY" -> NotificationCategory.Inactivity
@@ -176,7 +176,7 @@ private fun String?.toNotificationCategory(): NotificationCategory? =
         else -> null
     }
 
-private fun String?.toEpochMillisOrNull(): Long? =
+internal fun String?.toEpochMillisOrNull(): Long? =
     this?.let { value ->
         runCatching { Instant.parse(value).toEpochMilli() }
             .recoverCatching {

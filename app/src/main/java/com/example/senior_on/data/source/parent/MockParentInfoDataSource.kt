@@ -14,4 +14,8 @@ class MockParentInfoDataSource(
     override fun saveParentInfo(parentInfo: ParentInfo) {
         _parentInfo.value = parentInfo
     }
+
+    override fun clearParentInfo() {
+        _parentInfo.value = null
+    }
 }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
@@ -119,6 +121,63 @@ fun DisplayTabScreen(
                     onButtonEditClick = onButtonEditClick,
                 )
             }
+        }
+    }
+}
+
+@Composable
+internal fun DisplayTabLoadingScreen(
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.White),
+    ) {
+        DisplayTopBar()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = SeniorOnColors.Primary600)
+        }
+    }
+}
+
+@Composable
+internal fun DisplayTabErrorScreen(
+    message: String,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.White),
+    ) {
+        DisplayTopBar()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = message,
+                style = SeniorOnTextStyles.BodyMMedium,
+                color = SeniorOnColors.Gray500,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "다시 시도",
+                modifier = Modifier.clickable(onClick = onRetryClick),
+                style = SeniorOnTextStyles.BodyMSemiBold,
+                color = SeniorOnColors.Primary600,
+            )
         }
     }
 }
@@ -409,14 +468,6 @@ private fun EmptyParentInformationCard(onClick: () -> Unit) {
         Text(
             text = "부모님 정보가 없습니다",
             style = SeniorOnTextStyles.HeadingS,
-            color = SeniorOnColors.White,
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "부모님 정보를 입력하면 이곳에서 확인할 수 있어요",
-            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.White,
         )
     }

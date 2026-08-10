@@ -1,138 +1,237 @@
 package com.example.senior_on.ui.parent.medication
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.domain.model.parent.ParentMedication
+import com.example.senior_on.ui.parent.component.ParentDetailTopBar
 import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationContent
+import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationMessageType
 import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.theme.SeniorOnRadius
+import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import java.time.Instant
+import java.time.LocalTime
 
 @Composable
 fun ParentMedicationScreen(
     uiState: ParentMedicationUiState,
     onBackClick: () -> Unit,
-    onTakenClick: () -> Unit,
+    onTakenClick: (String) -> Unit,
+    onMessageConsumed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ParentMedicationScaffold(
-        onBackClick = onBackClick,
-        modifier = modifier,
-    ) {
-        if (uiState.content == ParentMedicationContent.Loading) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.message) {
+        val message = uiState.message ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        onMessageConsumed()
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SeniorOnColors.Background1),
+        ) {
             Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SeniorOnColors.SupportWhite100)
+                    .statusBarsPadding(),
             ) {
-                CircularProgressIndicator(color = SeniorOnColors.Primary600)
+                ParentDetailTopBar(
+                    title = "복약",
+                    onBackClick = onBackClick,
+                )
             }
-            return@ParentMedicationScaffold
+
+            when (uiState.content) {
+                ParentMedicationContent.Loading -> ParentMedicationLoadingContent()
+                ParentMedicationContent.Empty -> ParentMedicationEmptyContent(
+                    onBackClick = onBackClick,
+                )
+                ParentMedicationContent.Completed -> ParentMedicationCompletedContent(
+                    onBackClick = onBackClick,
+                )
+                ParentMedicationContent.List -> ParentMedicationListContent(
+                    uiState = uiState,
+                    onTakenClick = onTakenClick,
+                )
+            }
         }
 
-        val content = medicationScreenContent(uiState.content)
-        val isDue = uiState.content == ParentMedicationContent.Due
-
-        ParentMedicationStateContent(
-            title = content.title,
-            description = content.description,
-            titleColor = content.titleColor,
-            actionText = content.actionText,
-            actionIconResId = content.actionIconResId,
-            actionColor = if (isDue && uiState.isSubmitting) {
-                SeniorOnColors.Primary400
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(
+                    if (uiState.messageType == ParentMedicationMessageType.OutsideTakingWindow) {
+                        Alignment.Center
+                    } else {
+                        Alignment.BottomCenter
+                    },
+                )
+                .padding(horizontal = 16.dp, vertical = 30.5.dp),
+        ) { data ->
+            if (uiState.messageType == ParentMedicationMessageType.OutsideTakingWindow) {
+                ParentMedicationTakingWindowWarning(message = data.visuals.message)
             } else {
-                content.actionColor
-            },
-            actionShadowColor = content.actionShadowColor,
-            actionShadowRadius = content.actionShadowRadius,
-            onActionClick = if (isDue) onTakenClick else onBackClick,
-            isSubmitting = isDue && uiState.isSubmitting,
+                Snackbar(containerColor = SeniorOnColors.Gray700) {
+                    Text(
+                        text = data.visuals.message,
+                        style = SeniorOnTextStyles.HeadingL,
+                        color = SeniorOnColors.SupportWhite100,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ParentMedicationTakingWindowWarning(
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .background(Color(0xE54B4B4B))
+            .padding(horizontal = 12.dp, vertical = 30.5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_big_alert_filled),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
+            tint = SeniorOnColors.SupportWhite100,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = message,
+            style = SeniorOnTextStyles.HeadingL,
+            color = SeniorOnColors.SupportWhite100,
         )
     }
 }
 
-private data class MedicationScreenContent(
-    val title: String,
-    val description: AnnotatedString,
-    val titleColor: Color,
-    val actionText: String,
-    val actionIconResId: Int,
-    val actionColor: Color,
-    val actionShadowColor: Color,
-    val actionShadowRadius: Dp,
+@Composable
+private fun ParentMedicationLoadingContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(color = SeniorOnColors.Primary600)
+    }
+}
+
+@Composable
+private fun ParentMedicationListContent(
+    uiState: ParentMedicationUiState,
+    onTakenClick: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 24.dp,
+            end = 16.dp,
+            bottom = 32.dp,
+        ),
+    ) {
+        item {
+            ParentMedicationSectionTitle()
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        items(
+            items = uiState.medications,
+            key = ParentMedication::id,
+        ) { medication ->
+            ParentMedicationCard(
+                medication = medication,
+                highlighted = medication.id == uiState.highlightedMedicationId,
+                isSubmitting = medication.id == uiState.submittingMedicationId,
+                onTakenClick = { onTakenClick(medication.id) },
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Preview(
+    name = "Parent medication - Taking window warning",
+    showBackground = true,
+    backgroundColor = 0xFFF7F8F5,
+    widthDp = 360,
+    heightDp = 140,
 )
-
-private fun medicationScreenContent(
-    state: ParentMedicationContent,
-): MedicationScreenContent = when (state) {
-    ParentMedicationContent.Due -> MedicationScreenContent(
-        title = "약 드실 시간이에요!",
-        description = buildAnnotatedString {
-            append("드신 후 ")
-            withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                append("아래 버튼")
-            }
-            append("을\n눌러주세요")
-        },
-        titleColor = SeniorOnColors.Gray800,
-        actionText = "약 먹었어요",
-        actionIconResId = R.drawable.ic_big_check,
-        actionColor = SeniorOnColors.Primary700,
-        actionShadowColor = Color(0xFF9EB381),
-        actionShadowRadius = 32.dp,
-    )
-
-    ParentMedicationContent.Empty -> MedicationScreenContent(
-        title = "등록된 약이 없어요",
-        description = buildAnnotatedString {
-            append("자녀에게 ")
-            withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                append("약 등록")
-            }
-            append("을\n요청해 보세요")
-        },
-        titleColor = SeniorOnColors.Gray800,
-        actionText = "돌아가기",
-        actionIconResId = R.drawable.ic_arrow_back,
-        actionColor = SeniorOnColors.Gray400,
-        actionShadowColor = Color(0x38000000),
-        actionShadowRadius = 26.dp,
-    )
-
-    ParentMedicationContent.Completed -> MedicationScreenContent(
-        title = "잘 하셨어요!",
-        description = AnnotatedString("자녀에게 알림을 보냈어요"),
-        titleColor = SeniorOnColors.Primary700,
-        actionText = "돌아가기",
-        actionIconResId = R.drawable.ic_arrow_back,
-        actionColor = SeniorOnColors.Gray400,
-        actionShadowColor = Color(0x38000000),
-        actionShadowRadius = 26.dp,
-    )
-
-    ParentMedicationContent.Loading -> error("Loading 상태에는 화면 콘텐츠가 없습니다.")
+@Composable
+private fun ParentMedicationTakingWindowWarningPreview() {
+    SENIOR_ONTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            ParentMedicationTakingWindowWarning(
+                message = "복용 시간이 아니에요.",
+            )
+        }
+    }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
-private fun ParentMedicationDuePreview() {
+private fun ParentMedicationListPreview() {
     SENIOR_ONTheme {
         ParentMedicationScreen(
-            uiState = ParentMedicationUiState(content = ParentMedicationContent.Due),
+            uiState = ParentMedicationUiState(
+                content = ParentMedicationContent.List,
+                medications = listOf(
+                    ParentMedication("1", "혈압약", LocalTime.of(8, 0), Instant.EPOCH),
+                    ParentMedication("2", "혈압약", LocalTime.of(14, 0)),
+                    ParentMedication("3", "당뇨약", LocalTime.of(19, 0)),
+                ),
+                highlightedMedicationId = "2",
+            ),
             onBackClick = {},
             onTakenClick = {},
+            onMessageConsumed = {},
         )
     }
 }
@@ -145,18 +244,7 @@ private fun ParentMedicationEmptyPreview() {
             uiState = ParentMedicationUiState(content = ParentMedicationContent.Empty),
             onBackClick = {},
             onTakenClick = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 720)
-@Composable
-private fun ParentMedicationCompletedPreview() {
-    SENIOR_ONTheme {
-        ParentMedicationScreen(
-            uiState = ParentMedicationUiState(content = ParentMedicationContent.Completed),
-            onBackClick = {},
-            onTakenClick = {},
+            onMessageConsumed = {},
         )
     }
 }

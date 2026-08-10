@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.notification.route
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -12,8 +13,14 @@ import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
+import com.example.senior_on.domain.repository.server.DeviceRepository
+import com.example.senior_on.domain.repository.location.LocationRepository
+import com.example.senior_on.data.repository.impl.AddressSearchRepository
+import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
+import com.example.senior_on.ui.child.notification.NotificationSeverity
+import com.example.senior_on.ui.child.notification.toNotificationCategory
 
 private enum class NotificationDestination {
     Home,
@@ -28,6 +35,11 @@ fun NotificationRoute(
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
+    deviceRepository: DeviceRepository? = null,
+    locationRepository: LocationRepository? = null,
+    addressSearchRepository: AddressSearchRepository? = null,
+    navigationEvent: NotificationNavigationEvent? = null,
+    onNavigationEventConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val viewModel = notificationViewModel(
@@ -35,6 +47,8 @@ fun NotificationRoute(
         familyRepository = familyRepository,
         homeRepository = homeRepository,
         eventRepository = eventRepository,
+        deviceRepository = deviceRepository,
+        addressSearchRepository = addressSearchRepository,
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var destination by rememberSaveable {
@@ -65,6 +79,33 @@ fun NotificationRoute(
         selectedMessage = message
         viewModel.openNotification(category, message)
         destination = NotificationDestination.Detail
+    }
+
+    LaunchedEffect(navigationEvent) {
+        val event = navigationEvent ?: return@LaunchedEffect
+        val category = event.type.toNotificationCategory()
+        val eventId = event.eventId
+
+        if (category != null && eventId != null) {
+            openDetail(
+                category = category,
+                message = NotificationMessageUiState(
+                    time = "",
+                    title = event.title.orEmpty(),
+                    severity = if (category == NotificationCategory.Outing) {
+                        NotificationSeverity.Normal
+                    } else {
+                        NotificationSeverity.Danger
+                    },
+                    tintBackground = category != NotificationCategory.Outing,
+                    notificationId = event.notificationId,
+                    eventId = eventId,
+                ),
+            )
+        } else {
+            destination = NotificationDestination.Home
+        }
+        onNavigationEventConsumed()
     }
 
     when (destination) {
@@ -111,6 +152,8 @@ fun NotificationRoute(
                 NotificationDetailRoute(
                     category = category,
                     message = message,
+                    parentPhoneNumber = uiState.parentPhoneNumber,
+                    locationRepository = locationRepository,
                     onBackClick = {
                         destination = detailReturnDestination
                     },

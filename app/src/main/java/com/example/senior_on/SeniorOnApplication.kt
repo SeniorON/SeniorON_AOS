@@ -14,11 +14,13 @@ import com.example.senior_on.data.source.family.RemoteFamilyDataSource
 import com.example.senior_on.data.source.health.RemoteHospitalDataSource
 import com.example.senior_on.data.source.home.RemoteHomeDataSource
 import com.example.senior_on.data.source.medication.RemoteMedicationDataSource
+import com.example.senior_on.data.source.inquiry.RemoteInquiryDataSource
 import com.example.senior_on.data.source.notification.RemoteNotificationDataSource
 import com.example.senior_on.data.source.settings.RemoteUserSettingsDataSource
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.di.DefaultAppContainer
 import com.example.senior_on.notification.SeniorOnNotificationManager
+import com.example.senior_on.notification.FcmTokenSyncScheduler
 import com.example.senior_on.map.KakaoMapAvailability
 import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.sdk.common.KakaoSdk
@@ -27,6 +29,7 @@ class SeniorOnApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AccessTokenStore.initialize(this)
+        FcmTokenSyncScheduler.enqueueIfLoggedIn(this)
         SeniorOnNotificationManager.createAlertChannel(this)
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank()) {
             KakaoSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)
@@ -64,7 +67,8 @@ class SeniorOnApplication : Application() {
             notificationDataSource = RemoteNotificationDataSource(SeniorOnNetwork.notificationApi),
             eventDataSource = RemoteEventDataSource(SeniorOnNetwork.eventApi),
             userSettingsDataSource = RemoteUserSettingsDataSource(SeniorOnNetwork.userSettingsApi),
-            deviceDataSource = RemoteDeviceDataSource(SeniorOnNetwork.deviceApi)
+            deviceDataSource = RemoteDeviceDataSource(SeniorOnNetwork.deviceApi),
+            inquiryDataSource = RemoteInquiryDataSource(SeniorOnNetwork.inquiryApi),
         )
     }
 }

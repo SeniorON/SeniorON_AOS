@@ -44,9 +44,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
+import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.model.auth.AppUserProfile
-import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
@@ -54,6 +54,14 @@ import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.HospitalRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.auth.SessionRepository
+import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.domain.repository.server.UserSettingsRepository
+import com.example.senior_on.domain.repository.server.DeviceRepository
+import com.example.senior_on.domain.repository.location.LocationRepository
+import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
@@ -93,21 +101,35 @@ fun ChildMainScreen(
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
-    caregiverRelationshipRepository: CaregiverRelationshipRepository,
     notificationRepository: NotificationRepository,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
+    inquiryRepository: InquiryRepository,
+    userSettingsRepository: UserSettingsRepository,
     medicationRepository: MedicationRepository? = null,
     hospitalRepository: HospitalRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
+    deviceRepository: DeviceRepository? = null,
+    locationRepository: LocationRepository? = null,
+    addressSearchRepository: AddressSearchRepository? = null,
     modifier: Modifier = Modifier,
     onLogoutClick: () -> Unit = {},
-    onWithdrawClick: () -> Unit = {}
+    onWithdrawClick: () -> Unit = {},
+    notificationNavigationEvent: NotificationNavigationEvent? = null,
+    onNotificationNavigationConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     RequestNotificationPermissionOnChildEntry()
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
+    LaunchedEffect(notificationNavigationEvent) {
+        if (notificationNavigationEvent != null) {
+            selectedTab = ChildMainTab.Notification
+        }
+    }
     var familyDestination by rememberSaveable {
         mutableStateOf(ChildFamilyDestination.Overview)
     }
@@ -138,7 +160,6 @@ fun ChildMainScreen(
         factory = DisplayViewModel.factory(
             parentInfoRepository = parentInfoRepository,
             displayRepository = displayRepository,
-            caregiverRelationshipRepository = caregiverRelationshipRepository,
         )
     )
     val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
@@ -255,6 +276,17 @@ fun ChildMainScreen(
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
+            inquiryRepository = inquiryRepository,
+            userSettingsRepository = userSettingsRepository,
+            familyPhotoUploadPreparer = familyPhotoUploadPreparer,
+            deviceRepository = deviceRepository,
+            locationRepository = locationRepository,
+            addressSearchRepository = addressSearchRepository,
+            notificationNavigationEvent = notificationNavigationEvent,
+            onNotificationNavigationConsumed = onNotificationNavigationConsumed,
             onConnectedDeviceInfoSave = { updatedDevice ->
                 displayUiState.parentInfo?.let { currentParentInfo ->
                     displayViewModel.saveParentInfo(
@@ -285,7 +317,12 @@ fun ChildMainScreen(
             ChildBottomNavigation(
                 selectedTab = selectedTab,
                 onTabClick = { tab ->
+                    val isScreenTabReentry =
+                        tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
                     selectedTab = tab
+                    if (isScreenTabReentry) {
+                        displayViewModel.refreshOnScreenTabReentry()
+                    }
                     selectedPhotoId = null
                     selectedPhotoUri = null
                     selectedPhotoSessionId = null
@@ -323,6 +360,17 @@ private fun ChildMainTabContent(
     familyServerRepository: FamilyServerRepository,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
+    authRepository: AuthRepository,
+    sessionRepository: SessionRepository,
+    deviceRegistrationRepository: DeviceRegistrationRepository,
+    inquiryRepository: InquiryRepository,
+    userSettingsRepository: UserSettingsRepository,
+    familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
+    deviceRepository: DeviceRepository?,
+    locationRepository: LocationRepository?,
+    addressSearchRepository: AddressSearchRepository?,
+    notificationNavigationEvent: NotificationNavigationEvent?,
+    onNotificationNavigationConsumed: () -> Unit,
     onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
     onDisconnectDeviceConfirm: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -430,6 +478,11 @@ private fun ChildMainTabContent(
             familyRepository = familyServerRepository,
             homeRepository = homeServerRepository,
             eventRepository = eventRepository,
+            deviceRepository = deviceRepository,
+            locationRepository = locationRepository,
+            addressSearchRepository = addressSearchRepository,
+            navigationEvent = notificationNavigationEvent,
+            onNavigationEventConsumed = onNotificationNavigationConsumed,
             modifier = modifier,
         )
         return
@@ -441,6 +494,12 @@ private fun ChildMainTabContent(
             connectedDevice = connectedDevice,
             onConnectedDeviceInfoSave = onConnectedDeviceInfoSave,
             onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
+            deviceRegistrationRepository = deviceRegistrationRepository,
+            inquiryRepository = inquiryRepository,
+            userSettingsRepository = userSettingsRepository,
+            familyPhotoUploadPreparer = familyPhotoUploadPreparer,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,
             onWithdrawConfirm = onWithdrawClick
@@ -473,7 +532,7 @@ private fun ChildMainTabContent(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "자녀 메인 화면 흐름과 바텀네비 연결을 먼저 맞췄어요.",
+                text = "보호자 메인 화면 흐름과 바텀네비 연결을 먼저 맞췄어요.",
                 style = SeniorOnTextStyles.CaptionRegular,
                 color = SeniorOnColors.Gray500,
                 textAlign = TextAlign.Center

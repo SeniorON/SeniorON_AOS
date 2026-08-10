@@ -48,6 +48,7 @@ class ParentInfoRepositoryImpl(
 ) : ParentInfoRepository {
     override val parentInfo: StateFlow<ParentInfo?> = dataSource.parentInfo
     override fun saveParentInfo(parentInfo: ParentInfo) = dataSource.saveParentInfo(parentInfo)
+    override fun clearParentInfo() = dataSource.clearParentInfo()
 }
 
 class ParentLinkSafetyRepositoryImpl(
@@ -56,4 +57,3 @@ class ParentLinkSafetyRepositoryImpl(
     override suspend fun inspectLink(url: String): ParentLinkSafetyResult =
         dataSource.inspectLink(url.trim())
 }
-

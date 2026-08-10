@@ -14,7 +14,7 @@ class SettingsUiMapperTest {
 
         assertEquals(MockUserFixtures.assistantCaregiver.name, profile.name)
         assertEquals(MockUserFixtures.assistantCaregiver.email, profile.email)
-        assertEquals("자녀 계정", profile.accountTypeLabel)
+        assertEquals("보호자 계정", profile.accountTypeLabel)
     }
 
     @Test

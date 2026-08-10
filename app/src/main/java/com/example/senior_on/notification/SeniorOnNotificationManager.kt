@@ -69,9 +69,17 @@ object SeniorOnNotificationManager {
             ?: System.currentTimeMillis().hashCode()
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            val notificationType = message.data[MedicationReminderEventStore.NotificationTypeKey]
+            if (
+                notificationType != MedicationReminderEventStore.MedicationReminderType &&
+                notificationType != MedicationCheckedEventStore.MedicationCheckedType
+            ) {
+                action = NotificationNavigationEventStore.OpenNotificationAction
+            }
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or
                 Intent.FLAG_ACTIVITY_SINGLE_TOP
             message.data.forEach { (key, value) -> putExtra(key, value) }
+            putExtra(NotificationNavigationEventStore.TitleKey, title)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,

@@ -1,11 +1,16 @@
 package com.example.senior_on.data.repository.impl
 
 import com.example.senior_on.data.remote.dto.DeviceStatusUpdateRequest
+import com.example.senior_on.data.remote.dto.DeviceLocationResponse
+import com.example.senior_on.data.remote.dto.DeviceLocationUpdateRequest
+import com.example.senior_on.data.remote.dto.FcmTokenUpdateRequest
+import com.example.senior_on.data.remote.dto.HomeLocationResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.DeviceIdentifierDataSource
 import com.example.senior_on.data.source.device.LocalDeviceStatusDataSource
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DeviceRepositoryImplTest {
@@ -21,7 +26,7 @@ class DeviceRepositoryImplTest {
             ),
         )
 
-        repository.updateStatus()
+        assertTrue(repository.updateStatus())
 
         assertEquals(
             DeviceStatusUpdateRequest(
@@ -37,11 +42,16 @@ class DeviceRepositoryImplTest {
 private class RecordingDeviceDataSource : DeviceDataSource {
     val requests = mutableListOf<DeviceStatusUpdateRequest>()
 
-    override suspend fun updateStatus(request: DeviceStatusUpdateRequest) {
+    override suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean {
         requests += request
+        return true
     }
 
     override suspend fun disconnect() = Unit
+    override suspend fun updateFcmToken(request: FcmTokenUpdateRequest) = Unit
+    override suspend fun getLatestLocation(): DeviceLocationResponse = error("Not used")
+    override suspend fun updateLocation(request: DeviceLocationUpdateRequest) = Unit
+    override suspend fun getHomeLocation(): HomeLocationResponse = error("Not used")
 }
 
 private class FixedDeviceIdentifierDataSource(

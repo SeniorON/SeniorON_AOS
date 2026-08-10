@@ -48,7 +48,7 @@ class MockDisplayDataSource(
     }
 
     override fun disconnectDevice() {
-        _overview.update { current -> current.copy(device = null) }
+        _overview.value = MockDisplayFixtures.overview(MockDisplayScenario.NotConnected)
     }
 
     fun setScenario(scenario: MockDisplayScenario) {

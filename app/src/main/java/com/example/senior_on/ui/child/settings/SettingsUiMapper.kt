@@ -13,7 +13,7 @@ internal fun AppUserProfile.toSettingsProfileUiState(): SettingsProfileUiState {
     return SettingsProfileUiState(
         name = name,
         accountTypeLabel = when (mode) {
-            AppUserMode.Child -> "자녀 계정"
+            AppUserMode.Child -> "보호자 계정"
             AppUserMode.Senior -> "시니어 계정"
         },
         email = email,
