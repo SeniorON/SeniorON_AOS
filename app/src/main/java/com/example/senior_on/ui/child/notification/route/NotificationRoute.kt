@@ -14,6 +14,7 @@ import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
+import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.ui.child.notification.NotificationCategory
@@ -35,6 +36,7 @@ fun NotificationRoute(
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
     deviceRepository: DeviceRepository? = null,
+    locationRepository: LocationRepository? = null,
     addressSearchRepository: AddressSearchRepository? = null,
     navigationEvent: NotificationNavigationEvent? = null,
     onNavigationEventConsumed: () -> Unit = {},
@@ -150,6 +152,8 @@ fun NotificationRoute(
                 NotificationDetailRoute(
                     category = category,
                     message = message,
+                    parentPhoneNumber = uiState.parentPhoneNumber,
+                    locationRepository = locationRepository,
                     onBackClick = {
                         destination = detailReturnDestination
                     },

@@ -36,6 +36,7 @@ data class NotificationUiState(
     val isInactivitySettingSaving: Boolean = false,
     val detailMessages: Map<Long, NotificationMessageUiState> = emptyMap(),
     val isDetailLoading: Boolean = false,
+    val parentPhoneNumber: String? = null,
     val errorMessage: String? = null,
 )
 
@@ -85,21 +86,20 @@ class NotificationViewModel(
                         }.getOrNull()
                     }
                 }
-                val hasHomeAddress = async {
-                    homeRepository
-                        ?.getHome()
-                        ?.seniorAddress
-                        ?.isNotBlank()
-                        ?: true
-                }
+                val parentHome = async { homeRepository?.getHome() }
+                val parentHomeSnapshot = parentHome.await()
                 NotificationHomeLoadResult(
                     home = home.await().toUiState(
                         isParentDeviceOnline = parentOnline.await(),
-                        hasHomeAddress = hasHomeAddress.await(),
+                        hasHomeAddress = parentHomeSnapshot
+                            ?.seniorAddress
+                            ?.isNotBlank()
+                            ?: true,
                     ),
                     inactivityThresholdHours = inactivitySetting
                         ?.await()
                         ?.thresholdHours,
+                    parentPhoneNumber = parentHomeSnapshot?.seniorPhoneNumber,
                 )
             }.onSuccess { result ->
                 val mergedHome = result.home.copy(
@@ -133,6 +133,7 @@ class NotificationViewModel(
                         inactivityThresholdHours =
                             result.inactivityThresholdHours
                                 ?: it.inactivityThresholdHours,
+                        parentPhoneNumber = result.parentPhoneNumber,
                     )
                 }
             }.onFailure { throwable ->
@@ -458,6 +459,7 @@ class NotificationViewModel(
 private data class NotificationHomeLoadResult(
     val home: NotificationScreenUiState,
     val inactivityThresholdHours: Int? = null,
+    val parentPhoneNumber: String? = null,
 )
 
 private fun NotificationScreenUiState.withInactivityThresholdHours(

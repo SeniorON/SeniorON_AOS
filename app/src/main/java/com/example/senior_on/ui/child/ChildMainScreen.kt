@@ -74,6 +74,7 @@ import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
+import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
@@ -121,6 +122,7 @@ fun ChildMainScreen(
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
     deviceRepository: DeviceRepository? = null,
+    locationRepository: LocationRepository? = null,
     addressSearchRepository: AddressSearchRepository? = null,
     modifier: Modifier = Modifier,
     onLogoutClick: () -> Unit = {},
@@ -279,6 +281,7 @@ fun ChildMainScreen(
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
             deviceRepository = deviceRepository,
+            locationRepository = locationRepository,
             addressSearchRepository = addressSearchRepository,
             notificationNavigationEvent = notificationNavigationEvent,
             onNotificationNavigationConsumed = onNotificationNavigationConsumed,
@@ -348,6 +351,7 @@ private fun ChildMainTabContent(
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
     deviceRepository: DeviceRepository?,
+    locationRepository: LocationRepository?,
     addressSearchRepository: AddressSearchRepository?,
     notificationNavigationEvent: NotificationNavigationEvent?,
     onNotificationNavigationConsumed: () -> Unit,
@@ -461,6 +465,7 @@ private fun ChildMainTabContent(
             homeRepository = homeServerRepository,
             eventRepository = eventRepository,
             deviceRepository = deviceRepository,
+            locationRepository = locationRepository,
             addressSearchRepository = addressSearchRepository,
             navigationEvent = notificationNavigationEvent,
             onNavigationEventConsumed = onNotificationNavigationConsumed,
@@ -507,7 +512,7 @@ private fun ChildMainTabContent(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "자녀 메인 화면 흐름과 바텀네비 연결을 먼저 맞췄어요.",
+                text = "보호자 메인 화면 흐름과 바텀네비 연결을 먼저 맞췄어요.",
                 style = SeniorOnTextStyles.CaptionRegular,
                 color = SeniorOnColors.Gray500,
                 textAlign = TextAlign.Center
