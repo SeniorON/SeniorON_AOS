@@ -165,8 +165,7 @@ class OutingLocationService : Service() {
         private const val LogTag = "SeniorOnOutingLocation"
         private const val ReturnPhase = "RETURN"
         private const val RequiredReturnConfirmations = 2
-        // TODO: 외출/귀가 테스트 완료 후 5L * 60L * 1_000L로 원복
-        private const val LocationUploadIntervalMillis = 10_000L
+        private const val LocationUploadIntervalMillis = 5L * 60L * 1_000L
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(
