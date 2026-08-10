@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -499,7 +501,7 @@ internal fun SharedPhotoCard(
     Box(
         modifier = modifier
             .aspectRatio(SharedPhotoCardAspectRatio)
-            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .clip(RoundedCornerShape(10.dp))
             .background(SeniorOnColors.Background4)
             .then(
                 if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),
@@ -571,7 +573,10 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
 }
 
 @Composable
-internal fun BoxScope.SharedFamilyPhotoImage(photo: SharedFamilyPhotoUiModel) {
+internal fun BoxScope.SharedFamilyPhotoImage(
+    photo: SharedFamilyPhotoUiModel,
+    onRemoteImageLoadError: (photoId: String, failedUrl: String) -> Unit = { _, _ -> },
+) {
     when (val imageSource = photo.imageSource) {
         is FamilyImageSource.Local -> Image(
             painter = painterResource(id = imageSource.drawableResId),
@@ -579,13 +584,28 @@ internal fun BoxScope.SharedFamilyPhotoImage(photo: SharedFamilyPhotoUiModel) {
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Crop,
         )
-        is FamilyImageSource.Remote -> AsyncImage(
-            model = imageSource.url,
-            contentDescription = null,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
-            error = painterResource(id = R.drawable.ic_photo),
-        )
+        is FamilyImageSource.Remote -> {
+            val context = LocalContext.current
+            val cacheKey = remember(photo.id) { familyPhotoCacheKey(photo.id) }
+            val imageRequest = remember(context, imageSource.url, cacheKey) {
+                ImageRequest.Builder(context)
+                    .data(imageSource.url)
+                    .memoryCacheKey(cacheKey)
+                    .diskCacheKey(cacheKey)
+                    .build()
+            }
+
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = R.drawable.ic_photo),
+                onError = {
+                    onRemoteImageLoadError(photo.id, imageSource.url)
+                },
+            )
+        }
         is FamilyImageSource.Uri -> AsyncImage(
             model = imageSource.value,
             contentDescription = null,
@@ -596,6 +616,8 @@ internal fun BoxScope.SharedFamilyPhotoImage(photo: SharedFamilyPhotoUiModel) {
         null -> SharedPhotoImagePlaceholder()
     }
 }
+
+internal fun familyPhotoCacheKey(photoId: String): String = "family-photo:$photoId"
 
 @Composable
 private fun BoxScope.FamilyMemberImagePlaceholder() {

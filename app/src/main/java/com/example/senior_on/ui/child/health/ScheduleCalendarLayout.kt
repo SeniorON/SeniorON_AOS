@@ -31,6 +31,20 @@ internal val HospitalCalendarLayout = ScheduleCalendarLayoutValues(
     markedDotSize = 4.dp
 )
 
+internal val HealthOverlayCalendarLayout = ScheduleCalendarLayoutValues(
+    headerBottomSpacing = 10.dp,
+    headerIconSize = 18.dp,
+    headerTitleHorizontalPadding = 16.dp,
+    cellHeight = 32.dp,
+    cellHorizontalSpacing = 1.dp,
+    cellVerticalSpacing = 4.dp,
+    weekdayBottomSpacing = 4.dp,
+    dayCornerRadius = 8.dp,
+    markedDotTopPadding = 4.dp,
+    markedDotEndPadding = 4.5.dp,
+    markedDotSize = 4.dp
+)
+
 internal val BottomSheetCalendarLayout = ScheduleCalendarLayoutValues(
     headerBottomSpacing = 18.5.dp,
     headerIconSize = 18.dp,

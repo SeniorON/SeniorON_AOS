@@ -21,6 +21,8 @@ object SeniorOnColors {
     val Gray100 = Color(0xFFF2F2F2)
     val Gray50 = Color(0xFFF9F9F9)
 
+    val Toast = Gray700
+
     val DangerSOS = Color(0xFFFF0000)
     val Red500 = Color(0xFFC83333)
     val Red400 = Color(0xFFED3838)

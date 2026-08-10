@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class FamilyInvitationUiState(
     val invitationCode: String = "",
-    val memberCount: Int? = null,
+    val memberCount: Long? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
 )

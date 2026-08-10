@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,15 +81,7 @@ internal fun ParentHomeScreen(
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val now by produceState(initialValue = LocalDateTime.now(KoreaZoneId)) {
-        while (true) {
-            value = LocalDateTime.now(KoreaZoneId)
-            delay(30_000)
-        }
-    }
-    val gridButtons = buttons
-        .filterNot { it.type == SeniorHomeButtonType.Schedule }
-        .withEmergencyAtFixedGridSlot()
+    val now = rememberKoreaDateTime()
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -98,21 +91,7 @@ internal fun ParentHomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SeniorOnColors.White)
-                .drawWithCache {
-                    val gradient = Brush.radialGradient(
-                        colors = listOf(
-                            SeniorOnColors.Primary400.copy(alpha = 0.2f),
-                            Color(0xFFFAFFEC).copy(alpha = 0.2f),
-                        ),
-                        center = Offset(
-                            x = size.width * 0.5551f,
-                            y = size.height * 0.5812f,
-                        ),
-                        radius = size.height * 0.5869f,
-                    )
-                    onDrawBehind { drawRect(gradient) }
-                }
+                .seniorHomeBackground()
                 .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(
@@ -122,48 +101,17 @@ internal fun ParentHomeScreen(
                     bottom = 24.dp,
                 ),
         ) {
-            ParentDateWeatherHeader(
+            SeniorHomeContent(
                 now = now,
+                configuration = configuration,
+                musicButton = musicButton,
+                buttons = buttons,
+                scheduleUiState = scheduleUiState,
                 weatherUiState = weatherUiState,
+                onMusicClick = onMusicClick,
+                onScheduleClick = onScheduleClick,
+                onButtonClick = onButtonClick,
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            musicButton?.let { button ->
-                ParentMusicCard(
-                    onClick = { onMusicClick(button) },
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            ParentTodayScheduleCard(
-                uiState = scheduleUiState,
-                isFeatured = musicButton == null,
-                onClick = onScheduleClick,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                gridButtons.chunked(2).forEach { rowButtons ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        rowButtons.forEach { button ->
-                            ParentHomeGridButton(
-                                button = button,
-                                textStyle = configuration.fontSize.homeButtonTextStyle,
-                                onClick = { onButtonClick(button) },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        if (rowButtons.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -178,6 +126,71 @@ internal fun ParentHomeScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+internal fun ColumnScope.SeniorHomeContent(
+    now: LocalDateTime,
+    configuration: SeniorScreenConfiguration,
+    musicButton: ParentHomeButtonUiModel?,
+    buttons: List<ParentHomeButtonUiModel>,
+    scheduleUiState: ParentHomeScheduleUiState,
+    weatherUiState: ParentHomeWeatherUiState,
+    onMusicClick: (ParentHomeButtonUiModel) -> Unit,
+    onScheduleClick: () -> Unit,
+    onButtonClick: (ParentHomeButtonUiModel) -> Unit,
+    interactionEnabled: Boolean = true,
+) {
+    val gridButtons = buttons
+        .filterNot { it.type == SeniorHomeButtonType.Schedule }
+        .withEmergencyAtFixedGridSlot()
+
+    ParentDateWeatherHeader(
+        now = now,
+        weatherUiState = weatherUiState,
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    musicButton?.let { button ->
+        ParentMusicCard(
+            enabled = interactionEnabled,
+            onClick = { onMusicClick(button) },
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+
+    ParentTodayScheduleCard(
+        uiState = scheduleUiState,
+        isFeatured = musicButton == null,
+        interactionEnabled = interactionEnabled,
+        onClick = onScheduleClick,
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        gridButtons.chunked(2).forEach { rowButtons ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                rowButtons.forEach { button ->
+                    ParentHomeGridButton(
+                        button = button,
+                        textStyle = configuration.fontSize.homeButtonTextStyle,
+                        interactionEnabled = interactionEnabled,
+                        onClick = { onButtonClick(button) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (rowButtons.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+
     }
 }
 
@@ -240,6 +253,7 @@ private fun ParentDateWeatherHeader(
 
 @Composable
 private fun ParentMusicCard(
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -256,7 +270,7 @@ private fun ParentMusicCard(
             )
             .clip(ParentFeatureCardShape)
             .background(SeniorOnColors.Primary700)
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -281,6 +295,7 @@ private fun ParentMusicCard(
 private fun ParentTodayScheduleCard(
     uiState: ParentHomeScheduleUiState,
     isFeatured: Boolean,
+    interactionEnabled: Boolean,
     onClick: () -> Unit,
 ) {
     val scheduleCount = uiState.count
@@ -320,7 +335,7 @@ private fun ParentTodayScheduleCard(
                 shape = ParentFeatureCardShape,
             )
             .clickable(
-                enabled = !uiState.isLoading && scheduleCount > 0,
+                enabled = interactionEnabled && !uiState.isLoading && scheduleCount > 0,
                 onClick = onClick,
             )
             .padding(horizontal = 12.dp),
@@ -430,6 +445,7 @@ private fun ParentTodayScheduleCard(
 private fun ParentHomeGridButton(
     button: ParentHomeButtonUiModel,
     textStyle: TextStyle,
+    interactionEnabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -450,7 +466,7 @@ private fun ParentHomeGridButton(
             .background(
                 if (isEmergency) SeniorOnColors.Red400 else SeniorOnColors.White
             )
-            .clickable(onClick = onClick),
+            .clickable(enabled = interactionEnabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -465,12 +481,40 @@ private fun ParentHomeGridButton(
     }
 }
 
-private val SeniorFontSize.homeButtonTextStyle: TextStyle
+internal val SeniorFontSize.homeButtonTextStyle: TextStyle
     get() = when (this) {
         SeniorFontSize.Large -> SeniorOnTextStyles.HeadingXXXL
         SeniorFontSize.Normal -> SeniorOnTextStyles.HeadingXL
         SeniorFontSize.Small -> SeniorOnTextStyles.HeadingL
     }
+
+internal fun Modifier.seniorHomeBackground(): Modifier =
+    background(SeniorOnColors.White)
+        .drawWithCache {
+            val gradient = Brush.radialGradient(
+                colors = listOf(
+                    SeniorOnColors.Primary400.copy(alpha = 0.2f),
+                    Color(0xFFFAFFEC).copy(alpha = 0.2f),
+                ),
+                center = Offset(
+                    x = size.width * 0.5551f,
+                    y = size.height * 0.5812f,
+                ),
+                radius = size.height * 0.5869f,
+            )
+            onDrawBehind { drawRect(gradient) }
+        }
+
+@Composable
+internal fun rememberKoreaDateTime(): LocalDateTime {
+    val now by produceState(initialValue = LocalDateTime.now(KoreaZoneId)) {
+        while (true) {
+            value = LocalDateTime.now(KoreaZoneId)
+            delay(30_000)
+        }
+    }
+    return now
+}
 
 private val ParentFeatureCardShape =
     RoundedCornerShape(SeniorOnRadius.Large)

@@ -174,7 +174,8 @@ fun FamilyPhotoShareScreen(
                     message = message,
                     onMessageChange = onMessageChange,
                     bringIntoViewRequester = messageBringIntoViewRequester,
-                    onFocusChange = { isMessageFocused = it }
+                    onFocusChange = { isMessageFocused = it },
+                    errorMessage = uploadErrorMessage,
                 )
 
                 FamilyPhotoMessageTooltipVisibility(
@@ -198,7 +199,6 @@ fun FamilyPhotoShareScreen(
                 onReselectClick = onReselectClick,
                 onShareClick = onShareClick,
                 isUploading = isUploading,
-                errorMessage = uploadErrorMessage,
             )
         }
     }
@@ -335,18 +335,18 @@ private fun FamilyPhotoMessageInput(
     message: String,
     onMessageChange: (String) -> Unit,
     bringIntoViewRequester: BringIntoViewRequester,
-    onFocusChange: (Boolean) -> Unit
+    onFocusChange: (Boolean) -> Unit,
+    errorMessage: String?,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_family_photo_message),
+            Image(
+                painter = painterResource(id = R.drawable.ic_family_photo_message_emoji),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.Gray800,
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -413,14 +413,27 @@ private fun FamilyPhotoMessageInput(
             }
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        Text(
-            text = "${message.length}/30",
-            modifier = Modifier.align(Alignment.End),
-            style = SeniorOnTextStyles.CaptionMedium,
-            color = SeniorOnColors.Gray500
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            errorMessage?.let {
+                Text(
+                    text = it,
+                    modifier = Modifier.weight(1f),
+                    style = SeniorOnTextStyles.CaptionRegular,
+                    color = SeniorOnColors.Red300,
+                )
+            } ?: Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = "${message.length}/30",
+                style = SeniorOnTextStyles.CaptionMedium,
+                color = SeniorOnColors.Gray500,
+            )
+        }
     }
 }
 
@@ -429,7 +442,6 @@ private fun FamilyPhotoShareActions(
     onReselectClick: () -> Unit,
     onShareClick: () -> Unit,
     isUploading: Boolean,
-    errorMessage: String?,
 ) {
     Column(
         modifier = Modifier
@@ -437,15 +449,6 @@ private fun FamilyPhotoShareActions(
             .background(SeniorOnColors.White)
             .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
     ) {
-        errorMessage?.let {
-            Text(
-                text = it,
-                style = SeniorOnTextStyles.CaptionRegular,
-                color = SeniorOnColors.Red300,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FamilyTextActionButton(
                 text = "다시 선택",
@@ -457,7 +460,7 @@ private fun FamilyPhotoShareActions(
                 modifier = Modifier.weight(1f)
             )
             FamilyTextActionButton(
-                text = if (isUploading) "올리는 중..." else "공유하기",
+                text = "공유하기",
                 backgroundColor = SeniorOnColors.Primary600,
                 contentColor = SeniorOnColors.White,
                 borderColor = null,

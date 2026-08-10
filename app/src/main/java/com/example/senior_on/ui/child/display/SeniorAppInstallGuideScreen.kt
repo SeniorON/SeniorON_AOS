@@ -22,10 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,26 +30,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoActionButton
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoButtonStyle
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoPhoneTextField
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 @Composable
 fun SeniorAppInstallGuideScreen(
-    phoneNumber: TextFieldValue,
-    onPhoneNumberChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
-    onSendInstallLinkClick: () -> Unit = {},
+    onKakaoSendClick: () -> Unit = {},
     onAppInstallMethodClick: () -> Unit = {},
 ) {
     Column(
@@ -101,7 +93,7 @@ fun SeniorAppInstallGuideScreen(
             Spacer(modifier = Modifier.height(13.dp))
 
             Text(
-                text = "시니어 기기에 설치링크를 메시지로 전송하여,\n" +
+                text = "시니어 기기에 카카오톡으로 설치 링크를 전송하여,\n" +
                     "시니어ON 설치 후 로그인 해주세요.",
                 modifier = Modifier.fillMaxWidth(),
                 style = SeniorOnTextStyles.BodySMedium,
@@ -109,39 +101,13 @@ fun SeniorAppInstallGuideScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(66.dp))
 
-            Text(
-                text = "시니어의 전화번호(-를 제외하고 입력하세요)",
-                modifier = Modifier.fillMaxWidth(),
-                style = SeniorOnTextStyles.BodySMedium,
-                color = SeniorOnColors.Gray600,
+            KakaoInstallLinkButton(
+                onClick = onKakaoSendClick,
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            SeniorInfoPhoneTextField(
-                value = phoneNumber,
-                onValueChange = onPhoneNumberChange,
-                placeholder = "01012345678",
-                onClearClick = {
-                    onPhoneNumberChange(TextFieldValue())
-                },
-                textStyle = SeniorOnTextStyles.BodyMMedium,
-                showFocusedBorder = false,
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            SeniorInfoActionButton(
-                text = "설치링크 전송하기",
-                onClick = onSendInstallLinkClick,
-                style = SeniorInfoButtonStyle.Filled,
-                height = 50.dp,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(103.dp))
 
             AppInstallMethodChip(
                 onClick = onAppInstallMethodClick,
@@ -153,12 +119,44 @@ fun SeniorAppInstallGuideScreen(
 }
 
 @Composable
+private fun KakaoInstallLinkButton(
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Large))
+            .background(SeniorOnColors.Yellow)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_kakao),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .size(24.dp),
+            tint = Color.Unspecified,
+        )
+
+        Text(
+            text = "카카오톡으로 전송",
+            modifier = Modifier.align(Alignment.Center),
+            style = SeniorOnTextStyles.BodyMMedium,
+            color = SeniorOnColors.Gray800,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
 private fun AppInstallMethodChip(
     onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(38.dp))
             .background(SeniorOnColors.Gray100)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -223,14 +221,7 @@ private fun SeniorAppInstallGuideTopBar(
 )
 @Composable
 private fun SeniorAppInstallGuideScreenPreview() {
-    var phoneNumber by remember {
-        mutableStateOf(TextFieldValue("01012345678"))
-    }
-
     SENIOR_ONTheme {
-        SeniorAppInstallGuideScreen(
-            phoneNumber = phoneNumber,
-            onPhoneNumberChange = { phoneNumber = it },
-        )
+        SeniorAppInstallGuideScreen()
     }
 }

@@ -21,8 +21,9 @@ interface FamilyApi {
         @Query("cursorId") cursorId: Long? = null,
         @Query("size") size: Int? = null
     ): ApiResponse<FamilyPhotoListResponse>
-    @Multipart @POST("api/family/photos") suspend fun uploadPhoto(
-        @Part image: MultipartBody.Part, @Part("description") description: RequestBody?
+    @GET("api/family/photos/{familyPhotoId}")
+    suspend fun getPhoto(
+        @Path("familyPhotoId") familyPhotoId: Long,
     ): ApiResponse<FamilyPhotoItemResponse>
     @GET("api/family/photos/albums")
     suspend fun getAlbums(): ApiResponse<List<FamilyPhotoAlbumResponse>>
@@ -30,4 +31,14 @@ interface FamilyApi {
     suspend fun markViewed(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
     @DELETE("api/family/photos/{familyPhotoId}")
     suspend fun deletePhoto(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
+}
+
+interface FamilyPhotoUploadApi {
+    @Multipart
+    @POST("api/family/photos")
+    suspend fun uploadPhoto(
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Part image: MultipartBody.Part,
+        @Part("description") description: RequestBody?,
+    ): ApiResponse<FamilyPhotoItemResponse>
 }

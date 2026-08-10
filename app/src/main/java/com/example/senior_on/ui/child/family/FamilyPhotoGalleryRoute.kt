@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.family
 import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,13 +19,27 @@ fun FamilyPhotoGalleryRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadPhotoGallery()
+    }
+
     FamilyPhotoGalleryScreen(
         uiState = uiState,
         onBackClick = onBackClick,
         onGalleryClick = onGalleryClick,
         onCameraClick = onCameraClick,
         onPhotoClick = onPhotoClick,
-        onRetryClick = viewModel::loadFamilyOverview,
+        onRetryClick = {
+            viewModel.loadFamilyOverview()
+            viewModel.loadPhotoGallery(force = true)
+        },
+        onLoadMore = viewModel::loadMorePhotos,
+        sharedPhotoImage = { photo ->
+            SharedFamilyPhotoImage(
+                photo = photo,
+                onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
+            )
+        },
         modifier = modifier,
     )
 }

@@ -24,6 +24,7 @@ import com.example.senior_on.data.remote.dto.TodayScheduleResponse
 import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
+import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -32,10 +33,49 @@ import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisplayRepositoryImplTest {
+    @Test
+    fun offlineDeviceWithConnectionHistoryIsKept() = runBlocking {
+        val lastConnectedAt = "2026-08-07T18:05:57.484865"
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                deviceResponse = DeviceDetailResponse(
+                    deviceName = null,
+                    connected = false,
+                    connectionStatus = "OFFLINE",
+                    batteryLevel = null,
+                    networkConnected = false,
+                    lastConnectedAt = lastConnectedAt,
+                    lastLocationUpdatedAt = null,
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val device = repository.getDevice()
+
+        assertEquals("시니어폰", device?.name)
+        assertEquals(
+            DisplayDeviceConnectionStatus.Offline,
+            device?.connectionStatus,
+        )
+        assertEquals(lastConnectedAt, device?.lastConnectedAtLabel)
+    }
+
+    @Test
+    fun deviceWithoutIdentityOrConnectionHistoryIsAbsent() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        assertNull(repository.getDevice())
+    }
+
     @Test
     fun getOverviewUsesSeniorIdFromHomeSeniorProfile() = runBlocking {
         val homeDataSource = FakeHomeDataSource(
@@ -605,6 +645,8 @@ private class FakeHomeDataSource(
     ),
     private val weatherResponse: WeatherResponse =
         WeatherResponse(null, null, null, null),
+    private val deviceResponse: DeviceDetailResponse =
+        DeviceDetailResponse(null, false, null, null, false, null, null),
 ) : HomeDataSource {
     val savedButtonRequests = mutableListOf<HomeButtonSaveRequest>()
     val fontSizeRequests = mutableListOf<HomeFontSizeUpdateRequest>()
@@ -631,8 +673,7 @@ private class FakeHomeDataSource(
     override suspend fun getTodayHospitals(): List<TodayHospitalListResponse> =
         emptyList()
 
-    override suspend fun getDevice() =
-        DeviceDetailResponse(null, false, null, null, false, null, null)
+    override suspend fun getDevice() = deviceResponse
 
     override suspend fun getButtonOptions(): List<ButtonOptionResponse> {
         buttonOptionsRequestCount += 1

@@ -20,6 +20,7 @@ data class FamilyMemberUiModel(
     val id: String,
     val name: String,
     val role: FamilyCaregiverRole,
+    val canBecomePrimary: Boolean = false,
     val isCurrentUser: Boolean = false,
     val imageSource: FamilyImageSource? = null
 )
@@ -29,7 +30,7 @@ data class SharedFamilyPhotoUiModel(
     val id: String,
     val authorName: String,
     val createdAt: Instant,
-    val isOwnedByCurrentUser: Boolean,
+    val canDelete: Boolean,
     val imageSource: FamilyImageSource? = null,
     val message: String = "",
 ) {
@@ -49,9 +50,17 @@ data class FamilyTabUiState(
     val invitationCode: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val isPhotoLoading: Boolean = false,
+    val hasLoadedPhotoGallery: Boolean = false,
+    val photoErrorMessage: String? = null,
+    val hasMorePhotos: Boolean = false,
     val changingPrimaryMemberId: String? = null,
     val deletingMemberId: String? = null,
     val memberMutationErrorMessage: String? = null,
+    val loadingPhotoId: String? = null,
+    val deletingPhotoId: String? = null,
+    val deletedPhotoId: String? = null,
+    val photoMutationErrorMessage: String? = null,
 ) {
     val visibleMembers: List<FamilyMemberUiModel>
         get() = members
@@ -76,6 +85,15 @@ data class FamilyTabUiState(
     val isMemberMutationInProgress: Boolean
         get() = changingPrimaryMemberId != null || deletingMemberId != null
 }
+
+@Immutable
+data class FamilyPhotoDetailUiState(
+    val photo: SharedFamilyPhotoUiModel? = null,
+    val isLoading: Boolean = false,
+    val isDeleting: Boolean = false,
+    val deletedPhotoId: String? = null,
+    val errorMessage: String? = null,
+)
 
 private val SharedPhotoDateFormatter = DateTimeFormatter.ofPattern("yyyy. M. d")
 

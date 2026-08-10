@@ -170,7 +170,7 @@ private fun FamilyInvitationContent(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        FamilyInvitationHero(memberCount = uiState.memberCount ?: 0)
+        FamilyInvitationHero(memberCount = uiState.memberCount ?: 0L)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -218,7 +218,7 @@ private fun FamilyInvitationContent(
 }
 
 @Composable
-private fun FamilyInvitationHero(memberCount: Int) {
+private fun FamilyInvitationHero(memberCount: Long) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -273,7 +273,7 @@ private fun FamilyInvitationHero(memberCount: Int) {
 
             Text(
                 text = buildAnnotatedString {
-                    append("현재 가족 구성원은 ")
+                    append("현재 보호자 구성원은 ")
                     withStyle(SeniorOnTextStyles.BodyMSemiBold.toSpanStyle()) {
                         append("${memberCount}명")
                     }

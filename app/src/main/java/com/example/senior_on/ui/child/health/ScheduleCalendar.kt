@@ -38,6 +38,7 @@ import java.time.YearMonth
 
 internal enum class ScheduleCalendarMode {
     Hospital,
+    HealthOverlay,
     BottomSheet
 }
 
@@ -55,6 +56,7 @@ internal fun ScheduleCalendar(
 ) {
     val layout = when (mode) {
         ScheduleCalendarMode.Hospital -> HospitalCalendarLayout
+        ScheduleCalendarMode.HealthOverlay -> HealthOverlayCalendarLayout
         ScheduleCalendarMode.BottomSheet -> BottomSheetCalendarLayout
     }
 

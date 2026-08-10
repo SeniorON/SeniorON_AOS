@@ -21,6 +21,10 @@ fun FamilyMemberSettingsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var previouslyHadManagePermission by remember { mutableStateOf(false) }
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadFamilyMembers()
+    }
+
     LaunchedEffect(uiState.canManageMembers, uiState.isLoading) {
         if (previouslyHadManagePermission && !uiState.canManageMembers) {
             onBackClick()

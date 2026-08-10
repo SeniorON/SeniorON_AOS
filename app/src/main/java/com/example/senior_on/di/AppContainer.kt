@@ -8,7 +8,6 @@ import com.example.senior_on.data.repository.impl.AuthRepositoryImpl
 import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
 import com.example.senior_on.data.repository.impl.ChatBuddyRepositoryImpl
 import com.example.senior_on.data.repository.impl.DisplayRepositoryImpl
-import com.example.senior_on.data.repository.impl.FamilyRepositoryImpl
 import com.example.senior_on.data.repository.impl.HospitalSpecialtyRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentFamilyPhotoRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentInfoRepositoryImpl
@@ -31,10 +30,8 @@ import com.example.senior_on.data.source.auth.AuthDataSource
 import com.example.senior_on.data.source.auth.MockAuthDataSource
 import com.example.senior_on.data.source.auth.PersistedSessionDataSource
 import com.example.senior_on.data.source.auth.SocialAuthDataSource
-import com.example.senior_on.data.source.family.MockFamilyDataSource
 import com.example.senior_on.data.source.family.MockFamilyPhotoStore
 import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
-import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockFamilyPhotoFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
@@ -65,7 +62,6 @@ import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.auth.SocialAuthRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
-import com.example.senior_on.domain.repository.family.FamilyRepository
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
@@ -96,8 +92,6 @@ interface AppContainer {
     val locationRepository: LocationRepository
     val addressSearchRepository: AddressSearchRepository
     fun userProfileFor(userId: String): AppUserProfile
-    val familyRepository: FamilyRepository
-    fun familyRepositoryFor(userId: String): FamilyRepository
     val familyPhotoUploadPreparer: FamilyPhotoUploadPreparer
     val chatBuddyRepository: ChatBuddyRepository
     val parentFamilyPhotoRepository: ParentFamilyPhotoRepository
@@ -171,20 +165,8 @@ class DefaultAppContainer(
     override val addressSearchRepository: AddressSearchRepository =
         AddressSearchRepository()
 
-    private val familyPhotoStore = MockFamilyPhotoStore(
+    private val parentFamilyPhotoStore = MockFamilyPhotoStore(
         initialPhotos = MockFamilyPhotoFixtures.initialPhotos()
-    )
-    private val primaryFamilyRepository: FamilyRepository = FamilyRepositoryImpl(
-        MockFamilyDataSource(
-            initialOverview = MockFamilyFixtures.primaryCaregiverOverview,
-            photoStore = familyPhotoStore,
-        )
-    )
-    private val assistantFamilyRepository: FamilyRepository = FamilyRepositoryImpl(
-        MockFamilyDataSource(
-            initialOverview = MockFamilyFixtures.assistantCaregiverOverview,
-            photoStore = familyPhotoStore,
-        )
     )
     private val primaryCaregiverRelationshipRepository:
         CaregiverRelationshipRepository = CaregiverRelationshipRepositoryImpl(
@@ -202,19 +184,9 @@ class DefaultAppContainer(
             )
         )
 
-    override val familyRepository: FamilyRepository = primaryFamilyRepository
-
     override fun userProfileFor(userId: String): AppUserProfile {
         return MockUserFixtures.profileFor(userId)
             ?: MockUserFixtures.primaryCaregiver
-    }
-
-    override fun familyRepositoryFor(userId: String): FamilyRepository {
-        return when (userId.trim().lowercase()) {
-            MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID ->
-                assistantFamilyRepository
-            else -> primaryFamilyRepository
-        }
     }
 
     override fun caregiverRelationshipRepositoryFor(
@@ -242,7 +214,7 @@ class DefaultAppContainer(
         ChatBuddyRepositoryImpl(MockChatBuddyDataSource())
     override val parentFamilyPhotoRepository: ParentFamilyPhotoRepository =
         ParentFamilyPhotoRepositoryImpl(
-            MockParentFamilyPhotoDataSource(photoStore = familyPhotoStore)
+            MockParentFamilyPhotoDataSource(photoStore = parentFamilyPhotoStore)
         )
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
         ParentLinkSafetyRepositoryImpl(

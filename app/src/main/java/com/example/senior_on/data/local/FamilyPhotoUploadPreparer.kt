@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import java.io.File
 import java.io.IOException
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,15 +20,15 @@ class FamilyPhotoUploadPreparer(context: Context) {
         withContext(Dispatchers.IO) {
             val uri = photoUri.toUri()
             val resolver = appContext.contentResolver
-            val mimeType = resolver.getType(uri)
-                ?: MimeTypeMap.getSingleton()
-                    .getMimeTypeFromExtension(
-                        MimeTypeMap.getFileExtensionFromUrl(photoUri).lowercase(),
-                    )
-                ?: DefaultImageMimeType
-            require(mimeType.startsWith("image/")) {
-                "Only image files can be uploaded"
-            }
+            val extensionMimeType = MimeTypeMap.getSingleton()
+                .getMimeTypeFromExtension(
+                    MimeTypeMap.getFileExtensionFromUrl(photoUri)
+                        .lowercase(Locale.ROOT),
+                )
+            val mimeType = resolveFamilyPhotoMimeType(
+                reportedMimeType = resolver.getType(uri),
+                extensionMimeType = extensionMimeType,
+            )
 
             val extension = MimeTypeMap.getSingleton()
                 .getExtensionFromMimeType(mimeType)
@@ -95,10 +96,33 @@ class FamilyPhotoUploadPreparer(context: Context) {
 
     private companion object {
         const val UploadDirectory = "family_uploads"
-        const val DefaultImageMimeType = "image/jpeg"
         const val DefaultImageExtension = "jpg"
         const val DefaultBufferSize = 8 * 1024
         const val MaxUploadBytes = 10L * 1024L * 1024L
         const val MaxDisplayNameLength = 120
     }
+}
+
+private val AllowedFamilyPhotoMimeTypes = setOf(
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+)
+
+internal fun resolveFamilyPhotoMimeType(
+    reportedMimeType: String?,
+    extensionMimeType: String?,
+): String {
+    val mimeType = reportedMimeType
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?: extensionMimeType
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+        ?: throw IllegalArgumentException("Unable to determine family photo MIME type")
+    val normalizedMimeType = mimeType.lowercase(Locale.ROOT)
+    require(normalizedMimeType in AllowedFamilyPhotoMimeTypes) {
+        "Only JPEG, PNG, and WebP images can be uploaded"
+    }
+    return normalizedMimeType
 }
