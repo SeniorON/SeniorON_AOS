@@ -276,9 +276,17 @@ class HospitalRepositoryImpl(
 
     override suspend fun getUpcoming(parentId: Long): List<HospitalUpcomingGroup> =
         source.getUpcoming(parentId).map { response ->
+            val groupDate = response.scheduleDate.orEmpty()
             HospitalUpcomingGroup(
-                date = response.scheduleDate.orEmpty(),
-                appointments = response.schedules.orEmpty().map(HospitalDetailResponse::toDomain),
+                date = groupDate,
+                appointments = response.schedules.orEmpty().map { schedule ->
+                    val appointment = schedule.toDomain()
+                    if (appointment.date.isBlank()) {
+                        appointment.copy(date = groupDate)
+                    } else {
+                        appointment
+                    }
+                },
             )
         }
 
@@ -340,9 +348,11 @@ class MedicationRepositoryImpl(
                     repeatEndType = first.repeatEndType?.takeIf(String::isNotBlank) ?: "ONGOING",
                     durationWeeks = first.durationWeeks?.takeIf { it >= 1 },
                     endDate = first.endDate?.takeIf(String::isNotBlank),
-                    medicationIds = first.medicationIds.orEmpty().ifEmpty {
-                        listOfNotNull(first.medicationId)
-                    },
+                    medicationIds = responses
+                        .flatMap { response ->
+                            response.medicationIds.orEmpty() + listOfNotNull(response.medicationId)
+                        }
+                        .distinct(),
                 )
             }
 

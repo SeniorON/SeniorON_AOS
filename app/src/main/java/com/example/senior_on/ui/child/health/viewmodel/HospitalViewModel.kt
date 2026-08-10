@@ -16,6 +16,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -198,7 +199,8 @@ class HospitalViewModel(
                         monthlyAppointments = monthly,
                     )
                 }
-            }.onFailure {
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isLoading = false,

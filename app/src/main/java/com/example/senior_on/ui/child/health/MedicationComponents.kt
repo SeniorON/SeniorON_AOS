@@ -47,6 +47,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 enum class MedicationDoseStatus(val label: String) {
@@ -88,8 +89,31 @@ data class RegisteredMedicationUiState(
             MedicationRepeatDuration.Date -> repeat.endDate
         }
         if (effectiveEndDate != null && date.isAfter(effectiveEndDate)) return false
+
+        val cycle = repeat.cycleValue.coerceAtLeast(1).toLong()
+        val anchor = startDate ?: date
         val weekdayIndex = date.dayOfWeek.value % 7
-        return weekdayIndex in weekdays
+
+        return when (repeat.frequency) {
+            MedicationRepeatFrequency.Daily -> {
+                val days = ChronoUnit.DAYS.between(anchor, date)
+                days % cycle == 0L && weekdayIndex in weekdays
+            }
+            MedicationRepeatFrequency.Weekly -> {
+                if (weekdayIndex !in weekdays) return false
+                val weeks = ChronoUnit.DAYS.between(anchor, date) / 7
+                weeks % cycle == 0L
+            }
+            MedicationRepeatFrequency.Monthly -> {
+                val months = ChronoUnit.MONTHS.between(
+                    anchor.withDayOfMonth(1),
+                    date.withDayOfMonth(1),
+                )
+                if (months % cycle != 0L) return false
+                val targetDay = anchor.dayOfMonth.coerceAtMost(date.lengthOfMonth())
+                date.dayOfMonth == targetDay
+            }
+        }
     }
 }
 

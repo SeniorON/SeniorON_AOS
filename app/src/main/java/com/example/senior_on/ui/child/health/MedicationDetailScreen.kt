@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,6 +71,34 @@ data class MedicationDraft(
     val repeat: MedicationRepeatSelection = MedicationRepeatSelection(),
 )
 
+private val LocalDateNullableSaver = Saver<LocalDate?, String>(
+    save = { it?.toString().orEmpty() },
+    restore = { saved -> saved.takeIf(String::isNotBlank)?.let(LocalDate::parse) },
+)
+
+private val MedicationRepeatSelectionSaver = Saver<MedicationRepeatSelection, List<Any>>(
+    save = { selection ->
+        listOf(
+            selection.frequency.name,
+            selection.cycleValue,
+            ArrayList(selection.weekdays),
+            selection.duration.name,
+            selection.periodValue,
+            selection.endDate?.toString().orEmpty(),
+        )
+    },
+    restore = { saved ->
+        MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.valueOf(saved[0] as String),
+            cycleValue = saved[1] as Int,
+            weekdays = (saved[2] as List<*>).mapNotNull { it as? Int }.toSet(),
+            duration = MedicationRepeatDuration.valueOf(saved[3] as String),
+            periodValue = saved[4] as Int,
+            endDate = (saved[5] as String).takeIf(String::isNotBlank)?.let(LocalDate::parse),
+        )
+    },
+)
+
 @Composable
 fun MedicationDetailScreen(
     mode: MedicationEditorMode,
@@ -89,8 +118,16 @@ fun MedicationDetailScreen(
             initialDraft.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
         )
     }
-    var startDate by remember(initialDraft) { mutableStateOf(initialDraft.startDate) }
-    var repeatSelection by remember(initialDraft) {
+    var startDate by rememberSaveable(
+        initialDraft,
+        stateSaver = LocalDateNullableSaver,
+    ) {
+        mutableStateOf(initialDraft.startDate)
+    }
+    var repeatSelection by rememberSaveable(
+        initialDraft,
+        stateSaver = MedicationRepeatSelectionSaver,
+    ) {
         mutableStateOf(
             initialDraft.repeat.copy(
                 weekdays = initialDraft.weekdays.ifEmpty {
