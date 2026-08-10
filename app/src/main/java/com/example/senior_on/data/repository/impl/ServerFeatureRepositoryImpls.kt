@@ -35,6 +35,7 @@ class HomeServerRepositoryImpl(
             seniorAddress = it.senior_profile?.address,
             seniorId = it.senior_profile?.senior_id,
             seniorName = it.senior_profile?.name,
+            seniorPhoneNumber = it.senior_profile?.phone,
         )
     }
     override suspend fun getSeniorHome() = source.getSeniorHome().let {
@@ -164,7 +165,9 @@ class FamilyServerRepositoryImpl(
         if (exception.code() == 404) false else throw exception
     }
 
-    override suspend fun join(code: String) = source.join(FamilyJoinRequest(code.trim())).let {
+    override suspend fun join(code: String) = source.join(
+        FamilyJoinRequest(normalizeFamilyCodeForRequest(code))
+    ).let {
         FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }
     override suspend fun createCode() = source.createCode().let {
@@ -398,6 +401,8 @@ class NotificationRepositoryImpl(
     override suspend fun isParentDeviceOnline() = source.getParentDeviceStatus().online == true
     override suspend fun getInactivitySetting(userId: Long) =
         source.getInactivitySetting(userId).toDomain()
+    override suspend fun getMyInactivitySetting() =
+        source.getMyInactivitySetting().toDomain()
     override suspend fun updateInactivitySetting(userId: Long, thresholdHours: Int) =
         source.updateInactivitySetting(userId, InactivitySettingRequest(thresholdHours)).toDomain()
 }
@@ -421,7 +426,21 @@ class EventRepositoryImpl(
         }
     override suspend fun createRiskLink(url: String, battery: Int?) =
         source.createRiskLink(RiskLinkRequest(url.trim(), battery)).let {
-            SafetyEvent(it.id, "RISK_LINK", it.detectedAt, null, null, null, battery, it.linkUrl, it.riskLevel != "SAFE")
+            SafetyEvent(
+                it.id,
+                "RISK_LINK",
+                it.detectedAt,
+                null,
+                null,
+                null,
+                battery,
+                it.linkUrl,
+                when (it.riskLevel?.trim()?.uppercase()) {
+                    "낮음", "LOW", "SAFE" -> false
+                    "높음", "HIGH", "DANGEROUS" -> true
+                    else -> null
+                },
+            )
         }
     override suspend fun createOutingReturn(
         phase: String, latitude: Double, longitude: Double, battery: Int
@@ -484,7 +503,51 @@ class DeviceRepositoryImpl(
         )
     )
 
+    override suspend fun updateFcmToken(token: String) = source.updateFcmToken(
+        FcmTokenUpdateRequest(
+            deviceIdentifier = identifierSource.getOrCreateIdentifier(),
+            deviceToken = token,
+        )
+    )
+
     override suspend fun disconnect() = source.disconnect()
+
+    override suspend fun getLatestLocation(): DeviceLocation =
+        source.getLatestLocation().let { response ->
+            DeviceLocation(
+                latitude = requireNotNull(response.latitude) {
+                    "최근 위치의 위도가 없습니다."
+                },
+                longitude = requireNotNull(response.longitude) {
+                    "최근 위치의 경도가 없습니다."
+                },
+                lastLocationUpdatedAt = response.lastLocationUpdatedAt,
+            )
+        }
+
+    override suspend fun updateLocation(latitude: Double, longitude: Double) {
+        source.updateLocation(
+            DeviceLocationUpdateRequest(
+                deviceIdentifier = identifierSource.getOrCreateIdentifier(),
+                latitude = latitude,
+                longitude = longitude,
+            )
+        )
+    }
+
+    override suspend fun getHomeLocation(): SeniorHomeLocation =
+        source.getHomeLocation().let { response ->
+            SeniorHomeLocation(
+                latitude = requireNotNull(response.latitude) {
+                    "등록된 집 좌표의 위도가 없습니다."
+                },
+                longitude = requireNotNull(response.longitude) {
+                    "등록된 집 좌표의 경도가 없습니다."
+                },
+            )
+        }
+
+    override fun getBatteryLevel(): Int = localStatusSource.getBatteryLevel()
 }
 
 private fun HomeButtonResponse.toDomain() = ServerButton(

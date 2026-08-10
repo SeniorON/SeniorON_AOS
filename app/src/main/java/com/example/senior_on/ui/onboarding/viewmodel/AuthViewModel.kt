@@ -110,7 +110,7 @@ class AuthViewModel(
                         deviceIdentifier = deviceRegistration.deviceIdentifier,
                         userId = result.loginId,
                         mode = result.mode,
-                        keepLoggedIn = keepLoggedIn,
+                        keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                     )
                     onResult(result)
                 }
@@ -266,6 +266,7 @@ class AuthViewModel(
                 socialToken = pendingSocial.socialToken,
                 name = draft.name,
                 birth = draft.birth,
+                mode = mode,
                 serviceTermsAgreed = agreements.serviceTerms,
                 privacyPolicyAgreed = agreements.privacyPolicy,
                 ageOver14Agreed = agreements.ageOver14,
@@ -280,12 +281,9 @@ class AuthViewModel(
         val resultUsersId = requireNotNull(socialResult.usersId) {
             "소셜 회원가입 응답에 사용자 ID가 없습니다."
         }
-        // TODO: 소셜 회원가입 요청에서 role을 함께 받게 되면 이 후속 호출을 제거합니다.
-        val roleUpdateResult = authRepository.updateRole(
-            accessToken = resultAccessToken,
-            mode = mode,
-        )
-        val resultMode = roleUpdateResult.mode
+        val resultMode = requireNotNull(socialResult.mode) {
+            "소셜 회원가입 응답에 사용자 역할이 없습니다."
+        }
 
         accessToken = resultAccessToken
         sessionRepository.saveLoginSession(
@@ -381,7 +379,7 @@ class AuthViewModel(
                 pendingSocialSignup = PendingSocialSignup(
                     provider = provider,
                     socialToken = socialToken,
-                    keepLoggedIn = keepLoggedIn,
+                    keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )
                 signupDraft = SignupDraft(name = result.name)
                 accessToken = null
@@ -408,7 +406,7 @@ class AuthViewModel(
                     deviceIdentifier = deviceRegistration.deviceIdentifier,
                     userId = resultUsersId.toString(),
                     mode = resultMode,
-                    keepLoggedIn = keepLoggedIn,
+                    keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )
             } else {
                 accessToken = null
@@ -421,6 +419,11 @@ class AuthViewModel(
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
+
+    private fun shouldPersistSession(
+        mode: AppUserMode,
+        requestedByUser: Boolean,
+    ): Boolean = requestedByUser || mode == AppUserMode.Senior
 
     fun clearSignupEmailRequestError() {
         _uiState.update {

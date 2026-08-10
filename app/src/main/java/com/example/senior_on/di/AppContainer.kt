@@ -3,6 +3,7 @@ package com.example.senior_on.di
 import android.content.Context
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.repository.impl.AccountRecoveryRepositoryImpl
+import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.data.repository.impl.AuthRepositoryImpl
 import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositoryImpl
 import com.example.senior_on.data.repository.impl.ChatBuddyRepositoryImpl
@@ -37,8 +38,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
-import com.example.senior_on.data.source.parent.MockParentLinkSafetyDataSource
 import com.example.senior_on.data.source.parent.InMemoryParentInfoDataSource
+import com.example.senior_on.data.source.parent.RemoteParentLinkSafetyDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
@@ -89,6 +90,7 @@ interface AppContainer {
     val userSettingsRepository: UserSettingsRepository
     val deviceRepository: DeviceRepository
     val locationRepository: LocationRepository
+    val addressSearchRepository: AddressSearchRepository
     fun userProfileFor(userId: String): AppUserProfile
     val familyPhotoUploadPreparer: FamilyPhotoUploadPreparer
     val chatBuddyRepository: ChatBuddyRepository
@@ -118,6 +120,7 @@ class DefaultAppContainer(
     deviceDataSource: DeviceDataSource
 ) : AppContainer {
     private val deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
+    private val localDeviceStatusDataSource = AndroidDeviceStatusDataSource(context)
 
     override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource)
     override val accountRecoveryRepository: AccountRecoveryRepository =
@@ -148,7 +151,7 @@ class DefaultAppContainer(
     override val deviceRepository = DeviceRepositoryImpl(
         source = deviceDataSource,
         identifierSource = deviceIdentifierDataSource,
-        localStatusSource = AndroidDeviceStatusDataSource(context),
+        localStatusSource = localDeviceStatusDataSource,
     )
 
     override val locationRepository: LocationRepository = LocationRepositoryImpl(
@@ -159,6 +162,8 @@ class DefaultAppContainer(
            ),
        ),
     )
+    override val addressSearchRepository: AddressSearchRepository =
+        AddressSearchRepository()
 
     private val parentFamilyPhotoStore = MockFamilyPhotoStore(
         initialPhotos = MockFamilyPhotoFixtures.initialPhotos()
@@ -212,5 +217,10 @@ class DefaultAppContainer(
             MockParentFamilyPhotoDataSource(photoStore = parentFamilyPhotoStore)
         )
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
-        ParentLinkSafetyRepositoryImpl(MockParentLinkSafetyDataSource())
+        ParentLinkSafetyRepositoryImpl(
+            RemoteParentLinkSafetyDataSource(
+                eventDataSource = eventDataSource,
+                deviceStatusDataSource = localDeviceStatusDataSource,
+            )
+        )
 }

@@ -14,6 +14,7 @@ data class HomeSnapshot(
     val seniorAddress: String? = null,
     val seniorId: Long? = null,
     val seniorName: String? = null,
+    val seniorPhoneNumber: String? = null,
 )
 data class ServerMusicCard(
     val enabled: Boolean,
@@ -52,6 +53,15 @@ data class DeviceInfo(
     val name: String, val connected: Boolean, val status: String,
     val batteryLevel: Int?, val networkConnected: Boolean,
     val lastConnectedAt: String?, val lastLocationUpdatedAt: String?
+)
+data class DeviceLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val lastLocationUpdatedAt: String?,
+)
+data class SeniorHomeLocation(
+    val latitude: Double,
+    val longitude: Double,
 )
 data class FamilyCodeInfo(val familyId: Long?, val code: String, val memberCount: Long? = null)
 data class ServerFamilyMember(

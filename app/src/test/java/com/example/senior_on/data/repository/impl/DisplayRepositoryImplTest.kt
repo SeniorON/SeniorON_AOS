@@ -3,6 +3,10 @@ package com.example.senior_on.data.repository.impl
 import com.example.senior_on.data.remote.dto.ButtonOptionResponse
 import com.example.senior_on.data.remote.dto.DeviceDetailResponse
 import com.example.senior_on.data.remote.dto.DeviceStatusUpdateRequest
+import com.example.senior_on.data.remote.dto.DeviceLocationResponse
+import com.example.senior_on.data.remote.dto.DeviceLocationUpdateRequest
+import com.example.senior_on.data.remote.dto.FcmTokenUpdateRequest
+import com.example.senior_on.data.remote.dto.HomeLocationResponse
 import com.example.senior_on.data.remote.dto.FamilyMemberResponse
 import com.example.senior_on.data.remote.dto.HomeButtonCreateRequest
 import com.example.senior_on.data.remote.dto.HomeButtonCreateResponse
@@ -918,4 +922,8 @@ private class FakeHomeDataSource(
 private class FakeDeviceDataSource : DeviceDataSource {
     override suspend fun updateStatus(request: DeviceStatusUpdateRequest) = true
     override suspend fun disconnect() = Unit
+    override suspend fun updateFcmToken(request: FcmTokenUpdateRequest) = Unit
+    override suspend fun getLatestLocation(): DeviceLocationResponse = error("Not used")
+    override suspend fun updateLocation(request: DeviceLocationUpdateRequest) = Unit
+    override suspend fun getHomeLocation(): HomeLocationResponse = error("Not used")
 }

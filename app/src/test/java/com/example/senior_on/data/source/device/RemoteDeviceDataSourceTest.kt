@@ -1,7 +1,11 @@
 package com.example.senior_on.data.source.device
 
 import com.example.senior_on.data.remote.api.DeviceApi
+import com.example.senior_on.data.remote.dto.DeviceLocationResponse
+import com.example.senior_on.data.remote.dto.DeviceLocationUpdateRequest
 import com.example.senior_on.data.remote.dto.DeviceStatusUpdateRequest
+import com.example.senior_on.data.remote.dto.FcmTokenUpdateRequest
+import com.example.senior_on.data.remote.dto.HomeLocationResponse
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -59,6 +63,20 @@ class RemoteDeviceDataSourceTest {
         ): Response<Unit> = statusResponse
 
         override suspend fun disconnect(): Response<Unit> = Response.success(Unit)
+
+        override suspend fun updateFcmToken(
+            request: FcmTokenUpdateRequest,
+        ): Response<Unit> = Response.success(Unit)
+
+        override suspend fun getLatestLocation(): DeviceLocationResponse =
+            error("Not used in this test")
+
+        override suspend fun updateLocation(
+            request: DeviceLocationUpdateRequest,
+        ): Response<Unit> = Response.success(Unit)
+
+        override suspend fun getHomeLocation(): HomeLocationResponse =
+            error("Not used in this test")
     }
 
     private companion object {

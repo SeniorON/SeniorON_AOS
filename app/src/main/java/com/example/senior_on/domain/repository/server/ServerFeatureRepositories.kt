@@ -80,6 +80,7 @@ interface NotificationRepository {
     suspend fun updateSetting(type: String, enabled: Boolean): NotificationSetting
     suspend fun isParentDeviceOnline(): Boolean
     suspend fun getInactivitySetting(userId: Long): InactivitySetting
+    suspend fun getMyInactivitySetting(): InactivitySetting
     suspend fun updateInactivitySetting(userId: Long, thresholdHours: Int): InactivitySetting
 }
 
@@ -103,5 +104,10 @@ interface DeviceRepository {
      * @return `false` when the server reports that this device was explicitly disconnected.
      */
     suspend fun updateStatus(): Boolean
+    suspend fun updateFcmToken(token: String)
     suspend fun disconnect()
+    suspend fun getLatestLocation(): DeviceLocation
+    suspend fun updateLocation(latitude: Double, longitude: Double)
+    suspend fun getHomeLocation(): SeniorHomeLocation
+    fun getBatteryLevel(): Int
 }

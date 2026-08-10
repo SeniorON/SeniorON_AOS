@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.parent.home
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +51,9 @@ fun ParentHomeRoute(
         weatherUiState = uiState.weather,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refresh,
+        onChangeDefaultHomeClick = {
+            context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+        },
         onMusicClick = { openParentHomeButton(context, it) },
         onScheduleClick = onScheduleClick,
         onButtonClick = { button ->

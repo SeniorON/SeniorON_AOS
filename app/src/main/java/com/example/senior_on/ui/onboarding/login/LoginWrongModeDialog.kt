@@ -70,7 +70,7 @@ fun LoginWrongModeDialogContent(
                     LoginWrongModeDialogType.SeniorAccount ->
                         "시니어 계정으로\n가입된 회원입니다"
                     LoginWrongModeDialogType.ChildAccount ->
-                        "자녀 계정으로\n가입된 회원입니다"
+                        "보호자 계정으로\n가입된 회원입니다"
                 },
                 modifier = Modifier.padding(top = 16.dp),
                 style = SeniorOnTextStyles.BodyLBold,
@@ -83,7 +83,7 @@ fun LoginWrongModeDialogContent(
                     LoginWrongModeDialogType.SeniorAccount ->
                         "시니어 모드로 선택한 후\n다시 진행해주세요."
                     LoginWrongModeDialogType.ChildAccount ->
-                        "자녀 모드로 선택한 후\n다시 진행해주세요."
+                        "보호자 모드로 선택한 후\n다시 진행해주세요."
                 },
                 modifier = Modifier.padding(top = 18.dp),
                 style = SeniorOnTextStyles.BodySMedium,

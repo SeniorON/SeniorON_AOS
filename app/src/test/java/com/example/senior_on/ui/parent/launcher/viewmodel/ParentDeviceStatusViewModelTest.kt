@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.parent.launcher.viewmodel
 
+import com.example.senior_on.domain.model.server.DeviceLocation
+import com.example.senior_on.domain.model.server.SeniorHomeLocation
 import com.example.senior_on.domain.repository.server.DeviceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +37,7 @@ class ParentDeviceStatusViewModelTest {
             statusUpdateIntervalMillis = 1L,
         )
 
-        viewModel.startStatusUpdates()
+        viewModel.startForegroundUpdates()
         advanceUntilIdle()
 
         assertTrue(viewModel.isDeviceDisconnected.value)
@@ -50,6 +52,13 @@ class ParentDeviceStatusViewModelTest {
             return false
         }
 
+        override suspend fun updateFcmToken(token: String) = Unit
         override suspend fun disconnect() = Unit
+        override suspend fun getLatestLocation(): DeviceLocation =
+            error("Not used in this test")
+        override suspend fun updateLocation(latitude: Double, longitude: Double) = Unit
+        override suspend fun getHomeLocation(): SeniorHomeLocation =
+            error("Not used in this test")
+        override fun getBatteryLevel(): Int = 100
     }
 }

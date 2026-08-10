@@ -8,6 +8,8 @@ import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
+import com.example.senior_on.domain.repository.server.DeviceRepository
+import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
 import com.example.senior_on.ui.child.notification.NotificationScreenUiState
@@ -15,6 +17,7 @@ import com.example.senior_on.ui.child.notification.apiType
 import com.example.senior_on.ui.child.notification.emptyNotificationScreenUiState
 import com.example.senior_on.ui.child.notification.parentNotConnectedNotificationScreenUiState
 import com.example.senior_on.ui.child.notification.toUiState
+import com.example.senior_on.ui.child.notification.toEpochMillisOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +36,7 @@ data class NotificationUiState(
     val isInactivitySettingSaving: Boolean = false,
     val detailMessages: Map<Long, NotificationMessageUiState> = emptyMap(),
     val isDetailLoading: Boolean = false,
+    val parentPhoneNumber: String? = null,
     val errorMessage: String? = null,
 )
 
@@ -41,6 +45,8 @@ class NotificationViewModel(
     private val familyRepository: FamilyServerRepository?,
     private val homeRepository: HomeServerRepository?,
     private val eventRepository: EventRepository?,
+    private val deviceRepository: DeviceRepository?,
+    private val addressSearchRepository: AddressSearchRepository?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NotificationUiState())
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
@@ -80,21 +86,20 @@ class NotificationViewModel(
                         }.getOrNull()
                     }
                 }
-                val hasHomeAddress = async {
-                    homeRepository
-                        ?.getHome()
-                        ?.seniorAddress
-                        ?.isNotBlank()
-                        ?: true
-                }
+                val parentHome = async { homeRepository?.getHome() }
+                val parentHomeSnapshot = parentHome.await()
                 NotificationHomeLoadResult(
                     home = home.await().toUiState(
                         isParentDeviceOnline = parentOnline.await(),
-                        hasHomeAddress = hasHomeAddress.await(),
+                        hasHomeAddress = parentHomeSnapshot
+                            ?.seniorAddress
+                            ?.isNotBlank()
+                            ?: true,
                     ),
                     inactivityThresholdHours = inactivitySetting
                         ?.await()
                         ?.thresholdHours,
+                    parentPhoneNumber = parentHomeSnapshot?.seniorPhoneNumber,
                 )
             }.onSuccess { result ->
                 val mergedHome = result.home.copy(
@@ -128,6 +133,7 @@ class NotificationViewModel(
                         inactivityThresholdHours =
                             result.inactivityThresholdHours
                                 ?: it.inactivityThresholdHours,
+                        parentPhoneNumber = result.parentPhoneNumber,
                     )
                 }
             }.onFailure { throwable ->
@@ -201,7 +207,29 @@ class NotificationViewModel(
                 it.copy(isDetailLoading = true, errorMessage = null)
             }
             runCatching {
-                events.getDetail(eventId).toUiState(category, message)
+                var detail = events.getDetail(eventId).toUiState(category, message)
+                if (category == NotificationCategory.Outing) {
+                    val latestLocation = runCatching {
+                        deviceRepository?.getLatestLocation()
+                    }.getOrNull()
+                    if (latestLocation != null) {
+                        val latestAddress = runCatching {
+                            addressSearchRepository?.getAddressFromCoordinates(
+                                latitude = latestLocation.latitude,
+                                longitude = latestLocation.longitude,
+                            )?.selectedAddress
+                        }.getOrNull()
+                        detail = detail.copy(
+                            address = latestAddress ?: detail.address,
+                            latitude = latestLocation.latitude,
+                            longitude = latestLocation.longitude,
+                            lastLocationUpdatedAtMillis =
+                                latestLocation.lastLocationUpdatedAt
+                                    .toEpochMillisOrNull(),
+                        )
+                    }
+                }
+                detail
             }.onSuccess { detail ->
                 Log.d(
                     DetailLogTag,
@@ -405,6 +433,8 @@ class NotificationViewModel(
         private val familyRepository: FamilyServerRepository?,
         private val homeRepository: HomeServerRepository?,
         private val eventRepository: EventRepository?,
+        private val deviceRepository: DeviceRepository?,
+        private val addressSearchRepository: AddressSearchRepository?,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -414,6 +444,8 @@ class NotificationViewModel(
                 familyRepository = familyRepository,
                 homeRepository = homeRepository,
                 eventRepository = eventRepository,
+                deviceRepository = deviceRepository,
+                addressSearchRepository = addressSearchRepository,
             ) as T
         }
     }
@@ -427,6 +459,7 @@ class NotificationViewModel(
 private data class NotificationHomeLoadResult(
     val home: NotificationScreenUiState,
     val inactivityThresholdHours: Int? = null,
+    val parentPhoneNumber: String? = null,
 )
 
 private fun NotificationScreenUiState.withInactivityThresholdHours(

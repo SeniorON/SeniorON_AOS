@@ -10,6 +10,7 @@
     <exclude domain="sharedpref" path="fcm_registration.xml"/>
     <exclude domain="sharedpref" path="auth_token.xml"/>
     <exclude domain="sharedpref" path="refresh_token.xml"/>
+    <exclude domain="sharedpref" path="outing_tracking.xml"/>
     <!--
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>

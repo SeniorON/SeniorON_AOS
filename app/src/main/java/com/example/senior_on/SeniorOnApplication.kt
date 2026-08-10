@@ -19,6 +19,7 @@ import com.example.senior_on.data.source.settings.RemoteUserSettingsDataSource
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.di.DefaultAppContainer
 import com.example.senior_on.notification.SeniorOnNotificationManager
+import com.example.senior_on.notification.FcmTokenSyncScheduler
 import com.example.senior_on.map.KakaoMapAvailability
 import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.sdk.common.KakaoSdk
@@ -27,6 +28,7 @@ class SeniorOnApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AccessTokenStore.initialize(this)
+        FcmTokenSyncScheduler.enqueueIfLoggedIn(this)
         SeniorOnNotificationManager.createAlertChannel(this)
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank()) {
             KakaoSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)

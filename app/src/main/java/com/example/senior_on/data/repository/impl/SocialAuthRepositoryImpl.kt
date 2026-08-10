@@ -71,6 +71,7 @@ class SocialAuthRepositoryImpl(
                 socialToken = credentials.socialToken.trim(),
                 name = credentials.name.trim(),
                 birth = credentials.birth,
+                role = credentials.mode.toRoleApiValue(),
                 serviceTermsAgreed = credentials.serviceTermsAgreed,
                 privacyPolicyAgreed = credentials.privacyPolicyAgreed,
                 ageOver14Agreed = credentials.ageOver14Agreed,
@@ -103,5 +104,10 @@ class SocialAuthRepositoryImpl(
     private fun SocialProvider.toApiValue() = when (this) {
         SocialProvider.Kakao -> "KAKAO"
         SocialProvider.Google -> "GOOGLE"
+    }
+
+    private fun AppUserMode.toRoleApiValue() = when (this) {
+        AppUserMode.Child -> "CHILD"
+        AppUserMode.Senior -> "PARENT"
     }
 }

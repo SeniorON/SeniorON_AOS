@@ -99,7 +99,7 @@ fun ModeSelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ModeCard(
-                    label = "자녀",
+                    label = "보호자",
                     iconResId = R.drawable.ic_big_dependent,
                     selected = selectedMode == ModeType.Child,
                     dimmed = selectedMode != null && selectedMode != ModeType.Child,

@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -75,6 +76,7 @@ internal fun ParentHomeScreen(
     onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
+    onChangeDefaultHomeClick: () -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -110,6 +112,19 @@ internal fun ParentHomeScreen(
                 onScheduleClick = onScheduleClick,
                 onButtonClick = onButtonClick,
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onChangeDefaultHomeClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "기본 홈 앱 되돌리기 (테스트)",
+                    style = SeniorOnTextStyles.HeadingS,
+                    color = SeniorOnColors.Gray700,
+                )
+            }
         }
     }
 }
@@ -175,6 +190,7 @@ internal fun ColumnScope.SeniorHomeContent(
                 }
             }
         }
+
     }
 }
 
@@ -554,6 +570,7 @@ private fun ParentHomeScreenPreview() {
             onMusicClick = {},
             onScheduleClick = {},
             onButtonClick = {},
+            onChangeDefaultHomeClick = {},
         )
     }
 }
