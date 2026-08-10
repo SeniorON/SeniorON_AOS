@@ -143,7 +143,7 @@ data class NotificationFooterPanelUiState(
     val tone: NotificationFooterTone,
     val title: String = when (tone) {
         NotificationFooterTone.Recommendation -> "무활동 감지 등"
-        NotificationFooterTone.Warning -> "어머니 폰이 연결되지 않았어요."
+        NotificationFooterTone.Warning -> "시니어 폰이 연결되지 않았어요."
     },
     val highlightedTitle: String? = when (tone) {
         NotificationFooterTone.Recommendation -> "중요한 알림 설정"
