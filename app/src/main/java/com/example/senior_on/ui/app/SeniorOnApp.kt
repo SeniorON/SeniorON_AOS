@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -15,7 +16,6 @@ import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.location.tracking.ParentOutingTrackingController
 import com.example.senior_on.ui.child.route.ChildMainRoute
 import com.example.senior_on.ui.onboarding.route.OnboardingRoute
-import com.example.senior_on.ui.parent.route.ParentLauncherRoute
 
 private enum class AppDestination {
     Onboarding,
@@ -24,7 +24,10 @@ private enum class AppDestination {
 }
 
 @Composable
-fun SeniorOnApp(appContainer: AppContainer) {
+fun SeniorOnApp(
+    appContainer: AppContainer,
+    onOpenParentLauncher: () -> Unit,
+) {
     val context = LocalContext.current
     val notificationNavigationEvent by
         NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
@@ -66,9 +69,8 @@ fun SeniorOnApp(appContainer: AppContainer) {
                 NotificationNavigationEventStore::consume,
         )
 
-        AppDestination.ParentLauncher -> ParentLauncherRoute(
-            appContainer = appContainer,
-            onExitToOnboarding = ::openOnboarding,
-        )
+        AppDestination.ParentLauncher -> LaunchedEffect(Unit) {
+            onOpenParentLauncher()
+        }
     }
 }

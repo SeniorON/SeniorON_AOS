@@ -47,7 +47,7 @@ data class ParentHomeButtonUiModel(
 data class ParentHomeUiState(
     val screenConfiguration: SeniorScreenConfiguration = SeniorScreenConfiguration(),
     val musicButton: ParentHomeButtonUiModel? = null,
-    val buttons: List<ParentHomeButtonUiModel> = emptyList(),
+    val buttons: List<ParentHomeButtonUiModel> = defaultOfflineHomeButtons(),
     val schedule: ParentHomeScheduleUiState = ParentHomeScheduleUiState(),
     val weather: ParentHomeWeatherUiState = ParentHomeWeatherUiState(),
     val isLoading: Boolean = true,
@@ -107,7 +107,9 @@ class ParentHomeViewModel(
                         musicButton = home.musicCard
                             ?.takeIf { musicCard -> musicCard.enabled }
                             ?.toUiModel(),
-                        buttons = home.buttons.map(ServerButton::toUiModel),
+                        buttons = home.buttons
+                            .map(ServerButton::toUiModel)
+                            .ifEmpty(::defaultOfflineHomeButtons),
                         schedule = schedulesResult
                             .getOrNull()
                             ?.toHomeScheduleUiState()
@@ -131,9 +133,20 @@ class ParentHomeViewModel(
                 .onFailure { throwable ->
                     _uiState.update {
                         it.copy(
+                            buttons = it.buttons.ifEmpty(::defaultOfflineHomeButtons),
                             isLoading = false,
                             isRefreshing = false,
-                            schedule = it.schedule.copy(isLoading = false),
+                            schedule = schedulesResult
+                                .getOrNull()
+                                ?.toHomeScheduleUiState()
+                                ?: it.schedule.copy(isLoading = false),
+                            weather = weatherResult.getOrNull()?.let { weather ->
+                                ParentHomeWeatherUiState(
+                                    temperature = weather.temperature,
+                                    status = weather.status,
+                                    text = weather.text.ifBlank { "날씨 정보 없음" },
+                                )
+                            } ?: it.weather,
                             errorMessage = throwable.message
                                 ?: "부모님 홈 정보를 불러오지 못했어요.",
                         )
@@ -148,6 +161,31 @@ class ParentHomeViewModel(
         }
     }
 }
+
+private fun defaultOfflineHomeButtons(): List<ParentHomeButtonUiModel> = listOf(
+    offlineButton(-1, SeniorHomeButtonType.Call, "전화", "PHONE"),
+    offlineButton(-2, SeniorHomeButtonType.Message, "메시지", "MESSAGE"),
+    offlineButton(-3, SeniorHomeButtonType.Camera, "카메라", "CAMERA"),
+    offlineButton(-4, SeniorHomeButtonType.Photo, "사진", "PHOTO"),
+    offlineButton(-5, SeniorHomeButtonType.ChatBuddy, "말벗", "COMPANION"),
+    offlineButton(-6, SeniorHomeButtonType.Medication, "복약", "MEDICATION"),
+    offlineButton(-7, SeniorHomeButtonType.Calendar, "캘린더", "CALENDAR"),
+    offlineButton(-8, SeniorHomeButtonType.Emergency, "긴급알림", "EMERGENCY"),
+)
+
+private fun offlineButton(
+    id: Long,
+    type: SeniorHomeButtonType,
+    label: String,
+    actionValue: String,
+) = ParentHomeButtonUiModel(
+    id = id,
+    type = type,
+    label = label,
+    actionType = "DEFAULT",
+    actionValue = actionValue,
+    packageName = null,
+)
 
 private fun List<TodayHospitalSchedule>.toHomeScheduleUiState(): ParentHomeScheduleUiState {
     val firstSchedule = firstOrNull()

@@ -9,6 +9,7 @@ import com.example.senior_on.ui.app.SeniorOnApp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.notification.NotificationNavigationEventStore
+import com.example.senior_on.ui.parent.launcher.ParentLauncherActivity
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,9 +21,19 @@ class MainActivity : ComponentActivity() {
             SENIOR_ONTheme {
                 SeniorOnApp(
                     appContainer = (application as SeniorOnApplication).appContainer,
+                    onOpenParentLauncher = ::openParentLauncher,
                 )
             }
         }
+    }
+
+    private fun openParentLauncher() {
+        startActivity(
+            Intent(this, ParentLauncherActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+        )
+        finish()
     }
 
     override fun onNewIntent(intent: Intent) {

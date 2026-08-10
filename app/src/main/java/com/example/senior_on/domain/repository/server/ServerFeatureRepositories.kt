@@ -70,6 +70,7 @@ interface NotificationRepository {
     suspend fun updateSetting(type: String, enabled: Boolean): NotificationSetting
     suspend fun isParentDeviceOnline(): Boolean
     suspend fun getInactivitySetting(userId: Long): InactivitySetting
+    suspend fun getMyInactivitySetting(): InactivitySetting
     suspend fun updateInactivitySetting(userId: Long, thresholdHours: Int): InactivitySetting
 }
 

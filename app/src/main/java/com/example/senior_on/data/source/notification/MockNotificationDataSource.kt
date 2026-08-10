@@ -115,6 +115,9 @@ class MockNotificationDataSource(
         )
     }
 
+    override suspend fun getMyInactivitySetting(): InactivitySettingResponse =
+        getInactivitySetting(MockParentUserId)
+
     override suspend fun updateInactivitySetting(
         userId: Long,
         request: InactivitySettingRequest,

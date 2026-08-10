@@ -14,6 +14,7 @@ data class HomeSnapshot(
     val seniorAddress: String? = null,
     val seniorId: Long? = null,
     val seniorName: String? = null,
+    val seniorPhoneNumber: String? = null,
 )
 data class ServerMusicCard(
     val enabled: Boolean,

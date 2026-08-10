@@ -35,6 +35,7 @@ class HomeServerRepositoryImpl(
             seniorAddress = it.senior_profile?.address,
             seniorId = it.senior_profile?.senior_id,
             seniorName = it.senior_profile?.name,
+            seniorPhoneNumber = it.senior_profile?.phone,
         )
     }
     override suspend fun getSeniorHome() = source.getSeniorHome().let {
@@ -328,6 +329,8 @@ class NotificationRepositoryImpl(
     override suspend fun isParentDeviceOnline() = source.getParentDeviceStatus().online == true
     override suspend fun getInactivitySetting(userId: Long) =
         source.getInactivitySetting(userId).toDomain()
+    override suspend fun getMyInactivitySetting() =
+        source.getMyInactivitySetting().toDomain()
     override suspend fun updateInactivitySetting(userId: Long, thresholdHours: Int) =
         source.updateInactivitySetting(userId, InactivitySettingRequest(thresholdHours)).toDomain()
 }
@@ -351,7 +354,21 @@ class EventRepositoryImpl(
         }
     override suspend fun createRiskLink(url: String, battery: Int?) =
         source.createRiskLink(RiskLinkRequest(url.trim(), battery)).let {
-            SafetyEvent(it.id, "RISK_LINK", it.detectedAt, null, null, null, battery, it.linkUrl, it.riskLevel != "SAFE")
+            SafetyEvent(
+                it.id,
+                "RISK_LINK",
+                it.detectedAt,
+                null,
+                null,
+                null,
+                battery,
+                it.linkUrl,
+                when (it.riskLevel?.trim()?.uppercase()) {
+                    "낮음", "LOW", "SAFE" -> false
+                    "높음", "HIGH", "DANGEROUS" -> true
+                    else -> null
+                },
+            )
         }
     override suspend fun createOutingReturn(
         phase: String, latitude: Double, longitude: Double, battery: Int

@@ -12,6 +12,7 @@ interface NotificationDataSource {
     suspend fun updateSetting(type: String, request: NotificationSettingRequest): NotificationSettingResponse
     suspend fun getParentDeviceStatus(): ParentDeviceStatusResponse
     suspend fun getInactivitySetting(userId: Long): InactivitySettingResponse
+    suspend fun getMyInactivitySetting(): InactivitySettingResponse
     suspend fun updateInactivitySetting(userId: Long, request: InactivitySettingRequest): InactivitySettingResponse
 }
 
@@ -26,6 +27,8 @@ class RemoteNotificationDataSource(private val api: NotificationApi) : Notificat
     override suspend fun getParentDeviceStatus() = api.getParentDeviceStatus().requireData()
     override suspend fun getInactivitySetting(userId: Long) =
         api.getInactivitySetting(userId).requireData()
+    override suspend fun getMyInactivitySetting() =
+        api.getMyInactivitySetting().requireData()
     override suspend fun updateInactivitySetting(userId: Long, request: InactivitySettingRequest) =
         api.updateInactivitySetting(userId, request).requireData()
 }

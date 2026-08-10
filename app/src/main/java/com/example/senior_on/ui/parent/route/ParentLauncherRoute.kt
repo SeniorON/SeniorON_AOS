@@ -1,6 +1,9 @@
 package com.example.senior_on.ui.parent.route
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
@@ -11,8 +14,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -24,13 +29,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
+import com.example.senior_on.device.ParentDeviceStatusScheduler
+import com.example.senior_on.device.ParentInactivityMonitor
 import com.example.senior_on.ui.parent.chat.ParentChatBuddyRoute
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyRoute
 import com.example.senior_on.ui.parent.home.ParentHomeRoute
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentLocationTrackingViewModel
+import com.example.senior_on.ui.parent.launcher.viewmodel.ParentDeviceStatusViewModel
 import com.example.senior_on.location.tracking.hasBackgroundLocationPermission
 import com.example.senior_on.location.tracking.hasForegroundLocationPermission
 import com.example.senior_on.ui.parent.medication.route.ParentMedicationRoute
@@ -39,8 +50,9 @@ import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
-import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipErrorScreen
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
+import com.example.senior_on.ui.parent.launcher.ParentHomeRoleManager
+import com.example.senior_on.ui.parent.launcher.ParentBrowserRoleManager
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipStatus
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipViewModel
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
@@ -61,6 +73,8 @@ fun ParentLauncherRoute(
     onExitToOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    RequestDefaultParentRolesOnEntry()
+
     val familyMembershipViewModel: ParentFamilyMembershipViewModel = viewModel(
         factory = ParentFamilyMembershipViewModel.factory(
             repository = appContainer.familyServerRepository,
@@ -82,8 +96,8 @@ fun ParentLauncherRoute(
             )
 
         ParentFamilyMembershipStatus.Error ->
-            ParentFamilyMembershipErrorScreen(
-                onRetryClick = familyMembershipViewModel::checkFamilyMembership,
+            ParentLauncherContent(
+                appContainer = appContainer,
                 modifier = modifier,
             )
 
@@ -101,6 +115,7 @@ private fun ParentLauncherContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    ParentDeviceStatusLifecycleEffect(appContainer)
     var notificationPermissionHandled by rememberSaveable {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -137,11 +152,13 @@ private fun ParentLauncherContent(
 
     fun openHome() {
         destination = ParentDestination.Home
-    }
         highlightedMedicationLogId = null
+    }
 
-    BackHandler(enabled = destination != ParentDestination.Home) {
-        openHome()
+    BackHandler {
+        if (destination != ParentDestination.Home) {
+            openHome()
+        }
     }
 
     when (destination) {
@@ -173,8 +190,8 @@ private fun ParentLauncherContent(
         ParentDestination.Medication -> ParentMedicationRoute(
             repository = appContainer.medicationRepository,
             onBackClick = ::openHome,
-            modifier = modifier,
             highlightedMedicationLogId = highlightedMedicationLogId,
+            modifier = modifier,
         )
 
         ParentDestination.Emergency -> ParentEmergencyRoute(
@@ -205,13 +222,94 @@ private fun ParentLauncherContent(
                 scheduledTime = reminder.plannedTime,
             ),
             onConfirmClick = {
-                MedicationReminderEventStore.consume()
                 highlightedMedicationLogId = reminder.medicationLogId
+                MedicationReminderEventStore.consume()
                 destination = ParentDestination.Medication
             },
         )
     }
 
+}
+
+@Composable
+private fun ParentDeviceStatusLifecycleEffect(appContainer: AppContainer) {
+    if (LocalInspectionMode.current) return
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val inactivityMonitor = remember(context, appContainer) {
+        ParentInactivityMonitor(
+            context = context.applicationContext,
+            notificationRepository = appContainer.notificationRepository,
+            eventRepository = appContainer.eventRepository,
+            locationRepository = appContainer.locationRepository,
+            deviceRepository = appContainer.deviceRepository,
+        )
+    }
+    val statusViewModel: ParentDeviceStatusViewModel = viewModel(
+        factory = ParentDeviceStatusViewModel.factory(
+            repository = appContainer.deviceRepository,
+            inactivityMonitor = inactivityMonitor,
+        ),
+    )
+
+    LaunchedEffect(Unit) {
+        ParentDeviceStatusScheduler.schedulePeriodic(context)
+    }
+
+    DisposableEffect(lifecycleOwner, statusViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> statusViewModel.startForegroundUpdates()
+                Lifecycle.Event.ON_STOP -> {
+                    statusViewModel.stopForegroundUpdates()
+                    ParentDeviceStatusScheduler.enqueueImmediate(context)
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            statusViewModel.startForegroundUpdates()
+        }
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            statusViewModel.stopForegroundUpdates()
+        }
+    }
+}
+
+@Composable
+private fun RequestDefaultParentRolesOnEntry() {
+    if (LocalInspectionMode.current) return
+    val activity = LocalContext.current.findActivity() ?: return
+    val browserRoleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {},
+    )
+    val requestBrowserRole = {
+        ParentBrowserRoleManager.createBrowserSelectionIntent(activity)
+            ?.let(browserRoleLauncher::launch)
+    }
+    val roleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = { requestBrowserRole() },
+    )
+
+    LaunchedEffect(activity) {
+        val homeRoleIntent = ParentHomeRoleManager.createHomeSelectionIntent(activity)
+        if (homeRoleIntent != null) {
+            roleLauncher.launch(homeRoleIntent)
+        } else {
+            requestBrowserRole()
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable

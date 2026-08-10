@@ -115,6 +115,7 @@
         <activity
             android:name=".ui.parent.launcher.ParentLauncherActivity"
             android:exported="false"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.SENIOR_ON" />
 
         <activity
@@ -132,6 +133,19 @@
                 <data android:scheme="https" />
             </intent-filter>
         </activity>
+
+        <activity-alias
+            android:name=".ui.parent.launcher.ParentHomeAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:targetActivity=".ui.parent.launcher.ParentLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
 
         <activity
             android:name=".MainActivity"

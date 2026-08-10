@@ -21,6 +21,8 @@ interface NotificationApi {
     suspend fun getParentDeviceStatus(): ApiResponse<ParentDeviceStatusResponse>
     @GET("api/inactivity-settings/{targetUserId}")
     suspend fun getInactivitySetting(@Path("targetUserId") targetUserId: Long): ApiResponse<InactivitySettingResponse>
+    @GET("api/inactivity-settings/me")
+    suspend fun getMyInactivitySetting(): ApiResponse<InactivitySettingResponse>
     @PATCH("api/inactivity-settings/{targetUserId}") suspend fun updateInactivitySetting(
         @Path("targetUserId") targetUserId: Long, @Body request: InactivitySettingRequest
     ): ApiResponse<InactivitySettingResponse>
