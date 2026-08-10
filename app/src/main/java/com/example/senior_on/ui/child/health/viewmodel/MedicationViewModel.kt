@@ -10,6 +10,9 @@ import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.ui.child.health.MedicationDoseStatus
 import com.example.senior_on.ui.child.health.MedicationDraft
 import com.example.senior_on.ui.child.health.MedicationEditorMode
+import com.example.senior_on.ui.child.health.MedicationRepeatDuration
+import com.example.senior_on.ui.child.health.MedicationRepeatFrequency
+import com.example.senior_on.ui.child.health.MedicationRepeatSelection
 import com.example.senior_on.ui.child.health.RegisteredMedicationUiState
 import com.example.senior_on.ui.child.health.TodayMedicationUiState
 import com.example.senior_on.ui.child.health.buildTodayMedicationsFromRegistered
@@ -377,14 +380,36 @@ private data class RemoteMedicationData(
     val markedDates: Set<LocalDate>,
 )
 
-private fun MedicationInfo.toUiState(): RegisteredMedicationUiState =
-    RegisteredMedicationUiState(
+private fun MedicationInfo.toUiState(): RegisteredMedicationUiState {
+    val weekdays = days.toWeekdayIndexSet()
+    val parsedStartDate = startDate.toLocalDateOrNull()
+    val parsedEndDate = endDate.toLocalDateOrNull()
+    val repeat = MedicationRepeatSelection(
+        frequency = when (repeatType.trim().uppercase()) {
+            "WEEKLY" -> MedicationRepeatFrequency.Weekly
+            "MONTHLY" -> MedicationRepeatFrequency.Monthly
+            else -> MedicationRepeatFrequency.Daily
+        },
+        cycleValue = repeatInterval.coerceAtLeast(1),
+        weekdays = weekdays,
+        duration = when (repeatEndType.trim().uppercase()) {
+            "DURATION" -> MedicationRepeatDuration.Period
+            "END_DATE" -> MedicationRepeatDuration.Date
+            else -> MedicationRepeatDuration.Continuous
+        },
+        periodValue = durationWeeks?.coerceAtLeast(1) ?: 3,
+        endDate = parsedEndDate,
+    )
+    return RegisteredMedicationUiState(
         id = groupId.ifBlank { id?.toString().orEmpty() },
         category = name,
         name = ingredient.orEmpty(),
         times = times.mapNotNull(String::toLocalTimeOrNull).distinct().sorted(),
-        weekdays = days.toWeekdayIndexSet(),
+        weekdays = weekdays,
+        startDate = parsedStartDate,
+        repeat = repeat,
     )
+}
 
 private fun List<String>.toWeekdayIndexSet(): Set<Int> {
     if (isEmpty()) return emptySet()
@@ -436,6 +461,7 @@ private fun MedicationDraft.toUiState(id: String): RegisteredMedicationUiState =
         times = times.sorted().distinct(),
         weekdays = weekdays,
         startDate = startDate,
+        repeat = repeat.copy(weekdays = weekdays),
     )
 
 private fun markedDatesFor(
@@ -452,14 +478,49 @@ private fun markedDatesFor(
 
 private fun MedicationDraft.toDomain(
     current: RegisteredMedicationUiState?,
-): MedicationInfo = MedicationInfo(
-    id = null,
-    groupId = current?.id.orEmpty(),
-    name = category.trim(),
-    ingredient = name.trim().takeIf(String::isNotEmpty),
-    times = times.sorted().map { it.format(TimeFormatter) },
-    days = weekdays.sorted().map(::weekdayApiValue),
-)
+): MedicationInfo {
+    val resolvedStartDate = startDate ?: LocalDate.now()
+    val repeatType = when (repeat.frequency) {
+        MedicationRepeatFrequency.Daily -> "DAILY"
+        MedicationRepeatFrequency.Weekly -> "WEEKLY"
+        MedicationRepeatFrequency.Monthly -> "MONTHLY"
+    }
+    val repeatEndType = when (repeat.duration) {
+        MedicationRepeatDuration.Continuous -> "ONGOING"
+        MedicationRepeatDuration.Period -> "DURATION"
+        MedicationRepeatDuration.Date -> "END_DATE"
+    }
+    val durationWeeks = when (repeat.duration) {
+        MedicationRepeatDuration.Period -> repeat.periodValue.coerceAtLeast(1)
+        else -> null
+    }
+    val resolvedEndDate = when (repeat.duration) {
+        MedicationRepeatDuration.Date -> repeat.endDate
+        MedicationRepeatDuration.Period ->
+            resolvedStartDate.plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+        MedicationRepeatDuration.Continuous -> null
+    }
+    return MedicationInfo(
+        id = null,
+        groupId = current?.id.orEmpty(),
+        name = category.trim(),
+        ingredient = name.trim().takeIf(String::isNotEmpty),
+        times = times.sorted().map { it.format(TimeFormatter) },
+        days = weekdays.sorted().map(::weekdayApiValue),
+        startDate = resolvedStartDate.toString(),
+        repeatType = repeatType,
+        repeatInterval = repeat.cycleValue.coerceAtLeast(1),
+        repeatEndType = repeatEndType,
+        durationWeeks = durationWeeks,
+        endDate = resolvedEndDate?.toString(),
+    )
+}
+
+private fun String?.toLocalDateOrNull(): LocalDate? {
+    val value = this?.trim().orEmpty()
+    if (value.isEmpty()) return null
+    return runCatching { LocalDate.parse(value) }.getOrNull()
+}
 
 private fun String.toLocalTimeOrNull(): LocalTime? {
     val value = trim()

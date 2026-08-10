@@ -57,19 +57,19 @@ private val PeriodStepperIconSize = 8.333.dp
 private val PeriodStepperIconStroke = 1.667.dp
 private val PeriodStepperIconGap = 10.dp
 
-internal enum class MedicationRepeatFrequency(val label: String) {
+enum class MedicationRepeatFrequency(val label: String) {
     Daily("매일"),
     Weekly("매주"),
     Monthly("매월")
 }
 
-internal enum class MedicationRepeatDuration(val label: String) {
+enum class MedicationRepeatDuration(val label: String) {
     Continuous("계속 복용"),
     Period("복용 기간"),
     Date("날짜 지정")
 }
 
-internal data class MedicationRepeatSelection(
+data class MedicationRepeatSelection(
     val frequency: MedicationRepeatFrequency = MedicationRepeatFrequency.Daily,
     val cycleValue: Int = 1,
     val weekdays: Set<Int> = emptySet(),

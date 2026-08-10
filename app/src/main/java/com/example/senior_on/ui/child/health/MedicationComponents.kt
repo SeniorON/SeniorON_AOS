@@ -61,7 +61,8 @@ data class RegisteredMedicationUiState(
     val name: String,
     val times: List<LocalTime>,
     val weekdays: Set<Int>,
-    val startDate: LocalDate? = null
+    val startDate: LocalDate? = null,
+    val repeat: MedicationRepeatSelection = MedicationRepeatSelection(),
 ) {
     val time: LocalTime
         get() = times.firstOrNull() ?: LocalTime.of(8, 0)
@@ -78,6 +79,15 @@ data class RegisteredMedicationUiState(
     fun isScheduledOn(date: LocalDate): Boolean {
         if (weekdays.isEmpty()) return false
         if (startDate != null && date.isBefore(startDate)) return false
+        val effectiveEndDate = when (repeat.duration) {
+            MedicationRepeatDuration.Continuous -> null
+            MedicationRepeatDuration.Period -> {
+                val weeks = repeat.periodValue.coerceAtLeast(1).toLong()
+                (startDate ?: date).plusWeeks(weeks)
+            }
+            MedicationRepeatDuration.Date -> repeat.endDate
+        }
+        if (effectiveEndDate != null && date.isAfter(effectiveEndDate)) return false
         val weekdayIndex = date.dayOfWeek.value % 7
         return weekdayIndex in weekdays
     }

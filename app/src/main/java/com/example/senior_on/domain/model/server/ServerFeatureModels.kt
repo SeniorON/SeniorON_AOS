@@ -81,8 +81,19 @@ data class HospitalAppointment(
     val date: String, val time: String, val reminderType: String
 )
 data class MedicationInfo(
-    val id: Long?, val groupId: String, val name: String, val ingredient: String?,
-    val times: List<String>, val days: List<String>
+    val id: Long?,
+    val groupId: String,
+    val name: String,
+    val ingredient: String?,
+    val times: List<String>,
+    val days: List<String>,
+    val startDate: String? = null,
+    val repeatType: String = "DAILY",
+    val repeatInterval: Int = 1,
+    val repeatEndType: String = "ONGOING",
+    val durationWeeks: Int? = null,
+    val endDate: String? = null,
+    val medicationIds: List<Long> = emptyList(),
 )
 data class MedicationSchedule(
     val logId: Long, val name: String, val plannedTime: String,

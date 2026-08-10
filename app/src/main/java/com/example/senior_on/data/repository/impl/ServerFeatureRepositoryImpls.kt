@@ -291,41 +291,82 @@ class MedicationRepositoryImpl(
             }
             .map { (groupId, responses) ->
                 val first = responses.first()
+                val times = first.medicineTimes
+                    ?.map(String::trim)
+                    ?.filter(String::isNotEmpty)
+                    ?.takeIf(List<*>::isNotEmpty)
+                    ?: responses.mapNotNull { it.medicineTime }
+                        .map(String::trim)
+                        .filter(String::isNotEmpty)
+                        .distinct()
+                val days = first.medicineDayList
+                    ?.map(String::trim)
+                    ?.filter(String::isNotEmpty)
+                    ?.takeIf(List<*>::isNotEmpty)
+                    ?: first.medicineDays
+                        ?.split(",")
+                        ?.map(String::trim)
+                        ?.filter(String::isNotEmpty)
+                        ?.takeIf(List<*>::isNotEmpty)
+                    ?: responses.flatMap { response ->
+                        response.medicineDays.orEmpty()
+                            .split(",")
+                            .map(String::trim)
+                            .filter(String::isNotEmpty)
+                    }.distinct()
                 MedicationInfo(
                     id = first.medicationId,
                     groupId = groupId,
                     name = first.medicineName.orEmpty(),
                     ingredient = first.ingredientName,
-                    times = responses.mapNotNull { it.medicineTime }
-                        .map(String::trim)
-                        .filter(String::isNotEmpty)
-                        .distinct(),
-                    days = responses.flatMap { response ->
-                        response.medicineDays.orEmpty()
-                            .split(",")
-                            .map(String::trim)
-                            .filter(String::isNotEmpty)
-                    }.distinct(),
+                    times = times,
+                    days = days,
+                    startDate = first.startDate,
+                    repeatType = first.repeatType?.takeIf(String::isNotBlank) ?: "DAILY",
+                    repeatInterval = first.repeatInterval?.takeIf { it >= 1 } ?: 1,
+                    repeatEndType = first.repeatEndType?.takeIf(String::isNotBlank) ?: "ONGOING",
+                    durationWeeks = first.durationWeeks?.takeIf { it >= 1 },
+                    endDate = first.endDate?.takeIf(String::isNotBlank),
+                    medicationIds = first.medicationIds.orEmpty().ifEmpty {
+                        listOfNotNull(first.medicationId)
+                    },
                 )
             }
+
     override suspend fun create(parentId: Long, medication: MedicationInfo) =
-        source.create(parentId, medication.toCreateRequest()).let {
+        source.create(parentId, medication.toCreateRequest()).let { response ->
             MedicationInfo(
-                it.medicationIds?.firstOrNull(), it.medicationGroupId.orEmpty(),
-                it.medicineName.orEmpty(), it.ingredientName,
-                it.medicineTimes.orEmpty(), it.medicineDays.orEmpty()
+                id = response.medicationIds?.firstOrNull(),
+                groupId = response.medicationGroupId.orEmpty(),
+                name = response.medicineName.orEmpty(),
+                ingredient = response.ingredientName,
+                times = response.medicineTimes.orEmpty(),
+                days = response.medicineDays.orEmpty(),
+                startDate = response.startDate,
+                repeatType = response.repeatType?.takeIf(String::isNotBlank) ?: medication.repeatType,
+                repeatInterval = response.repeatInterval?.takeIf { it >= 1 } ?: medication.repeatInterval,
+                repeatEndType = response.repeatEndType?.takeIf(String::isNotBlank)
+                    ?: medication.repeatEndType,
+                durationWeeks = response.durationWeeks?.takeIf { it >= 1 } ?: medication.durationWeeks,
+                endDate = response.endDate?.takeIf(String::isNotBlank) ?: medication.endDate,
+                medicationIds = response.medicationIds.orEmpty(),
             )
         }
+
     override suspend fun update(parentId: Long, medication: MedicationInfo) {
         source.update(parentId, medication.toUpdateRequest())
     }
+
     override suspend fun delete(parentId: Long, groupId: String) {
         source.delete(parentId, groupId.trim())
     }
+
     override suspend fun getMySchedules(date: String) =
         source.getMySchedules(date.trim()).map(MedicationScheduleResponse::toDomain)
+
     override suspend fun getParentSchedules(parentId: Long, date: String) =
         source.getParentSchedules(parentId, date.trim()).map(MedicationScheduleResponse::toDomain)
+
     override suspend fun getParentMonthlySchedules(parentId: Long, year: Int, month: Int) =
         source.getParentMonthlySchedules(parentId, year, month).let { response ->
             MedicationMonthlySchedule(
@@ -338,6 +379,7 @@ class MedicationRepositoryImpl(
                     .toSet(),
             )
         }
+
     override suspend fun markNearestTaken() = source.checkNearest().let {
         MedicationSchedule(
             logId = it.medicationLogId ?: 0L,
@@ -514,9 +556,43 @@ private fun HospitalAppointment.toCreateRequest() =
 private fun HospitalAppointment.toUpdateRequest() =
     HospitalUpdateRequest(hospitalName.trim(), department.trim(), date, time, reminderType)
 private fun MedicationInfo.toCreateRequest() =
-    MedicationCreateRequest(name.trim(), ingredient?.trim(), times, days)
+    MedicationCreateRequest(
+        medicineName = name.trim(),
+        ingredientName = ingredient?.trim()?.takeIf(String::isNotEmpty),
+        medicineTimes = times,
+        startDate = startDate?.takeIf(String::isNotBlank) ?: LocalDate.now().toString(),
+        repeatType = repeatType,
+        repeatInterval = repeatInterval.coerceAtLeast(1),
+        medicineDays = days,
+        repeatEndType = repeatEndType,
+        durationWeeks = durationWeeks?.takeIf { it >= 1 }
+            ?.takeIf { repeatEndType.equals("DURATION", ignoreCase = true) },
+        endDate = endDate?.takeIf(String::isNotBlank)
+            ?.takeIf {
+                repeatEndType.equals("END_DATE", ignoreCase = true) ||
+                    repeatEndType.equals("DURATION", ignoreCase = true)
+            },
+    )
+
 private fun MedicationInfo.toUpdateRequest() =
-    MedicationUpdateRequest(groupId.trim(), name.trim(), ingredient?.trim(), days, times)
+    MedicationUpdateRequest(
+        medicationGroupId = groupId.trim(),
+        medicineName = name.trim(),
+        ingredientName = ingredient?.trim()?.takeIf(String::isNotEmpty),
+        medicineTimes = times,
+        startDate = startDate?.takeIf(String::isNotBlank) ?: LocalDate.now().toString(),
+        repeatType = repeatType,
+        repeatInterval = repeatInterval.coerceAtLeast(1),
+        medicineDays = days,
+        repeatEndType = repeatEndType,
+        durationWeeks = durationWeeks?.takeIf { it >= 1 }
+            ?.takeIf { repeatEndType.equals("DURATION", ignoreCase = true) },
+        endDate = endDate?.takeIf(String::isNotBlank)
+            ?.takeIf {
+                repeatEndType.equals("END_DATE", ignoreCase = true) ||
+                    repeatEndType.equals("DURATION", ignoreCase = true)
+            },
+    )
 private fun MedicationScheduleResponse.toDomain() =
     MedicationSchedule(
         logId = medicationLogId ?: 0,
