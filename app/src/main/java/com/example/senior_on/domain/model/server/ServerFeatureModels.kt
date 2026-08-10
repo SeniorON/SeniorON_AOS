@@ -77,8 +77,17 @@ data class ServerFamilyHome(
     val members: List<ServerFamilyMember>, val recentPhotos: List<ServerFamilyPhoto>
 )
 data class HospitalAppointment(
-    val id: Long, val hospitalName: String, val department: String,
-    val date: String, val time: String, val reminderType: String
+    val id: Long,
+    val hospitalName: String,
+    val department: String,
+    val date: String,
+    val time: String,
+    val reminderType: String,
+)
+
+data class HospitalUpcomingGroup(
+    val date: String,
+    val appointments: List<HospitalAppointment>,
 )
 data class MedicationInfo(
     val id: Long?,

@@ -7,30 +7,40 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.domain.repository.server.HospitalRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.notification.MedicationCheckedEventStore
 import com.example.senior_on.ui.child.health.HealthMainScreen
+import com.example.senior_on.ui.child.health.viewmodel.HospitalViewModel
 import com.example.senior_on.ui.child.health.viewmodel.MedicationViewModel
 
 @Composable
 fun HealthMainRoute(
     medicationRepository: MedicationRepository,
+    hospitalRepository: HospitalRepository,
     familyRepository: FamilyServerRepository,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: MedicationViewModel = viewModel(
+    val medicationViewModel: MedicationViewModel = viewModel(
         factory = MedicationViewModel.factory(
             medicationRepository = medicationRepository,
             familyRepository = familyRepository,
         ),
     )
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val hospitalViewModel: HospitalViewModel = viewModel(
+        factory = HospitalViewModel.factory(
+            hospitalRepository = hospitalRepository,
+            familyRepository = familyRepository,
+        ),
+    )
+    val medicationUiState by medicationViewModel.uiState.collectAsStateWithLifecycle()
+    val hospitalUiState by hospitalViewModel.uiState.collectAsStateWithLifecycle()
     val medicationCheckedEvent by MedicationCheckedEventStore.pendingEvent
         .collectAsStateWithLifecycle()
 
     LaunchedEffect(medicationCheckedEvent) {
         medicationCheckedEvent?.let { event ->
-            viewModel.onMedicationChecked(
+            medicationViewModel.onMedicationChecked(
                 checkedParentUserId = event.parentUserId,
                 medicationLogId = event.medicationLogId,
             )
@@ -39,14 +49,24 @@ fun HealthMainRoute(
     }
 
     HealthMainScreen(
-        medicationUiState = uiState,
-        onMedicationDateSelected = viewModel::selectDate,
-        onAddMedicationClick = viewModel::openAddMedication,
-        onMedicationClick = viewModel::openMedication,
-        onMedicationEditorBackClick = viewModel::backFromMedicationEditor,
-        onMedicationEditClick = viewModel::openEditMedication,
-        onMedicationSaveClick = viewModel::saveMedication,
-        onMedicationDeleteClick = viewModel::deleteMedication,
+        medicationUiState = medicationUiState,
+        hospitalUiState = hospitalUiState,
+        onMedicationDateSelected = medicationViewModel::selectDate,
+        onAddMedicationClick = medicationViewModel::openAddMedication,
+        onMedicationClick = medicationViewModel::openMedication,
+        onMedicationEditorBackClick = medicationViewModel::backFromMedicationEditor,
+        onMedicationEditClick = medicationViewModel::openEditMedication,
+        onMedicationSaveClick = medicationViewModel::saveMedication,
+        onMedicationDeleteClick = medicationViewModel::deleteMedication,
+        onHospitalMonthSelected = hospitalViewModel::selectMonth,
+        onHospitalDateSelected = hospitalViewModel::selectDate,
+        onAddHospitalClick = hospitalViewModel::openAdd,
+        onHospitalClick = hospitalViewModel::openView,
+        onHospitalEditClick = hospitalViewModel::openEdit,
+        onHospitalSaveClick = hospitalViewModel::saveAppointment,
+        onHospitalDeleteClick = hospitalViewModel::deleteAppointment,
+        onHospitalEditorBackClick = hospitalViewModel::closeEditor,
+        onConsumeHospitalError = hospitalViewModel::consumeError,
         modifier = modifier,
     )
 }

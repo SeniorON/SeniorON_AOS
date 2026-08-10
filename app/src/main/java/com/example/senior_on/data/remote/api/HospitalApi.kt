@@ -10,6 +10,10 @@ interface HospitalApi {
     @GET("api/hospitals/parents/{parentUserId}/daily") suspend fun getDaily(
         @Path("parentUserId") parentUserId: Long, @Query("date") date: String
     ): ApiResponse<List<HospitalDetailResponse>>
+    @GET("api/hospitals/parents/{parentUserId}/upcoming")
+    suspend fun getUpcoming(
+        @Path("parentUserId") parentUserId: Long,
+    ): ApiResponse<List<HospitalUpcomingResponse>>
     @POST("api/hospitals/parents/{parentUserId}") suspend fun create(
         @Path("parentUserId") parentUserId: Long, @Body request: HospitalCreateRequest
     ): ApiResponse<HospitalCreateResponse>

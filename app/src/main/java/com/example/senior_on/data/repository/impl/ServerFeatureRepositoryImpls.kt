@@ -270,13 +270,26 @@ class HospitalRepositoryImpl(
 ) : HospitalRepository {
     override suspend fun getMonthly(parentId: Long, year: Int, month: Int) =
         source.getMonthly(parentId, year, month).map(HospitalListResponse::toDomain)
+
     override suspend fun getDaily(parentId: Long, date: String) =
         source.getDaily(parentId, date.trim()).map(HospitalDetailResponse::toDomain)
+
+    override suspend fun getUpcoming(parentId: Long): List<HospitalUpcomingGroup> =
+        source.getUpcoming(parentId).map { response ->
+            HospitalUpcomingGroup(
+                date = response.scheduleDate.orEmpty(),
+                appointments = response.schedules.orEmpty().map(HospitalDetailResponse::toDomain),
+            )
+        }
+
     override suspend fun create(parentId: Long, appointment: HospitalAppointment) =
         source.create(parentId, appointment.toCreateRequest()).toDomain()
+
     override suspend fun update(parentId: Long, appointment: HospitalAppointment) =
         source.update(parentId, appointment.id, appointment.toUpdateRequest())
-    override suspend fun delete(parentId: Long, hospitalId: Long) = source.delete(parentId, hospitalId)
+
+    override suspend fun delete(parentId: Long, hospitalId: Long) =
+        source.delete(parentId, hospitalId)
 }
 
 class MedicationRepositoryImpl(

@@ -52,6 +52,7 @@ interface FamilyServerRepository {
 interface HospitalRepository {
     suspend fun getMonthly(parentId: Long, year: Int, month: Int): List<HospitalAppointment>
     suspend fun getDaily(parentId: Long, date: String): List<HospitalAppointment>
+    suspend fun getUpcoming(parentId: Long): List<HospitalUpcomingGroup>
     suspend fun create(parentId: Long, appointment: HospitalAppointment): HospitalAppointment
     suspend fun update(parentId: Long, appointment: HospitalAppointment)
     suspend fun delete(parentId: Long, hospitalId: Long)

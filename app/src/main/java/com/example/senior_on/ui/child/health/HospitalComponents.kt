@@ -42,13 +42,14 @@ import java.time.LocalTime
 import java.time.YearMonth
 
 data class HospitalAppointmentUiState(
+    val id: Long = 0L,
     val date: LocalDate,
     val hospitalName: String,
     val specialty: String,
     val time: LocalTime,
     val daysLeft: Int,
     val highlighted: Boolean = false,
-    val reminder: HospitalReminder = HospitalReminder.DayBefore
+    val reminder: HospitalReminder = HospitalReminder.DayBefore,
 ) {
     val departmentAndTime: String
         get() = "$specialty · ${time.toKoreanTime()}"
@@ -59,6 +60,14 @@ internal fun UpcomingAppointmentsSection(
     appointments: List<HospitalAppointmentUiState>,
     onAppointmentClick: (HospitalAppointmentUiState) -> Unit
 ) {
+    val upcomingGroups = remember(appointments) {
+        appointments
+            .groupBy { it.date }
+            .entries
+            .sortedBy { it.key }
+            .take(2)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -67,13 +76,14 @@ internal fun UpcomingAppointmentsSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ScheduleSectionTitle(title = "다가오는 진료")
-        if (appointments.isEmpty()) {
+        if (upcomingGroups.isEmpty()) {
             EmptyUpcomingAppointmentCard()
         } else {
-            appointments.take(2).forEach { appointment ->
+            upcomingGroups.forEachIndexed { index, (_, dayAppointments) ->
+                val primary = dayAppointments.first()
                 UpcomingAppointmentCard(
-                    appointment = appointment,
-                    onClick = { onAppointmentClick(appointment) }
+                    appointment = primary.copy(highlighted = index == 0),
+                    onClick = { onAppointmentClick(primary) }
                 )
             }
         }

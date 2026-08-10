@@ -24,6 +24,7 @@ fun ChildMainRoute(
             appContainer.caregiverRelationshipRepositoryFor(userId),
         notificationRepository = appContainer.notificationRepository,
         medicationRepository = appContainer.medicationRepository,
+        hospitalRepository = appContainer.hospitalRepository,
         homeServerRepository = appContainer.homeServerRepository,
         eventRepository = appContainer.eventRepository,
         onLogoutClick = onLogoutClick,
