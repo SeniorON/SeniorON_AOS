@@ -145,7 +145,7 @@ private fun ParentPhotoSourceContent(
     ) {
         ParentPhotoSourceOption(
             title = "가족이 보낸 사진",
-            description = "자녀가 올린 사진보기",
+            description = "가족이 올린 사진보기",
             backgroundColor = SeniorOnColors.Primary200,
             onClick = onFamilyPhotosClick
         )
