@@ -33,7 +33,7 @@ import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentLocationTrackingViewModel
 import com.example.senior_on.location.tracking.hasBackgroundLocationPermission
 import com.example.senior_on.location.tracking.hasForegroundLocationPermission
-import com.example.senior_on.ui.parent.medication.ParentMedicationRoute
+import com.example.senior_on.ui.parent.medication.route.ParentMedicationRoute
 import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
 import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.notification.MedicationReminderEventStore
@@ -129,12 +129,16 @@ private fun ParentLauncherContent(
     var destination by rememberSaveable {
         mutableStateOf(ParentDestination.Home)
     }
+    var highlightedMedicationLogId by rememberSaveable {
+        mutableStateOf<Long?>(null)
+    }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
 
     fun openHome() {
         destination = ParentDestination.Home
     }
+        highlightedMedicationLogId = null
 
     BackHandler(enabled = destination != ParentDestination.Home) {
         openHome()
@@ -145,7 +149,10 @@ private fun ParentLauncherContent(
             repository = appContainer.homeServerRepository,
             onScheduleClick = { destination = ParentDestination.Schedule },
             onChatBuddyClick = { destination = ParentDestination.ChatBuddy },
-            onMedicationClick = { destination = ParentDestination.Medication },
+            onMedicationClick = {
+                highlightedMedicationLogId = null
+                destination = ParentDestination.Medication
+            },
             onEmergencyClick = { destination = ParentDestination.Emergency },
             onFamilyPhotosClick = { destination = ParentDestination.FamilyPhotos },
             modifier = modifier,
@@ -167,6 +174,7 @@ private fun ParentLauncherContent(
             repository = appContainer.medicationRepository,
             onBackClick = ::openHome,
             modifier = modifier,
+            highlightedMedicationLogId = highlightedMedicationLogId,
         )
 
         ParentDestination.Emergency -> ParentEmergencyRoute(
@@ -198,6 +206,7 @@ private fun ParentLauncherContent(
             ),
             onConfirmClick = {
                 MedicationReminderEventStore.consume()
+                highlightedMedicationLogId = reminder.medicationLogId
                 destination = ParentDestination.Medication
             },
         )
