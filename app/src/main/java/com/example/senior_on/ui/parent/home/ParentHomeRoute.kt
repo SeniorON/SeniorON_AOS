@@ -1,6 +1,9 @@
 package com.example.senior_on.ui.parent.home
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -10,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeViewModel
@@ -18,6 +22,7 @@ import com.example.senior_on.ui.parent.photo.ParentPhotoSourceBottomSheet
 @Composable
 fun ParentHomeRoute(
     repository: HomeServerRepository,
+    refreshRequest: Int = 0,
     onScheduleClick: () -> Unit,
     onChatBuddyClick: () -> Unit,
     onMedicationClick: () -> Unit,
@@ -32,6 +37,12 @@ fun ParentHomeRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhotoSource by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(refreshRequest) {
+        if (refreshRequest > 0) {
+            viewModel.refresh()
+        }
+    }
+
     ParentHomeScreen(
         configuration = uiState.screenConfiguration,
         musicButton = uiState.musicButton,
@@ -40,6 +51,9 @@ fun ParentHomeRoute(
         weatherUiState = uiState.weather,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refresh,
+        onChangeDefaultHomeClick = {
+            context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+        },
         onMusicClick = { openParentHomeButton(context, it) },
         onScheduleClick = onScheduleClick,
         onButtonClick = { button ->
@@ -77,6 +91,12 @@ private fun openParentHomeButton(
     val packageName = button.packageName?.trim().orEmpty()
     if (button.actionType.equals("APP", ignoreCase = true) && packageName.isNotEmpty()) {
         openAppOrPlayStore(context, packageName)
+    } else if (
+        button.actionType.equals("DEFAULT", ignoreCase = true) &&
+        !button.actionValue.isNullOrBlank() &&
+        startDefaultHomeButtonAction(context, button.actionValue)
+    ) {
+        return
     } else {
         button.type?.let { openSeniorHomeButton(context, it) }
     }

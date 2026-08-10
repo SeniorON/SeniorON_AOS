@@ -19,5 +19,6 @@ class SeniorOnFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         FcmTokenStore(applicationContext).save(token)
+        FcmTokenSyncScheduler.enqueue(applicationContext)
     }
 }

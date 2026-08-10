@@ -737,7 +737,9 @@ private data class NotificationDetailUiState(
                 latitude = message.latitude,
                 longitude = message.longitude,
                 battery = message.deviceBattery.toBatteryLabel(),
-                lastLocationUpdate = message.occurredAtMillis.toRelativeTimeLabel(),
+                lastLocationUpdate = (
+                    message.lastLocationUpdatedAtMillis ?: message.occurredAtMillis
+                ).toRelativeTimeLabel(),
             )
         }
     }

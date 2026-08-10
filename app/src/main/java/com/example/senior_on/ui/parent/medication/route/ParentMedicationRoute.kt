@@ -1,4 +1,4 @@
-package com.example.senior_on.ui.parent.medication
+package com.example.senior_on.ui.parent.medication.route
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
@@ -9,12 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.repository.server.MedicationRepository
+import com.example.senior_on.ui.parent.medication.ParentMedicationScreen
 import com.example.senior_on.ui.parent.medication.viewmodel.ParentMedicationViewModel
 
 @Composable
 fun ParentMedicationRoute(
     repository: MedicationRepository,
     onBackClick: () -> Unit,
+    highlightedMedicationLogId: Long? = null,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ParentMedicationViewModel = viewModel(
@@ -22,8 +24,8 @@ fun ParentMedicationRoute(
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(viewModel) {
-        viewModel.loadMedication()
+    LaunchedEffect(viewModel, highlightedMedicationLogId) {
+        viewModel.loadMedication(highlightedMedicationLogId)
     }
 
     DisposableEffect(viewModel) {
@@ -41,6 +43,7 @@ fun ParentMedicationRoute(
         uiState = uiState,
         onBackClick = ::resetAndGoBack,
         onTakenClick = viewModel::markAsTaken,
+        onMessageConsumed = viewModel::consumeMessage,
         modifier = modifier,
     )
 }

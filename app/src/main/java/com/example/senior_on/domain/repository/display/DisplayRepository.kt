@@ -2,6 +2,7 @@ package com.example.senior_on.domain.repository.display
 
 import com.example.senior_on.domain.model.display.DisplayOverview
 import com.example.senior_on.domain.model.display.DisplayDevice
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -27,6 +28,8 @@ interface DisplayRepository {
         buttons: List<SeniorHomeButtonType>,
         customButtonLabels: Map<SeniorHomeButtonType, String>,
     )
+
+    suspend fun saveButtons(buttons: List<DisplayHomeButton>)
 
     suspend fun disconnectDevice()
 }

@@ -9,10 +9,10 @@ class MockParentLinkSafetyDataSource : ParentLinkSafetyDataSource {
         delay(3_000)
         return ParentLinkSafetyResult(
             url = url,
-            verdict = if ("fake-bank" in url) {
-                ParentLinkSafetyVerdict.Dangerous
-            } else {
-                ParentLinkSafetyVerdict.Safe
+            verdict = when {
+                "unknown" in url -> ParentLinkSafetyVerdict.Unknown
+                "fake-bank" in url -> ParentLinkSafetyVerdict.Dangerous
+                else -> ParentLinkSafetyVerdict.Safe
             }
         )
     }

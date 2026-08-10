@@ -47,7 +47,7 @@ data class ParentHomeButtonUiModel(
 data class ParentHomeUiState(
     val screenConfiguration: SeniorScreenConfiguration = SeniorScreenConfiguration(),
     val musicButton: ParentHomeButtonUiModel? = null,
-    val buttons: List<ParentHomeButtonUiModel> = emptyList(),
+    val buttons: List<ParentHomeButtonUiModel> = defaultOfflineHomeButtons(),
     val schedule: ParentHomeScheduleUiState = ParentHomeScheduleUiState(),
     val weather: ParentHomeWeatherUiState = ParentHomeWeatherUiState(),
     val isLoading: Boolean = true,
@@ -107,7 +107,9 @@ class ParentHomeViewModel(
                         musicButton = home.musicCard
                             ?.takeIf { musicCard -> musicCard.enabled }
                             ?.toUiModel(),
-                        buttons = home.buttons.map(ServerButton::toUiModel),
+                        buttons = home.buttons
+                            .map(ServerButton::toUiModel)
+                            .ifEmpty(::defaultOfflineHomeButtons),
                         schedule = schedulesResult
                             .getOrNull()
                             ?.toHomeScheduleUiState()
@@ -131,9 +133,20 @@ class ParentHomeViewModel(
                 .onFailure { throwable ->
                     _uiState.update {
                         it.copy(
+                            buttons = it.buttons.ifEmpty(::defaultOfflineHomeButtons),
                             isLoading = false,
                             isRefreshing = false,
-                            schedule = it.schedule.copy(isLoading = false),
+                            schedule = schedulesResult
+                                .getOrNull()
+                                ?.toHomeScheduleUiState()
+                                ?: it.schedule.copy(isLoading = false),
+                            weather = weatherResult.getOrNull()?.let { weather ->
+                                ParentHomeWeatherUiState(
+                                    temperature = weather.temperature,
+                                    status = weather.status,
+                                    text = weather.text.ifBlank { "날씨 정보 없음" },
+                                )
+                            } ?: it.weather,
                             errorMessage = throwable.message
                                 ?: "부모님 홈 정보를 불러오지 못했어요.",
                         )
@@ -148,6 +161,31 @@ class ParentHomeViewModel(
         }
     }
 }
+
+private fun defaultOfflineHomeButtons(): List<ParentHomeButtonUiModel> = listOf(
+    offlineButton(-1, SeniorHomeButtonType.Call, "전화", "PHONE"),
+    offlineButton(-2, SeniorHomeButtonType.Message, "메시지", "MESSAGE"),
+    offlineButton(-3, SeniorHomeButtonType.Camera, "카메라", "CAMERA"),
+    offlineButton(-4, SeniorHomeButtonType.Photo, "사진", "PHOTO"),
+    offlineButton(-5, SeniorHomeButtonType.ChatBuddy, "말벗", "COMPANION"),
+    offlineButton(-6, SeniorHomeButtonType.Medication, "복약", "MEDICATION"),
+    offlineButton(-7, SeniorHomeButtonType.Calendar, "캘린더", "CALENDAR"),
+    offlineButton(-8, SeniorHomeButtonType.Emergency, "긴급알림", "EMERGENCY"),
+)
+
+private fun offlineButton(
+    id: Long,
+    type: SeniorHomeButtonType,
+    label: String,
+    actionValue: String,
+) = ParentHomeButtonUiModel(
+    id = id,
+    type = type,
+    label = label,
+    actionType = "DEFAULT",
+    actionValue = actionValue,
+    packageName = null,
+)
 
 private fun List<TodayHospitalSchedule>.toHomeScheduleUiState(): ParentHomeScheduleUiState {
     val firstSchedule = firstOrNull()
@@ -171,7 +209,7 @@ private fun ServerTodaySchedule?.toUiState() = ParentHomeScheduleUiState(
 private fun ServerMusicCard.toUiModel() = ParentHomeButtonUiModel(
     id = 0,
     type = resolveButtonType(actionValue, packageName),
-    label = "음악 듣기",
+    label = "노래 듣기",
     actionType = actionType,
     actionValue = actionValue,
     packageName = packageName,
@@ -208,7 +246,7 @@ private fun resolveButtonType(
         "CALENDAR" -> SeniorHomeButtonType.Calendar
         "ALARM" -> SeniorHomeButtonType.Alarm
         "MEMO" -> SeniorHomeButtonType.Memo
-        "RECORDER" -> SeniorHomeButtonType.Recorder
+        "VOICE_MEMO", "RECORDER", "VOICE_RECORDER" -> SeniorHomeButtonType.Recorder
         "CALCULATOR" -> SeniorHomeButtonType.Calculator
         "SETTINGS" -> SeniorHomeButtonType.Settings
         "FLASHLIGHT" -> SeniorHomeButtonType.Flashlight
@@ -245,14 +283,28 @@ private fun resolveButtonType(
         "HOME_SHOPPING" -> SeniorHomeButtonType.HomeShopping
         "GO_STOP" -> SeniorHomeButtonType.GoStop
         "MELON" -> SeniorHomeButtonType.Melon
+        "GENIE" -> SeniorHomeButtonType.Genie
+        "YOUTUBE_MUSIC" -> SeniorHomeButtonType.YouTubeMusic
         "SPOTIFY" -> SeniorHomeButtonType.Spotify
+        "FLO" -> SeniorHomeButtonType.Flo
+        "VIBE" -> SeniorHomeButtonType.Vibe
+        "BUGS" -> SeniorHomeButtonType.Bugs
+        "SAMSUNG_MUSIC" -> SeniorHomeButtonType.SamsungMusic
+        "KAKAO_MUSIC" -> SeniorHomeButtonType.KakaoMusic
         "PHOTO", "GALLERY" -> SeniorHomeButtonType.Photo
         "CAMERA" -> SeniorHomeButtonType.Camera
         "EMERGENCY", "SOS" -> SeniorHomeButtonType.Emergency
         else -> when (packageValue) {
             "com.google.android.youtube" -> SeniorHomeButtonType.YouTube
             "com.iloen.melon" -> SeniorHomeButtonType.Melon
+            "com.ktmusic.geniemusic" -> SeniorHomeButtonType.Genie
+            "com.google.android.apps.youtube.music" -> SeniorHomeButtonType.YouTubeMusic
             "com.spotify.music" -> SeniorHomeButtonType.Spotify
+            "skplanet.musicmate" -> SeniorHomeButtonType.Flo
+            "com.naver.vibe" -> SeniorHomeButtonType.Vibe
+            "com.neowiz.android.bugs" -> SeniorHomeButtonType.Bugs
+            "com.sec.android.app.music" -> SeniorHomeButtonType.SamsungMusic
+            "com.kakao.music" -> SeniorHomeButtonType.KakaoMusic
             "com.kakao.talk" -> SeniorHomeButtonType.KakaoTalk
             "com.nhn.android.nmap" -> SeniorHomeButtonType.NaverMap
             "net.daum.android.map" -> SeniorHomeButtonType.KakaoMap

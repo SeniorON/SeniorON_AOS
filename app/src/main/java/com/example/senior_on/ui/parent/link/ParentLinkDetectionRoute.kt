@@ -15,6 +15,7 @@ import com.example.senior_on.ui.parent.link.viewmodel.ParentLinkDetectionViewMod
 @Composable
 fun ParentLinkDetectionRoute(
     repository: ParentLinkSafetyRepository,
+    url: String? = null,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -23,6 +24,10 @@ fun ParentLinkDetectionRoute(
         factory = ParentLinkDetectionViewModel.factory(repository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(url) {
+        url?.takeIf(String::isNotBlank)?.let(viewModel::inspectLink)
+    }
 
     LaunchedEffect(uiState.status) {
         if (uiState.status == ParentLinkDetectionStatus.Safe) {

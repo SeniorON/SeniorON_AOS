@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -75,6 +76,7 @@ internal fun ParentHomeScreen(
     onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
+    onChangeDefaultHomeClick: () -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -110,6 +112,19 @@ internal fun ParentHomeScreen(
                 onScheduleClick = onScheduleClick,
                 onButtonClick = onButtonClick,
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onChangeDefaultHomeClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "기본 홈 앱 되돌리기 (테스트)",
+                    style = SeniorOnTextStyles.HeadingS,
+                    color = SeniorOnColors.Gray700,
+                )
+            }
         }
     }
 }
@@ -175,6 +190,7 @@ internal fun ColumnScope.SeniorHomeContent(
                 }
             }
         }
+
     }
 }
 
@@ -260,7 +276,7 @@ private fun ParentMusicCard(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "음악 듣기",
+                text = "노래 듣기",
                 style = SeniorOnTextStyles.HeadingL,
                 color = SeniorOnColors.SupportWhite100,
                 maxLines = 1,
@@ -268,7 +284,7 @@ private fun ParentMusicCard(
         }
         Icon(
             painter = painterResource(R.drawable.ic_big_play),
-            contentDescription = "음악 듣기 실행",
+            contentDescription = "노래 듣기 실행",
             modifier = Modifier.size(42.dp),
             tint = SeniorOnColors.White,
         )
@@ -460,7 +476,7 @@ private fun ParentHomeGridButton(
             color = if (isEmergency) SeniorOnColors.White else SeniorOnColors.Gray800,
             textAlign = TextAlign.Center,
             maxLines = 2,
-            overflow = TextOverflow.Clip,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -528,7 +544,7 @@ private fun ParentHomeScreenPreview() {
             musicButton = ParentHomeButtonUiModel(
                 id = 0,
                 type = SeniorHomeButtonType.Melon,
-                label = "음악 듣기",
+                label = "노래 듣기",
                 actionType = "APP",
                 actionValue = "MELON",
                 packageName = "com.iloen.melon",
@@ -554,6 +570,7 @@ private fun ParentHomeScreenPreview() {
             onMusicClick = {},
             onScheduleClick = {},
             onButtonClick = {},
+            onChangeDefaultHomeClick = {},
         )
     }
 }

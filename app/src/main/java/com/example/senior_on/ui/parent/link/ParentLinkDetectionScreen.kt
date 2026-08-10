@@ -66,13 +66,17 @@ fun ParentLinkDetectionScreen(
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        LinkInspectionIndicator()
+        LinkInspectionIndicator(
+            isChecking = uiState.status == ParentLinkDetectionStatus.Checking ||
+                uiState.status == ParentLinkDetectionStatus.Idle,
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
             text = when (uiState.status) {
                 ParentLinkDetectionStatus.Dangerous -> "위험한 링크예요"
+                ParentLinkDetectionStatus.Unknown -> "안전 여부를 확인할 수 없어요"
                 ParentLinkDetectionStatus.Failed -> "링크를 확인하지 못했어요"
                 else -> "잠시만 기다려 주세요"
             },
@@ -92,6 +96,9 @@ fun ParentLinkDetectionScreen(
                             append("안전을 위해 ")
                         }
                         append("페이지를 열지 않았어요.")
+                    }
+                    ParentLinkDetectionStatus.Unknown -> {
+                        append("페이지를 열지 않았어요. 잠시 후 다시 시도해 주세요.")
                     }
                     ParentLinkDetectionStatus.Failed -> {
                         append(uiState.errorMessage.orEmpty())
@@ -115,7 +122,7 @@ fun ParentLinkDetectionScreen(
 }
 
 @Composable
-private fun LinkInspectionIndicator() {
+private fun LinkInspectionIndicator(isChecking: Boolean) {
     val transition = rememberInfiniteTransition(label = "link-inspection")
     val rotation by transition.animateFloat(
         initialValue = 0f,
@@ -141,13 +148,15 @@ private fun LinkInspectionIndicator() {
                 color = SeniorOnColors.Gray200,
                 style = stroke
             )
-            drawArc(
-                color = SeniorOnColors.Primary600,
-                startAngle = rotation - 90f,
-                sweepAngle = 360f * 0.32f,
-                useCenter = false,
-                style = stroke
-            )
+            if (isChecking) {
+                drawArc(
+                    color = SeniorOnColors.Primary600,
+                    startAngle = rotation - 90f,
+                    sweepAngle = 360f * 0.32f,
+                    useCenter = false,
+                    style = stroke
+                )
+            }
         }
 
         MagnifyingLinkIcon()

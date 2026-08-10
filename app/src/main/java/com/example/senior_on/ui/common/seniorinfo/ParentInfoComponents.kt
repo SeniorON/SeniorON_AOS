@@ -653,7 +653,7 @@ internal fun SeniorInfoSkipNoticeContent(
 
         Spacer(modifier = Modifier.height(18.dp))
         Text(
-            text = "부모님 정보를 입력하지 않으면\n일부 기능이 제한돼요.",
+            text = "시니어 정보를 입력하지 않으면\n일부 기능이 제한돼요.",
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500,
             textAlign = TextAlign.Center

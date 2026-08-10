@@ -29,8 +29,22 @@ internal fun openSeniorHomeButton(
             openAppOrPlayStore(context, "com.google.android.youtube")
         SeniorHomeButtonType.Melon ->
             openAppOrPlayStore(context, "com.iloen.melon")
+        SeniorHomeButtonType.Genie ->
+            openAppOrPlayStore(context, "com.ktmusic.geniemusic")
+        SeniorHomeButtonType.YouTubeMusic ->
+            openAppOrPlayStore(context, "com.google.android.apps.youtube.music")
         SeniorHomeButtonType.Spotify ->
             openAppOrPlayStore(context, "com.spotify.music")
+        SeniorHomeButtonType.Flo ->
+            openAppOrPlayStore(context, "skplanet.musicmate")
+        SeniorHomeButtonType.Vibe ->
+            openAppOrPlayStore(context, "com.naver.vibe")
+        SeniorHomeButtonType.Bugs ->
+            openAppOrPlayStore(context, "com.neowiz.android.bugs")
+        SeniorHomeButtonType.SamsungMusic ->
+            openAppOrPlayStore(context, "com.sec.android.app.music")
+        SeniorHomeButtonType.KakaoMusic ->
+            openAppOrPlayStore(context, "com.kakao.music")
         SeniorHomeButtonType.NaverMap ->
             openAppOrPlayStore(context, "com.nhn.android.nmap")
         SeniorHomeButtonType.KakaoMap ->
@@ -55,8 +69,23 @@ internal fun openSeniorHomeButton(
 internal fun openExternalBrowser(context: Context, url: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
         addCategory(Intent.CATEGORY_BROWSABLE)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
+    val externalBrowserPackage = context.findExternalBrowserPackage(intent) ?: return
+    intent.setPackage(externalBrowserPackage)
     startIntent(context, intent)
+}
+
+private fun Context.findExternalBrowserPackage(intent: Intent): String? {
+    val candidates = packageManager.queryIntentActivities(
+        intent,
+        android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
+    ).map { it.activityInfo.packageName }
+        .distinct()
+        .filterNot { it == packageName }
+
+    return candidates.firstOrNull { it == PreferredBrowserPackage }
+        ?: candidates.firstOrNull()
 }
 
 internal fun openSystemGallery(context: Context) {
@@ -119,3 +148,5 @@ internal fun openAppOrPlayStore(context: Context, packageName: String) {
 private fun startIntent(context: Context, intent: Intent) {
     runCatching { context.startActivity(intent) }
 }
+
+private const val PreferredBrowserPackage = "com.android.chrome"
