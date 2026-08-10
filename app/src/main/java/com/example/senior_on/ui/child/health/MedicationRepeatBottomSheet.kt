@@ -80,7 +80,9 @@ data class MedicationRepeatSelection(
         when (duration) {
             MedicationRepeatDuration.Continuous -> "계속 복용"
             MedicationRepeatDuration.Period -> {
-                val end = (startDate ?: LocalDate.now()).plusWeeks(periodValue.toLong())
+                val end = (startDate ?: LocalDate.now())
+                    .plusWeeks(periodValue.toLong())
+                    .minusDays(1)
                 "${periodValue}주 · ${end.monthValue}월${end.dayOfMonth}일까지"
             }
             MedicationRepeatDuration.Date -> {
