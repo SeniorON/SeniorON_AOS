@@ -40,6 +40,8 @@ fun FamilyTabRoute(
         onUploadPhotoClick = { isPhotoSourceSheetVisible = true },
         onPhotoClick = onPhotoClick,
         onRetryClick = viewModel::loadFamilyOverview,
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = viewModel::refreshFamilyOverview,
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(
                 photo = photo,

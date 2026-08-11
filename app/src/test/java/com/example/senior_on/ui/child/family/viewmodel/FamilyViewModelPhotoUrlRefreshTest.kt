@@ -35,7 +35,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
             val viewModel = FamilyViewModel(repository)
             advanceUntilIdle()
 
-            viewModel.loadLatestFamilyOverview()
+            viewModel.refreshFamilyOverview()
             advanceUntilIdle()
 
             assertEquals(2, repository.homeRequestCount)
