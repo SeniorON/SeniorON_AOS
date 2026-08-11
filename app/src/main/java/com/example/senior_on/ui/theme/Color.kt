@@ -19,7 +19,9 @@ object SeniorOnColors {
     val Gray300 = Color(0xFFAAAAAA)
     val Gray200 = Color(0xFFD9D9D9)
     val Gray100 = Color(0xFFF2F2F2)
-    val Gray50 = Color(0xFFFAFAFA)
+    val Gray50 = Color(0xFFF9F9F9)
+
+    val Toast = Gray700
 
     val DangerSOS = Color(0xFFFF0000)
     val Red500 = Color(0xFFC83333)
@@ -32,7 +34,8 @@ object SeniorOnColors {
     val Health = Color(0xFF6548B8)
     val Schedule = Color(0xFF484FBC)
     val Media = Color(0xFFD85A1F)
-    val ActionAdd = Color(0xFF439BFF)
+    val SupportBlue = Color(0xFF439BFF)
+    val ActionAdd = SupportBlue
     val Yellow = Color(0xFFF3E700)
 
     val Background1 = Color(0xFFF8F8F5)
@@ -40,8 +43,12 @@ object SeniorOnColors {
     val Background3 = Color(0xFFF5F6F2)
     val Background4 = Color(0xFFEFEFE9)
 
-    val SupportWhite100 = Color(0xFFFFFFFF)
+    val Background5 = Color(0xFFF1F5F9)
 
+    val SupportWhite100 = Color(0xFFFFFFFF)
+    val SupportWhite80 = Color(0xCCFFFFFF)
+
+    val SupportWhite20 = Color(0x33FFFFFF)
     val White = Color(0xFFFFFFFF)
     val Black = Color(0xFF000000)
 }

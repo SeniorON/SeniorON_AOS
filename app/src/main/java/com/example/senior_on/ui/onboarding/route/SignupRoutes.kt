@@ -1,0 +1,180 @@
+package com.example.senior_on.ui.onboarding.route
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.senior_on.di.AppContainer
+import com.example.senior_on.domain.model.auth.AppUserMode
+import com.example.senior_on.ui.onboarding.signup.SignupAccountInfoScreen
+import com.example.senior_on.ui.onboarding.signup.SignupEmailVerificationScreen
+import com.example.senior_on.ui.onboarding.signup.SignupModeGuideScreen
+import com.example.senior_on.ui.onboarding.signup.SignupNameBirthScreen
+import com.example.senior_on.ui.onboarding.signup.SignupScreen
+import com.example.senior_on.ui.onboarding.signup.SignupTermsAgreementScreen
+import com.example.senior_on.ui.onboarding.social.SocialLoginTokenProvider
+import kotlinx.coroutines.launch
+
+@Composable
+fun SignupEntryRoute(
+    appContainer: AppContainer,
+    selectedMode: AppUserMode,
+    onBackClick: () -> Unit,
+    onEmailClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onSocialLoginSuccess: (userId: String) -> Unit,
+    onSocialSignupRequired: () -> Unit,
+) {
+    val viewModel = onboardingAuthViewModel(appContainer)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    fun handleSocialResult(result: com.example.senior_on.domain.model.auth.SocialLoginResult?) {
+        when {
+            result == null -> Unit
+            result.isNewUser -> onSocialSignupRequired()
+            result.mode == selectedMode && result.usersId != null ->
+                onSocialLoginSuccess(result.usersId.toString())
+        }
+    }
+
+    SignupScreen(
+        onBackClick = onBackClick,
+        onKakaoClick = {
+            scope.launch {
+                runCatching {
+                    SocialLoginTokenProvider.getKakaoAccessToken(context)
+                }.onSuccess { token ->
+                    viewModel.loginWithKakao(
+                        kakaoAccessToken = token,
+                        mode = selectedMode,
+                        keepLoggedIn = true,
+                        onResult = ::handleSocialResult,
+                    )
+                }
+            }
+        },
+        onGoogleClick = {
+            scope.launch {
+                runCatching {
+                    SocialLoginTokenProvider.getGoogleFirebaseIdToken(context)
+                }.onSuccess { token ->
+                    viewModel.loginWithGoogle(
+                        firebaseIdToken = token,
+                        mode = selectedMode,
+                        keepLoggedIn = true,
+                        onResult = ::handleSocialResult,
+                    )
+                }
+            }
+        },
+        onEmailClick = onEmailClick,
+        onLoginClick = onLoginClick
+    )
+}
+
+@Composable
+fun SignupModeGuideRoute(
+    onBackClick: () -> Unit,
+    onReselectClick: () -> Unit,
+    onContinueClick: () -> Unit
+) {
+    SignupModeGuideScreen(
+        onBackClick = onBackClick,
+        onReselectClick = onReselectClick,
+        onContinueClick = onContinueClick
+    )
+}
+
+@Composable
+fun SignupNameBirthRoute(
+    appContainer: AppContainer,
+    onBackClick: () -> Unit,
+    onNextClick: (isSocialSignup: Boolean) -> Unit,
+) {
+    val viewModel = onboardingAuthViewModel(appContainer)
+
+    SignupNameBirthScreen(
+        onBackClick = onBackClick,
+        onNextClick = { name, birth ->
+            viewModel.saveNameAndBirth(name, birth)
+            onNextClick(viewModel.hasPendingSocialSignup())
+        }
+    )
+}
+
+@Composable
+fun SignupEmailVerificationRoute(
+    appContainer: AppContainer,
+    onBackClick: () -> Unit,
+    onNextClick: () -> Unit
+) {
+    val viewModel = onboardingAuthViewModel(appContainer)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    SignupEmailVerificationScreen(
+        onBackClick = onBackClick,
+        onNextClick = { email ->
+            viewModel.saveVerifiedEmail(email)
+            onNextClick()
+        },
+        onSendVerificationCode =
+            viewModel::sendSignupEmailVerificationCode,
+        onVerifyCode =
+            viewModel::verifySignupEmailVerificationCode,
+        emailRequestErrorMessage =
+            uiState.signupEmailRequestErrorMessage,
+        onEmailChange =
+            viewModel::clearSignupEmailRequestError,
+    )
+}
+
+@Composable
+fun SignupAccountInfoRoute(
+    appContainer: AppContainer,
+    onBackClick: () -> Unit,
+    onNextClick: () -> Unit
+) {
+    val viewModel = onboardingAuthViewModel(appContainer)
+
+    SignupAccountInfoScreen(
+        onBackClick = onBackClick,
+        onNextClick = { loginId, password, passwordCheck ->
+            viewModel.saveAccountInfo(
+                loginId = loginId,
+                password = password,
+                passwordCheck = passwordCheck
+            )
+            onNextClick()
+        },
+        onCheckLoginId = viewModel::checkLoginId
+    )
+}
+
+@Composable
+fun SignupTermsRoute(
+    appContainer: AppContainer,
+    selectedMode: AppUserMode,
+    onBackClick: (isSocialSignup: Boolean) -> Unit,
+    onSignupSuccess: (userId: String) -> Unit
+) {
+    val viewModel = onboardingAuthViewModel(appContainer)
+
+    SignupTermsAgreementScreen(
+        onBackClick = {
+            onBackClick(viewModel.hasPendingSocialSignup())
+        },
+        onCompleteClick = { agreements, onResult ->
+            viewModel.completeSignup(
+                mode = selectedMode,
+                agreements = agreements
+            ) { loginResult ->
+                if (loginResult != null) {
+                    onSignupSuccess(loginResult.loginId)
+                }
+                onResult(loginResult != null)
+            }
+        }
+    )
+}
