@@ -8,4 +8,8 @@ data class NameUpdateRequest(val name: String)
 data class NameUpdateResponse(val name: String?)
 data class ProfileImageResponse(val profileImageUrl: String?)
 data class ProfileImageUpdateResponse(val profileImageUrl: String?)
-data class CurrentNameResponse(val name: String?)
+data class UserAccountResponse(
+    val name: String?,
+    val role: String?,
+    val email: String?,
+)

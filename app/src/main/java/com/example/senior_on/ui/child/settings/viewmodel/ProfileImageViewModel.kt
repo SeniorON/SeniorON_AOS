@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.R
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +13,10 @@ import kotlinx.coroutines.launch
 
 data class ProfileImageUiState(
     val profileName: String? = null,
+    val profileRole: String? = null,
+    val profileEmail: String? = null,
     val profileImageUrl: String? = null,
+    val profileImageRevision: Long = 0L,
     val isLoading: Boolean = false,
     val isUploading: Boolean = false,
     val loadErrorMessage: String? = null,
@@ -27,9 +29,10 @@ class ProfileImageViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileImageUiState())
     val uiState: StateFlow<ProfileImageUiState> = _uiState.asStateFlow()
+    private var hasLoadedSettingsProfile = false
 
     fun loadSettingsProfile() {
-        if (_uiState.value.isLoading) return
+        if (hasLoadedSettingsProfile || _uiState.value.isLoading) return
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -40,10 +43,13 @@ class ProfileImageViewModel(
             runCatching {
                 userSettingsRepository.getSettings()
             }.onSuccess { settings ->
+                hasLoadedSettingsProfile = true
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         profileName = settings.name.takeIf(String::isNotBlank),
+                        profileRole = settings.role.takeIf(String::isNotBlank),
+                        profileEmail = settings.email.takeIf(String::isNotBlank),
                         profileImageUrl = settings.profileImageUrl
                             ?.takeIf { value -> value.isNotBlank() },
                     )
@@ -63,17 +69,27 @@ class ProfileImageViewModel(
     fun updateProfileImage(imageUri: String) {
         if (_uiState.value.isUploading) return
         if (imageUri.isBlank()) return
+        val previousImageUrl = _uiState.value.profileImageUrl
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isUploading = true,
                     uploadErrorMessage = null,
+                    profileImageUrl = imageUri,
+                    profileImageRevision = it.profileImageRevision + 1,
                 )
             }
             runCatching {
-                val prepared = photoUploadPreparer.prepare(imageUri)
+                val prepared = photoUploadPreparer.prepareProfileImage(imageUri)
                 try {
-                    userSettingsRepository.updateProfileImage(prepared)
+                    val uploadedUrl = userSettingsRepository.updateProfileImage(prepared)
+                    val verifiedUrl = runCatching {
+                        userSettingsRepository.getProfileImageUrl()
+                    }.getOrNull()
+                    verifiedUrl
+                        ?.takeIf(String::isNotBlank)
+                        ?: uploadedUrl?.takeIf(String::isNotBlank)
+                        ?: error("서버에서 프로필 이미지 주소를 받지 못했습니다.")
                 } finally {
                     runCatching { prepared.file.delete() }
                 }
@@ -81,54 +97,18 @@ class ProfileImageViewModel(
                 _uiState.update {
                     it.copy(
                         isUploading = false,
-                        profileImageUrl = url?.takeIf { value -> value.isNotBlank() }
-                            ?: it.profileImageUrl,
+                        profileImageUrl = url,
+                        profileImageRevision = it.profileImageRevision + 1,
                     )
                 }
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
                         isUploading = false,
+                        profileImageUrl = previousImageUrl,
+                        profileImageRevision = it.profileImageRevision + 1,
                         uploadErrorMessage = throwable.message
                             ?: "프로필 이미지 변경에 실패했습니다.",
-                    )
-                }
-            }
-        }
-    }
-
-    fun applyDefaultProfileImage() {
-        if (_uiState.value.isUploading) return
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isUploading = true,
-                    uploadErrorMessage = null,
-                )
-            }
-            runCatching {
-                val prepared = photoUploadPreparer.prepareDrawable(
-                    drawableResId = R.drawable.ic_dependent2,
-                    displayName = "default_profile.png",
-                )
-                try {
-                    userSettingsRepository.updateProfileImage(prepared)
-                } finally {
-                    runCatching { prepared.file.delete() }
-                }
-            }.onSuccess { url ->
-                _uiState.update {
-                    it.copy(
-                        isUploading = false,
-                        profileImageUrl = url?.takeIf(String::isNotBlank),
-                    )
-                }
-            }.onFailure { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isUploading = false,
-                        uploadErrorMessage = throwable.message
-                            ?: "기본 프로필 이미지 적용에 실패했습니다.",
                     )
                 }
             }

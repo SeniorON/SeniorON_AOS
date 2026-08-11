@@ -3,7 +3,6 @@ package com.example.senior_on.ui.child.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -34,14 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -50,22 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
-import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
-import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.ui.common.seniorinfo.BirthDateBottomSheet
-import com.example.senior_on.ui.common.seniorinfo.CustomRelationshipBottomSheet
-import com.example.senior_on.ui.common.seniorinfo.CustomRelationshipMaxLength
-import com.example.senior_on.ui.common.seniorinfo.InputLabel
-import com.example.senior_on.ui.common.seniorinfo.RelationshipSelector
-import com.example.senior_on.ui.common.seniorinfo.RequiredPhoneNumberLength
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoActionButton
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoButtonStyle
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoPhoneTextField
-import com.example.senior_on.ui.common.seniorinfo.SeniorInfoTextField
 import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
-import com.example.senior_on.ui.common.seniorinfo.formatPhoneFieldValue
 import com.example.senior_on.ui.common.seniorinfo.parseBirthDate
-import com.example.senior_on.ui.common.seniorinfo.toBirthDateString
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -463,245 +442,12 @@ private fun DisconnectDeviceDialog(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditConnectedDeviceInfoScreen(
-    device: ConnectedSeniorDeviceUiState,
-    onBackClick: () -> Unit,
-    onSaveClick: (ConnectedSeniorDeviceUiState) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var name by rememberSaveable { mutableStateOf(device.name) }
-    var relationship by rememberSaveable { mutableStateOf(device.relationship) }
-    var customRelationship by rememberSaveable { mutableStateOf(device.customRelationship) }
-    var customRelationshipDraft by rememberSaveable { mutableStateOf(device.customRelationship) }
-    var birthDate by rememberSaveable { mutableStateOf(device.birthDate) }
-    var phoneNumber by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(device.phoneNumber))
-    }
-    var address by rememberSaveable { mutableStateOf(device.address) }
-    var addressDetail by rememberSaveable { mutableStateOf(device.addressDetail) }
-    var showCustomRelationshipSheet by rememberSaveable { mutableStateOf(false) }
-    var showBirthDateSheet by rememberSaveable { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-
-    val isRelationshipValid = when (relationship) {
-        SeniorRelationship.Custom -> customRelationship.isNotBlank()
-        else -> true
-    }
-    val canSave = name.isNotBlank() &&
-        isRelationshipValid &&
-        parseBirthDate(birthDate) != null &&
-        phoneNumber.text.count(Char::isDigit) == RequiredPhoneNumberLength
-
-    if (showCustomRelationshipSheet) {
-        CustomRelationshipBottomSheet(
-            value = customRelationshipDraft,
-            onValueChange = { customRelationshipDraft = it.take(CustomRelationshipMaxLength) },
-            onCancel = { showCustomRelationshipSheet = false },
-            onConfirm = {
-                val trimmed = customRelationshipDraft.trim()
-                if (trimmed.isNotEmpty()) {
-                    customRelationship = trimmed.take(CustomRelationshipMaxLength)
-                    relationship = SeniorRelationship.Custom
-                    showCustomRelationshipSheet = false
-                }
-            }
-        )
-    }
-
-    if (showBirthDateSheet) {
-        BirthDateBottomSheet(
-            initialBirthDate = birthDate,
-            onDismiss = { showBirthDateSheet = false },
-            onConfirm = { selectedBirthDate ->
-                birthDate = selectedBirthDate.toBirthDateString()
-                showBirthDateSheet = false
-            }
-        )
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SeniorOnColors.White)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { focusManager.clearFocus() })
-            }
-            .statusBarsPadding()
-    ) {
-        SettingsBackTopAppBar(
-            title = "정보 수정",
-            onBackClick = onBackClick
-        )
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(top = 24.dp, bottom = 16.dp)
-        ) {
-            InputLabel(text = "이름")
-            Spacer(modifier = Modifier.height(6.dp))
-            SeniorInfoTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = "이름 입력",
-                keyboardType = KeyboardType.Text,
-                onClearClick = { name = "" }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            InputLabel(text = "관계")
-            Spacer(modifier = Modifier.height(6.dp))
-            RelationshipSelector(
-                selectedRelationship = if (showCustomRelationshipSheet) {
-                    SeniorRelationship.Custom
-                } else {
-                    relationship
-                },
-                customRelationshipLabel = customRelationship,
-                onRelationshipClick = { selected ->
-                    if (selected == SeniorRelationship.Custom) {
-                        customRelationshipDraft = customRelationship
-                        showCustomRelationshipSheet = true
-                    } else {
-                        customRelationship = ""
-                        relationship = selected
-                    }
-                }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            InputLabel(text = "생년월일", optionalText = " (필수)")
-            Spacer(modifier = Modifier.height(6.dp))
-            SeniorInfoTextField(
-                value = birthDate,
-                onValueChange = {},
-                placeholder = "생년월일 선택",
-                readOnly = true,
-                onClick = { showBirthDateSheet = true },
-                trailingContent = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_sm_chevron_down_1),
-                        contentDescription = "생년월일 선택",
-                        modifier = Modifier.size(24.dp),
-                        tint = SeniorOnColors.Gray500
-                    )
-                }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            InputLabel(text = "전화번호", optionalText = " (필수)")
-            Spacer(modifier = Modifier.height(6.dp))
-            SeniorInfoPhoneTextField(
-                value = phoneNumber,
-                onValueChange = { phoneNumber = formatPhoneFieldValue(it) },
-                placeholder = "010-0000-0000",
-                onClearClick = { phoneNumber = TextFieldValue("") }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            InputLabel(text = "자택 주소", optionalText = "(선택)")
-            Spacer(modifier = Modifier.height(4.dp))
-            SeniorInfoTextField(
-                value = address,
-                onValueChange = { address = it },
-                placeholder = "주소 검색",
-                keyboardType = KeyboardType.Text,
-                trailingContent = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_search),
-                        contentDescription = "주소 검색",
-                        modifier = Modifier.size(24.dp),
-                        tint = SeniorOnColors.Gray500
-                    )
-                }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            SeniorInfoTextField(
-                value = addressDetail,
-                onValueChange = { addressDetail = it },
-                placeholder = "상세 주소 입력",
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done,
-                onClearClick = { addressDetail = "" }
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "외출·귀가 알림 기준 위치로 사용돼요.",
-                style = SeniorOnTextStyles.CaptionMedium,
-                color = SeniorOnColors.Gray400
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_alert_filled),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = SeniorOnColors.Gray200
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = buildAnnotatedString {
-                        append("다음에 하기 선택시 ")
-                        withStyle(SpanStyle(color = SeniorOnColors.Red300)) {
-                            append("일부 기능이 제한")
-                        }
-                        append("될 수 있어요")
-                    },
-                    style = SeniorOnTextStyles.BodySMedium,
-                    color = SeniorOnColors.Gray400
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            SeniorInfoActionButton(
-                text = "저장",
-                onClick = {
-                    onSaveClick(
-                        device.copy(
-                            name = name.trim(),
-                            relationship = relationship,
-                            customRelationship = if (relationship == SeniorRelationship.Custom) {
-                                customRelationship
-                            } else {
-                                ""
-                            },
-                            birthDate = birthDate,
-                            phoneNumber = phoneNumber.text,
-                            address = address.trim(),
-                            addressDetail = addressDetail.trim()
-                        )
-                    )
-                },
-                style = SeniorInfoButtonStyle.Filled,
-                enabled = canSave,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun ConnectedDevicesScreenPreview() {
     SENIOR_ONTheme {
         ConnectedDevicesScreen(
-            device = MockSeniorFixtures.mother.toConnectedSeniorDeviceUiState(
-                deviceName = MockDisplayFixtures.CONNECTED_DEVICE_NAME,
-                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
-            ),
+            device = PreviewConnectedDevice,
             onBackClick = {},
             onEditInfoClick = {},
             onDisconnectConfirm = {}
@@ -709,22 +455,12 @@ private fun ConnectedDevicesScreenPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 800)
-@Composable
-private fun EditConnectedDeviceInfoScreenPreview() {
-    SENIOR_ONTheme {
-        EditConnectedDeviceInfoScreen(
-            device = MockSeniorFixtures.mother.toConnectedSeniorDeviceUiState(
-                deviceName = MockDisplayFixtures.CONNECTED_DEVICE_NAME,
-                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
-            ).copy(
-                birthDate = "1949.04.01",
-                phoneNumber = "",
-                address = "서울특별시 성북구 길음로 33",
-                addressDetail = "203동 2403호"
-            ),
-            onBackClick = {},
-            onSaveClick = {}
-        )
-    }
-}
+private val PreviewConnectedDevice = ConnectedSeniorDeviceUiState(
+    deviceName = "Galaxy A16",
+    name = "김순자",
+    relationship = SeniorRelationship.Mother,
+    birthDate = "1949.04.01",
+    phoneNumber = "010-1234-5678",
+    address = "서울특별시 성북구 길음로 33",
+    addressDetail = "203동 2403호",
+)

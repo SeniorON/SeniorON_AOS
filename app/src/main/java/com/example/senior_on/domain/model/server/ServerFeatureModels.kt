@@ -171,7 +171,12 @@ data class SafetyEvent(
     val receiverCount: Int? = null,
     val notifiedCount: Int? = null,
 )
-data class UserAccountSettings(val name: String, val profileImageUrl: String?)
+data class UserAccountSettings(
+    val name: String,
+    val role: String,
+    val email: String,
+    val profileImageUrl: String?,
+)
 data class SeniorProfileUpdate(
     val seniorId: Long, val name: String, val relation: String,
     val customRelation: String?, val birth: String, val phoneNumber: String,

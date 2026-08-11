@@ -88,17 +88,14 @@ private val HelpFaqItems = listOf(
     )
 )
 
-private const val InstallGuideAnswer =
-    "답변 추가 예정"
-
 @Composable
 fun HelpInquiryScreen(
     onBackClick: () -> Unit,
     onInquiryClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onInstallGuideClick: () -> Unit = {},
 ) {
     var expandedFaqId by rememberSaveable { mutableStateOf<String?>(null) }
-    var isInstallGuideExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -163,9 +160,7 @@ fun HelpInquiryScreen(
 
             HelpGuideRow(
                 title = "부모님 앱 설치 가이드",
-                answer = InstallGuideAnswer,
-                expanded = isInstallGuideExpanded,
-                onClick = { isInstallGuideExpanded = !isInstallGuideExpanded }
+                onClick = onInstallGuideClick,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -284,8 +279,6 @@ private fun HelpFaqRow(
 @Composable
 private fun HelpGuideRow(
     title: String,
-    answer: String,
-    expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -329,26 +322,6 @@ private fun HelpGuideRow(
             )
         }
 
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 10.dp, start = 34.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                    .background(SeniorOnColors.Gray50)
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = answer,
-                    style = SeniorOnTextStyles.BodySRegular,
-                    color = SeniorOnColors.Gray600
-                )
-            }
-        }
     }
 }
 
