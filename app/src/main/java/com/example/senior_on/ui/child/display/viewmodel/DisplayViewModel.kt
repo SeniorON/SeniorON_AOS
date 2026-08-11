@@ -32,6 +32,8 @@ class DisplayViewModel(
     private val initialRelationshipLabel = initialParentInfo?.relationshipLabel
     private var isInitialButtonSetupInProgress = false
     private var initialLoadJob: Job? = null
+    private var overviewPullRefreshJob: Job? = null
+    private var editPermissionRefreshJob: Job? = null
     private var homeRefreshJob: Job? = null
     private var deviceRefreshJob: Job? = null
     private var weatherRefreshJob: Job? = null
@@ -53,6 +55,7 @@ class DisplayViewModel(
     fun loadOverview() {
         if (
             initialLoadJob?.isActive == true ||
+            overviewPullRefreshJob?.isActive == true ||
             homeRefreshJob?.isActive == true
         ) return
 
@@ -100,12 +103,110 @@ class DisplayViewModel(
     }
 
     fun refreshOnScreenTabReentry() {
+        refreshEditPermission()
         refreshHomeSilently()
         refreshWeatherIfStale()
     }
 
+    fun refreshOverview() {
+        if (
+            initialLoadJob?.isActive == true ||
+            overviewPullRefreshJob?.isActive == true ||
+            _uiState.value.isSaving
+        ) return
+
+        homeRefreshJob?.cancel()
+        editPermissionRefreshJob?.cancel()
+        weatherRefreshJob?.cancel()
+        overviewPullRefreshJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = true,
+                    isEditPermissionLoading = true,
+                    isWeatherLoading = true,
+                    errorMessage = null,
+                )
+            }
+
+            try {
+                val editPermissionRequest = async {
+                    runCatching { displayRepository.canCurrentUserEditScreen() }
+                }
+                val overviewRequest = async {
+                    runCatching {
+                        displayRepository.getOverview(
+                            parentInfoRepository.parentInfo.value
+                        )
+                    }
+                }
+                val weatherRequest = async {
+                    runCatching {
+                        displayRepository.getWeather(
+                            latitude = DefaultWeatherCoordinates.LATITUDE,
+                            longitude = DefaultWeatherCoordinates.LONGITUDE,
+                        )
+                    }
+                }
+
+                val canEditScreen = editPermissionRequest.await().getOrDefault(false)
+                _uiState.update {
+                    it.copy(
+                        canEditScreen = canEditScreen,
+                        isEditPermissionLoading = false,
+                    )
+                }
+
+                overviewRequest.await()
+                    .onSuccess(::applyOverview)
+                    .onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(errorMessage = throwable.toDisplayErrorMessage())
+                        }
+                    }
+
+                weatherRequest.await()
+                    .onSuccess { weather ->
+                        lastWeatherUpdatedAtMillis = currentTimeMillis()
+                        _uiState.update { it.copy(weather = weather) }
+                    }
+            } finally {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = false,
+                        isEditPermissionLoading = false,
+                        isWeatherLoading = false,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun refreshEditPermission() {
+        if (
+            initialLoadJob?.isActive == true ||
+            overviewPullRefreshJob?.isActive == true ||
+            editPermissionRefreshJob?.isActive == true
+        ) return
+
+        editPermissionRefreshJob = viewModelScope.launch {
+            _uiState.update { it.copy(isEditPermissionLoading = true) }
+            val canEditScreen = runCatching {
+                displayRepository.canCurrentUserEditScreen()
+            }.getOrDefault(false)
+            _uiState.update {
+                it.copy(
+                    canEditScreen = canEditScreen,
+                    isEditPermissionLoading = false,
+                )
+            }
+        }
+    }
+
     private fun refreshHomeSilently(force: Boolean = false) {
-        if (initialLoadJob?.isActive == true) return
+        if (
+            initialLoadJob?.isActive == true ||
+            overviewPullRefreshJob?.isActive == true
+        ) return
         if (homeRefreshJob?.isActive == true) {
             if (!force) return
             homeRefreshJob?.cancel()
@@ -344,7 +445,10 @@ class DisplayViewModel(
     }
 
     private fun refreshWeather() {
-        if (weatherRefreshJob?.isActive == true) return
+        if (
+            overviewPullRefreshJob?.isActive == true ||
+            weatherRefreshJob?.isActive == true
+        ) return
 
         weatherRefreshJob = viewModelScope.launch {
             _uiState.update { it.copy(isWeatherLoading = true) }

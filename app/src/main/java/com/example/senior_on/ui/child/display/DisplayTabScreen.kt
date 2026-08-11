@@ -25,7 +25,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -63,6 +65,7 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun DisplayTabScreen(
     uiState: DisplayTabUiState,
     modifier: Modifier = Modifier,
@@ -73,53 +76,61 @@ fun DisplayTabScreen(
     onLargePreviewClick: () -> Unit = {},
     onFontEditClick: () -> Unit = {},
     onButtonEditClick: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SeniorOnColors.White)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
     ) {
-        DisplayTopBar()
-
-        LazyColumn(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(bottom = 24.dp),
+                .fillMaxSize()
+                .background(SeniorOnColors.White)
         ) {
-            item {
-                DisplaySummarySection(
-                    parentInfo = uiState.parentInfo,
-                    relationshipLabel = uiState.relationshipLabel,
-                    device = uiState.device,
-                    onDeviceClick = onDeviceClick,
-                    onParentInfoClick = onParentInfoClick,
-                )
-            }
+            DisplayTopBar()
 
-            item {
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .background(SeniorOnColors.Background1)
-                )
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
+                item {
+                    DisplaySummarySection(
+                        parentInfo = uiState.parentInfo,
+                        relationshipLabel = uiState.relationshipLabel,
+                        device = uiState.device,
+                        onDeviceClick = onDeviceClick,
+                        onParentInfoClick = onParentInfoClick,
+                    )
+                }
 
-            item {
-                ScreenEditSection(
-                    parentInfo = uiState.parentInfo,
-                    relationshipLabel = uiState.relationshipLabel,
-                    configuration = uiState.screenConfiguration,
-                    weather = uiState.weather,
-                    isWeatherLoading = uiState.isWeatherLoading,
-                    todaySchedule = uiState.todaySchedule,
-                    canEditScreen = canEditScreen,
-                    showScreenEditActions = showScreenEditActions,
-                    onLargePreviewClick = onLargePreviewClick,
-                    onFontEditClick = onFontEditClick,
-                    onButtonEditClick = onButtonEditClick,
-                )
+                item {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .background(SeniorOnColors.Background1)
+                    )
+                }
+
+                item {
+                    ScreenEditSection(
+                        parentInfo = uiState.parentInfo,
+                        relationshipLabel = uiState.relationshipLabel,
+                        configuration = uiState.screenConfiguration,
+                        weather = uiState.weather,
+                        isWeatherLoading = uiState.isWeatherLoading,
+                        todaySchedule = uiState.todaySchedule,
+                        canEditScreen = canEditScreen,
+                        showScreenEditActions = showScreenEditActions,
+                        onLargePreviewClick = onLargePreviewClick,
+                        onFontEditClick = onFontEditClick,
+                        onButtonEditClick = onButtonEditClick,
+                    )
+                }
             }
         }
     }
@@ -235,7 +246,7 @@ private fun DisplaySummarySection(
             onClick = onDeviceClick,
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         if (parentInfo == null) {
             EmptyParentInformationCard(onClick = onParentInfoClick)

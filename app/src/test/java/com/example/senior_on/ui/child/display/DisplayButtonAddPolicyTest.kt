@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.display
 
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -61,5 +62,52 @@ class DisplayButtonAddPolicyTest {
     @Test
     fun maximumCountsOnlyGeneralButtons() {
         assertEquals(18, buttonAddMaximumCount())
+    }
+
+    @Test
+    fun cancellingAddRestoresEntryButtonsAndDropsImportedApp() {
+        val phone = DisplayHomeButton(
+            name = "전화",
+            actionType = "DEFAULT",
+            actionValue = "PHONE",
+        )
+        val netflix = DisplayHomeButton(
+            name = "넷플릭스",
+            actionType = "APP",
+            actionValue = "com.netflix.mediaclient",
+            packageName = "com.netflix.mediaclient",
+        )
+
+        val restoredButtons = resolveButtonEditDraftAfterButtonAdd(
+            buttonsAtEntry = listOf(phone),
+            selectedButtons = listOf(phone, netflix),
+            exit = ButtonAddExit.Cancel,
+        )
+
+        assertEquals(listOf(phone), restoredButtons)
+        assertFalse(netflix in restoredButtons)
+    }
+
+    @Test
+    fun continuingAddKeepsImportedAppInDraftUntilFinalSave() {
+        val phone = DisplayHomeButton(
+            name = "전화",
+            actionType = "DEFAULT",
+            actionValue = "PHONE",
+        )
+        val netflix = DisplayHomeButton(
+            name = "넷플릭스",
+            actionType = "APP",
+            actionValue = "com.netflix.mediaclient",
+            packageName = "com.netflix.mediaclient",
+        )
+
+        val continuedButtons = resolveButtonEditDraftAfterButtonAdd(
+            buttonsAtEntry = listOf(phone),
+            selectedButtons = listOf(phone, netflix),
+            exit = ButtonAddExit.Continue,
+        )
+
+        assertEquals(listOf(phone, netflix), continuedButtons)
     }
 }

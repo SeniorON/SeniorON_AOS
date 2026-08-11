@@ -712,14 +712,16 @@ private fun ButtonEditMenuItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ButtonNameEditBottomSheet(
+internal fun ButtonNameEditBottomSheet(
     initialName: String,
+    title: String = "이름 편집",
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
     var name by rememberSaveable(initialName) {
         mutableStateOf(initialName)
     }
+    val saveEnabled = name.isNotBlank()
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val saveName: () -> Unit = {
@@ -743,6 +745,8 @@ private fun ButtonNameEditBottomSheet(
     ) {
         ButtonNameEditSheetContent(
             name = name,
+            title = title,
+            saveEnabled = saveEnabled,
             onNameChange = { name = it },
             onCancelClick = onDismiss,
             onSaveClick = saveName,
@@ -763,6 +767,8 @@ private fun ButtonNameEditBottomSheet(
 @Composable
 private fun ButtonNameEditSheetContent(
     name: String,
+    title: String,
+    saveEnabled: Boolean,
     onNameChange: (String) -> Unit,
     onCancelClick: () -> Unit,
     onSaveClick: () -> Unit,
@@ -804,7 +810,7 @@ private fun ButtonNameEditSheetContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "이름 편집",
+                    text = title,
                     style = SeniorOnTextStyles.BodyLMedium,
                     color = SeniorOnColors.Gray800,
                 )
@@ -817,6 +823,7 @@ private fun ButtonNameEditSheetContent(
                 Text(
                     text = "저장",
                     modifier = Modifier.clickable(
+                        enabled = saveEnabled,
                         interactionSource = remember {
                             MutableInteractionSource()
                         },
@@ -824,7 +831,11 @@ private fun ButtonNameEditSheetContent(
                         onClick = onSaveClick,
                     ),
                     style = SeniorOnTextStyles.BodyMSemiBold,
-                    color = SeniorOnColors.Primary600,
+                    color = if (saveEnabled) {
+                        SeniorOnColors.Primary600
+                    } else {
+                        SeniorOnColors.Gray300
+                    },
                 )
             }
         }
@@ -1066,6 +1077,8 @@ private fun ButtonNameEditSheetContentPreview() {
         ) {
             ButtonNameEditSheetContent(
                 name = name,
+                title = "이름 편집",
+                saveEnabled = name.isNotBlank(),
                 onNameChange = { name = it },
                 onCancelClick = {},
                 onSaveClick = {},

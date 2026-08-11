@@ -64,11 +64,27 @@ fun DisplayTabRoute(
     var buttonEditDraftItems by remember {
         mutableStateOf<List<DisplayHomeButton>>(emptyList())
     }
+    var buttonAddEntryItems by remember {
+        mutableStateOf<List<DisplayHomeButton>>(emptyList())
+    }
     var transientImportedButtons by remember {
         mutableStateOf<List<DisplayHomeButton>>(emptyList())
     }
+    var pendingAppNameInput by remember {
+        mutableStateOf<PickedInstalledApp?>(null)
+    }
     var autoSelectKey by remember { mutableStateOf<String?>(null) }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
+
+    fun importButton(button: DisplayHomeButton) {
+        if (button.actionType.equals("APP", ignoreCase = true)) {
+            transientImportedButtons = (
+                transientImportedButtons + button
+                ).distinctBy(DisplayHomeButton::stableKey)
+        }
+        autoSelectKey = button.stableKey
+        autoSelectEvent += 1
+    }
 
     val selectableDefaultButtons = uiState.availableButtonOptions
         .filter(DisplayHomeButton::isSelectableDefaultOption)
@@ -82,17 +98,20 @@ fun DisplayTabRoute(
             context = context,
             defaultButtons = uiState.availableButtonOptions,
         )
-        if (importedButton.actionType.equals("APP", ignoreCase = true)) {
-            transientImportedButtons = (
-                transientImportedButtons + importedButton
-                ).distinctBy(DisplayHomeButton::stableKey)
+        if (importedButton == null) {
+            pendingAppNameInput = pickedApp
+        } else {
+            importButton(importedButton)
         }
-        autoSelectKey = importedButton.stableKey
-        autoSelectEvent += 1
     }
 
     fun navigateBack() {
         if (destination == DisplayDestination.ButtonAdd) {
+            buttonEditDraftItems = resolveButtonEditDraftAfterButtonAdd(
+                buttonsAtEntry = buttonAddEntryItems,
+                selectedButtons = buttonEditDraftItems,
+                exit = ButtonAddExit.Cancel,
+            )
             transientImportedButtons = emptyList()
             autoSelectKey = null
             saveableStateHolder.removeState(DisplayDestination.ButtonAdd.name)
@@ -126,6 +145,7 @@ fun DisplayTabRoute(
 
     fun clearButtonEditFlowState() {
         buttonEditDraftItems = emptyList()
+        buttonAddEntryItems = emptyList()
         transientImportedButtons = emptyList()
         autoSelectKey = null
         listOf(
@@ -163,6 +183,8 @@ fun DisplayTabRoute(
                         !uiState.isEditPermissionLoading &&
                         !uiState.isLoading &&
                         !uiState.isSaving,
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = viewModel::refreshOverview,
                     modifier = modifier,
                     onDeviceClick = {
                         if (uiState.device == null) {
@@ -206,6 +228,7 @@ fun DisplayTabRoute(
                                 DisplayDestination.ButtonEditGuide.name
                             )
                             buttonEditDraftItems = emptyList()
+                            buttonAddEntryItems = emptyList()
                             transientImportedButtons = emptyList()
                             autoSelectKey = null
                             destination = DisplayDestination.ButtonEditGuide
@@ -359,6 +382,7 @@ fun DisplayTabRoute(
                 },
                 onAddButtonClick = { buttons ->
                     buttonEditDraftItems = buttons
+                    buttonAddEntryItems = buttons
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
                     saveableStateHolder.removeState(
@@ -397,10 +421,15 @@ fun DisplayTabRoute(
                 onSaveClick = { musicButton, appButtons ->
                     val currentDraftButtons = buttonEditDraftItems
                         .ifEmpty { uiState.configuredButtonItems }
-                    buttonEditDraftItems = createInitialButtonOrder(
+                    val selectedButtons = createInitialButtonOrder(
                         currentButtons = currentDraftButtons,
                         musicButton = musicButton,
                         appButtons = appButtons,
+                    )
+                    buttonEditDraftItems = resolveButtonEditDraftAfterButtonAdd(
+                        buttonsAtEntry = buttonAddEntryItems,
+                        selectedButtons = selectedButtons,
+                        exit = ButtonAddExit.Continue,
                     )
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
@@ -437,6 +466,22 @@ fun DisplayTabRoute(
         ParentPhoneInternetRequiredDialog(
             onConfirmClick = { showInternetRequiredDialog = false },
             obscureBackgroundContent = true,
+        )
+    }
+
+    pendingAppNameInput?.let { pickedApp ->
+        ButtonNameEditBottomSheet(
+            initialName = "",
+            title = "버튼 이름 설정",
+            onDismiss = { pendingAppNameInput = null },
+            onSave = { name ->
+                pickedApp.toDisplayHomeButton(
+                    context = context,
+                    defaultButtons = uiState.availableButtonOptions,
+                    buttonName = name,
+                )?.let(::importButton)
+                pendingAppNameInput = null
+            },
         )
     }
 

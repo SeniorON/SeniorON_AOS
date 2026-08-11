@@ -1,6 +1,5 @@
 package com.example.senior_on.ui.child.display
 
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -80,6 +78,20 @@ internal fun buttonAddMaximumCount(): Int = MaximumButtonSelectionCount
 
 internal fun buttonAddCanContinue(selectedAppCount: Int): Boolean =
     buttonAddSelectedCount(selectedAppCount) >= MinimumButtonSelectionCount
+
+internal enum class ButtonAddExit {
+    Cancel,
+    Continue,
+}
+
+internal fun resolveButtonEditDraftAfterButtonAdd(
+    buttonsAtEntry: List<DisplayHomeButton>,
+    selectedButtons: List<DisplayHomeButton>,
+    exit: ButtonAddExit,
+): List<DisplayHomeButton> = when (exit) {
+    ButtonAddExit.Cancel -> buttonsAtEntry
+    ButtonAddExit.Continue -> selectedButtons
+}
 
 @Composable
 fun DisplayButtonAddScreen(
@@ -216,7 +228,7 @@ fun DisplayButtonAddScreen(
                 }
                 item { Spacer(modifier = Modifier.height(20.dp)) }
                 item {
-                    AnimatedAppButtonSection(
+                    AppButtonSection(
                         buttons = orderedButtons,
                         selectedButtonKeys = selectedButtonKeys.toSet(),
                         onImportAppClick = onImportAppClick,
@@ -252,7 +264,7 @@ private fun DisplayHomeButton.isProtectedButton(): Boolean =
     ) || type in MusicButtons
 
 @Composable
-private fun AnimatedAppButtonSection(
+private fun AppButtonSection(
     buttons: List<DisplayHomeButton>,
     selectedButtonKeys: Set<String>,
     onImportAppClick: () -> Unit,
@@ -312,11 +324,9 @@ private fun AnimatedAppButtonSection(
     }
 
     val cardShape = RoundedCornerShape(SeniorOnRadius.Medium)
-    val listHeight = (16 + buttons.size * 44 + (buttons.size - 1)).dp
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(listHeight)
             .dropShadow(
                 shape = cardShape,
                 shadow = Shadow(
@@ -326,22 +336,12 @@ private fun AnimatedAppButtonSection(
                 ),
             )
             .clip(cardShape)
-            .background(SeniorOnColors.White),
-        contentPadding = PaddingValues(vertical = 8.dp),
-        userScrollEnabled = false,
+            .background(SeniorOnColors.White)
+            .padding(vertical = 8.dp),
     ) {
-        items(
-            items = buttons,
-            key = DisplayHomeButton::stableKey,
-        ) { button ->
-            val index = buttons.indexOfFirst { it.stableKey == button.stableKey }
+        buttons.forEachIndexed { index, button ->
             Column(
                 modifier = Modifier
-                    .animateItem(
-                        fadeInSpec = tween(180),
-                        placementSpec = tween(300),
-                        fadeOutSpec = tween(180),
-                    )
                     .padding(horizontal = 14.dp),
             ) {
                 DynamicAppButtonRow(

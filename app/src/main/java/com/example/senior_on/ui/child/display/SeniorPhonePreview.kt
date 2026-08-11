@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +51,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 internal fun SeniorPhonePreview(
@@ -58,6 +61,7 @@ internal fun SeniorPhonePreview(
     weather: DisplayWeather? = null,
     isWeatherLoading: Boolean = false,
     todaySchedule: DisplayTodaySchedule? = null,
+    scrollEnabled: Boolean = false,
 ) {
     val previewScale = previewWidth.value / SeniorPhoneDesignWidth.value
     val previewShape = RoundedCornerShape((24f * previewScale).dp)
@@ -83,16 +87,19 @@ internal fun SeniorPhonePreview(
                     weather = weather,
                     isWeatherLoading = isWeatherLoading,
                     todaySchedule = todaySchedule,
+                    scrollEnabled = scrollEnabled,
                 )
             },
         ) { measurables, constraints ->
+            val designWidthPx = SeniorPhoneDesignWidth.roundToPx()
+            val scale = constraints.maxWidth.toFloat() / designWidthPx
+            val designHeightPx = (constraints.maxHeight / scale).roundToInt()
             val designPlaceable = measurables.single().measure(
                 Constraints.fixed(
-                    width = SeniorPhoneDesignWidth.roundToPx(),
-                    height = SeniorPhoneDesignHeight.roundToPx(),
+                    width = designWidthPx,
+                    height = designHeightPx,
                 )
             )
-            val scale = constraints.maxWidth.toFloat() / designPlaceable.width
 
             layout(
                 width = constraints.maxWidth,
@@ -114,6 +121,7 @@ private fun SeniorPhoneDesign(
     weather: DisplayWeather?,
     isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
+    scrollEnabled: Boolean,
 ) {
     val now = rememberKoreaDateTime()
     val musicButtonType = configuration.buttons.firstOrNull {
@@ -142,18 +150,29 @@ private fun SeniorPhoneDesign(
     ) {
         SeniorPhoneStatusBar(now)
 
-        SeniorHomeContent(
-            now = now,
-            configuration = configuration,
-            musicButton = musicButton,
-            buttons = buttons,
-            scheduleUiState = todaySchedule.toPreviewScheduleUiState(),
-            weatherUiState = weather.toPreviewWeatherUiState(isWeatherLoading),
-            interactionEnabled = false,
-            onMusicClick = {},
-            onScheduleClick = {},
-            onButtonClick = {},
-        )
+        val contentModifier = if (scrollEnabled) {
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        } else {
+            Modifier.weight(1f)
+        }
+        Column(
+            modifier = contentModifier.padding(top = 14.dp, bottom = 24.dp),
+        ) {
+            SeniorHomeContent(
+                now = now,
+                configuration = configuration,
+                musicButton = musicButton,
+                buttons = buttons,
+                scheduleUiState = todaySchedule.toPreviewScheduleUiState(),
+                weatherUiState = weather.toPreviewWeatherUiState(isWeatherLoading),
+                interactionEnabled = false,
+                onMusicClick = {},
+                onScheduleClick = {},
+                onButtonClick = {},
+            )
+        }
     }
 }
 
@@ -286,7 +305,6 @@ private fun String?.toKoreanWeatherLabel(): String? {
 }
 
 private val SeniorPhoneDesignWidth = 360.dp
-private val SeniorPhoneDesignHeight = 960.dp
 private val StatusBarTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm", Locale.KOREAN)
 private val ScheduleTimePattern =
