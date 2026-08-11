@@ -49,6 +49,7 @@ data class FamilyTabUiState(
     val sharedPhotos: List<SharedFamilyPhotoUiModel> = emptyList(),
     val invitationCode: String = "",
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
     val isPhotoLoading: Boolean = false,
     val hasLoadedPhotoGallery: Boolean = false,

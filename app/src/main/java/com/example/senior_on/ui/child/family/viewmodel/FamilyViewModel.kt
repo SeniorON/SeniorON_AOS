@@ -51,11 +51,21 @@ class FamilyViewModel(
     }
 
     fun loadFamilyOverview() {
+        loadFamilyOverview(isPullRefresh = false)
+    }
+
+    fun refreshFamilyOverview() {
+        if (homeLoadJob?.isActive == true) return
+        loadFamilyOverview(isPullRefresh = true)
+    }
+
+    private fun loadFamilyOverview(isPullRefresh: Boolean) {
         homeLoadJob?.cancel()
         homeLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = true,
+                    isLoading = !isPullRefresh,
+                    isRefreshing = isPullRefresh,
                     errorMessage = null
                 )
             }
@@ -112,6 +122,7 @@ class FamilyViewModel(
                             recentPhotos
                         },
                         isLoading = false,
+                        isRefreshing = false,
                         errorMessage = null,
                     )
                 }
@@ -121,6 +132,7 @@ class FamilyViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         errorMessage = "가족 정보를 불러오지 못했어요."
                     )
                 }
