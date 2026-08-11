@@ -157,7 +157,7 @@ fun SignupTermsRoute(
     appContainer: AppContainer,
     selectedMode: AppUserMode,
     onBackClick: (isSocialSignup: Boolean) -> Unit,
-    onSignupSuccess: (userId: String) -> Unit
+    onSignupSuccess: () -> Unit
 ) {
     val viewModel = onboardingAuthViewModel(appContainer)
 
@@ -169,11 +169,11 @@ fun SignupTermsRoute(
             viewModel.completeSignup(
                 mode = selectedMode,
                 agreements = agreements
-            ) { loginResult ->
-                if (loginResult != null) {
-                    onSignupSuccess(loginResult.loginId)
+            ) { succeeded ->
+                if (succeeded) {
+                    onSignupSuccess()
                 }
-                onResult(loginResult != null)
+                onResult(succeeded)
             }
         }
     )

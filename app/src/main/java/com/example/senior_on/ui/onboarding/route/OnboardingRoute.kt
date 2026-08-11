@@ -56,6 +56,13 @@ private enum class SeniorOnRoute {
     AddressSearch
 }
 
+internal enum class PostLoginDestination {
+    Authenticated,
+    FamilyShareCode,
+    ParentInfoInput,
+    CaregiverRelationshipInput,
+}
+
 private const val InvalidFamilyShareCodeMessage =
     "가족 공유 코드를 다시 확인해 주세요."
 
@@ -123,36 +130,53 @@ fun OnboardingRoute(
         authenticatedUserId = userId
         connectedSeniorId = status?.seniorId
 
-        if (status == null || status.onboardingCompleted) {
-            onAuthenticated(mode, userId)
-            return
-        }
-        if (!status.hasFamily) {
-            currentRoute = SeniorOnRoute.FamilyShareCode
-            return
-        }
-        if (mode == AppUserMode.Senior) {
-            onAuthenticated(mode, userId)
+        if (status == null) {
+            currentRoute = SeniorOnRoute.Login
             return
         }
 
-        currentRoute = when {
-            status.managerType == CareManagerType.Primary &&
-                !status.seniorProfileCompleted -> SeniorOnRoute.ParentInfoInput
-            status.seniorId == null -> SeniorOnRoute.FamilyShareCode
-            status.managerType == CareManagerType.Sub &&
-                !status.relationRegistered ->
-                SeniorOnRoute.CaregiverRelationshipInput
-            else -> {
+        when (resolvePostLoginDestination(mode, status)) {
+            PostLoginDestination.Authenticated -> {
                 onAuthenticated(mode, userId)
-                return
             }
+            PostLoginDestination.FamilyShareCode ->
+                currentRoute = SeniorOnRoute.FamilyShareCode
+            PostLoginDestination.ParentInfoInput ->
+                currentRoute = SeniorOnRoute.ParentInfoInput
+            PostLoginDestination.CaregiverRelationshipInput ->
+                currentRoute = SeniorOnRoute.CaregiverRelationshipInput
         }
     }
 
     fun resolveOnboardingStatus(mode: AppUserMode, userId: String) {
         authViewModel.loadOnboardingStatus { status ->
             navigateFromOnboardingStatus(mode, userId, status)
+        }
+    }
+
+    fun resolveAfterFamilyJoin() {
+        authViewModel.loadOnboardingStatus { status ->
+            val destination = status?.let {
+                resolvePostLoginDestination(selectedUserMode, it)
+            }
+            if (status != null && destination != PostLoginDestination.FamilyShareCode) {
+                navigateFromOnboardingStatus(
+                    mode = selectedUserMode,
+                    userId = authenticatedUserId,
+                    status = status,
+                )
+                return@loadOnboardingStatus
+            }
+
+            // Family membership was already confirmed by FamilyConnectionViewModel.
+            // A follow-up timeout or briefly stale status must not trap the user on
+            // the code screen.
+            when (selectedUserMode) {
+                AppUserMode.Child ->
+                    currentRoute = SeniorOnRoute.CaregiverRelationshipInput
+                AppUserMode.Senior ->
+                    onAuthenticated(selectedUserMode, authenticatedUserId)
+            }
         }
     }
 
@@ -322,14 +346,15 @@ fun OnboardingRoute(
                         SeniorOnRoute.SignupAccountInfo
                     }
                 },
-                onSignupSuccess = { userId ->
+                onSignupSuccess = {
                     clearSavedRouteStates(SignupStateRoutes)
-                    authenticatedUserId = userId
-                    currentRoute = SeniorOnRoute.FamilyShareCode
+                    authenticatedUserId = ""
+                    connectedSeniorId = null
+                    currentRoute = SeniorOnRoute.Login
                 }
             )
             SeniorOnRoute.FamilyShareCode -> FamilyShareCodeRoute(
-                onBackClick = { currentRoute = SeniorOnRoute.SignupTermsAgreement },
+                onBackClick = { currentRoute = SeniorOnRoute.Login },
                 onNextClick = { selectedOption ->
                     currentRoute = when (selectedOption) {
                         FamilyShareCodeOption.HasCode ->
@@ -345,16 +370,7 @@ fun OnboardingRoute(
                 appContainer = appContainer,
                 userId = authenticatedUserId,
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
-                onJoinSuccess = {
-                    when (selectedUserMode) {
-                        AppUserMode.Child -> {
-                            currentRoute = SeniorOnRoute.CaregiverRelationshipInput
-                        }
-                        AppUserMode.Senior -> {
-                            onAuthenticated(selectedUserMode, authenticatedUserId)
-                        }
-                    }
-                }
+                onJoinSuccess = { resolveAfterFamilyJoin() }
             )
             SeniorOnRoute.CaregiverRelationshipInput -> CaregiverRelationshipRoute(
                 appContainer = appContainer,
@@ -392,4 +408,19 @@ fun OnboardingRoute(
             )
         }
     }
+}
+
+internal fun resolvePostLoginDestination(
+    mode: AppUserMode,
+    status: OnboardingStatus,
+): PostLoginDestination = when {
+    status.onboardingCompleted -> PostLoginDestination.Authenticated
+    !status.hasFamily -> PostLoginDestination.FamilyShareCode
+    mode == AppUserMode.Senior -> PostLoginDestination.Authenticated
+    status.managerType == CareManagerType.Primary &&
+        !status.seniorProfileCompleted -> PostLoginDestination.ParentInfoInput
+    status.seniorId == null -> PostLoginDestination.FamilyShareCode
+    status.managerType == CareManagerType.Sub &&
+        !status.relationRegistered -> PostLoginDestination.CaregiverRelationshipInput
+    else -> PostLoginDestination.Authenticated
 }

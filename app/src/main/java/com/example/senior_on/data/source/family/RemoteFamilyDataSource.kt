@@ -4,6 +4,7 @@ import com.example.senior_on.data.remote.api.FamilyApi
 import com.example.senior_on.data.remote.api.FamilyPhotoUploadApi
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.requireData
+import com.example.senior_on.data.source.remoteRequest
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
@@ -31,9 +32,15 @@ class RemoteFamilyDataSource(
     private val api: FamilyApi,
     private val uploadApi: FamilyPhotoUploadApi,
 ) : RemoteFamilySource {
-    override suspend fun join(request: FamilyJoinRequest) = api.join(request).requireData()
-    override suspend fun createCode() = api.createCode().requireData()
-    override suspend fun getCode() = api.getCode().requireData()
+    override suspend fun join(request: FamilyJoinRequest) = remoteRequest {
+        api.join(request).requireData()
+    }
+    override suspend fun createCode() = remoteRequest {
+        api.createCode().requireData()
+    }
+    override suspend fun getCode() = remoteRequest {
+        api.getCode().requireData()
+    }
     override suspend fun getHome() = api.getHome().requireData()
     override suspend fun getMembers() = api.getMembers().requireData()
     override suspend fun changePrimaryManager(request: FamilyPrimaryManagerUpdateRequest) =

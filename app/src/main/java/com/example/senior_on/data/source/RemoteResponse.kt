@@ -22,7 +22,7 @@ internal suspend fun <T> remoteRequest(
         ?.takeIf(String::isNotBlank)
 
     throw IllegalStateException(
-        serverMessage ?: exception.message(),
+        serverMessage ?: exception.message,
         exception,
     )
 }
