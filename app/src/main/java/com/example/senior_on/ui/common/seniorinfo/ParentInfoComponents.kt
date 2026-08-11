@@ -32,8 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -46,6 +49,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -70,10 +74,14 @@ internal fun SeniorInfoTopBar(
             .zIndex(1f)
             .then(
                 if (showShadow) {
-                    Modifier.shadow(
-                        elevation = 12.dp,
-                        ambientColor = Color.Black.copy(alpha = 0.06f),
-                        spotColor = Color.Black.copy(alpha = 0.06f)
+                    Modifier.dropShadow(
+                        shape = RectangleShape,
+                        shadow = Shadow(
+                            radius = 12.dp,
+                            spread = 0.dp,
+                            color = SeniorOnColors.Black.copy(alpha = 0.06f),
+                            offset = DpOffset(x = 0.dp, y = 4.dp),
+                        )
                     )
                 } else {
                     Modifier
@@ -511,6 +519,12 @@ internal fun SeniorInfoEditBottomAction(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .zIndex(1f)
+            .shadow(
+                elevation = 12.dp,
+                ambientColor = Color.Black.copy(alpha = 0.06f),
+                spotColor = Color.Black.copy(alpha = 0.06f),
+            )
             .background(SeniorOnColors.White)
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {

@@ -32,7 +32,6 @@ import android.widget.Toast
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.model.auth.isValidPassword
-import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.ui.child.settings.viewmodel.ChangeNameViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.ChangePasswordViewModel
@@ -52,7 +51,6 @@ fun MyAccountScreen(
     modifier: Modifier = Modifier,
     onSelectAlbumClick: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
-    onApplyDefaultImageClick: () -> Unit = {}
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -91,7 +89,6 @@ fun MyAccountScreen(
 
     if (showProfilePhotoSheet) {
         SettingsProfilePhotoBottomSheet(
-            showApplyDefaultOption = profile.hasCustomProfileImage,
             onDismiss = { showProfilePhotoSheet = false },
             onSelectAlbumClick = {
                 showProfilePhotoSheet = false
@@ -100,10 +97,6 @@ fun MyAccountScreen(
             onTakePhotoClick = {
                 showProfilePhotoSheet = false
                 onTakePhotoClick()
-            },
-            onApplyDefaultImageClick = {
-                showProfilePhotoSheet = false
-                onApplyDefaultImageClick()
             }
         )
     }
@@ -418,6 +411,8 @@ private fun MyAccountProfileHeader(
             borderWidth = 1.dp,
             editIconSize = 24.dp,
             imageUrl = profile.profileImageUrl,
+            imageRevision = profile.profileImageRevision,
+            isUploading = profile.isProfileImageUploading,
             onEditClick = onEditClick
         )
 
@@ -446,7 +441,11 @@ private fun MyAccountProfileHeader(
 private fun MyAccountScreenPreview() {
     SENIOR_ONTheme {
         MyAccountScreen(
-            profile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
+            profile = SettingsProfileUiState(
+                name = "김민지",
+                accountTypeLabel = "보호자 계정",
+                email = "caregiver@example.com",
+            ),
             onBackClick = {},
             onChangeNameClick = {},
             onChangePasswordClick = {}
@@ -459,7 +458,7 @@ private fun MyAccountScreenPreview() {
 private fun ChangeNameScreenPreview() {
     SENIOR_ONTheme {
         ChangeNameScreen(
-            currentName = MockUserFixtures.primaryCaregiver.name,
+            currentName = "김민지",
             onBackClick = {},
             onSaveClick = {}
         )

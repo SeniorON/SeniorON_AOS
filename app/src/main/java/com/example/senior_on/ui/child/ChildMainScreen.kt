@@ -46,7 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
-import com.example.senior_on.domain.model.auth.AppUserProfile
+import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
@@ -74,10 +74,7 @@ import com.example.senior_on.ui.child.health.route.HealthMainRoute
 import com.example.senior_on.ui.child.notification.route.NotificationRoute
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
-import com.example.senior_on.ui.child.settings.SettingsProfileUiState
 import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
-import com.example.senior_on.ui.child.settings.toParentInfo
-import com.example.senior_on.ui.child.settings.toSettingsProfileUiState
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
@@ -95,7 +92,6 @@ private enum class ChildFamilyDestination {
 @Composable
 fun ChildMainScreen(
     authenticatedUserId: String,
-    userProfile: AppUserProfile,
     sessionInstance: Int,
     familyServerRepository: FamilyServerRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
@@ -163,7 +159,6 @@ fun ChildMainScreen(
         )
     )
     val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
-    val settingsProfile = userProfile.toSettingsProfileUiState()
     val connectedDevice = displayUiState.parentInfo?.let { parentInfo ->
         displayUiState.device?.let { device ->
             parentInfo.toConnectedSeniorDeviceUiState(
@@ -251,7 +246,7 @@ fun ChildMainScreen(
             familyPhotoUploadViewModel = familyPhotoUploadViewModel,
             familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
             displayViewModel = displayViewModel,
-            settingsProfile = settingsProfile,
+            parentInfo = displayUiState.parentInfo,
             connectedDevice = connectedDevice,
             onMemberSettingsClick = {
                 familyDestination = ChildFamilyDestination.MemberSettings
@@ -287,15 +282,11 @@ fun ChildMainScreen(
             addressSearchRepository = addressSearchRepository,
             notificationNavigationEvent = notificationNavigationEvent,
             onNotificationNavigationConsumed = onNotificationNavigationConsumed,
-            onConnectedDeviceInfoSave = { updatedDevice ->
-                displayUiState.parentInfo?.let { currentParentInfo ->
-                    displayViewModel.saveParentInfo(
-                        updatedDevice.toParentInfo(currentParentInfo)
-                    )
-                }
-            },
-            onDisconnectDeviceConfirm = {
-                displayViewModel.disconnectDevice()
+            onParentInfoSave = { updatedParentInfo, onSuccess ->
+                displayViewModel.saveParentInfo(
+                    parentInfo = updatedParentInfo,
+                    onSuccess = onSuccess,
+                )
             },
             onLogoutClick = onLogoutClick,
             onWithdrawClick = onWithdrawClick,
@@ -344,7 +335,7 @@ private fun ChildMainTabContent(
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     familyInvitationViewModelKey: String,
     displayViewModel: DisplayViewModel,
-    settingsProfile: SettingsProfileUiState,
+    parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
     onMemberSettingsClick: () -> Unit,
     onAddFamilyClick: () -> Unit,
@@ -371,8 +362,7 @@ private fun ChildMainTabContent(
     addressSearchRepository: AddressSearchRepository?,
     notificationNavigationEvent: NotificationNavigationEvent?,
     onNotificationNavigationConsumed: () -> Unit,
-    onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
-    onDisconnectDeviceConfirm: () -> Unit,
+    onParentInfoSave: (ParentInfo, () -> Unit) -> Unit,
     onLogoutClick: () -> Unit,
     onWithdrawClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -490,10 +480,10 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
-            initialProfile = settingsProfile,
+            parentInfo = parentInfo,
             connectedDevice = connectedDevice,
-            onConnectedDeviceInfoSave = onConnectedDeviceInfoSave,
-            onDisconnectDeviceConfirm = onDisconnectDeviceConfirm,
+            displayViewModel = displayViewModel,
+            onParentInfoSave = onParentInfoSave,
             authRepository = authRepository,
             sessionRepository = sessionRepository,
             deviceRegistrationRepository = deviceRegistrationRepository,

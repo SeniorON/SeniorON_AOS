@@ -107,7 +107,9 @@ object SeniorOnNetwork {
     val medicationApi: MedicationApi by lazy { retrofit.create(MedicationApi::class.java) }
     val notificationApi: NotificationApi by lazy { retrofit.create(NotificationApi::class.java) }
     val eventApi: EventApi by lazy { retrofit.create(EventApi::class.java) }
-    val userSettingsApi: UserSettingsApi by lazy { retrofit.create(UserSettingsApi::class.java) }
+    val userSettingsApi: UserSettingsApi by lazy {
+        uploadRetrofit.create(UserSettingsApi::class.java)
+    }
     val deviceApi: DeviceApi by lazy { retrofit.create(DeviceApi::class.java) }
     val inquiryApi: InquiryApi by lazy {
         uploadRetrofit.create(InquiryApi::class.java)

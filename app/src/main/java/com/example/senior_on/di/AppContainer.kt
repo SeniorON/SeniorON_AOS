@@ -56,7 +56,6 @@ import com.example.senior_on.data.source.location.AndroidLocationDataSource
 import com.example.senior_on.data.source.inquiry.InquiryDataSource
 import com.example.senior_on.data.source.notification.NotificationDataSource
 import com.example.senior_on.data.source.settings.UserSettingsDataSource
-import com.example.senior_on.domain.model.auth.AppUserProfile
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.domain.repository.auth.AccountRecoveryRepository
@@ -95,7 +94,6 @@ interface AppContainer {
     val inquiryRepository: InquiryRepository
     val locationRepository: LocationRepository
     val addressSearchRepository: AddressSearchRepository
-    fun userProfileFor(userId: String): AppUserProfile
     val familyPhotoUploadPreparer: FamilyPhotoUploadPreparer
     val chatBuddyRepository: ChatBuddyRepository
     val parentFamilyPhotoRepository: ParentFamilyPhotoRepository
@@ -194,11 +192,6 @@ class DefaultAppContainer(
                 activeSeniorId = MockSeniorFixtures.SENIOR_ID,
             )
         )
-
-    override fun userProfileFor(userId: String): AppUserProfile {
-        return MockUserFixtures.profileFor(userId)
-            ?: MockUserFixtures.primaryCaregiver
-    }
 
     override fun caregiverRelationshipRepositoryFor(
         userId: String,

@@ -536,11 +536,19 @@ class EventRepositoryImpl(
 class UserSettingsRepositoryImpl(
     private val source: UserSettingsDataSource
 ) : UserSettingsRepository {
-    override suspend fun getSettings() =
-        UserAccountSettings(source.getName().name.orEmpty(), source.getProfileImage().profileImageUrl)
+    override suspend fun getSettings(): UserAccountSettings {
+        val account = source.getAccount()
+        val profileImage = source.getProfileImage()
+        return UserAccountSettings(
+            name = account.name.orEmpty(),
+            role = account.role.orEmpty(),
+            email = account.email.orEmpty(),
+            profileImageUrl = profileImage.profileImageUrl,
+        )
+    }
 
     override suspend fun getName(): String =
-        source.getName().name.orEmpty()
+        source.getAccount().name.orEmpty()
 
     override suspend fun updateName(name: String) =
         source.updateName(NameUpdateRequest(name.trim())).name.orEmpty()

@@ -31,7 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -81,6 +83,7 @@ private const val FamilyBackgroundAspectRatio = 1170f / 690f
 private const val FamilySharePictureAspectRatio = 984f / 600f
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun FamilyTabScreen(
     modifier: Modifier = Modifier,
     uiState: FamilyTabUiState = FamilyTabUiState(),
@@ -91,6 +94,8 @@ fun FamilyTabScreen(
     onUploadPhotoClick: () -> Unit = {},
     onPhotoClick: (String) -> Unit = {},
     onRetryClick: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     memberImage: @Composable BoxScope.(FamilyMemberUiModel) -> Unit = {
         FamilyMemberImage(it)
     },
@@ -98,93 +103,99 @@ fun FamilyTabScreen(
         SharedFamilyPhotoImage(it)
     }
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SeniorOnColors.White)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
     ) {
-        FamilyTopBar()
-
-        if (uiState.isLoading && uiState.members.isEmpty()) {
-            FamilyLoadingContent(modifier = Modifier.weight(1f))
-        } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
-            FamilyErrorContent(
-                message = uiState.errorMessage,
-                onRetryClick = onRetryClick,
-                modifier = Modifier.weight(1f),
-            )
-        } else {
-            LazyColumn(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
+                .fillMaxSize()
+                .background(SeniorOnColors.White)
         ) {
-            item {
-                FamilyOverviewSection(
-                    members = uiState.visibleMembers,
-                    invitationSlotCount = uiState.invitationSlotCount,
-                    onInviteClick = onInviteFamilyClick,
-                    memberImage = memberImage
-                )
-            }
+            FamilyTopBar()
 
-            item {
-                Spacer(
-                    modifier = Modifier.height(
-                        if (uiState.canManageMembers) 30.dp else 16.dp
-                    )
+            if (uiState.isLoading && uiState.members.isEmpty()) {
+                FamilyLoadingContent(modifier = Modifier.weight(1f))
+            } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
+                FamilyErrorContent(
+                    message = uiState.errorMessage,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.weight(1f),
                 )
-                FamilyManagementButtons(
-                    canManageMembers = uiState.canManageMembers,
-                    onMemberSettingsClick = onMemberSettingsClick,
-                    onAddFamilyClick = onAddFamilyClick
-                )
-            }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item {
+                        FamilyOverviewSection(
+                            members = uiState.visibleMembers,
+                            invitationSlotCount = uiState.invitationSlotCount,
+                            onInviteClick = onInviteFamilyClick,
+                            memberImage = memberImage
+                        )
+                    }
 
-            item {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 34.dp, vertical = 24.dp),
-                    thickness = 2.dp,
-                    color = SeniorOnColors.Background4
-                )
-            }
+                    item {
+                        Spacer(
+                            modifier = Modifier.height(
+                                if (uiState.canManageMembers) 30.dp else 16.dp
+                            )
+                        )
+                        FamilyManagementButtons(
+                            canManageMembers = uiState.canManageMembers,
+                            onMemberSettingsClick = onMemberSettingsClick,
+                            onAddFamilyClick = onAddFamilyClick
+                        )
+                    }
 
-            item {
-                SharedPhotoHeader(
-                    members = uiState.visibleMembers,
-                    memberImage = memberImage
-                )
-            }
+                    item {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 34.dp, vertical = 24.dp),
+                            thickness = 2.dp,
+                            color = SeniorOnColors.Background4
+                        )
+                    }
 
-            item {
-                Spacer(modifier = Modifier.height(12.dp))
-                if (uiState.visibleSharedPhotos.isEmpty()) {
-                    EmptySharedPhotoCard()
-                } else {
-                    SharedPhotoGrid(
-                        photos = uiState.visibleSharedPhotos,
-                        sharedPhotoImage = sharedPhotoImage,
-                        onPhotoClick = onPhotoClick
-                    )
+                    item {
+                        SharedPhotoHeader(
+                            members = uiState.visibleMembers,
+                            memberImage = memberImage
+                        )
+                    }
 
-                    if (uiState.shouldShowMorePhotos) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        MorePhotosButton(onClick = onMorePhotosClick)
+                    item {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        if (uiState.visibleSharedPhotos.isEmpty()) {
+                            EmptySharedPhotoCard()
+                        } else {
+                            SharedPhotoGrid(
+                                photos = uiState.visibleSharedPhotos,
+                                sharedPhotoImage = sharedPhotoImage,
+                                onPhotoClick = onPhotoClick
+                            )
+
+                            if (uiState.shouldShowMorePhotos) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                MorePhotosButton(onClick = onMorePhotosClick)
+                            }
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        FamilyActionButton(
+                            text = "사진 올리기",
+                            iconResId = R.drawable.ic_plus,
+                            onClick = onUploadPhotoClick,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            buttonHeight = 48.dp
+                        )
                     }
                 }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                FamilyActionButton(
-                    text = "사진 올리기",
-                    iconResId = R.drawable.ic_plus,
-                    onClick = onUploadPhotoClick,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    buttonHeight = 48.dp
-                )
-            }
             }
         }
     }

@@ -3,10 +3,11 @@ package com.example.senior_on.data.source.settings
 import com.example.senior_on.data.remote.api.UserSettingsApi
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.requireData
+import com.example.senior_on.data.source.remoteRequest
 import okhttp3.MultipartBody
 
 interface UserSettingsDataSource {
-    suspend fun getName(): CurrentNameResponse
+    suspend fun getAccount(): UserAccountResponse
     suspend fun updateName(request: NameUpdateRequest): NameUpdateResponse
     suspend fun changePassword(request: PasswordChangeRequest): PasswordChangeResponse
     suspend fun getProfileImage(): ProfileImageResponse
@@ -14,11 +15,23 @@ interface UserSettingsDataSource {
 }
 
 class RemoteUserSettingsDataSource(private val api: UserSettingsApi) : UserSettingsDataSource {
-    override suspend fun getName() = api.getName().requireData()
-    override suspend fun updateName(request: NameUpdateRequest) = api.updateName(request).requireData()
-    override suspend fun changePassword(request: PasswordChangeRequest) =
+    override suspend fun getAccount() = remoteRequest {
+        api.getAccount().requireData()
+    }
+
+    override suspend fun updateName(request: NameUpdateRequest) = remoteRequest {
+        api.updateName(request).requireData()
+    }
+
+    override suspend fun changePassword(request: PasswordChangeRequest) = remoteRequest {
         api.changePassword(request).requireData()
-    override suspend fun getProfileImage() = api.getProfileImage().requireData()
-    override suspend fun updateProfileImage(image: MultipartBody.Part) =
+    }
+
+    override suspend fun getProfileImage() = remoteRequest {
+        api.getProfileImage().requireData()
+    }
+
+    override suspend fun updateProfileImage(image: MultipartBody.Part) = remoteRequest {
         api.updateProfileImage(image).requireData()
+    }
 }

@@ -137,6 +137,7 @@ fun OneOnOneInquiryRoute(
     OneOnOneInquiryScreen(
         onBackClick = onBackClick,
         historyItems = uiState.historyItems.map { it.toHistoryItem() },
+        isHistoryLoading = uiState.isHistoryLoading,
         onHistoryTabSelected = viewModel::loadInquiries,
         onInquiryExpand = viewModel::loadInquiryDetail,
         isSubmitting = uiState.isSubmitting,
@@ -152,6 +153,7 @@ private fun OneOnOneInquiryScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     historyItems: List<InquiryHistoryItem> = emptyList(),
+    isHistoryLoading: Boolean = false,
     onHistoryTabSelected: () -> Unit = {},
     onInquiryExpand: (String) -> Unit = {},
     isSubmitting: Boolean = false,
@@ -247,6 +249,7 @@ private fun OneOnOneInquiryScreen(
 
                 OneOnOneInquiryTab.History -> OneOnOneInquiryHistoryContent(
                     items = historyItems,
+                    isLoading = isHistoryLoading,
                     onInquiryExpand = onInquiryExpand,
                     modifier = Modifier.weight(1f)
                 )
@@ -679,8 +682,25 @@ private fun OneOnOneInquiryScreenPreview() {
 private fun OneOnOneInquiryHistoryContent(
     items: List<InquiryHistoryItem>,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
     onInquiryExpand: (String) -> Unit = {},
 ) {
+    if (isLoading) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(SeniorOnColors.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                color = SeniorOnColors.Primary600,
+                strokeWidth = 3.dp,
+            )
+        }
+        return
+    }
+
     if (items.isEmpty()) {
         Box(
             modifier = modifier
