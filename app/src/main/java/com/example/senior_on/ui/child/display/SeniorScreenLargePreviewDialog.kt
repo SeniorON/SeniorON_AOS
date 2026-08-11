@@ -81,6 +81,7 @@ private fun SeniorScreenLargePreviewContent(
                 weather = weather,
                 isWeatherLoading = isWeatherLoading,
                 todaySchedule = todaySchedule,
+                scrollEnabled = true,
             )
 
             Spacer(modifier = Modifier.height(21.dp))

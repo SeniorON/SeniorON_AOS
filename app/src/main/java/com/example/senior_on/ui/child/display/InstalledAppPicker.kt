@@ -7,7 +7,11 @@ import com.example.senior_on.ui.common.homebutton.findMatchingDefaultButton
 
 internal data class PickedInstalledApp(
     val packageName: String,
-    val label: String,
+    val label: String?,
+)
+
+private val AndroidPackageNamePattern = Regex(
+    pattern = "^[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+$",
 )
 
 internal fun createInstalledAppPickerIntent(): Intent {
@@ -40,9 +44,11 @@ internal fun readPickedInstalledApp(
         val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
         packageManager.getApplicationLabel(applicationInfo).toString()
     }.getOrNull()
-    val label = sequenceOf(activityLabel, applicationLabel, packageName)
-        .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
-        .first()
+    val label = selectInstalledAppDisplayName(
+        packageName = packageName,
+        activityLabel,
+        applicationLabel,
+    )
 
     return PickedInstalledApp(
         packageName = packageName,
@@ -53,13 +59,30 @@ internal fun readPickedInstalledApp(
 internal fun PickedInstalledApp.toDisplayHomeButton(
     context: Context,
     defaultButtons: List<DisplayHomeButton>,
-): DisplayHomeButton = findMatchingDefaultButton(
+    buttonName: String? = label,
+): DisplayHomeButton? = findMatchingDefaultButton(
     context = context,
     packageName = packageName,
     defaultButtons = defaultButtons,
-) ?: DisplayHomeButton(
-    name = label,
-    actionType = "APP",
-    actionValue = packageName,
-    packageName = packageName,
-)
+) ?: buttonName
+    ?.trim()
+    ?.takeIf(String::isNotEmpty)
+    ?.let { name ->
+        DisplayHomeButton(
+            name = name,
+            actionType = "APP",
+            actionValue = packageName,
+            packageName = packageName,
+        )
+    }
+
+internal fun selectInstalledAppDisplayName(
+    packageName: String,
+    vararg candidates: String?,
+): String? = candidates
+    .asSequence()
+    .mapNotNull { candidate -> candidate?.trim()?.takeIf(String::isNotEmpty) }
+    .firstOrNull { candidate ->
+        !candidate.equals(packageName, ignoreCase = true) &&
+            !AndroidPackageNamePattern.matches(candidate)
+    }

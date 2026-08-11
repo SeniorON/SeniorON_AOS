@@ -116,6 +116,54 @@ class DisplayButtonOrderTest {
     }
 
     @Test
+    fun musicAndScheduleStayAboveGridWhileEmergencyKeepsItsFixedSlot() {
+        val music = defaultButton(SeniorHomeButtonType.Melon)
+        val schedule = defaultButton(SeniorHomeButtonType.Schedule)
+        val emergency = defaultButton(SeniorHomeButtonType.Emergency)
+        val regularButtons = listOf(
+            defaultButton(SeniorHomeButtonType.Call),
+            defaultButton(SeniorHomeButtonType.Message),
+            defaultButton(SeniorHomeButtonType.Camera),
+            defaultButton(SeniorHomeButtonType.ChatBuddy),
+            defaultButton(SeniorHomeButtonType.Medication),
+            defaultButton(SeniorHomeButtonType.Photo),
+            appButton("유튜브", "com.google.android.youtube"),
+            appButton("지도", "com.example.map"),
+        )
+
+        val result = (
+            regularButtons.take(3) +
+                emergency +
+                schedule +
+                regularButtons.drop(3) +
+                music
+            ).withFixedButtonOrderSections()
+
+        assertEquals(music, result[0])
+        assertEquals(schedule, result[1])
+        assertEquals(emergency, result.drop(2)[7])
+        assertEquals(
+            regularButtons,
+            result.filterNot { button ->
+                button.isMusicButton() ||
+                    button.isDefaultAction("SCHEDULE") ||
+                    button.isDefaultAction("EMERGENCY")
+            },
+        )
+    }
+
+    @Test
+    fun scheduleStaysFeaturedWhenMusicIsNotSelected() {
+        val schedule = defaultButton(SeniorHomeButtonType.Schedule)
+        val call = defaultButton(SeniorHomeButtonType.Call)
+
+        val result = listOf(call, schedule).withFixedButtonOrderSections()
+
+        assertEquals(schedule, result.first())
+        assertEquals(call, result[1])
+    }
+
+    @Test
     fun selectedButtonEditsDeleteOnlyEditableButtons() {
         val call = defaultButton(SeniorHomeButtonType.Call)
         val message = defaultButton(SeniorHomeButtonType.Message)

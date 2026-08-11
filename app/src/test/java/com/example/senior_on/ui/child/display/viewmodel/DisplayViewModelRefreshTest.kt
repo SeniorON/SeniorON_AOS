@@ -14,22 +14,25 @@ import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.repository.display.DisplayRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DisplayViewModelRefreshTest {
     @Test
-    fun `화면 탭 재진입은 홈만 갱신하고 날씨는 10분 동안 재사용한다`() = runTest {
+    fun `화면 탭 재진입은 홈과 편집 권한을 갱신하고 날씨는 10분 동안 재사용한다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             var currentTimeMillis = 0L
@@ -44,12 +47,14 @@ class DisplayViewModelRefreshTest {
             advanceUntilIdle()
 
             assertEquals(1, repository.overviewRequestCount)
+            assertEquals(1, repository.editPermissionRequestCount)
             assertEquals(1, repository.weatherRequestCount)
             assertEquals(0, repository.deviceRequestCount)
 
             repository.overview = MockDisplayFixtures
                 .overview(MockDisplayScenario.NotConnected)
                 .copy(parentInfo = MockSeniorFixtures.mother)
+            repository.canEditScreen = false
             viewModel.refreshOnScreenTabReentry()
             viewModel.refreshOnScreenTabReentry()
 
@@ -57,7 +62,9 @@ class DisplayViewModelRefreshTest {
             advanceUntilIdle()
 
             assertEquals(2, repository.overviewRequestCount)
+            assertEquals(2, repository.editPermissionRequestCount)
             assertEquals(1, repository.weatherRequestCount)
+            assertFalse(viewModel.uiState.value.canEditScreen)
             assertNull(viewModel.uiState.value.device)
             assertEquals(
                 MockSeniorFixtures.mother,
@@ -69,11 +76,14 @@ class DisplayViewModelRefreshTest {
             )
 
             currentTimeMillis = 10 * 60 * 1_000L + 1L
+            repository.canEditScreen = true
             viewModel.refreshOnScreenTabReentry()
             advanceUntilIdle()
 
             assertEquals(3, repository.overviewRequestCount)
+            assertEquals(3, repository.editPermissionRequestCount)
             assertEquals(2, repository.weatherRequestCount)
+            assertEquals(true, viewModel.uiState.value.canEditScreen)
         } finally {
             Dispatchers.resetMain()
         }
@@ -101,20 +111,66 @@ class DisplayViewModelRefreshTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun `당겨서 새로고침은 화면 개요와 권한과 날씨를 한 번씩 갱신한다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = RecordingDisplayRepository()
+            val viewModel = DisplayViewModel(
+                parentInfoRepository = ParentInfoRepositoryImpl(
+                    MockParentInfoDataSource(MockSeniorFixtures.mother)
+                ),
+                displayRepository = repository,
+            )
+            advanceUntilIdle()
+
+            repository.overview = MockDisplayFixtures
+                .overview(MockDisplayScenario.NotConnected)
+                .copy(parentInfo = MockSeniorFixtures.mother)
+            repository.canEditScreen = false
+            val refreshGate = CompletableDeferred<Unit>()
+            repository.overviewGate = refreshGate
+
+            viewModel.refreshOverview()
+            viewModel.refreshOverview()
+            runCurrent()
+
+            assertTrue(viewModel.uiState.value.isRefreshing)
+            refreshGate.complete(Unit)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.isRefreshing)
+            assertEquals(2, repository.overviewRequestCount)
+            assertEquals(2, repository.editPermissionRequestCount)
+            assertEquals(2, repository.weatherRequestCount)
+            assertFalse(viewModel.uiState.value.canEditScreen)
+            assertNull(viewModel.uiState.value.device)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private class RecordingDisplayRepository : DisplayRepository {
     var overviewRequestCount = 0
+    var editPermissionRequestCount = 0
     var weatherRequestCount = 0
     var deviceRequestCount = 0
+    var canEditScreen = true
+    var overviewGate: CompletableDeferred<Unit>? = null
     var overview: DisplayOverview = MockDisplayFixtures
         .overview(MockDisplayScenario.Connected)
         .copy(parentInfo = MockSeniorFixtures.mother)
 
-    override suspend fun canCurrentUserEditScreen(): Boolean = true
+    override suspend fun canCurrentUserEditScreen(): Boolean {
+        editPermissionRequestCount += 1
+        return canEditScreen
+    }
 
     override suspend fun getOverview(currentParentInfo: ParentInfo?): DisplayOverview {
         overviewRequestCount += 1
+        overviewGate?.await()
         return overview
     }
 

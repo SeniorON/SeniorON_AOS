@@ -12,6 +12,10 @@
         <package android:name="com.nhn.android.search" />
         <package android:name="com.android.vending" />
         <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
             <action android:name="android.intent.action.DIAL" />
         </intent>
         <intent>
@@ -29,7 +33,17 @@
             <action android:name="android.intent.action.CREATE_NOTE" />
         </intent>
         <intent>
+            <action android:name="com.google.android.gms.actions.CREATE_NOTE" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
             <action android:name="android.intent.action.SHOW_ALARMS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SET_ALARM" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SHOW_TIMERS" />
         </intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -41,7 +55,23 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
+            <category android:name="android.intent.category.APP_BROWSER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_GALLERY" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MAPS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MARKET" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="market" />
         </intent>
         <intent>
             <action android:name="android.settings.SETTINGS" />
@@ -73,6 +103,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />

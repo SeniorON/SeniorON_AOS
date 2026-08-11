@@ -23,6 +23,7 @@ data class DisplayTabUiState(
     val canEditScreen: Boolean = false,
     val isEditPermissionLoading: Boolean = true,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isWeatherLoading: Boolean = false,
     val isRefreshingDevice: Boolean = false,
     val isSaving: Boolean = false,
