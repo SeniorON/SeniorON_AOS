@@ -77,7 +77,7 @@ private fun FindIdSuccessContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 34.dp)
+            .padding(top = 26.dp)
     ) {
         Text(
             text = "${name}님의 아이디",
@@ -107,7 +107,7 @@ private fun FindIdSuccessContent(
         ) {
             Text(
                 text = userId,
-                style = SeniorOnTextStyles.HeadingXS,
+                style = SeniorOnTextStyles.HeadingXXS,
                 color = SeniorOnColors.Gray800
             )
         }
@@ -122,11 +122,11 @@ private fun FindIdFailureContent(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
-            .padding(top = 34.dp)
+            .padding(top = 26.dp)
     ) {
         Text(
             text = buildAnnotatedString {
-                withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
+                withStyle(SpanStyle(color = SeniorOnColors.Primary700)) {
                     append("일치하는 아이디")
                 }
                 withStyle(SpanStyle(color = SeniorOnColors.Gray800)) {

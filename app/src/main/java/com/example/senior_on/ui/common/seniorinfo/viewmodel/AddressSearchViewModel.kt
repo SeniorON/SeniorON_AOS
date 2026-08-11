@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.common.seniorinfo.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.data.repository.impl.MissingKakaoRestApiKeyException
@@ -30,7 +31,7 @@ data class AddressSearchUiState(
 
 @OptIn(FlowPreview::class)
 class AddressSearchViewModel(
-    private val repository: AddressSearchRepository = AddressSearchRepository()
+    private val repository: AddressSearchRepository
 ) : ViewModel() {
     private val searchQuery = MutableStateFlow("")
     private val _uiState = MutableStateFlow(AddressSearchUiState())
@@ -146,6 +147,16 @@ class AddressSearchViewModel(
 
     fun consumeCurrentLocationResult() {
         _uiState.update { it.copy(currentLocationResult = null) }
+    }
+
+    class Factory(
+        private val repository: AddressSearchRepository,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            require(modelClass.isAssignableFrom(AddressSearchViewModel::class.java))
+            return AddressSearchViewModel(repository) as T
+        }
     }
 
     private suspend fun search(query: String) {

@@ -70,7 +70,7 @@ fun FindPasswordResetScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 36.dp)
+                    .padding(top = 28.dp)
             ) {
                 Text(
                     text = "새 비밀번호를 입력해 주세요",

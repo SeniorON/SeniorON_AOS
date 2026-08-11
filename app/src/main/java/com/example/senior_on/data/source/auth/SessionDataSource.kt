@@ -3,7 +3,6 @@ package com.example.senior_on.data.source.auth
 import android.content.Context
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.dto.UserRole
-import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import retrofit2.HttpException
 
 data class SavedSession(
@@ -53,7 +52,7 @@ class PersistedSessionStore(context: Context) {
 
 class PersistedSessionDataSource(
     context: Context,
-    private val userSettingsDataSource: UserSettingsDataSource,
+    private val authDataSource: AuthDataSource,
 ) : SessionDataSource {
     private val sessionStore = PersistedSessionStore(context)
 
@@ -63,15 +62,19 @@ class PersistedSessionDataSource(
         val session = sessionStore.getSession() ?: return null
 
         return try {
-            userSettingsDataSource.getAccount()
+            authDataSource.getOnboardingStatus()
             session
         } catch (throwable: Throwable) {
-            val httpException = throwable as? HttpException
-                ?: throwable.cause as? HttpException
+            val httpException = throwable.findHttpException()
             if (httpException?.code() in AUTH_FAILURE_CODES) {
                 clearSession()
+                null
+            } else {
+                // A temporary network/server failure must not turn a persisted login
+                // into a logout. The onboarding route will retry the status request
+                // and present an explicit retry state.
+                session
             }
-            null
         }
     }
 
@@ -88,3 +91,8 @@ class PersistedSessionDataSource(
         val AUTH_FAILURE_CODES = setOf(401, 403)
     }
 }
+
+private fun Throwable.findHttpException(): HttpException? =
+    generateSequence(this) { throwable -> throwable.cause }
+        .filterIsInstance<HttpException>()
+        .firstOrNull()

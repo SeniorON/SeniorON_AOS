@@ -10,12 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
@@ -32,7 +29,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,9 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,9 +45,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.layout.onSizeChanged
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.LoginResult
@@ -64,7 +55,6 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
-import kotlin.math.roundToInt
 
 private enum class LoginFieldError {
     None,
@@ -82,7 +72,7 @@ fun LoginScreen(
         keepLoggedIn: Boolean,
         onResult: (LoginResult?) -> Unit
     ) -> Unit,
-    onLoginClick: (userId: String) -> Unit = {},
+    onLoginClick: (userId: String, keepLoggedIn: Boolean) -> Unit = { _, _ -> },
     onGoToModeSelection: () -> Unit = {},
     onFindIdClick: () -> Unit = {},
     onFindPasswordClick: () -> Unit = {},
@@ -106,21 +96,6 @@ fun LoginScreen(
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
     var isLoggingIn by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    val density = LocalDensity.current
-    val imeBottomPx = WindowInsets.ime.getBottom(density)
-    var rootHeightPx by remember { mutableIntStateOf(0) }
-    var loginButtonTopPx by remember { mutableStateOf<Float?>(null) }
-    val loginButtonHeightPx = with(density) { 50.dp.toPx() }
-    val keyboardTopPx = rootHeightPx - imeBottomPx
-    val loginButtonMovementPx = loginButtonTopPx?.let { buttonTop ->
-        (buttonTop + loginButtonHeightPx - keyboardTopPx).coerceAtLeast(0f)
-    } ?: 0f
-    val loginButtonTransitionDistancePx = with(density) { 16.dp.toPx() }
-    val loginButtonTransitionProgress =
-        (loginButtonMovementPx / loginButtonTransitionDistancePx).coerceIn(0f, 1f)
-    val loginButtonHorizontalPadding = 16.dp * (1f - loginButtonTransitionProgress)
-    val loginButtonCornerRadius = SeniorOnRadius.Small * (1f - loginButtonTransitionProgress)
-
     val userIdError = loginError == LoginFieldError.InvalidCredentials
     val passwordError = loginError != LoginFieldError.None
     val passwordErrorMessage = when (loginError) {
@@ -149,7 +124,7 @@ fun LoginScreen(
                         AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
                     }
                 } else {
-                    onLoginClick(loginResult.loginId)
+                    onLoginClick(loginResult.loginId, keepLoggedIn)
                 }
             }
         }
@@ -165,7 +140,7 @@ fun LoginScreen(
                     AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
                 }
             }
-            result.usersId != null -> onLoginClick(result.usersId.toString())
+            result.usersId != null -> onLoginClick(result.usersId.toString(), keepLoggedIn)
             else -> loginError = LoginFieldError.InvalidCredentials
         }
     }
@@ -173,7 +148,6 @@ fun LoginScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .onSizeChanged { rootHeightPx = it.height }
             .background(SeniorOnColors.White)
             .clearFocusOnBackgroundTap(focusManager)
     ) {
@@ -185,7 +159,7 @@ fun LoginScreen(
         ) {
         LoginTopBar(onBackClick = onGoToModeSelection)
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
         Image(
             painter = painterResource(id = R.drawable.ic_splash_on),
@@ -257,14 +231,27 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(18.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
 
-        Spacer(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
-                .onGloballyPositioned { coordinates ->
-                    loginButtonTopPx = coordinates.positionInRoot().y
-                },
-        )
+                .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                .background(
+                    if (isLoggingIn) {
+                        SeniorOnColors.Primary600.copy(alpha = 0.5f)
+                    } else {
+                        SeniorOnColors.Primary600
+                    }
+                )
+                .clickable(enabled = !isLoggingIn, onClick = performLogin),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "로그인",
+                style = SeniorOnTextStyles.ButtonM,
+                color = SeniorOnColors.SupportWhite100,
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp)) // 로그인 버튼 - 아이디 찾기 row 간격
 
@@ -317,32 +304,6 @@ fun LoginScreen(
         }
         }
 
-        loginButtonTopPx?.let { buttonTopPx ->
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset {
-                        IntOffset(
-                            x = 0,
-                            y = (buttonTopPx - loginButtonMovementPx).roundToInt(),
-                        )
-                    }
-                    .fillMaxWidth()
-                    .padding(horizontal = loginButtonHorizontalPadding)
-                    .height(50.dp)
-                    .clip(RoundedCornerShape(loginButtonCornerRadius))
-                    .background(SeniorOnColors.Primary600)
-                    .clickable(enabled = !isLoggingIn, onClick = performLogin),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "로그인",
-                    style = SeniorOnTextStyles.ButtonM,
-                    color = SeniorOnColors.White,
-                )
-            }
-        }
-
         wrongModeDialogType?.let { dialogType ->
             LoginWrongModeDialogOverlay(
                 type = dialogType,
@@ -368,14 +329,14 @@ private fun LoginTopBar(
     ) {
         Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(26.dp)
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_arrow_back),
                 contentDescription = "뒤로가기",
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(24.dp),
                 tint = SeniorOnColors.Gray800
             )
         }
@@ -392,34 +353,22 @@ private fun LoginStayLoggedInRow(
         modifier = modifier.clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (checked) {
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(SeniorOnColors.Primary600)
-                    .border(
-                        width = 1.dp,
-                        color = SeniorOnColors.Primary600,
-                        shape = RoundedCornerShape(4.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_check),
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = SeniorOnColors.White
-                )
+        Icon(
+            painter = painterResource(
+                id = if (checked) {
+                    R.drawable.ic_check_filled
+                } else {
+                    R.drawable.ic_check_unfilled
+                }
+            ),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = if (checked) {
+                SeniorOnColors.Primary600
+            } else {
+                SeniorOnColors.Gray200
             }
-        } else {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_check_unfilled),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = Color.Unspecified
-            )
-        }
+        )
 
         Text(
             text = "로그인 상태 유지",
