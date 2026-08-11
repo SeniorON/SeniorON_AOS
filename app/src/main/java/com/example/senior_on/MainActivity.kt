@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.Density
 import com.example.senior_on.ui.app.SeniorOnApp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.notification.MedicationReminderEventStore
+import com.example.senior_on.notification.MedicationCheckedEventStore
 import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.ui.parent.launcher.ParentLauncherActivity
 
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         publishMedicationReminder(intent)
+        publishMedicationChecked(intent)
         publishNotificationNavigation(intent)
         enableEdgeToEdge()
         setContent {
@@ -51,6 +53,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         publishMedicationReminder(intent)
+        publishMedicationChecked(intent)
         publishNotificationNavigation(intent)
     }
 
@@ -70,6 +73,26 @@ class MainActivity : ComponentActivity() {
                     intent.getStringExtra(MedicationReminderEventStore.MedicineNameKey).orEmpty(),
                 MedicationReminderEventStore.PlannedTimeKey to
                     intent.getStringExtra(MedicationReminderEventStore.PlannedTimeKey).orEmpty(),
+            )
+        )
+    }
+
+    private fun publishMedicationChecked(intent: Intent?) {
+        if (
+            intent?.getStringExtra(MedicationCheckedEventStore.NotificationTypeKey) !=
+            MedicationCheckedEventStore.MedicationCheckedType
+        ) return
+
+        MedicationCheckedEventStore.publish(
+            mapOf(
+                MedicationCheckedEventStore.NotificationTypeKey to
+                    MedicationCheckedEventStore.MedicationCheckedType,
+                MedicationCheckedEventStore.ParentUserIdKey to
+                    intent.getStringExtra(MedicationCheckedEventStore.ParentUserIdKey).orEmpty(),
+                MedicationCheckedEventStore.MedicationLogIdKey to
+                    intent.getStringExtra(MedicationCheckedEventStore.MedicationLogIdKey).orEmpty(),
+                MedicationCheckedEventStore.MedicineNameKey to
+                    intent.getStringExtra(MedicationCheckedEventStore.MedicineNameKey).orEmpty(),
             )
         )
     }

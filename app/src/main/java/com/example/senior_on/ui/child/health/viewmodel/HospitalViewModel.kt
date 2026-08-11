@@ -33,6 +33,7 @@ data class HospitalUiState(
     val editingAppointment: HospitalAppointmentUiState? = null,
     val editorDate: LocalDate = LocalDate.now(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -45,7 +46,9 @@ class HospitalViewModel(
     val uiState: StateFlow<HospitalUiState> = _uiState.asStateFlow()
 
     private var parentUserId: Long? = null
+    private var fullLoadJob: Job? = null
     private var monthLoadJob: Job? = null
+    private var hasEnteredScreen = false
 
     init {
         loadHospitalData()
@@ -166,9 +169,30 @@ class HospitalViewModel(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    private fun loadHospitalData() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+    fun loadLatestHospitalData() {
+        if (!hasEnteredScreen) {
+            hasEnteredScreen = true
+            return
+        }
+        if (fullLoadJob?.isActive == true || monthLoadJob?.isActive == true) return
+        loadHospitalData(isPullRefresh = true)
+    }
+
+    fun refreshHospitalData() {
+        if (fullLoadJob?.isActive == true || monthLoadJob?.isActive == true) return
+        loadHospitalData(isPullRefresh = true)
+    }
+
+    private fun loadHospitalData(isPullRefresh: Boolean = false) {
+        fullLoadJob?.cancel()
+        fullLoadJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = !isPullRefresh,
+                    isRefreshing = isPullRefresh,
+                    errorMessage = null,
+                )
+            }
             runCatching {
                 val parentId = resolveParentUserId()
                 refreshAll(parentId, _uiState.value.displayedMonth)
@@ -177,6 +201,7 @@ class HospitalViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             errorMessage = "병원 일정을 불러오지 못했습니다.",
                         )
                     }
@@ -237,6 +262,7 @@ class HospitalViewModel(
                 editorMode = if (closeEditor) null else state.editorMode,
                 editingAppointment = if (closeEditor) null else state.editingAppointment,
                 isLoading = false,
+                isRefreshing = false,
                 isSaving = false,
                 errorMessage = null,
             )

@@ -48,6 +48,11 @@ fun HealthMainRoute(
         }
     }
 
+    LaunchedEffect(medicationViewModel, hospitalViewModel) {
+        medicationViewModel.loadLatestMedicationData()
+        hospitalViewModel.loadLatestHospitalData()
+    }
+
     HealthMainScreen(
         medicationUiState = medicationUiState,
         hospitalUiState = hospitalUiState,
@@ -59,6 +64,7 @@ fun HealthMainRoute(
         onMedicationSaveClick = medicationViewModel::saveMedication,
         onMedicationDeleteClick = medicationViewModel::deleteMedication,
         onConsumeMedicationError = medicationViewModel::consumeError,
+        onMedicationRefresh = medicationViewModel::refreshMedicationData,
         onHospitalMonthSelected = hospitalViewModel::selectMonth,
         onHospitalDateSelected = hospitalViewModel::selectDate,
         onAddHospitalClick = hospitalViewModel::openAdd,
@@ -68,6 +74,7 @@ fun HealthMainRoute(
         onHospitalDeleteClick = hospitalViewModel::deleteAppointment,
         onHospitalEditorBackClick = hospitalViewModel::closeEditor,
         onConsumeHospitalError = hospitalViewModel::consumeError,
+        onHospitalRefresh = hospitalViewModel::refreshHospitalData,
         modifier = modifier,
     )
 }

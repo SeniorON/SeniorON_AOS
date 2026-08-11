@@ -7,8 +7,13 @@ data class NotificationNavigationEvent(
     val type: String?,
     val notificationId: Long?,
     val eventId: Long?,
+    val medicationLogId: Long?,
     val title: String?,
 )
+
+val NotificationNavigationEvent.isMedicationNotification: Boolean
+    get() = type == MedicationReminderEventStore.MedicationReminderType ||
+        type == MedicationCheckedEventStore.MedicationCheckedType
 
 object NotificationNavigationEventStore {
     private val _pendingEvent = MutableStateFlow<NotificationNavigationEvent?>(null)
@@ -25,9 +30,13 @@ object NotificationNavigationEventStore {
         val eventId = data
             .valueOf(EventIdKey, EventIdSnakeKey)
             ?.toLongOrNull()
+        val medicationLogId = data
+            .valueOf(MedicationLogIdKey, MedicationLogIdSnakeKey)
+            ?.toLongOrNull()
 
         val isEventNotification = type in EventNotificationTypes ||
-            notificationId != null || eventId != null
+            type in MedicationNotificationTypes ||
+            notificationId != null || eventId != null || medicationLogId != null
         if (!openNotificationTab && !isEventNotification) {
             return
         }
@@ -36,6 +45,7 @@ object NotificationNavigationEventStore {
             type = type,
             notificationId = notificationId,
             eventId = eventId,
+            medicationLogId = medicationLogId,
             title = data.valueOf(TitleKey),
         )
     }
@@ -56,6 +66,8 @@ object NotificationNavigationEventStore {
     const val NotificationIdSnakeKey = "notification_id"
     const val EventIdKey = "eventId"
     const val EventIdSnakeKey = "event_id"
+    const val MedicationLogIdKey = "medicationLogId"
+    const val MedicationLogIdSnakeKey = "medication_log_id"
     const val TitleKey = "title"
 
     private val EventNotificationTypes = setOf(
@@ -63,5 +75,10 @@ object NotificationNavigationEventStore {
         "INACTIVITY",
         "RISK_LINK",
         "OUTING_RETURN",
+    )
+
+    private val MedicationNotificationTypes = setOf(
+        MedicationReminderEventStore.MedicationReminderType,
+        MedicationCheckedEventStore.MedicationCheckedType,
     )
 }

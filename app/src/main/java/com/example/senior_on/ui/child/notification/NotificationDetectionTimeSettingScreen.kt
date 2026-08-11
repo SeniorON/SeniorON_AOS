@@ -29,7 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -55,6 +55,7 @@ import com.example.senior_on.ui.theme.SeniorOnFontFamily
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import kotlin.math.roundToInt
 
 @Composable
 fun NotificationDetectionTimeSettingScreen(
@@ -66,14 +67,13 @@ fun NotificationDetectionTimeSettingScreen(
     BackHandler(onBack = onBackClick)
 
     var selectedHours by rememberSaveable(initialHours) {
-        mutableFloatStateOf(initialHours.toFloat())
+        mutableIntStateOf(initialHours.coerceIn(MinDetectionHours, MaxDetectionHours))
     }
-    val hours = selectedHours.toInt()
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background2)
+            .background(SeniorOnColors.SupportWhite100)
             .statusBarsPadding()
     ) {
         DetectionTimeTopBar(onBackClick = onBackClick)
@@ -82,6 +82,7 @@ fun NotificationDetectionTimeSettingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .background(SeniorOnColors.Background2)
                 .padding(horizontal = 16.dp)
         ) {
             DetectionTimeBadge(
@@ -90,7 +91,7 @@ fun NotificationDetectionTimeSettingScreen(
 
             Spacer(modifier = Modifier.height(118.dp))
 
-            DetectionTimeValue(hours = hours)
+            DetectionTimeValue(hours = selectedHours)
 
             Spacer(modifier = Modifier.height(30.dp))
 
@@ -108,7 +109,7 @@ fun NotificationDetectionTimeSettingScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             DetectionTimeSaveButton(
-                onClick = { onSaveClick(hours) }
+                onClick = { onSaveClick(selectedHours) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -235,8 +236,8 @@ private fun DetectionTimeDescriptionChip(
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun DetectionTimeSliderCard(
-    selectedHours: Float,
-    onHoursChange: (Float) -> Unit,
+    selectedHours: Int,
+    onHoursChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Medium)
@@ -261,16 +262,20 @@ private fun DetectionTimeSliderCard(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 18.dp)
         ) {
             Slider(
-                value = selectedHours,
-                onValueChange = { value -> onHoursChange(value.coerceIn(1f, 24f)) },
+                value = selectedHours.toFloat(),
+                onValueChange = { value ->
+                    onHoursChange(
+                        value.roundToInt().coerceIn(MinDetectionHours, MaxDetectionHours)
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(30.dp),
-                valueRange = 1f..24f,
-                steps = 22,
+                valueRange = MinDetectionHours.toFloat()..MaxDetectionHours.toFloat(),
+                steps = MaxDetectionHours - MinDetectionHours - 1,
                 thumb = {
                     Box(
-                        modifier = Modifier.size(width = 0.dp, height = 29.dp),
+                        modifier = Modifier.size(29.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
@@ -289,7 +294,10 @@ private fun DetectionTimeSliderCard(
                     }
                 },
                 track = {
-                    val progress = ((selectedHours - 1f) / 23f).coerceIn(0f, 1f)
+                    val progress = (
+                        (selectedHours - MinDetectionHours).toFloat() /
+                            (MaxDetectionHours - MinDetectionHours).toFloat()
+                        ).coerceIn(0f, 1f)
 
                     Canvas(
                         modifier = Modifier
@@ -364,6 +372,9 @@ private fun DetectionTimeSaveButton(
         )
     }
 }
+
+private const val MinDetectionHours = 1
+private const val MaxDetectionHours = 24
 
 @Preview(
     name = "Detection Time Setting",

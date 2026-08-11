@@ -17,6 +17,8 @@ internal fun NotificationHomeRoute(
     ) -> Unit,
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit,
     onDetectionTimeClick: () -> Unit,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NotificationScreen(
@@ -26,5 +28,7 @@ internal fun NotificationHomeRoute(
         onNotificationClick = onNotificationClick,
         onNotificationToggle = onNotificationToggle,
         onDetectionTimeClick = onDetectionTimeClick,
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
     )
 }

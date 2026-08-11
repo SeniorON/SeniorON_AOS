@@ -8,6 +8,8 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
+private val SeniorOnZoneId: ZoneId = ZoneId.of("Asia/Seoul")
+
 internal fun emptyNotificationScreenUiState(): NotificationScreenUiState =
     NotificationScreenUiState(
         sections = NotificationCategory.entries.map { category ->
@@ -99,7 +101,7 @@ private fun NotificationHomeItem.toMessageUiState(
     return NotificationMessageUiState(
         time = dateTimeLabel ?: occurredAt.orEmpty(),
         title = messageTitle,
-        detail = if (category == NotificationCategory.Inactivity) summary else null,
+        detail = null,
         severity = category.severity,
         tintBackground = category != NotificationCategory.Outing,
         occurredAtMillis = occurredAt.toEpochMillisOrNull(),
@@ -124,7 +126,8 @@ internal fun SafetyEvent.toUiState(
         time = occurredAt ?: fallback.time,
         title = resolvedTitle,
         detail = when (category) {
-            NotificationCategory.Inactivity -> message ?: lastSeenAt ?: fallback.detail
+            NotificationCategory.Inactivity -> inactivityDurationLabel()
+                ?: fallback.detail
             else -> fallback.detail
         },
         severity = if (
@@ -148,6 +151,23 @@ internal fun SafetyEvent.toUiState(
         lastSeenAt = lastSeenAt,
     )
 }
+
+private fun SafetyEvent.inactivityDurationLabel(): String? {
+    val hoursFromMessage = message
+        ?.let { inactivityHoursPattern.find(it) }
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toLongOrNull()
+    if (hoursFromMessage != null) return "${hoursFromMessage}시간"
+
+    val occurredAtMillis = occurredAt.toEpochMillisOrNull() ?: return null
+    val lastSeenAtMillis = lastSeenAt.toEpochMillisOrNull() ?: return null
+    val elapsedHours = ((occurredAtMillis - lastSeenAtMillis).coerceAtLeast(0L) / HOUR_MILLIS)
+    return "${elapsedHours}시간"
+}
+
+private val inactivityHoursPattern = Regex("(\\d+)\\s*시간")
+private const val HOUR_MILLIS = 60L * 60L * 1000L
 
 private val NotificationCategory.severity: NotificationSeverity
     get() = if (this == NotificationCategory.Outing) {
@@ -181,7 +201,7 @@ internal fun String?.toEpochMillisOrNull(): Long? =
         runCatching { Instant.parse(value).toEpochMilli() }
             .recoverCatching {
                 LocalDateTime.parse(value)
-                    .atZone(ZoneId.systemDefault())
+                    .atZone(SeniorOnZoneId)
                     .toInstant()
                     .toEpochMilli()
             }

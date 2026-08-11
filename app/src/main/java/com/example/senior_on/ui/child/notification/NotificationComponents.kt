@@ -50,7 +50,7 @@ import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
-private const val RECENT_ALARM_WINDOW_MILLIS = 48L * 60L * 60L * 1000L
+private const val RECENT_ALARM_WINDOW_MILLIS = 24L * 60L * 60L * 1000L
 
 enum class NotificationSeverity {
     Empty,
@@ -75,11 +75,11 @@ enum class NotificationCategory(
 ) {
     Sos(
         displayTitle = "긴급 알림",
-        displayDescription = "부모님의 긴급 도움 요청을 알려드려요."
+        displayDescription = "시니어의 긴급 도움 요청을 알려드려요."
     ),
     Inactivity(
         displayTitle = "무활동 감지",
-        displayDescription = "부모님의 활동 상태를 확인할 수 있어요."
+        displayDescription = "시니어의 활동 상태를 확인할 수 있어요."
     ),
     RiskLink(
         displayTitle = "위험 링크 감지",
@@ -87,7 +87,7 @@ enum class NotificationCategory(
     ),
     Outing(
         displayTitle = "외출·귀가 알림",
-        displayDescription = "부모님의 외출 및 귀가를 확인할 수 있어요."
+        displayDescription = "시니어의 외출 및 귀가를 확인할 수 있어요."
     )
 }
 
@@ -402,7 +402,7 @@ internal fun NotificationSectionCard(
 private fun NotificationMessageUiState.isRecentAlarm(
     nowMillis: Long = System.currentTimeMillis()
 ): Boolean {
-    val occurredAt = occurredAtMillis ?: return true
+    val occurredAt = occurredAtMillis ?: return false
     val ageMillis = nowMillis - occurredAt
     return ageMillis in 0..RECENT_ALARM_WINDOW_MILLIS
 }
@@ -629,13 +629,17 @@ private fun NotificationMessageRow(
                 color = titleColor,
                 textDecoration = titleTextDecoration
             )
-            message.detail?.let { detail ->
-                Text(
-                    text = detail,
-                    style = SeniorOnTextStyles.BodySMedium,
-                    color = detailColor
-                )
-            }
+            message.detail
+                ?.takeIf { detail ->
+                    detail.isNotBlank() && detail != message.title
+                }
+                ?.let { detail ->
+                    Text(
+                        text = detail,
+                        style = SeniorOnTextStyles.BodySMedium,
+                        color = detailColor
+                    )
+                }
         }
 
         Icon(
@@ -831,8 +835,9 @@ private fun NotificationTopBarDangerPreview() {
 @Preview(
     name = "Section Cards - Summary",
     showBackground = true,
-    backgroundColor = 0xFFF8F8F5,
-    widthDp = 360
+    backgroundColor = 0xFFFFFFFF,
+    widthDp = 360,
+    heightDp = 520,
 )
 @Composable
 private fun NotificationSectionCardPreview() {
@@ -840,15 +845,23 @@ private fun NotificationSectionCardPreview() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .background(SeniorOnColors.SupportWhite100),
         ) {
             NotificationSectionCard(
                 section = NotificationSectionUiState(
                     category = NotificationCategory.Sos,
                     enabled = false
                 ),
-                showDetailArrow = false
+                showDetailArrow = false,
+                showToggle = false,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .background(SeniorOnColors.Gray100)
             )
 
             NotificationSectionCard(
@@ -857,8 +870,11 @@ private fun NotificationSectionCardPreview() {
                     enabled = true,
                     detectionStandardTime = "4시간"
                 ),
-                showDetailArrow = true
+                showDetailArrow = true,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             NotificationSectionCard(
                 section = NotificationSectionUiState(
@@ -873,7 +889,19 @@ private fun NotificationSectionCardPreview() {
                         )
                     )
                 ),
-                showDetailArrow = true
+                showDetailArrow = true,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            NotificationSectionCard(
+                section = NotificationSectionUiState(
+                    category = NotificationCategory.Outing,
+                    enabled = true,
+                ),
+                showDetailArrow = true,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
     }
@@ -893,7 +921,8 @@ private fun NotificationSectionCardDisabledPreview() {
                 category = NotificationCategory.Sos,
                 enabled = false
             ),
-            showDetailArrow = false
+            showDetailArrow = false,
+            showToggle = false,
         )
     }
 }
@@ -933,7 +962,7 @@ private fun NotificationSectionCardEnabledEmptyPreview() {
                 enabled = true,
                 detectionStandardTime = "4시간"
             ),
-            showDetailArrow = true
+            showDetailArrow = true,
         )
     }
 }
@@ -960,7 +989,8 @@ private fun NotificationSectionCardSosDangerPreview() {
                     )
                 )
             ),
-            showDetailArrow = true
+            showDetailArrow = true,
+            showToggle = false,
         )
     }
 }
