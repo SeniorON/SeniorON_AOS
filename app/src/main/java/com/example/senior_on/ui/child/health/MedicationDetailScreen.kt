@@ -76,6 +76,16 @@ private val LocalDateNullableSaver = Saver<LocalDate?, String>(
     restore = { saved -> saved.takeIf(String::isNotBlank)?.let(LocalDate::parse) },
 )
 
+private val LocalTimeListSaver = Saver<List<LocalTime>, List<String>>(
+    save = { times -> times.map(LocalTime::toString) },
+    restore = { saved -> saved.map(LocalTime::parse) },
+)
+
+private val WeekdaySetSaver = Saver<Set<Int>, List<Int>>(
+    save = { weekdays -> weekdays.sorted() },
+    restore = { saved -> saved.toSet() },
+)
+
 private val MedicationRepeatSelectionSaver = Saver<MedicationRepeatSelection, List<Any>>(
     save = { selection ->
         listOf(
@@ -114,8 +124,10 @@ fun MedicationDetailScreen(
     val focusManager = LocalFocusManager.current
     var category by rememberSaveable(initialDraft) { mutableStateOf(initialDraft.category) }
     var name by rememberSaveable(initialDraft) { mutableStateOf(initialDraft.name) }
-    var times by remember(initialDraft) { mutableStateOf(initialDraft.times) }
-    var weekdays by remember(initialDraft) {
+    var times by rememberSaveable(initialDraft, stateSaver = LocalTimeListSaver) {
+        mutableStateOf(initialDraft.times)
+    }
+    var weekdays by rememberSaveable(initialDraft, stateSaver = WeekdaySetSaver) {
         mutableStateOf(
             initialDraft.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
         )
@@ -146,9 +158,12 @@ fun MedicationDetailScreen(
     var snackbarMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     val isEditable = mode != MedicationEditorMode.View
-    val isComplete = category.isNotBlank() && times.isNotEmpty() && weekdays.isNotEmpty()
+    val isComplete = category.isNotBlank() &&
+        times.isNotEmpty() &&
+        startDate != null &&
+        weekdays.isNotEmpty()
     val hasInput =
-        category.isNotBlank() || name.isNotBlank() || times.isNotEmpty() || weekdays.isNotEmpty()
+        category.isNotBlank() || name.isNotBlank() || times.isNotEmpty() || startDate != null
     val hasChanges =
         category != initialDraft.category ||
             name != initialDraft.name ||
@@ -262,6 +277,11 @@ fun MedicationDetailScreen(
                             modifier = Modifier.weight(1f)
                         )
                         if (isEditable) {
+                            val addTimeColor = if (times.isEmpty()) {
+                                SeniorOnColors.Gray300
+                            } else {
+                                SeniorOnColors.Primary600
+                            }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.clickable {
@@ -272,14 +292,14 @@ fun MedicationDetailScreen(
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_sm_plus),
                                     contentDescription = null,
-                                    tint = SeniorOnColors.Gray300,
+                                    tint = addTimeColor,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
                                     text = "복용 시간 추가",
                                     style = SeniorOnTextStyles.BodySMedium,
-                                    color = SeniorOnColors.Gray300
+                                    color = addTimeColor
                                 )
                             }
                         }
@@ -629,28 +649,31 @@ private fun MedicationEditableTimeChip(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(43.dp)
+            .height(44.dp)
             .clip(shape)
             .background(SeniorOnColors.Background2)
-            .border(width = 1.dp, color = SeniorOnColors.Gray200, shape = shape)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(start = 12.dp, end = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
-            style = SeniorOnTextStyles.BodyMSemiBold,
+            style = SeniorOnTextStyles.BodyMMedium,
             color = SeniorOnColors.Primary700,
             modifier = Modifier.weight(1f)
         )
-        Icon(
-            painter = painterResource(id = R.drawable.ic_trash),
-            contentDescription = "복용 시간 삭제",
-            tint = SeniorOnColors.Gray400,
+        Box(
             modifier = Modifier
-                .size(24.dp)
-                .clickable(onClick = onDeleteClick)
-        )
+                .size(40.dp)
+                .clickable(onClick = onDeleteClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_trash),
+                contentDescription = "복용 시간 삭제",
+                tint = SeniorOnColors.Gray400,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 

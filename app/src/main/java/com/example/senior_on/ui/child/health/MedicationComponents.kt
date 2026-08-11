@@ -48,6 +48,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 enum class MedicationDoseStatus(val label: String) {
@@ -78,13 +79,12 @@ data class RegisteredMedicationUiState(
         get() = weekdays.size == MedicationWeekdayLabels.size
 
     fun isScheduledOn(date: LocalDate): Boolean {
-        if (weekdays.isEmpty()) return false
         if (startDate != null && date.isBefore(startDate)) return false
         val effectiveEndDate = when (repeat.duration) {
             MedicationRepeatDuration.Continuous -> null
             MedicationRepeatDuration.Period -> {
                 val weeks = repeat.periodValue.coerceAtLeast(1).toLong()
-                (startDate ?: date).plusWeeks(weeks)
+                (startDate ?: date).plusWeeks(weeks).minusDays(1)
             }
             MedicationRepeatDuration.Date -> repeat.endDate
         }
@@ -97,12 +97,15 @@ data class RegisteredMedicationUiState(
         return when (repeat.frequency) {
             MedicationRepeatFrequency.Daily -> {
                 val days = ChronoUnit.DAYS.between(anchor, date)
-                days % cycle == 0L && weekdayIndex in weekdays
+                days >= 0L && days % cycle == 0L
             }
             MedicationRepeatFrequency.Weekly -> {
+                if (weekdays.isEmpty()) return false
                 if (weekdayIndex !in weekdays) return false
-                val weeks = ChronoUnit.DAYS.between(anchor, date) / 7
-                weeks % cycle == 0L
+                val anchorWeek = anchor.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                val targetWeek = date.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                val weeks = ChronoUnit.WEEKS.between(anchorWeek, targetWeek)
+                weeks >= 0L && weeks % cycle == 0L
             }
         }
     }
@@ -119,27 +122,29 @@ internal fun Set<Int>.toMedicationScheduleLabel(): String {
 internal fun buildTodayMedicationsFromRegistered(
     date: LocalDate,
     registered: List<RegisteredMedicationUiState>,
-    remoteSchedules: List<TodayMedicationUiState> = emptyList(),
+    remoteSchedules: List<TodayMedicationUiState>? = null,
 ): List<TodayMedicationUiState> {
+    if (remoteSchedules != null) {
+        return remoteSchedules
+            .asSequence()
+            .filter { schedule -> schedule.date == date }
+            .sortedWith(compareBy({ it.time }, { it.category }, { it.name }))
+            .toList()
+    }
+
     return registered
         .asSequence()
         .filter { medication -> medication.isScheduledOn(date) }
         .flatMap { medication ->
             val doseTimes = medication.times.ifEmpty { listOf(medication.time) }
             doseTimes.asSequence().map { doseTime ->
-                val remote = remoteSchedules.find { schedule ->
-                    schedule.date == date &&
-                        schedule.category == medication.category &&
-                        schedule.name == medication.name &&
-                        schedule.time == doseTime
-                }
                 TodayMedicationUiState(
                     date = date,
                     category = medication.category,
                     name = medication.name.ifBlank { medication.category },
                     time = doseTime,
-                    status = remote?.status ?: defaultDoseStatus(date, doseTime),
-                    medicationLogId = remote?.medicationLogId ?: 0L,
+                    status = defaultDoseStatus(date, doseTime),
+                    medicationLogId = 0L,
                 )
             }
         }

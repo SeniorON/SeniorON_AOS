@@ -13,6 +13,7 @@ import com.example.senior_on.ui.child.health.MedicationEditorMode
 import com.example.senior_on.ui.child.health.MedicationRepeatDuration
 import com.example.senior_on.ui.child.health.MedicationRepeatFrequency
 import com.example.senior_on.ui.child.health.MedicationRepeatSelection
+import com.example.senior_on.ui.child.health.MedicationWeekdayLabels
 import com.example.senior_on.ui.child.health.RegisteredMedicationUiState
 import com.example.senior_on.ui.child.health.TodayMedicationUiState
 import com.example.senior_on.ui.child.health.buildTodayMedicationsFromRegistered
@@ -22,6 +23,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +51,7 @@ class MedicationViewModel(
     val uiState: StateFlow<MedicationUiState> = _uiState.asStateFlow()
 
     private var parentUserId: Long? = null
+    private var fullLoadJob: Job? = null
     private var scheduleLoadJob: Job? = null
 
     init {
@@ -58,6 +61,7 @@ class MedicationViewModel(
     fun selectDate(date: LocalDate) {
         val currentDate = _uiState.value.selectedDate
         if (date == currentDate) return
+        fullLoadJob?.cancel()
         val monthChanged = YearMonth.from(date) != YearMonth.from(currentDate)
         _uiState.update { state ->
             state.copy(
@@ -202,21 +206,30 @@ class MedicationViewModel(
     }
 
     private fun loadMedicationData() {
-        viewModelScope.launch {
+        scheduleLoadJob?.cancel()
+        fullLoadJob?.cancel()
+        val requestedDate = _uiState.value.selectedDate
+        fullLoadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
                 val parentId = resolveParentUserId()
-                loadRemoteData(parentId, _uiState.value.selectedDate)
+                loadRemoteData(parentId, requestedDate)
             }.onSuccess(::applyRemoteData)
                 .onFailure { throwable ->
+                    if (throwable is CancellationException) return@onFailure
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = throwable.message)
+                        if (it.selectedDate == requestedDate) {
+                            it.copy(isLoading = false, errorMessage = throwable.message)
+                        } else {
+                            it
+                        }
                     }
                 }
         }
     }
 
     private fun loadSchedules(date: LocalDate, refreshMonthly: Boolean) {
+        fullLoadJob?.cancel()
         scheduleLoadJob?.cancel()
         scheduleLoadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -258,8 +271,13 @@ class MedicationViewModel(
                     }
                 }
             }.onFailure { throwable ->
+                if (throwable is CancellationException) return@onFailure
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = throwable.message)
+                    if (it.selectedDate == date) {
+                        it.copy(isLoading = false, errorMessage = throwable.message)
+                    } else {
+                        it
+                    }
                 }
             }
         }
@@ -279,7 +297,12 @@ class MedicationViewModel(
             year = month.year,
             month = month.monthValue,
         ).scheduledDates
-        return RemoteMedicationData(medications, schedules, markedDates)
+        return RemoteMedicationData(
+            requestedDate = date,
+            medications = medications,
+            schedules = schedules,
+            markedDates = markedDates,
+        )
     }
 
     private fun applyRemoteData(
@@ -287,6 +310,9 @@ class MedicationViewModel(
         closeEditor: Boolean = false,
     ) {
         _uiState.update { state ->
+            if (state.selectedDate != result.requestedDate) {
+                return@update state.copy(isLoading = false, isSaving = false)
+            }
             val selectedDate = state.selectedDate
             state.copy(
                 registeredMedications = result.medications,
@@ -388,20 +414,25 @@ class MedicationViewModel(
 }
 
 private data class RemoteMedicationData(
+    val requestedDate: LocalDate,
     val medications: List<RegisteredMedicationUiState>,
     val schedules: List<TodayMedicationUiState>,
     val markedDates: Set<LocalDate>,
 )
 
 private fun MedicationInfo.toUiState(): RegisteredMedicationUiState {
-    val weekdays = days.toWeekdayIndexSet()
+    val frequency = when (repeatType.trim().uppercase()) {
+        "WEEKLY" -> MedicationRepeatFrequency.Weekly
+        else -> MedicationRepeatFrequency.Daily
+    }
+    val weekdays = when (frequency) {
+        MedicationRepeatFrequency.Daily -> MedicationWeekdayLabels.indices.toSet()
+        MedicationRepeatFrequency.Weekly -> days.toWeekdayIndexSet()
+    }
     val parsedStartDate = startDate.toLocalDateOrNull()
     val parsedEndDate = endDate.toLocalDateOrNull()
     val repeat = MedicationRepeatSelection(
-        frequency = when (repeatType.trim().uppercase()) {
-            "WEEKLY" -> MedicationRepeatFrequency.Weekly
-            else -> MedicationRepeatFrequency.Daily
-        },
+        frequency = frequency,
         cycleValue = repeatInterval.coerceAtLeast(1),
         weekdays = weekdays,
         duration = when (repeatEndType.trim().uppercase()) {
@@ -508,7 +539,9 @@ private fun MedicationDraft.toDomain(
     val resolvedEndDate = when (repeat.duration) {
         MedicationRepeatDuration.Date -> repeat.endDate
         MedicationRepeatDuration.Period ->
-            resolvedStartDate.plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+            resolvedStartDate
+                .plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+                .minusDays(1)
         MedicationRepeatDuration.Continuous -> null
     }
     return MedicationInfo(
