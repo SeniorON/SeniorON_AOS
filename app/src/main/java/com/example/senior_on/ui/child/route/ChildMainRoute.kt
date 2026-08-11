@@ -17,7 +17,6 @@ fun ChildMainRoute(
 ) {
     ChildMainScreen(
         authenticatedUserId = userId,
-        userProfile = appContainer.userProfileFor(userId),
         sessionInstance = sessionInstance,
         familyServerRepository = appContainer.familyServerRepository,
         familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,

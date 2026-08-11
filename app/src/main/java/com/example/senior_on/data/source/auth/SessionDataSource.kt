@@ -63,10 +63,12 @@ class PersistedSessionDataSource(
         val session = sessionStore.getSession() ?: return null
 
         return try {
-            userSettingsDataSource.getName()
+            userSettingsDataSource.getAccount()
             session
         } catch (throwable: Throwable) {
-            if (throwable is HttpException && throwable.code() in AUTH_FAILURE_CODES) {
+            val httpException = throwable as? HttpException
+                ?: throwable.cause as? HttpException
+            if (httpException?.code() in AUTH_FAILURE_CODES) {
                 clearSession()
             }
             null

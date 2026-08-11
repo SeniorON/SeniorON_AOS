@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,18 +63,23 @@ import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.example.senior_on.R
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
-import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
-import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
-import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
 import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
+import com.example.senior_on.domain.model.parent.ParentInfo
+import com.example.senior_on.ui.child.display.ConnectionGuideScreen
+import com.example.senior_on.ui.child.display.DeviceConnectionScreen
+import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.ProfileImageViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
+import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
+import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
+import com.example.senior_on.ui.common.seniorinfo.toParentInfo
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -85,10 +92,9 @@ data class SettingsProfileUiState(
     val accountTypeLabel: String,
     val email: String,
     val profileImageUrl: String? = null,
-) {
-    val hasCustomProfileImage: Boolean
-        get() = !profileImageUrl.isNullOrBlank()
-}
+    val profileImageRevision: Long = 0L,
+    val isProfileImageUploading: Boolean = false,
+)
 
 private enum class SettingsDestination {
     Main,
@@ -96,8 +102,11 @@ private enum class SettingsDestination {
     ChangeName,
     ChangePassword,
     ConnectedDevices,
+    DeviceConnection,
     EditConnectedDeviceInfo,
+    EditConnectedDeviceAddressSearch,
     HelpInquiry,
+    ConnectionGuide,
     OneOnOneInquiry,
     Feedback
 }
@@ -110,10 +119,10 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
-    initialProfile: SettingsProfileUiState,
+    parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
-    onConnectedDeviceInfoSave: (ConnectedSeniorDeviceUiState) -> Unit,
-    onDisconnectDeviceConfirm: () -> Unit,
+    displayViewModel: DisplayViewModel,
+    onParentInfoSave: (ParentInfo, () -> Unit) -> Unit,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
     deviceRegistrationRepository: DeviceRegistrationRepository,
@@ -139,7 +148,9 @@ fun SettingsTabRoute(
     )
     val settingsUiState by viewModel.uiState.collectAsStateWithLifecycle()
     val profileImageUiState by profileImageViewModel.uiState.collectAsStateWithLifecycle()
+    val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val saveableStateHolder = rememberSaveableStateHolder()
     var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCameraCleanupUri by rememberSaveable { mutableStateOf<String?>(null) }
     var wasProfileImageUploading by remember { mutableStateOf(false) }
@@ -201,7 +212,9 @@ fun SettingsTabRoute(
     val albumLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.toString()?.let(profileImageViewModel::updateProfileImage)
+        uri?.toString()?.let { imageUri ->
+            profileImageViewModel.updateProfileImage(imageUri)
+        }
     }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -235,15 +248,29 @@ fun SettingsTabRoute(
     }
 
     var destination by rememberSaveable { mutableStateOf(SettingsDestination.Main) }
-    var profileName by rememberSaveable { mutableStateOf(initialProfile.name) }
-    var profileAccountType by rememberSaveable {
-        mutableStateOf(initialProfile.accountTypeLabel)
+    var connectionGuideReturnDestination by rememberSaveable {
+        mutableStateOf(SettingsDestination.HelpInquiry)
     }
-    var profileEmail by rememberSaveable { mutableStateOf(initialProfile.email) }
+    var selectedParentAddress by rememberSaveable { mutableStateOf("") }
+    var selectedParentAddressLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
+    var selectedParentAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
+    var profileName by rememberSaveable { mutableStateOf("") }
+    var profileAccountType by rememberSaveable { mutableStateOf("계정") }
+    var profileEmail by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(profileImageUiState.profileName) {
         profileImageUiState.profileName?.let { serverName ->
             profileName = serverName
+        }
+    }
+    LaunchedEffect(profileImageUiState.profileRole) {
+        profileImageUiState.profileRole?.let { serverRole ->
+            profileAccountType = serverRole.toSettingsAccountTypeLabel()
+        }
+    }
+    LaunchedEffect(profileImageUiState.profileEmail) {
+        profileImageUiState.profileEmail?.let { serverEmail ->
+            profileEmail = serverEmail
         }
     }
     val profile = SettingsProfileUiState(
@@ -251,17 +278,26 @@ fun SettingsTabRoute(
         accountTypeLabel = profileAccountType,
         email = profileEmail,
         profileImageUrl = profileImageUiState.profileImageUrl,
+        profileImageRevision = profileImageUiState.profileImageRevision,
+        isProfileImageUploading = profileImageUiState.isUploading,
     )
 
     val navigateBack = {
+        if (destination == SettingsDestination.EditConnectedDeviceInfo) {
+            saveableStateHolder.removeState(SettingsDestination.EditConnectedDeviceInfo.name)
+        }
         destination = when (destination) {
             SettingsDestination.ChangeName,
             SettingsDestination.ChangePassword -> SettingsDestination.MyAccount
+            SettingsDestination.DeviceConnection -> SettingsDestination.ConnectedDevices
             SettingsDestination.EditConnectedDeviceInfo -> SettingsDestination.ConnectedDevices
+            SettingsDestination.EditConnectedDeviceAddressSearch ->
+                SettingsDestination.EditConnectedDeviceInfo
             SettingsDestination.MyAccount,
             SettingsDestination.ConnectedDevices,
             SettingsDestination.HelpInquiry,
             SettingsDestination.Feedback -> SettingsDestination.Main
+            SettingsDestination.ConnectionGuide -> connectionGuideReturnDestination
             SettingsDestination.OneOnOneInquiry -> SettingsDestination.HelpInquiry
             SettingsDestination.Main -> SettingsDestination.Main
         }
@@ -282,7 +318,6 @@ fun SettingsTabRoute(
             onFeedbackClick = { destination = SettingsDestination.Feedback },
             onSelectAlbumClick = launchAlbum,
             onTakePhotoClick = launchCamera,
-            onApplyDefaultImageClick = profileImageViewModel::applyDefaultProfileImage,
             onLogoutConfirm = viewModel::logout,
             onWithdrawConfirm = viewModel::withdraw,
             isLoggingOut = settingsUiState.isLoggingOut,
@@ -296,7 +331,6 @@ fun SettingsTabRoute(
             onChangePasswordClick = { destination = SettingsDestination.ChangePassword },
             onSelectAlbumClick = launchAlbum,
             onTakePhotoClick = launchCamera,
-            onApplyDefaultImageClick = profileImageViewModel::applyDefaultProfileImage,
             modifier = modifier
         )
 
@@ -322,36 +356,105 @@ fun SettingsTabRoute(
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
             device = connectedDevice,
             onBackClick = navigateBack,
+            onDeviceInfoClick = {
+                displayViewModel.refreshDevice()
+                destination = SettingsDestination.DeviceConnection
+            },
             onEditInfoClick = {
-                if (connectedDevice != null) {
+                if (parentInfo != null) {
+                    selectedParentAddress = parentInfo.address
+                    selectedParentAddressLatitude = parentInfo.addressLatitude
+                    selectedParentAddressLongitude = parentInfo.addressLongitude
+                    saveableStateHolder.removeState(
+                        SettingsDestination.EditConnectedDeviceInfo.name
+                    )
                     destination = SettingsDestination.EditConnectedDeviceInfo
                 }
             },
-            onDisconnectConfirm = onDisconnectDeviceConfirm,
+            onDisconnectConfirm = { displayViewModel.disconnectDevice() },
             modifier = modifier
         )
 
+        SettingsDestination.DeviceConnection -> DeviceConnectionScreen(
+            device = displayUiState.device,
+            relationshipLabel = displayUiState.relationshipLabel
+                ?: connectedDevice?.relationshipLabel
+                ?: parentInfo?.relationshipLabel
+                ?: "부모님",
+            onBackClick = navigateBack,
+            onRefreshClick = displayViewModel::refreshDevice,
+            onDisconnectClick = {
+                displayViewModel.disconnectDevice {
+                    destination = SettingsDestination.ConnectedDevices
+                }
+            },
+            onInstallGuideClick = {
+                connectionGuideReturnDestination = SettingsDestination.DeviceConnection
+                destination = SettingsDestination.ConnectionGuide
+            },
+            modifier = modifier,
+        )
+
         SettingsDestination.EditConnectedDeviceInfo -> {
-            val device = connectedDevice
-            if (device == null) {
+            val currentParentInfo = parentInfo
+            if (currentParentInfo == null) {
                 destination = SettingsDestination.ConnectedDevices
             } else {
-                EditConnectedDeviceInfoScreen(
-                    device = device,
-                    onBackClick = navigateBack,
-                    onSaveClick = { updated ->
-                        onConnectedDeviceInfoSave(updated)
-                        destination = SettingsDestination.ConnectedDevices
-                    },
-                    modifier = modifier
-                )
+                saveableStateHolder.SaveableStateProvider(
+                    SettingsDestination.EditConnectedDeviceInfo.name
+                ) {
+                    ParentInfoEditScreen(
+                        parentInfo = currentParentInfo.copy(
+                            relationshipLabel = connectedDevice?.relationshipLabel
+                                ?: currentParentInfo.relationshipLabel,
+                        ),
+                        selectedAddress = selectedParentAddress,
+                        selectedAddressLatitude = selectedParentAddressLatitude,
+                        selectedAddressLongitude = selectedParentAddressLongitude,
+                        onBackClick = navigateBack,
+                        onSearchAddressClick = {
+                            destination = SettingsDestination.EditConnectedDeviceAddressSearch
+                        },
+                        onSaveClick = { inputState ->
+                            onParentInfoSave(
+                                inputState.toParentInfo(seniorId = currentParentInfo.seniorId)
+                            ) {
+                                saveableStateHolder.removeState(
+                                    SettingsDestination.EditConnectedDeviceInfo.name
+                                )
+                                destination = SettingsDestination.ConnectedDevices
+                            }
+                        },
+                        modifier = modifier,
+                    )
+                }
             }
         }
+
+        SettingsDestination.EditConnectedDeviceAddressSearch -> AddressSearchScreen(
+            modifier = modifier,
+            onBackClick = navigateBack,
+            onAddressSelected = { result ->
+                selectedParentAddress = result.selectedAddress
+                selectedParentAddressLatitude = result.latitude
+                selectedParentAddressLongitude = result.longitude
+                destination = SettingsDestination.EditConnectedDeviceInfo
+            },
+        )
 
         SettingsDestination.HelpInquiry -> HelpInquiryScreen(
             onBackClick = navigateBack,
             onInquiryClick = { destination = SettingsDestination.OneOnOneInquiry },
+            onInstallGuideClick = {
+                connectionGuideReturnDestination = SettingsDestination.HelpInquiry
+                destination = SettingsDestination.ConnectionGuide
+            },
             modifier = modifier
+        )
+
+        SettingsDestination.ConnectionGuide -> ConnectionGuideScreen(
+            modifier = modifier,
+            onBackClick = navigateBack,
         )
 
         SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryRoute(
@@ -381,7 +484,6 @@ fun SettingsScreen(
     onWithdrawConfirm: () -> Unit = {},
     onSelectAlbumClick: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
-    onApplyDefaultImageClick: () -> Unit = {},
     isLoggingOut: Boolean = false,
     isWithdrawing: Boolean = false,
 ) {
@@ -463,7 +565,6 @@ fun SettingsScreen(
 
     if (showProfilePhotoSheet) {
         SettingsProfilePhotoBottomSheet(
-            showApplyDefaultOption = profile.hasCustomProfileImage,
             onDismiss = { showProfilePhotoSheet = false },
             onSelectAlbumClick = {
                 showProfilePhotoSheet = false
@@ -472,10 +573,6 @@ fun SettingsScreen(
             onTakePhotoClick = {
                 showProfilePhotoSheet = false
                 onTakePhotoClick()
-            },
-            onApplyDefaultImageClick = {
-                showProfilePhotoSheet = false
-                onApplyDefaultImageClick()
             }
         )
     }
@@ -733,7 +830,10 @@ private fun SettingsProfileSection(
                 val imageUrl = profile.profileImageUrl
                 if (!imageUrl.isNullOrBlank()) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = rememberSettingsProfileImageRequest(
+                            imageData = imageUrl,
+                            revision = profile.profileImageRevision,
+                        ),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
@@ -746,6 +846,20 @@ private fun SettingsProfileSection(
                         tint = SeniorOnColors.Gray300
                     )
                 }
+                if (profile.isProfileImageUploading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(SeniorOnColors.Black.copy(alpha = 0.24f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = SeniorOnColors.White,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                }
             }
 
             Icon(
@@ -755,6 +869,7 @@ private fun SettingsProfileSection(
                     .align(Alignment.BottomEnd)
                     .size(30.dp)
                     .clickable(
+                        enabled = !profile.isProfileImageUploading,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onEditClick
@@ -857,11 +972,9 @@ private fun SettingsMenuRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsProfilePhotoBottomSheet(
-    showApplyDefaultOption: Boolean,
     onDismiss: () -> Unit,
     onSelectAlbumClick: () -> Unit,
     onTakePhotoClick: () -> Unit,
-    onApplyDefaultImageClick: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -906,16 +1019,6 @@ internal fun SettingsProfilePhotoBottomSheet(
                 iconResId = R.drawable.ic_camera_line,
                 onClick = onTakePhotoClick
             )
-
-            if (showApplyDefaultOption) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                SettingsProfilePhotoOption(
-                    text = "기본 이미지로 보기 (이 기기만)",
-                    iconResId = R.drawable.ic_dependent,
-                    onClick = onApplyDefaultImageClick
-                )
-            }
         }
     }
 }
@@ -1112,6 +1215,8 @@ internal fun SettingsProfileAvatar(
     borderColor: Color = SeniorOnColors.Gray200,
     editIconSize: Dp = 30.dp,
     imageUrl: String? = null,
+    imageRevision: Long = 0L,
+    isUploading: Boolean = false,
 ) {
     val editOverflow = if (onEditClick != null) 8.dp else 0.dp
     Box(
@@ -1137,7 +1242,10 @@ internal fun SettingsProfileAvatar(
         ) {
             if (!imageUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = imageUrl,
+                    model = rememberSettingsProfileImageRequest(
+                        imageData = imageUrl,
+                        revision = imageRevision,
+                    ),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -1150,6 +1258,20 @@ internal fun SettingsProfileAvatar(
                     tint = SeniorOnColors.Gray300
                 )
             }
+            if (isUploading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(SeniorOnColors.Black.copy(alpha = 0.24f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = SeniorOnColors.White,
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
         }
 
         if (onEditClick != null) {
@@ -1160,6 +1282,7 @@ internal fun SettingsProfileAvatar(
                     .align(Alignment.BottomEnd)
                     .size(editIconSize)
                     .clickable(
+                        enabled = !isUploading,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onEditClick
@@ -1167,6 +1290,23 @@ internal fun SettingsProfileAvatar(
                 tint = Color.Unspecified
             )
         }
+    }
+}
+
+@Composable
+private fun rememberSettingsProfileImageRequest(
+    imageData: String,
+    revision: Long,
+): ImageRequest {
+    val context = LocalContext.current
+    return remember(context, imageData, revision) {
+        val cacheKey = "$imageData#$revision"
+        ImageRequest.Builder(context)
+            .data(imageData)
+            .memoryCacheKey(cacheKey)
+            .diskCacheKey(cacheKey)
+            .placeholderMemoryCacheKey(cacheKey)
+            .build()
     }
 }
 
@@ -1191,7 +1331,11 @@ private fun createSettingsProfileCaptureUri(context: Context): Uri {
 private fun SettingsTabRoutePreview() {
     SENIOR_ONTheme {
         SettingsScreen(
-            profile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
+            profile = SettingsProfileUiState(
+                name = "김민지",
+                accountTypeLabel = "보호자 계정",
+                email = "caregiver@example.com",
+            ),
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -1202,7 +1346,11 @@ private fun SettingsTabRoutePreview() {
 private fun SettingsScreenPreview() {
     SENIOR_ONTheme {
         SettingsScreen(
-            profile = MockUserFixtures.primaryCaregiver.toSettingsProfileUiState(),
+            profile = SettingsProfileUiState(
+                name = "김민지",
+                accountTypeLabel = "보호자 계정",
+                email = "caregiver@example.com",
+            ),
             modifier = Modifier.fillMaxWidth(),
         )
     }

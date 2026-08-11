@@ -5,7 +5,9 @@ import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface UserSettingsApi {
-    @GET("api/users/settings/name") suspend fun getName(): ApiResponse<CurrentNameResponse>
+    @GET("api/users/settings/account")
+    suspend fun getAccount(): ApiResponse<UserAccountResponse>
+
     @PATCH("api/users/settings/name") suspend fun updateName(@Body request: NameUpdateRequest): ApiResponse<NameUpdateResponse>
     @PATCH("api/users/settings/password")
     suspend fun changePassword(@Body request: PasswordChangeRequest): ApiResponse<PasswordChangeResponse>
