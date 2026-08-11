@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.ParentInfo
+import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.domain.model.senior.SeniorInfo
 import com.example.senior_on.domain.model.senior.SeniorRegistration
 import com.example.senior_on.domain.model.senior.SeniorRelationUpdate
@@ -16,7 +17,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.net.SocketTimeoutException
+import java.time.LocalDate
 
 data class SeniorOnboardingUiState(
     val isLoading: Boolean = false,
@@ -67,20 +71,42 @@ class SeniorOnboardingViewModel(
     fun createSenior(
         accessToken: String,
         registration: SeniorRegistration,
-        parentInfo: ParentInfo,
         onResult: (SeniorInfo?) -> Unit
     ) {
         launchRequest(onFailure = { onResult(null) }) {
-            val result = seniorRepository.createSenior(
-                accessToken = accessToken,
-                registration = registration
+            val result = createSeniorOrConfirmRegistration(
+                registration = registration,
+                create = {
+                    seniorRepository.createSenior(
+                        accessToken = accessToken,
+                        registration = registration,
+                    )
+                },
+                findRegisteredSeniorId = {
+                    homeRepository.getHome().seniorId
+                },
             )
-            parentInfoRepository.saveParentInfo(
-                parentInfo.copy(seniorId = result.seniorId)
-            )
+            // The server-issued ID is the only valid identity for a registered senior.
+            // Local cache failures must not turn a completed server registration into
+            // a retry that can create a duplicate senior.
+            runCatching {
+                parentInfoRepository.saveParentInfo(
+                    result.toParentInfo(registration)
+                )
+            }
             _uiState.value = _uiState.value.copy(registeredSenior = result)
             onResult(result)
         }
+    }
+
+    fun showMissingSessionError() {
+        _uiState.value = _uiState.value.copy(
+            errorMessage = MISSING_SESSION_ERROR_MESSAGE
+        )
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
     fun updateRelation(
@@ -155,5 +181,62 @@ class SeniorOnboardingViewModel(
 
     private companion object {
         const val DEFAULT_ERROR_MESSAGE = "시니어 정보를 저장하지 못했습니다."
+        const val MISSING_SESSION_ERROR_MESSAGE =
+            "로그인 정보가 만료되었습니다. 다시 로그인해 주세요."
     }
+}
+
+internal suspend fun createSeniorOrConfirmRegistration(
+    registration: SeniorRegistration,
+    create: suspend () -> SeniorInfo,
+    findRegisteredSeniorId: suspend () -> Long?,
+): SeniorInfo {
+    return try {
+        create()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (timeout: SocketTimeoutException) {
+        val confirmedSeniorId = try {
+            findRegisteredSeniorId()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Throwable) {
+            null
+        } ?: throw timeout
+
+        registration.toConfirmedSeniorInfo(confirmedSeniorId)
+    }
+}
+
+private fun SeniorRegistration.toConfirmedSeniorInfo(seniorId: Long): SeniorInfo =
+    SeniorInfo(
+        seniorId = seniorId,
+        name = name,
+        relation = relation,
+        customRelation = customRelation,
+        birth = birth,
+        phoneNumber = phoneNumber,
+        address = address,
+        detailAddress = detailAddress,
+    )
+
+private fun SeniorInfo.toParentInfo(registration: SeniorRegistration): ParentInfo {
+    val relationshipLabel = when (relation) {
+        SeniorRelationType.MOTHER -> "어머니"
+        SeniorRelationType.FATHER -> "아버지"
+        SeniorRelationType.GRANDPARENT -> "조부모"
+        SeniorRelationType.OTHER -> customRelation.orEmpty()
+    }
+
+    return ParentInfo(
+        seniorId = seniorId,
+        name = name,
+        relationshipLabel = relationshipLabel,
+        birthDate = LocalDate.parse(birth),
+        phoneNumber = phoneNumber,
+        address = address,
+        addressDetail = detailAddress,
+        addressLatitude = registration.latitude,
+        addressLongitude = registration.longitude,
+    )
 }

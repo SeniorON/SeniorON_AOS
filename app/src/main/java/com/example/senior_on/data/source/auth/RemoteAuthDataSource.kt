@@ -21,7 +21,9 @@ class RemoteAuthDataSource(
     private val userApi: UserApi
 ) : AuthDataSource {
     override suspend fun checkLoginId(loginId: String): CheckLoginIdResponse {
-        return userApi.checkLoginId(loginId).requireData()
+        return remoteRequest {
+            userApi.checkLoginId(loginId).requireData()
+        }
     }
 
     override suspend fun sendSignupEmailVerificationCode(
@@ -35,26 +37,36 @@ class RemoteAuthDataSource(
     override suspend fun verifySignupEmailVerificationCode(
         request: VerifySignupEmailVerificationCodeRequest
     ): VerifySignupEmailVerificationCodeResponse {
-        return userApi.verifySignupEmailVerificationCode(request).requireData()
+        return remoteRequest {
+            userApi.verifySignupEmailVerificationCode(request).requireData()
+        }
     }
 
     override suspend fun signup(request: SignupRequest): SignupResponse {
-        return userApi.signup(request).requireData()
+        return remoteRequest {
+            userApi.signup(request).requireData()
+        }
     }
 
     override suspend fun login(request: LoginRequest): LoginResponse {
-        return userApi.login(request).requireData()
+        return remoteRequest {
+            userApi.login(request).requireData()
+        }
     }
 
     override suspend fun getOnboardingStatus(): OnboardingStatusResponse {
-        return userApi.getOnboardingStatus().requireData()
+        return remoteRequest {
+            userApi.getOnboardingStatus().requireData()
+        }
     }
 
     override suspend fun updateRole(
         authorization: String,
         request: UpdateRoleRequest
     ): UpdateRoleResponse {
-        return userApi.updateRole(authorization, request).requireData()
+        return remoteRequest {
+            userApi.updateRole(authorization, request).requireData()
+        }
     }
 
     override suspend fun logout(request: UserLogoutRequest) {

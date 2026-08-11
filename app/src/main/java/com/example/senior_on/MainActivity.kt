@@ -5,6 +5,9 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.example.senior_on.ui.app.SeniorOnApp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.notification.MedicationReminderEventStore
@@ -18,11 +21,19 @@ class MainActivity : ComponentActivity() {
         publishNotificationNavigation(intent)
         enableEdgeToEdge()
         setContent {
-            SENIOR_ONTheme {
-                SeniorOnApp(
-                    appContainer = (application as SeniorOnApplication).appContainer,
-                    onOpenParentLauncher = ::openParentLauncher,
+            val currentDensity = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(
+                    density = currentDensity.density,
+                    fontScale = 1f,
                 )
+            ) {
+                SENIOR_ONTheme {
+                    SeniorOnApp(
+                        appContainer = (application as SeniorOnApplication).appContainer,
+                        onOpenParentLauncher = ::openParentLauncher,
+                    )
+                }
             }
         }
     }

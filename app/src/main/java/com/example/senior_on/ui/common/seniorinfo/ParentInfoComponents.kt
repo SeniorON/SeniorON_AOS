@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -429,6 +430,7 @@ internal fun RelationshipSelector(
 
                 Text(
                     text = displayLabel,
+                    modifier = Modifier.padding(horizontal = 4.dp),
                     style = SeniorOnTextStyles.BodySSemiBold,
                     color = if (isSelected) {
                         SeniorOnColors.Primary600
@@ -439,7 +441,9 @@ internal fun RelationshipSelector(
                         TextDecoration.Underline
                     } else {
                         null
-                    }
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -451,6 +455,7 @@ internal fun SeniorInfoBottomActions(
     onSkipClick: () -> Unit,
     onSaveClick: () -> Unit,
     isSaveEnabled: Boolean,
+    errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -467,6 +472,14 @@ internal fun SeniorInfoBottomActions(
             .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
     ) {
         SeniorInfoWarning()
+        errorMessage?.let { message ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = SeniorOnTextStyles.CaptionRegular,
+                color = SeniorOnColors.Red300,
+            )
+        }
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),

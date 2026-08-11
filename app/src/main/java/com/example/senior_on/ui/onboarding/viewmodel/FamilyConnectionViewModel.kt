@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.domain.model.server.FamilyCodeInfo
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,7 +30,13 @@ class FamilyConnectionViewModel(
         if (_uiState.value.isLoading) return
         viewModelScope.launch {
             _uiState.value = FamilyConnectionUiState(isLoading = true)
-            runCatching { repository.join(familyCode) }
+            runCatching {
+                joinFamilyOrConfirmMembership(
+                    familyCode = familyCode,
+                    join = repository::join,
+                    hasFamily = repository::hasFamily,
+                )
+            }
                 .onSuccess { result ->
                     _uiState.value = FamilyConnectionUiState()
                     onSuccess(result)
@@ -87,5 +94,31 @@ class FamilyConnectionViewModel(
             "가족 공유 코드 생성에 실패했어요. 다시 시도해 주세요."
         const val INVALID_FAMILY_CODE_MESSAGE =
             "가족 공유 코드를 다시 확인해 주세요."
+    }
+}
+
+internal suspend fun joinFamilyOrConfirmMembership(
+    familyCode: String,
+    join: suspend (String) -> FamilyCodeInfo,
+    hasFamily: suspend () -> Boolean,
+): FamilyCodeInfo {
+    return try {
+        join(familyCode)
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (joinFailure: Throwable) {
+        val membershipConfirmed = try {
+            hasFamily()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Throwable) {
+            false
+        }
+        if (!membershipConfirmed) throw joinFailure
+
+        FamilyCodeInfo(
+            familyId = null,
+            code = familyCode,
+        )
     }
 }

@@ -6,6 +6,7 @@ import com.example.senior_on.data.remote.dto.CreateSeniorRequest
 import com.example.senior_on.data.remote.dto.CreateSeniorResponse
 import com.example.senior_on.data.remote.dto.UpdateSeniorRelationRequest
 import com.example.senior_on.data.remote.dto.UpdateSeniorRelationResponse
+import com.example.senior_on.data.source.remoteRequest
 
 class RemoteSeniorDataSource(
     private val seniorApi: SeniorApi
@@ -14,10 +15,12 @@ class RemoteSeniorDataSource(
         authorization: String,
         request: CreateSeniorRequest
     ): CreateSeniorResponse {
-        return seniorApi.createSenior(
-            authorization = authorization,
-            request = request
-        ).requireData()
+        return remoteRequest {
+            seniorApi.createSenior(
+                authorization = authorization,
+                request = request
+            ).requireData()
+        }
     }
 
     override suspend fun updateSeniorRelation(
@@ -25,11 +28,13 @@ class RemoteSeniorDataSource(
         seniorId: Long,
         request: UpdateSeniorRelationRequest
     ): UpdateSeniorRelationResponse {
-        return seniorApi.updateSeniorRelation(
-            authorization = authorization,
-            seniorId = seniorId,
-            request = request
-        ).requireData()
+        return remoteRequest {
+            seniorApi.updateSeniorRelation(
+                authorization = authorization,
+                seniorId = seniorId,
+                request = request
+            ).requireData()
+        }
     }
 
     private fun <T> ApiResponse<T>.requireData(): T {

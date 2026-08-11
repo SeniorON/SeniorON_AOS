@@ -10,6 +10,7 @@ import com.example.senior_on.data.remote.dto.FindLoginIdResponse
 import com.example.senior_on.data.remote.dto.ResetPasswordResponse
 import com.example.senior_on.data.remote.dto.SendPasswordResetVerificationCodeResponse
 import com.example.senior_on.data.remote.dto.VerifyPasswordResetVerificationCodeResponse
+import com.example.senior_on.data.source.remoteRequest
 
 class RemoteAccountRecoveryDataSource(
     private val accountRecoveryApi: AccountRecoveryApi
@@ -17,21 +18,29 @@ class RemoteAccountRecoveryDataSource(
     override suspend fun sendPasswordResetVerificationCode(
         request: SendPasswordResetVerificationCodeRequest
     ): SendPasswordResetVerificationCodeResponse {
-        return accountRecoveryApi.sendPasswordResetVerificationCode(request).requireData()
+        return remoteRequest {
+            accountRecoveryApi.sendPasswordResetVerificationCode(request).requireData()
+        }
     }
 
     override suspend fun verifyPasswordResetVerificationCode(
         request: VerifyPasswordResetVerificationCodeRequest
     ): VerifyPasswordResetVerificationCodeResponse {
-        return accountRecoveryApi.verifyPasswordResetVerificationCode(request).requireData()
+        return remoteRequest {
+            accountRecoveryApi.verifyPasswordResetVerificationCode(request).requireData()
+        }
     }
 
     override suspend fun findLoginId(request: FindLoginIdRequest): FindLoginIdResponse {
-        return accountRecoveryApi.findLoginId(request).requireData()
+        return remoteRequest {
+            accountRecoveryApi.findLoginId(request).requireData()
+        }
     }
 
     override suspend fun resetPassword(request: ResetPasswordRequest): ResetPasswordResponse {
-        return accountRecoveryApi.resetPassword(request).requireData()
+        return remoteRequest {
+            accountRecoveryApi.resetPassword(request).requireData()
+        }
     }
 
     private fun <T> ApiResponse<T>.requireData(): T {
