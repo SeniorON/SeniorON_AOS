@@ -23,6 +23,7 @@ import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.ui.child.notification.ParentPhoneInternetRequiredDialog
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
+import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
 import com.example.senior_on.ui.common.share.KakaoShareLauncher
@@ -45,6 +46,7 @@ private enum class DisplayDestination {
 @Composable
 fun DisplayTabRoute(
     viewModel: DisplayViewModel,
+    addressSearchViewModel: AddressSearchViewModel,
     modifier: Modifier = Modifier,
     onRefreshClick: () -> Unit = {},
     onInstallGuideClick: () -> Unit = {},
@@ -322,6 +324,7 @@ fun DisplayTabRoute(
 
             DisplayDestination.AddressSearch -> AddressSearchScreen(
                 modifier = modifier,
+                viewModel = addressSearchViewModel,
                 onBackClick = ::navigateBack,
                 onAddressSelected = { result ->
                     selectedAddress = result.selectedAddress

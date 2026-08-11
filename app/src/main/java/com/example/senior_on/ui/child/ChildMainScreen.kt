@@ -75,6 +75,7 @@ import com.example.senior_on.ui.child.notification.route.NotificationRoute
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
+import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
@@ -109,7 +110,7 @@ fun ChildMainScreen(
     eventRepository: EventRepository? = null,
     deviceRepository: DeviceRepository? = null,
     locationRepository: LocationRepository? = null,
-    addressSearchRepository: AddressSearchRepository? = null,
+    addressSearchRepository: AddressSearchRepository,
     modifier: Modifier = Modifier,
     onLogoutClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {},
@@ -117,6 +118,9 @@ fun ChildMainScreen(
     onNotificationNavigationConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val addressSearchViewModel: AddressSearchViewModel = viewModel(
+        factory = AddressSearchViewModel.Factory(addressSearchRepository),
+    )
     RequestNotificationPermissionOnChildEntry()
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
@@ -280,6 +284,7 @@ fun ChildMainScreen(
             deviceRepository = deviceRepository,
             locationRepository = locationRepository,
             addressSearchRepository = addressSearchRepository,
+            addressSearchViewModel = addressSearchViewModel,
             notificationNavigationEvent = notificationNavigationEvent,
             onNotificationNavigationConsumed = onNotificationNavigationConsumed,
             onParentInfoSave = { updatedParentInfo, onSuccess ->
@@ -360,6 +365,7 @@ private fun ChildMainTabContent(
     deviceRepository: DeviceRepository?,
     locationRepository: LocationRepository?,
     addressSearchRepository: AddressSearchRepository?,
+    addressSearchViewModel: AddressSearchViewModel,
     notificationNavigationEvent: NotificationNavigationEvent?,
     onNotificationNavigationConsumed: () -> Unit,
     onParentInfoSave: (ParentInfo, () -> Unit) -> Unit,
@@ -370,6 +376,7 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Screen) {
         DisplayTabRoute(
             viewModel = displayViewModel,
+            addressSearchViewModel = addressSearchViewModel,
             modifier = modifier,
         )
         return
@@ -490,6 +497,7 @@ private fun ChildMainTabContent(
             inquiryRepository = inquiryRepository,
             userSettingsRepository = userSettingsRepository,
             familyPhotoUploadPreparer = familyPhotoUploadPreparer,
+            addressSearchViewModel = addressSearchViewModel,
             modifier = modifier,
             onLogoutConfirm = onLogoutClick,
             onWithdrawConfirm = onWithdrawClick

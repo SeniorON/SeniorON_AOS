@@ -78,6 +78,7 @@ import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.ProfileImageViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
+import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -129,6 +130,7 @@ fun SettingsTabRoute(
     inquiryRepository: InquiryRepository,
     userSettingsRepository: UserSettingsRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
+    addressSearchViewModel: AddressSearchViewModel,
     modifier: Modifier = Modifier,
     onLogoutConfirm: () -> Unit = {},
     onWithdrawConfirm: () -> Unit = {},
@@ -433,6 +435,7 @@ fun SettingsTabRoute(
 
         SettingsDestination.EditConnectedDeviceAddressSearch -> AddressSearchScreen(
             modifier = modifier,
+            viewModel = addressSearchViewModel,
             onBackClick = navigateBack,
             onAddressSelected = { result ->
                 selectedParentAddress = result.selectedAddress

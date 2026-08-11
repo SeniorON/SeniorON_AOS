@@ -56,39 +56,31 @@ internal fun FindAccountTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(SeniorOnDimensions.TopBarHeight)
-            .background(SeniorOnColors.White),
-        contentAlignment = Alignment.Center
+            .background(SeniorOnColors.White)
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .align(Alignment.CenterStart)
+                .padding(start = 16.dp)
+                .size(26.dp)
+                .clickable(onClick = onBackClick),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable(onClick = onBackClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_arrow_back),
-                    contentDescription = "뒤로가기",
-                    modifier = Modifier.size(24.dp),
-                    tint = SeniorOnColors.Gray800
-                )
-            }
-
-            Text(
-                text = "아이디/비밀번호 찾기",
-                modifier = Modifier.weight(1f),
-                style = SeniorOnTextStyles.BodyLBold,
-                color = SeniorOnColors.Gray800,
-                textAlign = TextAlign.Center
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier.size(24.dp),
+                tint = SeniorOnColors.Gray800
             )
-
-            Spacer(modifier = Modifier.size(24.dp))
         }
+
+        Text(
+            text = "아이디/비밀번호 찾기",
+            modifier = Modifier.align(Alignment.Center),
+            style = SeniorOnTextStyles.BodyLBold,
+            color = SeniorOnColors.Gray800,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -124,7 +116,7 @@ private fun FindAccountTabItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val textColor = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray500
+    val textColor = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray300
     val indicatorColor = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray200
     val indicatorPaddingStart = if (tab == FindAccountTab.Id) 16.dp else 0.dp
     val indicatorPaddingEnd = if (tab == FindAccountTab.Password) 16.dp else 0.dp
@@ -132,24 +124,33 @@ private fun FindAccountTabItem(
     Column(
         modifier = modifier
             .clickable(onClick = onClick)
-            .padding(top = 24.dp),
+            .padding(top = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = text,
+            modifier = Modifier.fillMaxWidth(),
             style = SeniorOnTextStyles.BodyLBold,
-            color = textColor
+            color = textColor,
+            textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = indicatorPaddingStart, end = indicatorPaddingEnd)
-                .height(if (selected) 2.dp else 1.dp)
-                .background(indicatorColor)
-        )
+                .height(2.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = indicatorPaddingStart, end = indicatorPaddingEnd)
+                    .height(if (selected) 2.dp else 1.dp)
+                    .background(indicatorColor)
+            )
+        }
     }
 }
 
@@ -363,10 +364,10 @@ internal fun FindAccountInfoBanner(
             painter = painterResource(id = R.drawable.ic_information2),
             contentDescription = null,
             modifier = Modifier.size(18.dp),
-            tint = SeniorOnColors.Gray400
+            tint = SeniorOnColors.Gray200
         )
 
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         Text(
             text = text,
@@ -415,9 +416,10 @@ internal fun FindPasswordSuccessDialogContent(
     Box(
         modifier = modifier
             .width(249.dp)
+            .height(264.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
             .background(SeniorOnColors.White)
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = 16.dp, vertical = 32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -431,7 +433,7 @@ internal fun FindPasswordSuccessDialogContent(
             Text(
                 text = "비밀번호 변경 완료!",
                 modifier = Modifier.padding(top = 16.dp),
-                style = SeniorOnTextStyles.BodyLBold,
+                style = SeniorOnTextStyles.HeadingXS,
                 color = SeniorOnColors.Gray800,
                 textAlign = TextAlign.Center
             )
@@ -450,7 +452,7 @@ internal fun FindPasswordSuccessDialogContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
-                    .background(SeniorOnColors.Primary600, RoundedCornerShape(SeniorOnRadius.Medium))
+                    .background(SeniorOnColors.Primary600, RoundedCornerShape(SeniorOnRadius.Small))
                     .clickable(onClick = onLoginClick),
                 contentAlignment = Alignment.Center
             ) {

@@ -84,8 +84,8 @@ fun FindPasswordVerifyScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp)
-                .padding(top = 32.dp)
+                .padding(horizontal = 16.dp)
+                .padding(top = 24.dp)
         ) {
             Text(
                 text = buildAnnotatedString {

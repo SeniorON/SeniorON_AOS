@@ -219,10 +219,18 @@ class AuthViewModel(
         }
     }
 
-    fun loadOnboardingStatus(onResult: (OnboardingStatus?) -> Unit) {
-        launchRequest(onFailure = { onResult(null) }) {
+    fun loadOnboardingStatus(
+        onResult: (OnboardingStatus) -> Unit,
+        onFailure: (String) -> Unit,
+    ) {
+        launchRequest(onFailure = onFailure) {
             onResult(authRepository.getOnboardingStatus())
         }
+    }
+
+    fun clearSession() {
+        accessToken = null
+        sessionRepository.clearSession()
     }
 
     private suspend fun completeSocialSignup(

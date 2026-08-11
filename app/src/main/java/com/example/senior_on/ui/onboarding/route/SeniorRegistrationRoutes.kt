@@ -103,12 +103,16 @@ fun ParentInfoInputRoute(
 
 @Composable
 fun AddressSearchRoute(
+    appContainer: AppContainer,
     onBackClick: () -> Unit,
     onAddressSelected: (AddressSearchResult) -> Unit
 ) {
+    val viewModel = addressSearchViewModel(appContainer)
+
     AddressSearchScreen(
         onBackClick = onBackClick,
-        onAddressSelected = onAddressSelected
+        onAddressSelected = onAddressSelected,
+        viewModel = viewModel,
     )
 }
 

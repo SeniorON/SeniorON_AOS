@@ -133,8 +133,8 @@ private fun FindIdInputContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(top = 32.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 24.dp)
     ) {
         FindAccountTextField(
             label = "이름",

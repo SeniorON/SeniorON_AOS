@@ -136,7 +136,7 @@ class DefaultAppContainer(
         SessionRepositoryImpl(
             PersistedSessionDataSource(
                 context = context,
-                userSettingsDataSource = userSettingsDataSource,
+                authDataSource = authDataSource,
             )
         )
     override val deviceRegistrationRepository: DeviceRegistrationRepository =
