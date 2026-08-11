@@ -108,6 +108,10 @@ fun NotificationRoute(
         onNavigationEventConsumed()
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadLatestHome()
+    }
+
     when (destination) {
         NotificationDestination.Home -> NotificationHomeRoute(
             uiState = uiState.home,
@@ -118,6 +122,8 @@ fun NotificationRoute(
                 viewModel.loadInactivitySetting()
                 destination = NotificationDestination.InactivitySetting
             },
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = viewModel::refreshHome,
             modifier = modifier,
         )
 

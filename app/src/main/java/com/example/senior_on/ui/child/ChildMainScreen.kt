@@ -62,6 +62,7 @@ import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
+import com.example.senior_on.notification.isMedicationNotification
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
@@ -126,8 +127,13 @@ fun ChildMainScreen(
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
     LaunchedEffect(notificationNavigationEvent) {
-        if (notificationNavigationEvent != null) {
-            selectedTab = ChildMainTab.Notification
+        notificationNavigationEvent?.let { event ->
+            if (event.isMedicationNotification) {
+                selectedTab = ChildMainTab.Health
+                onNotificationNavigationConsumed()
+            } else {
+                selectedTab = ChildMainTab.Notification
+            }
         }
     }
     var familyDestination by rememberSaveable {

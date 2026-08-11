@@ -39,6 +39,7 @@ data class MedicationUiState(
     val editorMode: MedicationEditorMode? = null,
     val editingMedication: RegisteredMedicationUiState? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -53,6 +54,7 @@ class MedicationViewModel(
     private var parentUserId: Long? = null
     private var fullLoadJob: Job? = null
     private var scheduleLoadJob: Job? = null
+    private var hasEnteredScreen = false
 
     init {
         loadMedicationData()
@@ -175,6 +177,20 @@ class MedicationViewModel(
         loadMedicationData()
     }
 
+    fun loadLatestMedicationData() {
+        if (!hasEnteredScreen) {
+            hasEnteredScreen = true
+            return
+        }
+        if (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) return
+        loadMedicationData(isPullRefresh = true)
+    }
+
+    fun refreshMedicationData() {
+        if (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) return
+        loadMedicationData(isPullRefresh = true)
+    }
+
     fun onMedicationChecked(
         checkedParentUserId: Long,
         medicationLogId: Long,
@@ -205,12 +221,18 @@ class MedicationViewModel(
         }
     }
 
-    private fun loadMedicationData() {
+    private fun loadMedicationData(isPullRefresh: Boolean = false) {
         scheduleLoadJob?.cancel()
         fullLoadJob?.cancel()
         val requestedDate = _uiState.value.selectedDate
         fullLoadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = !isPullRefresh,
+                    isRefreshing = isPullRefresh,
+                    errorMessage = null,
+                )
+            }
             runCatching {
                 val parentId = resolveParentUserId()
                 loadRemoteData(parentId, requestedDate)
@@ -219,7 +241,11 @@ class MedicationViewModel(
                     if (throwable is CancellationException) return@onFailure
                     _uiState.update {
                         if (it.selectedDate == requestedDate) {
-                            it.copy(isLoading = false, errorMessage = throwable.message)
+                            it.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                errorMessage = throwable.message,
+                            )
                         } else {
                             it
                         }
@@ -311,7 +337,11 @@ class MedicationViewModel(
     ) {
         _uiState.update { state ->
             if (state.selectedDate != result.requestedDate) {
-                return@update state.copy(isLoading = false, isSaving = false)
+                return@update state.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    isSaving = false,
+                )
             }
             val selectedDate = state.selectedDate
             state.copy(
@@ -325,6 +355,7 @@ class MedicationViewModel(
                 editorMode = if (closeEditor) null else state.editorMode,
                 editingMedication = if (closeEditor) null else state.editingMedication,
                 isLoading = false,
+                isRefreshing = false,
                 isSaving = false,
                 errorMessage = null,
             )
