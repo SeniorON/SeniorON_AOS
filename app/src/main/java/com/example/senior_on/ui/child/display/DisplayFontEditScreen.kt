@@ -42,6 +42,7 @@ import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
 import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -59,6 +60,7 @@ fun DisplayFontEditScreen(
     isWeatherLoading: Boolean = false,
     todaySchedule: DisplayTodaySchedule? = null,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit = {},
     onSaveClick: (SeniorFontSize) -> Unit = {},
 ) {
@@ -131,7 +133,8 @@ fun DisplayFontEditScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             FontEditSaveButton(
-                enabled = hasChanges,
+                enabled = hasChanges && !isSaving,
+                isLoading = isSaving,
                 onClick = { onSaveClick(selectedFontSize) },
             )
 
@@ -316,35 +319,19 @@ private fun FontSizeOption(
 @Composable
 private fun FontEditSaveButton(
     enabled: Boolean,
+    isLoading: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    SeniorOnActionButton(
+        text = "저장하기",
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(
-                if (enabled) {
-                    SeniorOnColors.Primary600
-                } else {
-                    SeniorOnColors.Primary600.copy(alpha = 0.5f)
-                }
-            )
-            .clickable(
-                enabled = enabled,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "저장하기",
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.White,
-        )
-    }
+            .height(50.dp),
+        enabled = enabled,
+        isLoading = isLoading,
+    )
 }
 
 @Preview(

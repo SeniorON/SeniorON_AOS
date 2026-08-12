@@ -446,6 +446,7 @@ private fun FamilyPhotoShareActions(
                 contentColor = SeniorOnColors.White,
                 borderColor = null,
                 enabled = !isUploading,
+                isLoading = isUploading,
                 onClick = onShareClick,
                 modifier = Modifier.weight(1f)
             )

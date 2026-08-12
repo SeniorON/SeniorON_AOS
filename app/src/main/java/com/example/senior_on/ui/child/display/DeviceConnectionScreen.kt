@@ -2,6 +2,7 @@ package com.example.senior_on.ui.child.display
 
 import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +39,8 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.common.time.toRelativeTimeLabel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnBrushes
@@ -50,6 +53,8 @@ fun DeviceConnectionScreen(
     device: DisplayDevice?,
     relationshipLabel: String,
     modifier: Modifier = Modifier,
+    isRefreshing: Boolean = false,
+    isDisconnecting: Boolean = false,
     onBackClick: () -> Unit = {},
     onRefreshClick: () -> Unit = {},
     onDisconnectClick: () -> Unit = {},
@@ -63,6 +68,7 @@ fun DeviceConnectionScreen(
         ConnectionStatusTopBar(
             onBackClick = onBackClick,
             onRefreshClick = onRefreshClick,
+            isRefreshing = isRefreshing,
         )
 
         Column(
@@ -81,6 +87,7 @@ fun DeviceConnectionScreen(
 
             DeviceInformationCard(
                 device = device,
+                isDisconnecting = isDisconnecting,
                 onDisconnectClick = onDisconnectClick,
                 onInstallGuideClick = onInstallGuideClick,
             )
@@ -92,6 +99,7 @@ fun DeviceConnectionScreen(
 private fun ConnectionStatusTopBar(
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit,
+    isRefreshing: Boolean,
 ) {
     Box(
         modifier = Modifier
@@ -119,6 +127,7 @@ private fun ConnectionStatusTopBar(
             iconResId = R.drawable.ic_refresh,
             contentDescription = "연결 상태 새로고침",
             onClick = onRefreshClick,
+            isLoading = isRefreshing,
             modifier = Modifier.align(Alignment.CenterEnd),
         )
     }
@@ -130,23 +139,32 @@ private fun ConnectionTopBarIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
     Box(
         modifier = modifier
             .size(26.dp)
             .clickable(
+                enabled = !isLoading,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            painter = painterResource(iconResId),
-            contentDescription = contentDescription,
-            modifier = Modifier.size(26.dp),
-            tint = Color.Unspecified,
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(
+                color = SeniorOnColors.Gray800,
+                size = 20.dp,
+            )
+        } else {
+            Icon(
+                painter = painterResource(iconResId),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(26.dp),
+                tint = Color.Unspecified,
+            )
+        }
     }
 }
 
@@ -235,6 +253,7 @@ private fun DeviceStatusCard(
 @Composable
 private fun DeviceInformationCard(
     device: DisplayDevice?,
+    isDisconnecting: Boolean,
     onDisconnectClick: () -> Unit,
     onInstallGuideClick: () -> Unit,
 ) {
@@ -303,6 +322,7 @@ private fun DeviceInformationCard(
 
         DeviceConnectionActionButton(
             isConnected = device != null,
+            isLoading = device != null && isDisconnecting,
             onClick = if (device == null) onInstallGuideClick else onDisconnectClick,
         )
     }
@@ -348,45 +368,41 @@ private fun DeviceInformationRow(
 @Composable
 private fun DeviceConnectionActionButton(
     isConnected: Boolean,
+    isLoading: Boolean,
     onClick: () -> Unit,
 ) {
     val contentColor = if (isConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray700
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
 
-    Row(
+    SeniorOnActionButton(
+        text = if (isConnected) "연결 해제" else "부모님 앱 설치 방법",
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
-            .clip(shape)
-            .border(
-                width = 1.dp,
-                color = if (isConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray200,
-                shape = shape,
-            )
-            .clickable(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Spacer(modifier = Modifier.weight(1f))
-
-        if (!isConnected) {
-            Icon(
-                painter = painterResource(R.drawable.ic_download),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = contentColor,
-            )
-
-            Spacer(modifier = Modifier.width(6.dp))
-        }
-
-        Text(
-            text = if (isConnected) "연결 해제" else "부모님 앱 설치 방법",
-            style = SeniorOnTextStyles.ButtonM,
-            color = contentColor,
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-    }
+            .height(48.dp),
+        isLoading = isLoading,
+        containerColor = SeniorOnColors.White,
+        contentColor = contentColor,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray200,
+        ),
+        shape = shape,
+        minHeight = 48.dp,
+        leadingContent = if (isConnected) {
+            null
+        } else {
+            {
+                Icon(
+                    painter = painterResource(R.drawable.ic_download),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = androidx.compose.material3.LocalContentColor.current,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+        },
+    )
 }
 
 @Preview(name = "Not connected", showBackground = true, widthDp = 360, heightDp = 720)

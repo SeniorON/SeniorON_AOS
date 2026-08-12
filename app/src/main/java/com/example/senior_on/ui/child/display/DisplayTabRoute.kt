@@ -258,6 +258,8 @@ fun DisplayTabRoute(
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
                 device = uiState.device,
                 relationshipLabel = uiState.relationshipLabel ?: "부모님",
+                isRefreshing = uiState.isRefreshingDevice,
+                isDisconnecting = uiState.isSaving,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onRefreshClick = {
@@ -319,6 +321,7 @@ fun DisplayTabRoute(
                 selectedAddress = selectedAddress,
                 selectedAddressLatitude = selectedAddressLatitude,
                 selectedAddressLongitude = selectedAddressLongitude,
+                isSubmitting = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSearchAddressClick = {
                     destination = DisplayDestination.AddressSearch
@@ -359,6 +362,7 @@ fun DisplayTabRoute(
                 isWeatherLoading = uiState.isWeatherLoading,
                 todaySchedule = uiState.todaySchedule,
                 modifier = modifier,
+                isSaving = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSaveClick = { fontSize ->
                     viewModel.updateFontSize(
@@ -388,6 +392,7 @@ fun DisplayTabRoute(
                 initialButtons = buttonEditDraftItems
                     .ifEmpty { uiState.configuredButtonItems },
                 modifier = modifier,
+                isSaving = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSaveClick = { buttons ->
                     val savedButtons = buttons.withRequiredSeniorHomeButtons()
@@ -469,6 +474,7 @@ fun DisplayTabRoute(
                 initialButtons = buttonEditDraftItems
                     .ifEmpty { uiState.configuredButtonItems },
                 modifier = modifier,
+                isSaving = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSaveClick = { orderedButtons ->
                     val savedButtons = orderedButtons.withRequiredSeniorHomeButtons()
