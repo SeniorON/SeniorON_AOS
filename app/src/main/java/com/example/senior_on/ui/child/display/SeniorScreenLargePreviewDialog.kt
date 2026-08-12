@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
 import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -35,6 +36,7 @@ private val LargePhonePreviewHeight = 481.dp
 @Composable
 fun SeniorScreenLargePreviewDialog(
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton> = emptyList(),
     onDismiss: () -> Unit,
     weather: DisplayWeather? = null,
     isWeatherLoading: Boolean = false,
@@ -51,6 +53,7 @@ fun SeniorScreenLargePreviewDialog(
     ) {
         SeniorScreenLargePreviewContent(
             configuration = configuration,
+            buttonItems = buttonItems,
             onDismiss = onDismiss,
             weather = weather,
             isWeatherLoading = isWeatherLoading,
@@ -62,6 +65,7 @@ fun SeniorScreenLargePreviewDialog(
 @Composable
 private fun SeniorScreenLargePreviewContent(
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton> = emptyList(),
     onDismiss: () -> Unit,
     weather: DisplayWeather? = null,
     isWeatherLoading: Boolean = false,
@@ -76,6 +80,7 @@ private fun SeniorScreenLargePreviewContent(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             SeniorPhonePreview(
                 configuration = configuration,
+                buttonItems = buttonItems,
                 previewWidth = LargePhonePreviewWidth,
                 previewHeight = LargePhonePreviewHeight,
                 weather = weather,

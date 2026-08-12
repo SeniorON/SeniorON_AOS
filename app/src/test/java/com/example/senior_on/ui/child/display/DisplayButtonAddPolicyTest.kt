@@ -42,6 +42,56 @@ class DisplayButtonAddPolicyTest {
     }
 
     @Test
+    fun importedSupportedMusicAppTargetsTheTopMusicSection() {
+        val melon = DisplayHomeButton(
+            name = "멜론",
+            actionType = "DEFAULT",
+            actionValue = "MELON",
+            type = SeniorHomeButtonType.Melon,
+        )
+
+        assertEquals(
+            SeniorHomeButtonType.Melon,
+            melon.importedMusicButtonTypeOrNull(),
+        )
+    }
+
+    @Test
+    fun importedUnknownAppStaysInTheGeneralAppSection() {
+        val unknownMusicApp = DisplayHomeButton(
+            name = "새 음악 앱",
+            actionType = "APP",
+            actionValue = "com.example.music",
+            packageName = "com.example.music",
+            type = null,
+        )
+
+        assertEquals(null, unknownMusicApp.importedMusicButtonTypeOrNull())
+    }
+
+    @Test
+    fun importedMusicSelectionReplacesThePreviousTopMusicApp() {
+        val spotify = DisplayHomeButton(
+            name = "스포티파이",
+            actionType = "DEFAULT",
+            actionValue = "SPOTIFY",
+            type = SeniorHomeButtonType.Spotify,
+        )
+
+        val result = createInitialButtonOrder(
+            currentButtons = listOf(spotify),
+            musicButton = SeniorHomeButtonType.Melon,
+            appButtons = emptyList(),
+        )
+
+        assertEquals(
+            listOf(SeniorHomeButtonType.Melon),
+            result.mapNotNull(DisplayHomeButton::type)
+                .filter(SeniorHomeButtonType::isMusicButton),
+        )
+    }
+
+    @Test
     fun counterIncludesAllFourRequiredGeneralButtons() {
         assertEquals(9, buttonAddSelectedCount(selectedAppCount = 5))
     }
