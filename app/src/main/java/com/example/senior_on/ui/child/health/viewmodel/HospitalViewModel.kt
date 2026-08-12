@@ -175,7 +175,7 @@ class HospitalViewModel(
             return
         }
         if (fullLoadJob?.isActive == true || monthLoadJob?.isActive == true) return
-        loadHospitalData(isPullRefresh = true)
+        loadHospitalData(isPullRefresh = false)
     }
 
     fun refreshHospitalData() {

@@ -698,7 +698,7 @@ internal fun NotificationFooterPanel(
     modifier: Modifier = Modifier
 ) {
     val containerColor = when (uiState.tone) {
-        NotificationFooterTone.Recommendation -> SeniorOnColors.Background2
+        NotificationFooterTone.Recommendation -> SeniorOnColors.SupportWhite100
         NotificationFooterTone.Warning -> SeniorOnColors.Red100
     }
     val titleColor = when (uiState.tone) {

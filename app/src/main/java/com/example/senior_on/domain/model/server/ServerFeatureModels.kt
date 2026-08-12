@@ -73,6 +73,13 @@ data class ServerFamilyPhoto(
     val uploaderName: String, val description: String, val createdAt: String,
     val canDelete: Boolean, val isNew: Boolean
 )
+data class ServerFamilyPhotoAlbum(
+    val uploaderId: Long,
+    val uploaderName: String,
+    val latestPhotoUrl: String,
+    val photoCount: Long,
+    val hasNewPhotos: Boolean,
+)
 data class ServerFamilyPhotoCursor(
     val createdAt: String,
     val photoId: Long,

@@ -9,7 +9,6 @@ import com.example.senior_on.data.repository.impl.CaregiverRelationshipRepositor
 import com.example.senior_on.data.repository.impl.ChatBuddyRepositoryImpl
 import com.example.senior_on.data.repository.impl.DisplayRepositoryImpl
 import com.example.senior_on.data.repository.impl.HospitalSpecialtyRepositoryImpl
-import com.example.senior_on.data.repository.impl.ParentFamilyPhotoRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentInfoRepositoryImpl
 import com.example.senior_on.data.repository.impl.ParentLinkSafetyRepositoryImpl
 import com.example.senior_on.data.repository.impl.SessionRepositoryImpl
@@ -31,14 +30,11 @@ import com.example.senior_on.data.source.auth.AuthDataSource
 import com.example.senior_on.data.source.auth.MockAuthDataSource
 import com.example.senior_on.data.source.auth.PersistedSessionDataSource
 import com.example.senior_on.data.source.auth.SocialAuthDataSource
-import com.example.senior_on.data.source.family.MockFamilyPhotoStore
 import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
-import com.example.senior_on.data.source.mock.fixtures.MockFamilyPhotoFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
-import com.example.senior_on.data.source.parent.MockParentFamilyPhotoDataSource
 import com.example.senior_on.data.source.parent.InMemoryParentInfoDataSource
 import com.example.senior_on.data.source.parent.RemoteParentLinkSafetyDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
@@ -68,7 +64,6 @@ import com.example.senior_on.domain.repository.inquiry.InquiryRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
-import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
@@ -96,7 +91,6 @@ interface AppContainer {
     val addressSearchRepository: AddressSearchRepository
     val familyPhotoUploadPreparer: FamilyPhotoUploadPreparer
     val chatBuddyRepository: ChatBuddyRepository
-    val parentFamilyPhotoRepository: ParentFamilyPhotoRepository
     val parentLinkSafetyRepository: ParentLinkSafetyRepository
     val displayRepository: DisplayRepository
     val hospitalSpecialtyRepository: HospitalSpecialtyRepository
@@ -174,9 +168,6 @@ class DefaultAppContainer(
     override val addressSearchRepository: AddressSearchRepository =
         AddressSearchRepository()
 
-    private val parentFamilyPhotoStore = MockFamilyPhotoStore(
-        initialPhotos = MockFamilyPhotoFixtures.initialPhotos()
-    )
     private val primaryCaregiverRelationshipRepository:
         CaregiverRelationshipRepository = CaregiverRelationshipRepositoryImpl(
             MockCaregiverRelationshipDataSource(
@@ -215,10 +206,6 @@ class DefaultAppContainer(
     )
     override val chatBuddyRepository: ChatBuddyRepository =
         ChatBuddyRepositoryImpl(MockChatBuddyDataSource())
-    override val parentFamilyPhotoRepository: ParentFamilyPhotoRepository =
-        ParentFamilyPhotoRepositoryImpl(
-            MockParentFamilyPhotoDataSource(photoStore = parentFamilyPhotoStore)
-        )
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
         ParentLinkSafetyRepositoryImpl(
             RemoteParentLinkSafetyDataSource(

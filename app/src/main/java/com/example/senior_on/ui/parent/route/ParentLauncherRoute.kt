@@ -148,6 +148,7 @@ private fun ParentLauncherContent(
     var highlightedMedicationLogId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
+    var linkDetectionUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
@@ -156,20 +157,34 @@ private fun ParentLauncherContent(
 
     LaunchedEffect(notificationNavigationEvent) {
         val event = notificationNavigationEvent ?: return@LaunchedEffect
-        when {
-            event.isMedicationNotification -> {
-                highlightedMedicationLogId = event.medicationLogId
-                MedicationReminderEventStore.consume()
-                destination = ParentDestination.Medication
+        try {
+            when {
+                event.isMedicationNotification -> {
+                    highlightedMedicationLogId = event.medicationLogId
+                    MedicationReminderEventStore.consume()
+                    destination = ParentDestination.Medication
+                }
+                else -> {
+                    val eventDetail = event.eventId
+                        ?.takeIf { event.type == null || event.linkUrl == null }
+                        ?.let { eventId ->
+                            runCatching {
+                                appContainer.eventRepository.getDetail(eventId)
+                            }.getOrNull()
+                        }
+                    val eventType = event.type ?: eventDetail?.type
+
+                    if (eventType == "RISK_LINK") {
+                        linkDetectionUrl = event.linkUrl ?: eventDetail?.linkUrl
+                        destination = ParentDestination.LinkDetection
+                    } else {
+                        destination = ParentDestination.Home
+                    }
+                }
             }
-            event.type == "RISK_LINK" -> {
-                destination = ParentDestination.LinkDetection
-            }
-            else -> {
-                destination = ParentDestination.Home
-            }
+        } finally {
+            NotificationNavigationEventStore.consume()
         }
-        NotificationNavigationEventStore.consume()
     }
 
     ParentDeviceStatusLifecycleEffect(
@@ -183,6 +198,7 @@ private fun ParentLauncherContent(
     fun openHome() {
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
+        linkDetectionUrl = null
     }
 
     BackHandler {
@@ -234,12 +250,13 @@ private fun ParentLauncherContent(
 
         ParentDestination.LinkDetection -> ParentLinkDetectionRoute(
             repository = appContainer.parentLinkSafetyRepository,
+            url = linkDetectionUrl,
             onBackClick = ::openHome,
             modifier = modifier,
         )
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
-            repository = appContainer.parentFamilyPhotoRepository,
+            repository = appContainer.familyServerRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )

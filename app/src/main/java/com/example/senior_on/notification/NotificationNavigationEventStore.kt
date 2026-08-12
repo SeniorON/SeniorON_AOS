@@ -8,6 +8,7 @@ data class NotificationNavigationEvent(
     val notificationId: Long?,
     val eventId: Long?,
     val medicationLogId: Long?,
+    val linkUrl: String?,
     val title: String?,
 )
 
@@ -46,6 +47,7 @@ object NotificationNavigationEventStore {
             notificationId = notificationId,
             eventId = eventId,
             medicationLogId = medicationLogId,
+            linkUrl = data.valueOf(LinkUrlKey, LinkUrlSnakeKey, UrlKey),
             title = data.valueOf(TitleKey),
         )
     }
@@ -68,6 +70,9 @@ object NotificationNavigationEventStore {
     const val EventIdSnakeKey = "event_id"
     const val MedicationLogIdKey = "medicationLogId"
     const val MedicationLogIdSnakeKey = "medication_log_id"
+    const val LinkUrlKey = "linkUrl"
+    const val LinkUrlSnakeKey = "link_url"
+    const val UrlKey = "url"
     const val TitleKey = "title"
 
     private val EventNotificationTypes = setOf(
