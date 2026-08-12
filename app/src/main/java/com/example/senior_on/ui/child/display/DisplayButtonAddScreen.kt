@@ -101,6 +101,7 @@ fun DisplayButtonAddScreen(
     availableDefaultButtons: List<DisplayHomeButton> = emptyList(),
     transientImportedButtons: List<DisplayHomeButton> = emptyList(),
     autoSelectKey: String? = null,
+    autoSelectMusicButton: SeniorHomeButtonType? = null,
     autoSelectEvent: Int = 0,
     onBackClick: () -> Unit = {},
     onImportAppClick: () -> Unit = {},
@@ -147,7 +148,14 @@ fun DisplayButtonAddScreen(
         }
     }
 
-    LaunchedEffect(autoSelectEvent, autoSelectKey) {
+    LaunchedEffect(autoSelectEvent, autoSelectKey, autoSelectMusicButton) {
+        autoSelectMusicButton
+            ?.takeIf(MusicButtons::contains)
+            ?.let { musicButton ->
+                selectedMusicName = musicButton.name
+                return@LaunchedEffect
+            }
+
         val key = autoSelectKey ?: return@LaunchedEffect
         if (key in selectedButtonKeys || key !in candidateByKey) {
             return@LaunchedEffect
@@ -262,6 +270,9 @@ private fun DisplayHomeButton.isProtectedButton(): Boolean =
         "PHOTO",
         "EMERGENCY",
     ) || type in MusicButtons
+
+internal fun DisplayHomeButton.importedMusicButtonTypeOrNull(): SeniorHomeButtonType? =
+    type?.takeIf(MusicButtons::contains)
 
 @Composable
 private fun AppButtonSection(

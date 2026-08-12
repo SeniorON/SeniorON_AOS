@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
 import com.example.senior_on.ui.common.seniorinfo.formatPhoneNumber
 import com.example.senior_on.ui.common.seniorinfo.parseBirthDate
@@ -80,6 +81,7 @@ data class ConnectedSeniorDeviceUiState(
 @Composable
 fun ConnectedDevicesScreen(
     device: ConnectedSeniorDeviceUiState?,
+    isDisconnecting: Boolean = false,
     onBackClick: () -> Unit,
     onEditInfoClick: () -> Unit,
     onDisconnectConfirm: () -> Unit,
@@ -134,11 +136,13 @@ fun ConnectedDevicesScreen(
 
     if (showDisconnectDialog) {
         DisconnectDeviceDialog(
-            onDismiss = { showDisconnectDialog = false },
+            onDismiss = {
+                if (!isDisconnecting) showDisconnectDialog = false
+            },
             onConfirm = {
-                showDisconnectDialog = false
                 onDisconnectConfirm()
-            }
+            },
+            isDisconnecting = isDisconnecting,
         )
     }
 }
@@ -354,7 +358,8 @@ private fun ConnectedSeniorDeviceCard(
 @Composable
 private fun DisconnectDeviceDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    isDisconnecting: Boolean = false,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -441,21 +446,18 @@ private fun DisconnectDeviceDialog(
                         )
                     }
 
-                    Box(
+                    SeniorOnActionButton(
+                        text = "연결 해제",
+                        onClick = onConfirm,
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                            .background(SeniorOnColors.Red400)
-                            .clickable(onClick = onConfirm),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "연결 해제",
-                            style = SeniorOnTextStyles.ButtonM,
-                            color = SeniorOnColors.White
-                        )
-                    }
+                            .height(48.dp),
+                        enabled = !isDisconnecting,
+                        isLoading = isDisconnecting,
+                        containerColor = SeniorOnColors.Red400,
+                        contentColor = SeniorOnColors.White,
+                        minHeight = 48.dp,
+                    )
                 }
             }
         }

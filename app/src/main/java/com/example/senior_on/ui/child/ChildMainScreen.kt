@@ -83,7 +83,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
 import java.util.UUID
 
-private enum class ChildFamilyDestination {
+internal enum class ChildFamilyDestination {
     Overview,
     MemberSettings,
     Invitation,
@@ -147,6 +147,9 @@ fun ChildMainScreen(
     var photoDetailReturnDestination by rememberSaveable {
         mutableStateOf(ChildFamilyDestination.PhotoGallery)
     }
+    var photoShareReturnDestination by rememberSaveable {
+        mutableStateOf(ChildFamilyDestination.Overview)
+    }
     var selectedPhotoId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedPhotoSessionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -191,6 +194,9 @@ fun ChildMainScreen(
         familyDestination = ChildFamilyDestination.PhotoDetail
     }
     val navigateToPhotoShare = { photoUri: String ->
+        if (familyDestination != ChildFamilyDestination.PhotoShare) {
+            photoShareReturnDestination = familyDestination
+        }
         selectedPhotoUri = photoUri
         selectedPhotoSessionId = UUID.randomUUID().toString()
         familyDestination = ChildFamilyDestination.PhotoShare
@@ -227,14 +233,12 @@ fun ChildMainScreen(
         Unit
     }
     val navigateBackInFamily = {
-        familyDestination = when (familyDestination) {
-            ChildFamilyDestination.Invitation -> invitationReturnDestination
-            ChildFamilyDestination.MemberSettings -> ChildFamilyDestination.Overview
-            ChildFamilyDestination.PhotoGallery -> ChildFamilyDestination.Overview
-            ChildFamilyDestination.PhotoShare -> ChildFamilyDestination.PhotoGallery
-            ChildFamilyDestination.PhotoDetail -> photoDetailReturnDestination
-            ChildFamilyDestination.Overview -> ChildFamilyDestination.Overview
-        }
+        familyDestination = resolveChildFamilyBackDestination(
+            currentDestination = familyDestination,
+            invitationReturnDestination = invitationReturnDestination,
+            photoShareReturnDestination = photoShareReturnDestination,
+            photoDetailReturnDestination = photoDetailReturnDestination,
+        )
     }
 
     BackHandler(
@@ -257,6 +261,7 @@ fun ChildMainScreen(
             familyViewModel = familyViewModel,
             familyPhotoUploadViewModel = familyPhotoUploadViewModel,
             familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
+            settingsSessionKey = childSessionViewModelKey,
             displayViewModel = displayViewModel,
             parentInfo = displayUiState.parentInfo,
             connectedDevice = connectedDevice,
@@ -338,6 +343,20 @@ fun ChildMainScreen(
     }
 }
 
+internal fun resolveChildFamilyBackDestination(
+    currentDestination: ChildFamilyDestination,
+    invitationReturnDestination: ChildFamilyDestination = ChildFamilyDestination.Overview,
+    photoShareReturnDestination: ChildFamilyDestination = ChildFamilyDestination.Overview,
+    photoDetailReturnDestination: ChildFamilyDestination = ChildFamilyDestination.PhotoGallery,
+): ChildFamilyDestination = when (currentDestination) {
+    ChildFamilyDestination.Invitation -> invitationReturnDestination
+    ChildFamilyDestination.MemberSettings -> ChildFamilyDestination.Overview
+    ChildFamilyDestination.PhotoGallery -> ChildFamilyDestination.Overview
+    ChildFamilyDestination.PhotoShare -> photoShareReturnDestination
+    ChildFamilyDestination.PhotoDetail -> photoDetailReturnDestination
+    ChildFamilyDestination.Overview -> ChildFamilyDestination.Overview
+}
+
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
@@ -348,6 +367,7 @@ private fun ChildMainTabContent(
     familyViewModel: FamilyViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     familyInvitationViewModelKey: String,
+    settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
@@ -499,6 +519,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            sessionKey = settingsSessionKey,
             parentInfo = parentInfo,
             connectedDevice = connectedDevice,
             displayViewModel = displayViewModel,

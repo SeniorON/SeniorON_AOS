@@ -34,6 +34,7 @@ internal fun MedicationEditorRoute(
                 startDate = uiState.addMedicationStartDate,
             ),
             modifier = modifier,
+            isSaving = uiState.isSaving,
             onBackClick = onBackClick,
             onSaveClick = onSaveClick,
         )
@@ -47,6 +48,7 @@ internal fun MedicationEditorRoute(
                 mode = mode,
                 initialDraft = medication.toDraft(),
                 modifier = Modifier.fillMaxSize(),
+                isSaving = uiState.isSaving,
                 onBackClick = onBackClick,
                 onEditClick = onEditClick,
                 onSaveClick = onSaveClick,

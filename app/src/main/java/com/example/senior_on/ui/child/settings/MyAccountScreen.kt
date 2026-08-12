@@ -243,6 +243,7 @@ fun ChangeNameScreen(
         SettingsPrimaryButton(
             text = "저장",
             enabled = canSave,
+            isLoading = isSaving,
             onClick = {
                 hasSaveAttempted = true
                 if (!isSameAsCurrent) {
@@ -430,6 +431,7 @@ fun ChangePasswordScreen(
         SettingsPrimaryButton(
             text = "변경 완료",
             enabled = canComplete,
+            isLoading = isSaving,
             onClick = {
                 hasCompleteAttempted = true
                 if (

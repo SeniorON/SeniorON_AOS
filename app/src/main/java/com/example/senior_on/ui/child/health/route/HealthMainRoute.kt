@@ -50,6 +50,7 @@ fun HealthMainRoute(
         .collectAsStateWithLifecycle()
     var selectedSection by rememberSaveable { mutableStateOf(HealthSection.Health) }
     var appointmentToDelete by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
+    var wasDeletingAppointment by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(medicationCheckedEvent) {
@@ -77,6 +78,15 @@ fun HealthMainRoute(
         val message = medicationUiState.errorMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         medicationViewModel.consumeError()
+    }
+
+    LaunchedEffect(hospitalUiState.isSaving) {
+        if (hospitalUiState.isSaving && appointmentToDelete != null) {
+            wasDeletingAppointment = true
+        } else if (!hospitalUiState.isSaving && wasDeletingAppointment) {
+            appointmentToDelete = null
+            wasDeletingAppointment = false
+        }
     }
 
     when {
@@ -133,8 +143,8 @@ fun HealthMainRoute(
             onCancel = { appointmentToDelete = null },
             onConfirm = {
                 hospitalViewModel.deleteAppointment(appointment)
-                appointmentToDelete = null
             },
+            isConfirmLoading = hospitalUiState.isSaving,
         )
     }
 }

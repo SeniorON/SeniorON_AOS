@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -86,6 +85,8 @@ import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.ProfileImageViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
@@ -112,6 +113,11 @@ data class SettingsProfileUiState(
         get() = !profileImageUrl.isNullOrBlank() && !isUsingDefaultProfileImage
 }
 
+internal fun settingsSessionViewModelKey(
+    sessionKey: String,
+    viewModelName: String,
+): String = "settings:${viewModelName.trim()}:${sessionKey.trim()}"
+
 private enum class SettingsDestination {
     Main,
     MyAccount,
@@ -136,6 +142,7 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    sessionKey: String,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
     displayViewModel: DisplayViewModel,
@@ -152,6 +159,7 @@ fun SettingsTabRoute(
     onWithdrawConfirm: () -> Unit = {},
 ) {
     val viewModel: SettingsViewModel = viewModel(
+        key = settingsSessionViewModelKey(sessionKey, "actions"),
         factory = SettingsViewModel.factory(
             authRepository = authRepository,
             sessionRepository = sessionRepository,
@@ -159,6 +167,7 @@ fun SettingsTabRoute(
         ),
     )
     val profileImageViewModel: ProfileImageViewModel = viewModel(
+        key = settingsSessionViewModelKey(sessionKey, "profile"),
         factory = ProfileImageViewModel.factory(
             userSettingsRepository = userSettingsRepository,
             photoUploadPreparer = familyPhotoUploadPreparer,
@@ -170,11 +179,15 @@ fun SettingsTabRoute(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val saveableStateHolder = rememberSaveableStateHolder()
-    var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingCameraCleanupUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var wasProfileImageUploading by remember { mutableStateOf(false) }
+    var pendingCameraPhotoUri by rememberSaveable(sessionKey) {
+        mutableStateOf<String?>(null)
+    }
+    var pendingCameraCleanupUri by rememberSaveable(sessionKey) {
+        mutableStateOf<String?>(null)
+    }
+    var wasProfileImageUploading by remember(sessionKey) { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(profileImageViewModel) {
         profileImageViewModel.loadSettingsProfile()
     }
 
@@ -266,16 +279,22 @@ fun SettingsTabRoute(
         Unit
     }
 
-    var destination by rememberSaveable { mutableStateOf(SettingsDestination.Main) }
-    var connectionGuideReturnDestination by rememberSaveable {
+    var destination by rememberSaveable(sessionKey) {
+        mutableStateOf(SettingsDestination.Main)
+    }
+    var connectionGuideReturnDestination by rememberSaveable(sessionKey) {
         mutableStateOf(SettingsDestination.HelpInquiry)
     }
-    var selectedParentAddress by rememberSaveable { mutableStateOf("") }
-    var selectedParentAddressLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var selectedParentAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var profileName by rememberSaveable { mutableStateOf("") }
-    var profileAccountType by rememberSaveable { mutableStateOf("계정") }
-    var profileEmail by rememberSaveable { mutableStateOf("") }
+    var selectedParentAddress by rememberSaveable(sessionKey) { mutableStateOf("") }
+    var selectedParentAddressLatitude by rememberSaveable(sessionKey) {
+        mutableStateOf<Double?>(null)
+    }
+    var selectedParentAddressLongitude by rememberSaveable(sessionKey) {
+        mutableStateOf<Double?>(null)
+    }
+    var profileName by rememberSaveable(sessionKey) { mutableStateOf("") }
+    var profileAccountType by rememberSaveable(sessionKey) { mutableStateOf("계정") }
+    var profileEmail by rememberSaveable(sessionKey) { mutableStateOf("") }
 
     LaunchedEffect(profileImageUiState.profileName) {
         profileImageUiState.profileName?.let { serverName ->
@@ -410,6 +429,7 @@ fun SettingsTabRoute(
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
             device = connectedDevice,
+            isDisconnecting = displayUiState.isSaving,
             onBackClick = navigateBack,
             onDeviceInfoClick = {
                 displayViewModel.refreshDevice()
@@ -451,6 +471,8 @@ fun SettingsTabRoute(
                 connectionGuideReturnDestination = SettingsDestination.DeviceConnection
                 destination = SettingsDestination.ConnectionGuide
             },
+            isRefreshing = displayUiState.isRefreshing,
+            isDisconnecting = displayUiState.isSaving,
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -495,6 +517,7 @@ fun SettingsTabRoute(
                         selectedAddress = selectedParentAddress,
                         selectedAddressLatitude = selectedParentAddressLatitude,
                         selectedAddressLongitude = selectedParentAddressLongitude,
+                        isSubmitting = displayUiState.isSaving,
                         onBackClick = navigateBack,
                         onSearchAddressClick = {
                             destination = SettingsDestination.EditConnectedDeviceAddressSearch
@@ -682,6 +705,7 @@ fun SettingsScreen(
             },
             onConfirm = onLogoutConfirm,
             isConfirmEnabled = !isLoggingOut,
+            isConfirmLoading = isLoggingOut,
         )
     }
 
@@ -694,6 +718,7 @@ fun SettingsScreen(
             },
             onConfirm = onWithdrawConfirm,
             isConfirmEnabled = !isWithdrawing,
+            isConfirmLoading = isWithdrawing,
         )
     }
 }
@@ -703,6 +728,7 @@ private fun SettingsLogoutDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     isConfirmEnabled: Boolean = true,
+    isConfirmLoading: Boolean = false,
 ) {
     SettingsConfirmBottomDialog(
         onDismiss = onDismiss,
@@ -720,6 +746,7 @@ private fun SettingsLogoutDialog(
         confirmText = "로그아웃",
         confirmBackgroundColor = SeniorOnColors.Primary600,
         isConfirmEnabled = isConfirmEnabled,
+        isConfirmLoading = isConfirmLoading,
         onConfirm = onConfirm
     )
 }
@@ -729,6 +756,7 @@ private fun SettingsWithdrawDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     isConfirmEnabled: Boolean = true,
+    isConfirmLoading: Boolean = false,
 ) {
     SettingsConfirmBottomDialog(
         onDismiss = onDismiss,
@@ -753,6 +781,7 @@ private fun SettingsWithdrawDialog(
         confirmBackgroundColor = SeniorOnColors.Red400,
         onConfirm = onConfirm,
         isConfirmEnabled = isConfirmEnabled,
+        isConfirmLoading = isConfirmLoading,
     )
 }
 
@@ -769,6 +798,7 @@ private fun SettingsConfirmBottomDialog(
     dialogHeight: Dp,
     titleToDescriptionSpacing: Dp = 12.dp,
     isConfirmEnabled: Boolean = true,
+    isConfirmLoading: Boolean = false,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -859,30 +889,18 @@ private fun SettingsConfirmBottomDialog(
                         )
                     }
 
-                    Box(
+                    SeniorOnActionButton(
+                        text = confirmText,
+                        onClick = onConfirm,
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                            .background(
-                                if (isConfirmEnabled) {
-                                    confirmBackgroundColor
-                                } else {
-                                    confirmBackgroundColor.copy(alpha = 0.5f)
-                                }
-                            )
-                            .clickable(
-                                enabled = isConfirmEnabled,
-                                onClick = onConfirm
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = confirmText,
-                            style = SeniorOnTextStyles.ButtonM,
-                            color = SeniorOnColors.White
-                        )
-                    }
+                            .height(48.dp),
+                        enabled = isConfirmEnabled,
+                        isLoading = isConfirmLoading,
+                        containerColor = confirmBackgroundColor,
+                        contentColor = SeniorOnColors.White,
+                        minHeight = 48.dp,
+                    )
                 }
             }
         }
@@ -973,9 +991,9 @@ private fun SettingsProfileSection(
                             .background(SeniorOnColors.Black.copy(alpha = 0.24f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
+                        SeniorOnLoadingIndicator(
                             color = SeniorOnColors.White,
+                            size = 22.dp,
                             strokeWidth = 2.dp,
                         )
                     }
@@ -1325,27 +1343,16 @@ internal fun SettingsPrimaryButton(
     text: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
-    val backgroundColor = if (enabled) {
-        SeniorOnColors.Primary600
-    } else {
-        SeniorOnColors.Primary600.copy(alpha = 0.5f)
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(backgroundColor)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.White
-        )
-    }
+    SeniorOnActionButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        isLoading = isLoading,
+    )
 }
 
 @Composable
@@ -1474,9 +1481,9 @@ internal fun SettingsProfileAvatar(
                         .background(SeniorOnColors.Black.copy(alpha = 0.24f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
+                    SeniorOnLoadingIndicator(
                         color = SeniorOnColors.White,
+                        size = 22.dp,
                         strokeWidth = 2.dp,
                     )
                 }

@@ -53,6 +53,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.example.senior_on.R
 import com.example.senior_on.common.time.koreaToday
 import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -108,6 +109,7 @@ fun MedicationDetailScreen(
     mode: MedicationEditorMode,
     initialDraft: MedicationDraft,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit,
     onEditClick: () -> Unit = {},
     onSaveClick: (MedicationDraft) -> Unit,
@@ -390,7 +392,8 @@ fun MedicationDetailScreen(
                             MedicationEditorMode.Add -> {
                                 MedicationPrimaryButton(
                                     label = "약 추가하기",
-                                    enabled = isComplete,
+                                    enabled = isComplete && !isSaving,
+                                    isLoading = isSaving,
                                     onClick = ::saveMedicationIfValid,
                                     iconResId = R.drawable.ic_plus,
                                     modifier = Modifier.fillMaxWidth()
@@ -399,11 +402,12 @@ fun MedicationDetailScreen(
                             MedicationEditorMode.View -> {
                                 MedicationDeleteButton(
                                     onClick = { showDeleteDialog = true },
+                                    enabled = !isSaving,
                                     modifier = Modifier.weight(1f)
                                 )
                                 MedicationPrimaryButton(
                                     label = "수정하기",
-                                    enabled = true,
+                                    enabled = !isSaving,
                                     onClick = onEditClick,
                                     iconResId = R.drawable.ic_pencil,
                                     modifier = Modifier.weight(1f)
@@ -412,7 +416,8 @@ fun MedicationDetailScreen(
                             MedicationEditorMode.Edit -> {
                                 MedicationPrimaryButton(
                                     label = "수정하기",
-                                    enabled = isComplete,
+                                    enabled = isComplete && !isSaving,
+                                    isLoading = isSaving,
                                     onClick = ::saveMedicationIfValid,
                                     iconResId = R.drawable.ic_pencil,
                                     modifier = Modifier.fillMaxWidth()
@@ -509,7 +514,8 @@ fun MedicationDetailScreen(
         SeniorOnDeleteConfirmDialog(
             title = "'${category.ifBlank { initialDraft.category }}'을 삭제할까요?",
             onCancel = { showDeleteDialog = false },
-            onConfirm = onDeleteClick
+            onConfirm = onDeleteClick,
+            isConfirmLoading = isSaving,
         )
     }
 }
@@ -837,6 +843,7 @@ private fun MedicationRepeatField(
 @Composable
 private fun MedicationDeleteButton(
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -844,7 +851,7 @@ private fun MedicationDeleteButton(
             .height(48.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .border(1.dp, SeniorOnColors.Red300, RoundedCornerShape(SeniorOnRadius.Small))
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -867,35 +874,31 @@ private fun MedicationDeleteButton(
 private fun MedicationPrimaryButton(
     label: String,
     enabled: Boolean,
+    isLoading: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconResId: Int? = null
 ) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Primary600)
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        iconResId?.let {
+    SeniorOnActionButton(
+        text = label,
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        enabled = enabled,
+        isLoading = isLoading,
+        minHeight = 48.dp,
+        shape = RoundedCornerShape(SeniorOnRadius.Small),
+        leadingContent = iconResId?.let { iconId ->
+            {
             Icon(
-                painter = painterResource(id = it),
+                painter = painterResource(id = iconId),
                 contentDescription = null,
                 tint = SeniorOnColors.SupportWhite100,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-        }
-        Text(
-            text = label,
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.SupportWhite100
-        )
-    }
+            }
+        },
+    )
 }
 
 internal fun RegisteredMedicationUiState.toDraft() = MedicationDraft(

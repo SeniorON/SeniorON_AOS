@@ -55,6 +55,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -514,6 +515,7 @@ internal fun SeniorInfoBottomActions(
 internal fun SeniorInfoEditBottomAction(
     onSaveClick: () -> Unit,
     isSaveEnabled: Boolean,
+    isSubmitting: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -528,13 +530,15 @@ internal fun SeniorInfoEditBottomAction(
             .background(SeniorOnColors.White)
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
-        SeniorInfoActionButton(
+        SeniorOnActionButton(
             text = "수정하기",
             onClick = onSaveClick,
-            style = SeniorInfoButtonStyle.Filled,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
             enabled = isSaveEnabled,
-            height = 52.dp,
+            isLoading = isSubmitting,
+            minHeight = 52.dp,
         )
     }
 }

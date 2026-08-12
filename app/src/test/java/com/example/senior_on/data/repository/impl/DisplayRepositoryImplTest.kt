@@ -1,6 +1,7 @@
 package com.example.senior_on.data.repository.impl
 
 import com.example.senior_on.data.remote.dto.ButtonOptionResponse
+import com.example.senior_on.data.remote.dto.ConnectionResponse
 import com.example.senior_on.data.remote.dto.DeviceDetailResponse
 import com.example.senior_on.data.remote.dto.DeviceStatusUpdateRequest
 import com.example.senior_on.data.remote.dto.DeviceLocationResponse
@@ -40,6 +41,90 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisplayRepositoryImplTest {
+    @Test
+    fun getOverviewMapsOnlineConnectionStatusFromHomeResponse() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = homeResponse(
+                    connection = ConnectionResponse(
+                        connected = true,
+                        battery = 72,
+                        device_name = "Galaxy S24",
+                        connection_status = "ONLINE",
+                    )
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val device = repository.getOverview(currentParentInfo = null).device
+
+        assertEquals("Galaxy S24", device?.name)
+        assertEquals(DisplayDeviceConnectionStatus.Online, device?.connectionStatus)
+    }
+
+    @Test
+    fun getOverviewMapsOfflineConnectionStatusFromHomeResponse() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = homeResponse(
+                    connection = ConnectionResponse(
+                        connected = false,
+                        battery = 51,
+                        device_name = "Galaxy S24",
+                        connection_status = "OFFLINE",
+                    )
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val device = repository.getOverview(currentParentInfo = null).device
+
+        assertEquals("Galaxy S24", device?.name)
+        assertEquals(DisplayDeviceConnectionStatus.Offline, device?.connectionStatus)
+    }
+
+    @Test
+    fun getOverviewMapsDisconnectedConnectionStatusToAbsentDevice() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = homeResponse(
+                    connection = ConnectionResponse(
+                        connected = false,
+                        battery = 51,
+                        device_name = "stale-device",
+                        connection_status = "DISCONNECTED",
+                    )
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        assertNull(repository.getOverview(currentParentInfo = null).device)
+    }
+
+    @Test
+    fun getOverviewFallsBackToConnectedWhenConnectionStatusIsMissing() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = homeResponse(
+                    connection = ConnectionResponse(
+                        connected = false,
+                        battery = 51,
+                        device_name = "Galaxy S24",
+                    )
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        assertEquals(
+            DisplayDeviceConnectionStatus.Offline,
+            repository.getOverview(currentParentInfo = null).device?.connectionStatus,
+        )
+    }
+
     @Test
     fun allSupportedMusicAppsUseBackendEnumValuesAndMapBackToButtons() = runBlocking {
         val musicCases = listOf(
@@ -826,6 +911,16 @@ private fun familyMember(
     managerType = managerType,
     me = isMe,
     profileImageUrl = null,
+)
+
+private fun homeResponse(connection: ConnectionResponse?) = HomeResponse(
+    connection = connection,
+    buttons = emptyList(),
+    user_name = null,
+    senior_profile = null,
+    font_size = "LARGE",
+    music_card = null,
+    today_schedule = null,
 )
 
 private class FakeHomeDataSource(

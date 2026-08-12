@@ -26,6 +26,7 @@ internal fun HospitalEditorRoute(
         initialDraft = appointment?.toDraft(),
         specialtyRepository = specialtyRepository,
         modifier = modifier,
+        isSaving = uiState.isSaving,
         onBackClick = onBackClick,
         onSaveClick = onSaveClick,
         onDeleteClick = { appointment?.let(onDeleteClick) },
