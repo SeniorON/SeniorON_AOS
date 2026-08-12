@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.example.senior_on.ui.parent.medication
 
 import androidx.compose.foundation.background
@@ -22,6 +24,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -50,6 +53,7 @@ fun ParentMedicationScreen(
     uiState: ParentMedicationUiState,
     onBackClick: () -> Unit,
     onTakenClick: (String) -> Unit,
+    onRefresh: () -> Unit = {},
     onMessageConsumed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,18 +83,24 @@ fun ParentMedicationScreen(
                 )
             }
 
-            when (uiState.content) {
-                ParentMedicationContent.Loading -> ParentMedicationLoadingContent()
-                ParentMedicationContent.Empty -> ParentMedicationEmptyContent(
-                    onBackClick = onBackClick,
-                )
-                ParentMedicationContent.Completed -> ParentMedicationCompletedContent(
-                    onBackClick = onBackClick,
-                )
-                ParentMedicationContent.List -> ParentMedicationListContent(
-                    uiState = uiState,
-                    onTakenClick = onTakenClick,
-                )
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when (uiState.content) {
+                    ParentMedicationContent.Loading -> ParentMedicationLoadingContent()
+                    ParentMedicationContent.Empty -> ParentMedicationEmptyContent(
+                        onBackClick = onBackClick,
+                    )
+                    ParentMedicationContent.Completed -> ParentMedicationCompletedContent(
+                        onBackClick = onBackClick,
+                    )
+                    ParentMedicationContent.List -> ParentMedicationListContent(
+                        uiState = uiState,
+                        onTakenClick = onTakenClick,
+                    )
+                }
             }
         }
 

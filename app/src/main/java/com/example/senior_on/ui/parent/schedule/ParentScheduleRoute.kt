@@ -2,6 +2,7 @@ package com.example.senior_on.ui.parent.schedule
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,9 +20,14 @@ fun ParentScheduleRoute(
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadTodaySchedules()
+    }
+
     ParentScheduleScreen(
         uiState = uiState,
         onBackClick = onBackClick,
+        onRefresh = viewModel::refresh,
         modifier = modifier,
     )
 }

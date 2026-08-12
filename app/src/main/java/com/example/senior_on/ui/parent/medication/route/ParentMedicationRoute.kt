@@ -43,6 +43,7 @@ fun ParentMedicationRoute(
         uiState = uiState,
         onBackClick = ::resetAndGoBack,
         onTakenClick = viewModel::markAsTaken,
+        onRefresh = viewModel::refresh,
         onMessageConsumed = viewModel::consumeMessage,
         modifier = modifier,
     )

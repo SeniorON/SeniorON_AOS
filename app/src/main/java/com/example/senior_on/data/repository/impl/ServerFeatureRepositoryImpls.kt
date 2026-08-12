@@ -193,6 +193,15 @@ class FamilyServerRepositoryImpl(
         source.changePrimaryManager(FamilyPrimaryManagerUpdateRequest(userId))
     }
     override suspend fun deleteMember(userId: Long) = source.deleteMember(userId)
+    override suspend fun getPhotoAlbums() = source.getAlbums().map { album ->
+        ServerFamilyPhotoAlbum(
+            uploaderId = album.uploaderUserId.requirePositiveFamilyId("uploaderUserId"),
+            uploaderName = album.uploaderName.orEmpty(),
+            latestPhotoUrl = album.latestPhotoUrl.orEmpty(),
+            photoCount = album.photoCount ?: 0L,
+            hasNewPhotos = album.hasNewPhotos == true,
+        )
+    }
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,

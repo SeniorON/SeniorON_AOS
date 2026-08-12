@@ -39,6 +39,7 @@ data class ParentMedicationUiState(
     val submittingMedicationId: String? = null,
     val message: String? = null,
     val messageType: ParentMedicationMessageType = ParentMedicationMessageType.Default,
+    val isRefreshing: Boolean = false,
 )
 
 class ParentMedicationViewModel(
@@ -50,12 +51,17 @@ class ParentMedicationViewModel(
     private var loadJob: Job? = null
     private var submitJob: Job? = null
 
-    fun loadMedication(highlightedMedicationLogId: Long? = null) {
+    fun loadMedication(
+        highlightedMedicationLogId: Long? = null,
+        isRefresh: Boolean = false,
+    ) {
+        if (_uiState.value.isRefreshing) return
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    content = ParentMedicationContent.Loading,
+                    content = if (isRefresh) it.content else ParentMedicationContent.Loading,
+                    isRefreshing = isRefresh,
                     highlightedMedicationId = highlightedMedicationLogId?.toString(),
                     message = null,
                     messageType = ParentMedicationMessageType.Default,
@@ -77,6 +83,7 @@ class ParentMedicationViewModel(
                         },
                         medications = medications,
                         submittingMedicationId = null,
+                        isRefreshing = false,
                     )
                 }
             }.onFailure { throwable ->
@@ -87,11 +94,17 @@ class ParentMedicationViewModel(
                         medications = emptyList(),
                         message = "복약 정보를 불러오지 못했어요.",
                         messageType = ParentMedicationMessageType.Default,
+                        isRefreshing = false,
                     )
                 }
             }
         }
     }
+
+    fun refresh() = loadMedication(
+        highlightedMedicationLogId = _uiState.value.highlightedMedicationId?.toLongOrNull(),
+        isRefresh = true,
+    )
 
     fun markAsTaken(medicationId: String) {
         val medication = _uiState.value.medications

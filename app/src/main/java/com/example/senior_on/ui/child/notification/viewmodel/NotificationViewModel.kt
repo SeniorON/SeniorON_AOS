@@ -73,7 +73,7 @@ class NotificationViewModel(
             return
         }
         if (homeLoadJob?.isActive == true) return
-        loadHome(isPullRefresh = true)
+        loadHome(isPullRefresh = false)
     }
 
     fun refreshHome() {

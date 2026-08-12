@@ -183,7 +183,7 @@ class MedicationViewModel(
             return
         }
         if (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) return
-        loadMedicationData(isPullRefresh = true)
+        loadMedicationData(isPullRefresh = false)
     }
 
     fun refreshMedicationData() {

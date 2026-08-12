@@ -17,6 +17,7 @@ data class ParentScheduleUiState(
     val date: LocalDate = LocalDate.now(),
     val schedules: List<ParentSchedule> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val errorMessage: String? = null
 ) {
     val hasSchedules: Boolean
@@ -29,15 +30,17 @@ class ParentScheduleViewModel(
     private val _uiState = MutableStateFlow(ParentScheduleUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        loadTodaySchedules()
-    }
-
-    fun loadTodaySchedules() {
+    fun loadTodaySchedules(isRefresh: Boolean = false) {
+        if (_uiState.value.isRefreshing) return
         viewModelScope.launch {
             val today = LocalDate.now()
             _uiState.update {
-                it.copy(date = today, isLoading = true, errorMessage = null)
+                it.copy(
+                    date = today,
+                    isLoading = !isRefresh,
+                    isRefreshing = isRefresh,
+                    errorMessage = null,
+                )
             }
 
             runCatching {
@@ -55,7 +58,8 @@ class ParentScheduleViewModel(
                     _uiState.update {
                         it.copy(
                             schedules = schedules.sortedBy(ParentSchedule::time),
-                            isLoading = false
+                            isLoading = false,
+                            isRefreshing = false,
                         )
                     }
                 }
@@ -64,12 +68,15 @@ class ParentScheduleViewModel(
                         it.copy(
                             schedules = emptyList(),
                             isLoading = false,
+                            isRefreshing = false,
                             errorMessage = "일정을 불러오지 못했어요."
                         )
                     }
                 }
         }
     }
+
+    fun refresh() = loadTodaySchedules(isRefresh = true)
 
     companion object {
         fun factory(repository: HomeServerRepository) = viewModelFactory {
