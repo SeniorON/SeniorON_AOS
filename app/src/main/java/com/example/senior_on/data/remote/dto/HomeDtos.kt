@@ -61,7 +61,12 @@ data class SeniorProfileUpdateRequest(
     val address: String?,
     val detailAddress: String?
 )
-data class ConnectionResponse(val connected: Boolean?, val battery: Int?, val device_name: String?)
+data class ConnectionResponse(
+    val connected: Boolean?,
+    val battery: Int?,
+    val device_name: String?,
+    val connection_status: String? = null,
+)
 data class HomeButtonResponse(
     val icon: String?, val button_id: Long?, val button_order: Int?,
     val button_name: String?, val action_type: String?, val action_value: String?,
