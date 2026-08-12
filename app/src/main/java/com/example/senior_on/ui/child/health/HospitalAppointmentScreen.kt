@@ -36,7 +36,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
@@ -54,6 +53,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
 import com.example.senior_on.data.repository.impl.HospitalSpecialtyRepositoryImpl
 import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
@@ -76,6 +76,7 @@ fun HospitalAppointmentScreen(
     initialDraft: HospitalAppointmentDraft? = null,
     specialtyRepository: HospitalSpecialtyRepository = PreviewHospitalSpecialtyRepository,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit,
     onSaveClick: (HospitalAppointmentDraft) -> Unit,
     onDeleteClick: () -> Unit = {}
@@ -251,7 +252,8 @@ fun HospitalAppointmentScreen(
                 HospitalEditorMode.Add -> {
                     HospitalEditorSaveButton(
                         label = "진료 추가하기",
-                        enabled = isComplete,
+                        enabled = isComplete && !isSaving,
+                        isLoading = isSaving,
                         onClick = saveDraft,
                         iconResId = R.drawable.ic_plus,
                         modifier = Modifier.weight(1f)
@@ -264,7 +266,8 @@ fun HospitalAppointmentScreen(
                     )
                     HospitalEditorSaveButton(
                         label = "수정하기",
-                        enabled = isComplete,
+                        enabled = isComplete && !isSaving,
+                        isLoading = isSaving,
                         onClick = saveDraft,
                         iconResId = R.drawable.ic_pencil,
                         modifier = Modifier.weight(1f)
@@ -273,7 +276,8 @@ fun HospitalAppointmentScreen(
                 HospitalEditorMode.Edit -> {
                     HospitalEditorSaveButton(
                         label = "수정하기",
-                        enabled = isComplete,
+                        enabled = isComplete && !isSaving,
+                        isLoading = isSaving,
                         onClick = saveDraft,
                         modifier = Modifier.weight(1f)
                     )
@@ -343,7 +347,8 @@ fun HospitalAppointmentScreen(
         SeniorOnDeleteConfirmDialog(
             title = "${selectedDate.monthValue}월 ${selectedDate.dayOfMonth}일 진료를\n삭제할까요?",
             onCancel = { showDeleteDialog = false },
-            onConfirm = onDeleteClick
+            onConfirm = onDeleteClick,
+            isConfirmLoading = isSaving,
         )
     }
 }
@@ -696,24 +701,28 @@ private fun HospitalEditorSaveButton(
     enabled: Boolean,
     onClick: () -> Unit,
     @androidx.annotation.DrawableRes iconResId: Int? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
-    Row(
-        modifier = modifier
-            .height(46.dp)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Primary600)
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        iconResId?.let {
-            Icon(painterResource(it), null, Modifier.size(20.dp), SeniorOnColors.SupportWhite100)
-            Spacer(modifier = Modifier.width(6.dp))
-        }
-        Text(label, style = SeniorOnTextStyles.ButtonM, color = SeniorOnColors.SupportWhite100)
-    }
+    SeniorOnActionButton(
+        text = label,
+        onClick = onClick,
+        modifier = modifier.height(46.dp),
+        enabled = enabled,
+        isLoading = isLoading,
+        minHeight = 46.dp,
+        leadingContent = iconResId?.let { iconId ->
+            {
+                Icon(
+                    painterResource(iconId),
+                    null,
+                    Modifier.size(20.dp),
+                    SeniorOnColors.SupportWhite100,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+        },
+    )
 }
 
 internal fun LocalTime.toKoreanTime(): String =

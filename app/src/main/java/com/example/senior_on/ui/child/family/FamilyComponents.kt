@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.family
 
 import com.example.senior_on.ui.theme.SeniorOnDimensions
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,6 +50,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -107,6 +108,7 @@ internal fun FamilyActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    isLoading: Boolean = false,
     outlined: Boolean = false,
     buttonHeight: Dp = 44.dp,
     expandWidth: Boolean = true,
@@ -117,40 +119,37 @@ internal fun FamilyActionButton(
     val backgroundColor = if (outlined) SeniorOnColors.White else SeniorOnColors.Primary600
     val contentColor = if (outlined) SeniorOnColors.Primary600 else SeniorOnColors.White
 
-    Row(
+    SeniorOnActionButton(
+        text = text,
+        onClick = onClick,
         modifier = modifier
             .then(if (expandWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(buttonHeight)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(shape)
-            .background(backgroundColor)
-            .then(
-                if (outlined) {
-                    Modifier.border(1.dp, SeniorOnColors.Primary600, shape)
-                } else {
-                    Modifier
-                },
+            .height(buttonHeight),
+        enabled = enabled,
+        isLoading = isLoading,
+        containerColor = backgroundColor,
+        contentColor = contentColor,
+        disabledContainerColor = backgroundColor.copy(alpha = 0.5f),
+        disabledContentColor = contentColor.copy(alpha = 0.5f),
+        border = if (outlined) {
+            BorderStroke(1.dp, SeniorOnColors.Primary600)
+        } else {
+            null
+        },
+        shape = shape,
+        minHeight = buttonHeight,
+        horizontalPadding = 12.dp,
+        textStyle = SeniorOnTextStyles.ButtonM,
+        leadingContent = {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = androidx.compose.material3.LocalContentColor.current,
             )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(id = iconResId),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = contentColor,
-        )
-        Spacer(modifier = Modifier.width(iconSpacing))
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonM,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+            Spacer(modifier = Modifier.width(iconSpacing))
+        },
+    )
 }
 
 @Composable
@@ -162,31 +161,25 @@ internal fun FamilyTextActionButton(
     modifier: Modifier = Modifier,
     borderColor: Color? = null,
     enabled: Boolean = true,
+    isLoading: Boolean = false,
     buttonHeight: Dp = 48.dp,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
-    Box(
-        modifier = modifier
-            .height(buttonHeight)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(shape)
-            .background(backgroundColor)
-            .then(
-                if (borderColor == null) {
-                    Modifier
-                } else {
-                    Modifier.border(1.dp, borderColor, shape)
-                },
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonS,
-            color = contentColor,
-        )
-    }
+    SeniorOnActionButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier.height(buttonHeight),
+        enabled = enabled,
+        isLoading = isLoading,
+        containerColor = backgroundColor,
+        contentColor = contentColor,
+        disabledContainerColor = backgroundColor.copy(alpha = 0.5f),
+        disabledContentColor = contentColor.copy(alpha = 0.5f),
+        border = borderColor?.let { BorderStroke(1.dp, it) },
+        shape = shape,
+        minHeight = buttonHeight,
+        textStyle = SeniorOnTextStyles.ButtonS,
+    )
 }
 
 @Composable

@@ -24,6 +24,7 @@ internal fun HospitalEditorRoute(
         mode = mode,
         initialDate = uiState.editorDate,
         initialDraft = appointment?.toDraft(),
+        isSaving = uiState.isSaving,
         specialtyRepository = specialtyRepository,
         modifier = modifier,
         onBackClick = onBackClick,

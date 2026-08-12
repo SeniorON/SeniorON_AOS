@@ -27,6 +27,7 @@ internal fun MedicationEditorRoute(
         MedicationDetailScreen(
             mode = MedicationEditorMode.Add,
             initialDraft = MedicationDraft("", "", emptyList(), emptySet()),
+            isSaving = uiState.isSaving,
             modifier = modifier,
             onBackClick = onBackClick,
             onSaveClick = onSaveClick,
@@ -40,6 +41,7 @@ internal fun MedicationEditorRoute(
             MedicationDetailScreen(
                 mode = mode,
                 initialDraft = medication.toDraft(),
+                isSaving = uiState.isSaving,
                 modifier = Modifier.fillMaxSize(),
                 onBackClick = onBackClick,
                 onEditClick = onEditClick,

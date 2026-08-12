@@ -67,6 +67,7 @@ import androidx.compose.ui.window.PopupProperties
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -199,6 +200,7 @@ fun DisplayButtonEditGuideScreen(
 fun DisplayButtonEditSelectedScreen(
     initialButtons: List<DisplayHomeButton>,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit = {},
     onSaveClick: (buttons: List<DisplayHomeButton>) -> Unit = {},
     onAddButtonClick: (buttons: List<DisplayHomeButton>) -> Unit = {},
@@ -230,7 +232,8 @@ fun DisplayButtonEditSelectedScreen(
     ) {
         ButtonEditTopBar(
             onBackClick = onBackClick,
-            saveEnabled = hasChanges,
+            saveEnabled = hasChanges && !isSaving,
+            isSaving = isSaving,
             onSaveClick = {
                 onSaveClick(currentButtons)
             },
@@ -322,6 +325,7 @@ private fun ButtonEditTopBar(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     saveEnabled: Boolean = false,
+    isSaving: Boolean = false,
     onSaveClick: (() -> Unit)? = null,
 ) {
     Box(
@@ -357,37 +361,22 @@ private fun ButtonEditTopBar(
             color = SeniorOnColors.Gray800,
         )
 
-        onSaveClick?.let {
-            Box(
+        onSaveClick?.let { save ->
+            SeniorOnActionButton(
+                text = "저장",
+                onClick = save,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 16.dp)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(38.dp))
-                    .background(
-                        if (saveEnabled) {
-                            SeniorOnColors.Primary600
-                        } else {
-                            SeniorOnColors.Primary600.copy(alpha = 0.5f)
-                        }
-                    )
-                    .clickable(
-                        enabled = saveEnabled,
-                        interactionSource = remember {
-                            MutableInteractionSource()
-                        },
-                        indication = null,
-                        onClick = it,
-                    )
-                    .padding(horizontal = 18.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "저장",
-                    style = SeniorOnTextStyles.BodySSemiBold,
-                    color = SeniorOnColors.White,
-                )
-            }
+                    .height(36.dp),
+                enabled = saveEnabled,
+                isLoading = isSaving,
+                shape = RoundedCornerShape(38.dp),
+                minHeight = 36.dp,
+                horizontalPadding = 18.dp,
+                textStyle = SeniorOnTextStyles.BodySSemiBold,
+                loadingIndicatorSize = 18.dp,
+            )
         }
     }
 }

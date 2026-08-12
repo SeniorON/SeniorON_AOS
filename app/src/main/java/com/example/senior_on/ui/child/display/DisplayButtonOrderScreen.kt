@@ -57,6 +57,7 @@ import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnDimensions
@@ -112,6 +113,7 @@ internal fun List<DisplayHomeButton>.withFixedButtonOrderSections():
 fun DisplayButtonOrderScreen(
     initialButtons: List<DisplayHomeButton>,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit = {},
     onSaveClick: (List<DisplayHomeButton>) -> Unit = {},
 ) {
@@ -160,6 +162,7 @@ fun DisplayButtonOrderScreen(
         ) {
             ButtonOrderTopBar(
                 onBackClick = onBackClick,
+                isSaving = isSaving,
                 onSaveClick = {
                     onSaveClick(
                         buildList {
@@ -403,6 +406,7 @@ private fun FixedEmergencyButtonOrderCard(
 private fun ButtonOrderTopBar(
     onBackClick: () -> Unit,
     onSaveClick: () -> Unit,
+    isSaving: Boolean,
 ) {
     Box(
         modifier = Modifier.fillMaxWidth().height(SeniorOnDimensions.TopBarHeight)
@@ -430,23 +434,21 @@ private fun ButtonOrderTopBar(
             style = SeniorOnTextStyles.BodyLBold,
             color = SeniorOnColors.Gray800,
         )
-        Box(
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
-                .height(36.dp).clip(RoundedCornerShape(38.dp))
-                .background(SeniorOnColors.Primary600)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onSaveClick,
-                ).padding(horizontal = 18.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "저장",
-                style = SeniorOnTextStyles.BodySSemiBold,
-                color = SeniorOnColors.White,
-            )
-        }
+        SeniorOnActionButton(
+            text = "저장",
+            onClick = onSaveClick,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp)
+                .height(36.dp),
+            enabled = !isSaving,
+            isLoading = isSaving,
+            shape = RoundedCornerShape(38.dp),
+            minHeight = 36.dp,
+            horizontalPadding = 18.dp,
+            textStyle = SeniorOnTextStyles.BodySSemiBold,
+            loadingIndicatorSize = 18.dp,
+        )
     }
 }
 

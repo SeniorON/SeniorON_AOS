@@ -242,6 +242,7 @@ private fun OneOnOneInquiryScreen(
                         }
                     },
                     canSubmit = canSubmit,
+                    isSubmitting = isSubmitting,
                     onSubmitClick = {
                         onSubmitInquiry(title, content, imageUris)
                     },
@@ -364,6 +365,7 @@ private fun OneOnOneInquiryWriteContent(
     imageUris: List<String>,
     onAddImageClick: () -> Unit,
     canSubmit: Boolean,
+    isSubmitting: Boolean,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -479,6 +481,7 @@ private fun OneOnOneInquiryWriteContent(
         SettingsPrimaryButton(
             text = "문의하기",
             enabled = canSubmit,
+            isLoading = isSubmitting,
             onClick = onSubmitClick,
             modifier = Modifier
                 .fillMaxWidth()

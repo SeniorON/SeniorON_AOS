@@ -34,7 +34,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
@@ -50,6 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -105,6 +105,7 @@ fun MedicationDetailScreen(
     mode: MedicationEditorMode,
     initialDraft: MedicationDraft,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit,
     onEditClick: () -> Unit = {},
     onSaveClick: (MedicationDraft) -> Unit,
@@ -370,7 +371,8 @@ fun MedicationDetailScreen(
                             MedicationEditorMode.Add -> {
                                 MedicationPrimaryButton(
                                     label = "약 추가하기",
-                                    enabled = isComplete,
+                                    enabled = isComplete && !isSaving,
+                                    isLoading = isSaving,
                                     onClick = {
                                         onSaveClick(
                                             MedicationDraft(
@@ -405,7 +407,8 @@ fun MedicationDetailScreen(
                             MedicationEditorMode.Edit -> {
                                 MedicationPrimaryButton(
                                     label = "수정하기",
-                                    enabled = isComplete,
+                                    enabled = isComplete && !isSaving,
+                                    isLoading = isSaving,
                                     onClick = {
                                         onSaveClick(
                                             MedicationDraft(
@@ -495,7 +498,8 @@ fun MedicationDetailScreen(
         SeniorOnDeleteConfirmDialog(
             title = "'${category.ifBlank { initialDraft.category }}'을 삭제할까요?",
             onCancel = { showDeleteDialog = false },
-            onConfirm = onDeleteClick
+            onConfirm = onDeleteClick,
+            isConfirmLoading = isSaving,
         )
     }
 }
@@ -832,33 +836,28 @@ private fun MedicationPrimaryButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconResId: Int? = null
+    iconResId: Int? = null,
+    isLoading: Boolean = false,
 ) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Primary600)
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        iconResId?.let {
-            Icon(
-                painter = painterResource(id = it),
-                contentDescription = null,
-                tint = SeniorOnColors.SupportWhite100,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-        }
-        Text(
-            text = label,
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.SupportWhite100
-        )
-    }
+    SeniorOnActionButton(
+        text = label,
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        enabled = enabled,
+        isLoading = isLoading,
+        minHeight = 48.dp,
+        leadingContent = iconResId?.let { iconId ->
+            {
+                Icon(
+                    painter = painterResource(id = iconId),
+                    contentDescription = null,
+                    tint = SeniorOnColors.SupportWhite100,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+        },
+    )
 }
 
 internal fun RegisteredMedicationUiState.toDraft() = MedicationDraft(
