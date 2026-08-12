@@ -48,6 +48,8 @@ import com.example.senior_on.ui.parent.medication.route.ParentMedicationRoute
 import com.example.senior_on.ui.parent.medication.ParentMedicationReminderDialog
 import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.notification.MedicationReminderEventStore
+import com.example.senior_on.notification.NotificationNavigationEventStore
+import com.example.senior_on.notification.isMedicationNotification
 import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
@@ -149,6 +151,26 @@ private fun ParentLauncherContent(
     var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
+    val notificationNavigationEvent by
+        NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
+
+    LaunchedEffect(notificationNavigationEvent) {
+        val event = notificationNavigationEvent ?: return@LaunchedEffect
+        when {
+            event.isMedicationNotification -> {
+                highlightedMedicationLogId = event.medicationLogId
+                MedicationReminderEventStore.consume()
+                destination = ParentDestination.Medication
+            }
+            event.type == "RISK_LINK" -> {
+                destination = ParentDestination.LinkDetection
+            }
+            else -> {
+                destination = ParentDestination.Home
+            }
+        }
+        NotificationNavigationEventStore.consume()
+    }
 
     ParentDeviceStatusLifecycleEffect(
         appContainer = appContainer,

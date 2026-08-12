@@ -58,7 +58,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.ContextCompat
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.address.AddressSearchResult
@@ -77,7 +76,7 @@ fun AddressSearchScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onAddressSelected: (AddressSearchResult) -> Unit = {},
-    viewModel: AddressSearchViewModel = viewModel()
+    viewModel: AddressSearchViewModel,
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

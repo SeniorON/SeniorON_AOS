@@ -2,7 +2,10 @@ package com.example.senior_on.ui.onboarding.signup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.animation.rememberSplineBasedDecay
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
+import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -326,6 +329,20 @@ private fun SignupBirthPickerColumn(
     val pickerHeight = 200.dp
     val pickerItemHeight = 70.dp
     val pickerCenterPadding = (pickerHeight - pickerItemHeight) / 2
+    val snapLayoutInfoProvider = remember(listState) {
+        SnapLayoutInfoProvider(listState)
+    }
+    val decayAnimationSpec = rememberSplineBasedDecay<Float>()
+    val fastSnapFlingBehavior = remember(
+        snapLayoutInfoProvider,
+        decayAnimationSpec,
+    ) {
+        snapFlingBehavior(
+            snapLayoutInfoProvider = snapLayoutInfoProvider,
+            decayAnimationSpec = decayAnimationSpec,
+            snapAnimationSpec = tween(durationMillis = 120),
+        )
+    }
 
     Box(modifier = modifier.height(pickerHeight)) {
         LazyColumn(
@@ -333,7 +350,7 @@ private fun SignupBirthPickerColumn(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = pickerCenterPadding),
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+            flingBehavior = fastSnapFlingBehavior
         ) {
             items(values.size) { index ->
                 val value = values[index]

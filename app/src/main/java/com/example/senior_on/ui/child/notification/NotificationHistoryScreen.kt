@@ -44,6 +44,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun NotificationHistoryScreen(
@@ -217,6 +218,14 @@ private fun NotificationHistoryCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+    val formattedTime = remember(message.occurredAtMillis, message.time) {
+        message.occurredAtMillis.toHistoryTimeOrNull() ?: message.time
+    }
+    val displayTime = if (isToday && !formattedTime.startsWith("오늘")) {
+        "오늘 $formattedTime"
+    } else {
+        formattedTime
+    }
     val isTodaySos = isToday && category == NotificationCategory.Sos
     val containerColor = when {
         isTodaySos -> SeniorOnColors.Red300
@@ -267,7 +276,7 @@ private fun NotificationHistoryCard(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = message.time,
+                text = displayTime,
                 style = SeniorOnTextStyles.BodyMBold,
                 color = timeColor
             )
@@ -301,7 +310,7 @@ private data class NotificationHistoryGroup(
 
 private fun List<NotificationMessageUiState>.toRecentHistoryGroups(
     nowMillis: Long = System.currentTimeMillis(),
-    zoneId: ZoneId = ZoneId.systemDefault()
+    zoneId: ZoneId = NotificationHistoryZoneId
 ): List<NotificationHistoryGroup> {
     val today = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate()
     val oldestDate = today.minusDays(29)
@@ -327,6 +336,17 @@ private fun List<NotificationMessageUiState>.toRecentHistoryGroups(
                 messages = dateMessages
             )
         }
+}
+
+private val NotificationHistoryZoneId: ZoneId = ZoneId.of("Asia/Seoul")
+private val NotificationHistoryTimeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+
+private fun Long?.toHistoryTimeOrNull(): String? {
+    val epochMillis = this ?: return null
+    return Instant.ofEpochMilli(epochMillis)
+        .atZone(NotificationHistoryZoneId)
+        .format(NotificationHistoryTimeFormatter)
 }
 
 private val NotificationCategory.historyTitle: String

@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.domain.model.address.AddressSearchResult
 import com.example.senior_on.domain.model.parent.SeniorRelationType
@@ -14,7 +13,7 @@ import com.example.senior_on.ui.common.seniorinfo.CaregiverRelationshipInputScre
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoInputScreen
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoInputState
 import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
-import com.example.senior_on.ui.common.seniorinfo.toParentInfo
+import com.example.senior_on.ui.common.seniorinfo.parseBirthDate
 
 @Composable
 fun CaregiverRelationshipRoute(
@@ -79,23 +78,24 @@ fun ParentInfoInputRoute(
         selectedAddressLatitude = selectedAddressLatitude,
         selectedAddressLongitude = selectedAddressLongitude,
         isSubmitting = uiState.isLoading,
+        errorMessage = uiState.errorMessage,
         onBackClick = onBackClick,
         onSkipClick = onSkipClick,
         onSearchAddressClick = onSearchAddressClick,
+        onInputChange = seniorViewModel::clearError,
         onSaveClick = { inputState ->
             val accessToken = authViewModel.accessToken
             if (accessToken != null) {
                 seniorViewModel.createSenior(
                     accessToken = accessToken,
                     registration = inputState.toSeniorRegistration(),
-                    parentInfo = inputState.toParentInfo(
-                        seniorId = MockSeniorFixtures.SENIOR_ID
-                    )
                 ) { senior ->
                     if (senior != null) {
                         onComplete()
                     }
                 }
+            } else {
+                seniorViewModel.showMissingSessionError()
             }
         }
     )
@@ -103,17 +103,20 @@ fun ParentInfoInputRoute(
 
 @Composable
 fun AddressSearchRoute(
+    appContainer: AppContainer,
     onBackClick: () -> Unit,
     onAddressSelected: (AddressSearchResult) -> Unit
 ) {
+    val viewModel = addressSearchViewModel(appContainer)
+
     AddressSearchScreen(
         onBackClick = onBackClick,
-        onAddressSelected = onAddressSelected
+        onAddressSelected = onAddressSelected,
+        viewModel = viewModel,
     )
 }
 
 private fun ParentInfoInputState.toSeniorRegistration(): SeniorRegistration {
-    val parentInfo = toParentInfo(seniorId = MockSeniorFixtures.SENIOR_ID)
     val relation = when (relationship) {
         SeniorRelationship.Mother -> SeniorRelationType.MOTHER
         SeniorRelationship.Father -> SeniorRelationType.FATHER
@@ -122,16 +125,16 @@ private fun ParentInfoInputState.toSeniorRegistration(): SeniorRegistration {
     }
 
     return SeniorRegistration(
-        name = parentInfo.name,
+        name = name.trim(),
         relation = relation,
         customRelation = customRelationship.takeIf {
             relation == SeniorRelationType.OTHER
         },
-        birth = parentInfo.birthDate.toString(),
-        phoneNumber = parentInfo.phoneNumber,
-        address = parentInfo.address,
-        detailAddress = parentInfo.addressDetail,
-        latitude = parentInfo.addressLatitude,
-        longitude = parentInfo.addressLongitude
+        birth = requireNotNull(parseBirthDate(birthDate)).toString(),
+        phoneNumber = phoneNumber,
+        address = address.trim(),
+        detailAddress = addressDetail.trim(),
+        latitude = addressLatitude,
+        longitude = addressLongitude
     )
 }

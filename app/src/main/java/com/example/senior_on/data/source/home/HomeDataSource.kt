@@ -3,6 +3,7 @@ package com.example.senior_on.data.source.home
 import com.example.senior_on.data.remote.api.HomeApi
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.requireData
+import com.example.senior_on.data.source.remoteRequest
 
 interface HomeDataSource {
     suspend fun getHome(): HomeResponse
@@ -20,7 +21,9 @@ interface HomeDataSource {
 }
 
 class RemoteHomeDataSource(private val api: HomeApi) : HomeDataSource {
-    override suspend fun getHome() = api.getHome().requireData()
+    override suspend fun getHome() = remoteRequest {
+        api.getHome().requireData()
+    }
     override suspend fun getWeather(latitude: Double, longitude: Double) =
         api.getWeather(latitude, longitude).requireData()
     override suspend fun getSeniorHome() = api.getSeniorHome().requireData()

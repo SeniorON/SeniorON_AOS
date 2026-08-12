@@ -662,7 +662,12 @@ private data class NotificationDetailUiState(
             message: NotificationMessageUiState
         ): NotificationDetailUiState {
             val isReturnedHome = message.movementType == NotificationMovementType.ReturnedHome
-            val formattedTime = message.occurredAtMillis.toKoreanDateTime()
+            val formattedTime = message.occurredAtMillis.toKoreanDateTimeOrNull()
+                ?: message.time.toDisplayDateTimeOrNull()
+                ?: "시간 정보 없음"
+            val formattedClockTime = message.occurredAtMillis.toKoreanTimeOrNull()
+                ?: message.time.toDisplayTimeOrNull()
+                ?: "시간 정보 없음"
             return when (category) {
                 NotificationCategory.Sos -> NotificationDetailUiState(
                     category = category,
@@ -700,7 +705,8 @@ private data class NotificationDetailUiState(
                     backIconColor = SeniorOnColors.Gray800,
                     showRipple = true,
                     actionColor = SeniorOnColors.Red400,
-                    url = message.title
+                    url = message.title,
+                    detectedTime = formattedClockTime,
                 )
                 NotificationCategory.Outing -> NotificationDetailUiState(
                     category = category,
@@ -770,10 +776,32 @@ private fun cssLinearGradient(
     }
 }
 
-private fun Long?.toKoreanDateTime(): String {
-    val dateTime = Instant.ofEpochMilli(this ?: System.currentTimeMillis())
-        .atZone(ZoneId.systemDefault())
+private val SeniorOnZoneId: ZoneId = ZoneId.of("Asia/Seoul")
+
+private fun Long?.toKoreanDateTimeOrNull(): String? {
+    val epochMillis = this ?: return null
+    val dateTime = Instant.ofEpochMilli(epochMillis)
+        .atZone(SeniorOnZoneId)
     return DateTimeFormatter.ofPattern("M월 d일 a h:mm", Locale.KOREAN).format(dateTime)
+}
+
+private fun Long?.toKoreanTimeOrNull(): String? {
+    val epochMillis = this ?: return null
+    val dateTime = Instant.ofEpochMilli(epochMillis)
+        .atZone(SeniorOnZoneId)
+    return DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN).format(dateTime)
+}
+
+private fun String?.toDisplayDateTimeOrNull(): String? {
+    val value = this?.trim()?.takeIf(String::isNotEmpty) ?: return null
+    val epochMillis = value.toEpochMillisOrNull() ?: return value
+    return epochMillis.toKoreanDateTimeOrNull()
+}
+
+private fun String?.toDisplayTimeOrNull(): String? {
+    val value = this?.trim()?.takeIf(String::isNotEmpty) ?: return null
+    val epochMillis = value.toEpochMillisOrNull() ?: return value
+    return epochMillis.toKoreanTimeOrNull()
 }
 
 private fun Int?.toBatteryLabel(): String =

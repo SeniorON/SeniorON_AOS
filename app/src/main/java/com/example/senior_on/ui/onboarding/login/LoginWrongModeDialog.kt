@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -54,7 +55,12 @@ fun LoginWrongModeDialogContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier.size(38.dp),
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(
+                        color = SeniorOnColors.Background3,
+                        shape = CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -97,14 +103,14 @@ fun LoginWrongModeDialogContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
-                    .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
                     .background(SeniorOnColors.Primary600)
                     .clickable(onClick = onConfirmClick),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "처음으로",
-                    style = SeniorOnTextStyles.ButtonM,
+                    style = SeniorOnTextStyles.ButtonS,
                     color = SeniorOnColors.SupportWhite100
                 )
             }

@@ -5,6 +5,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
     sections: List<NotificationSectionUiState>,
@@ -30,7 +35,9 @@ fun NotificationScreen(
     onSectionClick: (NotificationCategory) -> Unit = {},
     onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
-    onDetectionTimeClick: () -> Unit = {}
+    onDetectionTimeClick: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     NotificationScreen(
         uiState = NotificationScreenUiState(
@@ -45,10 +52,13 @@ fun NotificationScreen(
         onSectionClick = onSectionClick,
         onNotificationClick = onNotificationClick,
         onNotificationToggle = onNotificationToggle,
-        onDetectionTimeClick = onDetectionTimeClick
+        onDetectionTimeClick = onDetectionTimeClick,
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
     uiState: NotificationScreenUiState,
@@ -56,7 +66,9 @@ fun NotificationScreen(
     onSectionClick: (NotificationCategory) -> Unit = {},
     onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
-    onDetectionTimeClick: () -> Unit = {}
+    onDetectionTimeClick: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     val sections = uiState.sections.map { section ->
         when {
@@ -110,80 +122,88 @@ fun NotificationScreen(
             count = notificationCount
         )
 
-        Column(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(1f),
         ) {
-            sections.forEachIndexed { index, section ->
-                NotificationSectionCard(
-                    section = section,
-                    showDetailArrow = uiState.isParentPhoneRegistered && section.enabled,
-                    showToggle = section.category != NotificationCategory.Sos,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    textMuted = footerPanel?.tone == NotificationFooterTone.Warning,
-                    onClick = { onSectionClick(section.category) },
-                    onMessageClick = { message ->
-                        onNotificationClick(section.category, message)
-                    },
-                    onToggleClick = {
-                        when {
-                            !uiState.isParentPhoneRegistered ||
-                                !uiState.isParentPhoneInternetConnected -> {
-                                showParentPhoneInternetRequiredDialog = true
-                            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                sections.forEachIndexed { index, section ->
+                    NotificationSectionCard(
+                        section = section,
+                        showDetailArrow = uiState.isParentPhoneRegistered && section.enabled,
+                        showToggle = section.category != NotificationCategory.Sos,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        textMuted = footerPanel?.tone == NotificationFooterTone.Warning,
+                        onClick = { onSectionClick(section.category) },
+                        onMessageClick = { message ->
+                            onNotificationClick(section.category, message)
+                        },
+                        onToggleClick = {
+                            when {
+                                !uiState.isParentPhoneRegistered ||
+                                    !uiState.isParentPhoneInternetConnected -> {
+                                    showParentPhoneInternetRequiredDialog = true
+                                }
 
-                            section.category == NotificationCategory.Outing &&
-                                !uiState.hasHomeAddress -> {
-                                showHomeAddressMissingDialog = true
-                            }
+                                section.category == NotificationCategory.Outing &&
+                                    !uiState.hasHomeAddress -> {
+                                    showHomeAddressMissingDialog = true
+                                }
 
-                            else -> {
-                                val toggledEnabled = !section.enabled
-                                onNotificationToggle(section.category, toggledEnabled)
+                                else -> {
+                                    val toggledEnabled = !section.enabled
+                                    onNotificationToggle(section.category, toggledEnabled)
+                                }
                             }
+                        },
+                        onDetectionTimeClick = onDetectionTimeClick
+                    )
+
+                    val nextSection = sections.getOrNull(index + 1)
+                    when {
+                        section.category == NotificationCategory.Sos &&
+                            nextSection?.category == NotificationCategory.Inactivity -> {
+                            NotificationSectionDivider()
                         }
-                    },
-                    onDetectionTimeClick = onDetectionTimeClick
-                )
 
-                val nextSection = sections.getOrNull(index + 1)
-                when {
-                    section.category == NotificationCategory.Sos &&
-                        nextSection?.category == NotificationCategory.Inactivity -> {
-                        NotificationSectionDivider()
-                    }
+                        section.category == NotificationCategory.Inactivity &&
+                            nextSection?.category == NotificationCategory.RiskLink -> {
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
 
-                    section.category == NotificationCategory.Inactivity &&
-                        nextSection?.category == NotificationCategory.RiskLink -> {
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
+                        section.category == NotificationCategory.RiskLink &&
+                            nextSection?.category == NotificationCategory.Outing -> {
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
 
-                    section.category == NotificationCategory.RiskLink &&
-                        nextSection?.category == NotificationCategory.Outing -> {
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-
-                    nextSection != null -> {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        nextSection != null -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
                 }
-            }
 
-            AnimatedVisibility(
-                visible = footerPanel != null,
-                enter = fadeIn(animationSpec = tween(180)),
-                exit = fadeOut(animationSpec = tween(180))
-            ) {
-                latestFooterPanel?.let { panel ->
-                    Column {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        NotificationFooterPanel(
-                            uiState = panel,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .height(200.dp)
-                        )
+                AnimatedVisibility(
+                    visible = footerPanel != null,
+                    enter = fadeIn(animationSpec = tween(180)),
+                    exit = fadeOut(animationSpec = tween(180))
+                ) {
+                    latestFooterPanel?.let { panel ->
+                        Column {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            NotificationFooterPanel(
+                                uiState = panel,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .height(200.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -206,12 +226,12 @@ fun NotificationScreen(
 private fun NotificationMessageUiState.isRecentAlarm(
     nowMillis: Long = System.currentTimeMillis()
 ): Boolean {
-    val occurredAt = occurredAtMillis ?: return true
+    val occurredAt = occurredAtMillis ?: return false
     val ageMillis = nowMillis - occurredAt
     return ageMillis in 0..RECENT_ALARM_WINDOW_MILLIS
 }
 
-private const val RECENT_ALARM_WINDOW_MILLIS = 48L * 60L * 60L * 1000L
+private const val RECENT_ALARM_WINDOW_MILLIS = 24L * 60L * 60L * 1000L
 
 @Composable
 private fun NotificationSectionDivider() {

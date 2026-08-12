@@ -75,9 +75,11 @@ fun ParentInfoInputScreen(
     selectedAddressLatitude: Double? = null,
     selectedAddressLongitude: Double? = null,
     isSubmitting: Boolean = false,
+    errorMessage: String? = null,
     onBackClick: () -> Unit = {},
     onSkipClick: () -> Unit = {},
     onSearchAddressClick: () -> Unit = {},
+    onInputChange: () -> Unit = {},
     onSaveClick: (ParentInfoInputState) -> Unit = {}
 ) {
     var name by rememberSaveable { mutableStateOf(initialState?.name.orEmpty()) }
@@ -154,6 +156,7 @@ fun ParentInfoInputScreen(
                     customRelationship = trimmedRelationship.take(CustomRelationshipMaxLength)
                     relationship = SeniorRelationship.Custom
                     showCustomRelationshipSheet = false
+                    onInputChange()
                 }
             }
         )
@@ -166,6 +169,7 @@ fun ParentInfoInputScreen(
             onConfirm = { selectedBirthDate ->
                 birthDate = selectedBirthDate.toBirthDateString()
                 showBirthDateSheet = false
+                onInputChange()
             }
         )
     }
@@ -194,7 +198,10 @@ fun ParentInfoInputScreen(
 
         SeniorInfoFormContent(
             name = name,
-            onNameChange = { name = it },
+            onNameChange = {
+                name = it
+                onInputChange()
+            },
             selectedRelationship = if (showCustomRelationshipSheet) {
                 SeniorRelationship.Custom
             } else {
@@ -208,16 +215,26 @@ fun ParentInfoInputScreen(
                 } else {
                     customRelationship = ""
                     relationship = selectedRelationship
+                    onInputChange()
                 }
             },
             birthDate = birthDate,
             onBirthDateClick = { showBirthDateSheet = true },
             phoneNumber = phoneNumber,
-            onPhoneNumberChange = { phoneNumber = formatPhoneFieldValue(it) },
+            onPhoneNumberChange = {
+                phoneNumber = formatPhoneFieldValue(it)
+                onInputChange()
+            },
             address = address,
-            onAddressChange = { address = it },
+            onAddressChange = {
+                address = it
+                onInputChange()
+            },
             addressDetail = addressDetail,
-            onAddressDetailChange = { addressDetail = it },
+            onAddressDetailChange = {
+                addressDetail = it
+                onInputChange()
+            },
             onSearchAddressClick = onSearchAddressClick,
             showIntro = mode == ParentInfoScreenMode.Input,
             isPhoneNumberRequired = true,
@@ -255,6 +272,7 @@ fun ParentInfoInputScreen(
                 onSkipClick = { showSkipNotice = true },
                 onSaveClick = saveParentInfo,
                 isSaveEnabled = isSaveEnabled,
+                errorMessage = errorMessage,
             )
 
             ParentInfoScreenMode.Edit -> SeniorInfoEditBottomAction(

@@ -34,7 +34,7 @@ fun SplashRoute(
 fun LoginRoute(
     appContainer: AppContainer,
     selectedMode: AppUserMode,
-    onLoginSuccess: (userId: String) -> Unit,
+    onLoginSuccess: (userId: String, keepLoggedIn: Boolean) -> Unit,
     onBackClick: () -> Unit,
     onFindIdClick: () -> Unit,
     onFindPasswordClick: () -> Unit,

@@ -3,6 +3,7 @@ package com.example.senior_on.ui.onboarding.route
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
+import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.onboarding.viewmodel.AccountRecoveryViewModel
 import com.example.senior_on.ui.onboarding.viewmodel.AuthViewModel
 import com.example.senior_on.ui.onboarding.viewmodel.SeniorOnboardingViewModel
@@ -43,6 +44,17 @@ internal fun seniorOnboardingViewModel(
             homeRepository = appContainer.homeServerRepository,
             caregiverRelationshipRepositoryFor =
                 appContainer::caregiverRelationshipRepositoryFor
+        )
+    )
+}
+
+@Composable
+internal fun addressSearchViewModel(
+    appContainer: AppContainer
+): AddressSearchViewModel {
+    return viewModel(
+        factory = AddressSearchViewModel.Factory(
+            repository = appContainer.addressSearchRepository,
         )
     )
 }
