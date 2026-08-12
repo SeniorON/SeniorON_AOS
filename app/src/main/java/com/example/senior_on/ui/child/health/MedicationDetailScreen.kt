@@ -60,17 +60,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-enum class MedicationEditorMode { Add, View, Edit }
-
-data class MedicationDraft(
-    val category: String,
-    val name: String,
-    val times: List<LocalTime>,
-    val weekdays: Set<Int>,
-    val startDate: LocalDate? = null,
-    val repeat: MedicationRepeatSelection = MedicationRepeatSelection(),
-)
-
 private val LocalDateNullableSaver = Saver<LocalDate?, String>(
     save = { it?.toString().orEmpty() },
     restore = { saved -> saved.takeIf(String::isNotBlank)?.let(LocalDate::parse) },
@@ -203,7 +192,7 @@ fun MedicationDetailScreen(
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 }
         ) {
-            MedicationEditorTopBar(
+            HealthEditorTopBar(
                 title = when (mode) {
                     MedicationEditorMode.Add -> "복약 등록하기"
                     MedicationEditorMode.View -> "복약 정보"
@@ -217,10 +206,10 @@ fun MedicationDetailScreen(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                MedicationFormSection(
+                HealthFormSection(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp)
                 ) {
-                    MedicationFormLabel("약 이름")
+                    HealthFormLabel("약 이름")
                     Spacer(modifier = Modifier.height(12.dp))
                     MedicationTextInput(
                         value = category,
@@ -245,11 +234,11 @@ fun MedicationDetailScreen(
                     )
                 }
 
-                MedicationFormSection(
+                HealthFormSection(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 0.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        MedicationFormLabel("성분명")
+                        HealthFormLabel("성분명")
                         Spacer(modifier = Modifier.width(8.dp))
                         MedicationSelectBadge()
                     }
@@ -272,7 +261,7 @@ fun MedicationDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        MedicationFormLabel(
+                        HealthFormLabel(
                             text = "복용 시간",
                             modifier = Modifier.weight(1f)
                         )
@@ -335,7 +324,7 @@ fun MedicationDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    MedicationFormLabel("복용 시작일")
+                    HealthFormLabel("복용 시작일")
                     Spacer(modifier = Modifier.height(12.dp))
                     MedicationStartDateField(
                         date = startDate,
@@ -349,7 +338,7 @@ fun MedicationDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    MedicationFormLabel("반복")
+                    HealthFormLabel("반복")
                     Spacer(modifier = Modifier.height(12.dp))
                     MedicationRepeatField(
                         frequencyLabel = repeatSelection.frequency.label,
@@ -512,59 +501,6 @@ fun MedicationDetailScreen(
 }
 
 @Composable
-private fun MedicationEditorTopBar(
-    title: String,
-    onBackClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .dropShadow(
-                shape = RectangleShape,
-                shadow = Shadow(
-                    radius = 12.dp,
-                    spread = 0.dp,
-                    color = Color.Black.copy(alpha = 15f / 255f),
-                    offset = DpOffset(x = 0.dp, y = 4.dp)
-                )
-            )
-            .background(SeniorOnColors.SupportWhite100)
-            .statusBarsPadding()
-            .height(SeniorOnDimensions.TopBarHeight)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로가기",
-                tint = SeniorOnColors.Gray800,
-                modifier = Modifier.size(26.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = title,
-            style = SeniorOnTextStyles.BodyLBold,
-            color = SeniorOnColors.Gray800
-        )
-    }
-}
-
-@Composable
-private fun MedicationFormSection(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(modifier = modifier.fillMaxWidth(), content = content)
-}
-
-@Composable
 private fun MedicationTimePickerField(
     isFocused: Boolean,
     onClick: () -> Unit
@@ -709,19 +645,6 @@ private fun MedicationSnackbar(
             color = SeniorOnColors.SupportWhite100
         )
     }
-}
-
-@Composable
-private fun MedicationFormLabel(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = text,
-        style = SeniorOnTextStyles.BodyMSemiBold,
-        color = SeniorOnColors.Gray800,
-        modifier = modifier
-    )
 }
 
 @Composable

@@ -22,6 +22,7 @@ fun HospitalScreen(
     upcomingAppointments: List<HospitalAppointmentUiState> = appointments,
     displayedMonth: YearMonth = YearMonth.now(),
     selectedDate: LocalDate = LocalDate.now(),
+    selectedAppointments: List<HospitalAppointmentUiState> = appointments.filter { it.date == selectedDate },
     onDisplayedMonthChange: (YearMonth) -> Unit = {},
     onSelectedDateChange: (LocalDate) -> Unit = {},
     onAddAppointmentClick: (LocalDate) -> Unit = {},
@@ -34,8 +35,6 @@ fun HospitalScreen(
             .filter { YearMonth.from(it.date) == displayedMonth }
             .mapTo(mutableSetOf()) { it.date.dayOfMonth }
     }
-    val selectedAppointments = appointments.filter { it.date == selectedDate }
-
     fun moveMonth(monthDelta: Long) {
         val movedMonth = displayedMonth.plusMonths(monthDelta)
         onDisplayedMonthChange(movedMonth)
