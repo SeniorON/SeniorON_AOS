@@ -21,6 +21,7 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 class FamilyPhotoUploadPreparer(context: Context) {
     private val appContext = context.applicationContext
@@ -157,11 +158,24 @@ class FamilyPhotoUploadPreparer(context: Context) {
         )
 
         try {
-            val bitmap = drawable.toBitmap(
-                width = DefaultProfileImageSize,
-                height = DefaultProfileImageSize,
+            val iconSize = calculateDefaultProfileIconSize(DefaultProfileImageSize)
+            val iconBitmap = drawable.toBitmap(
+                width = iconSize,
+                height = iconSize,
                 config = Bitmap.Config.ARGB_8888,
             )
+            val bitmap = Bitmap.createBitmap(
+                DefaultProfileImageSize,
+                DefaultProfileImageSize,
+                Bitmap.Config.ARGB_8888,
+            )
+            Canvas(bitmap).drawBitmap(
+                iconBitmap,
+                (DefaultProfileImageSize - iconSize) / 2f,
+                (DefaultProfileImageSize - iconSize) / 2f,
+                null,
+            )
+            iconBitmap.recycle()
             try {
                 uploadFile.outputStream().use { output ->
                     check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
@@ -253,6 +267,13 @@ class FamilyPhotoUploadPreparer(context: Context) {
         const val DefaultProfileImageSize = 256
     }
 }
+
+internal fun calculateDefaultProfileIconSize(canvasSize: Int): Int =
+    (canvasSize * DefaultProfileIconSizeDp / DefaultProfileContainerSizeDp)
+        .roundToInt()
+
+private const val DefaultProfileIconSizeDp = 64f
+private const val DefaultProfileContainerSizeDp = 98f
 
 private val AllowedFamilyPhotoMimeTypes = setOf(
     "image/jpeg",
