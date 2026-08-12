@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -43,9 +43,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -53,7 +57,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
@@ -74,12 +80,17 @@ import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.ui.child.display.ConnectionGuideScreen
 import com.example.senior_on.ui.child.display.DeviceConnectionScreen
+import com.example.senior_on.ui.child.display.SeniorAppInstallGuideScreen
+import com.example.senior_on.ui.child.display.seniorAppInstallShareContent
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.ProfileImageViewModel
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
+import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
 import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
+import com.example.senior_on.ui.common.share.KakaoShareLauncher
+import com.example.senior_on.ui.common.share.ShareLaunchResult
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -94,7 +105,11 @@ data class SettingsProfileUiState(
     val profileImageUrl: String? = null,
     val profileImageRevision: Long = 0L,
     val isProfileImageUploading: Boolean = false,
-)
+    val isUsingDefaultProfileImage: Boolean = true,
+) {
+    val hasCustomProfileImage: Boolean
+        get() = !profileImageUrl.isNullOrBlank() && !isUsingDefaultProfileImage
+}
 
 private enum class SettingsDestination {
     Main,
@@ -103,6 +118,7 @@ private enum class SettingsDestination {
     ChangePassword,
     ConnectedDevices,
     DeviceConnection,
+    SeniorAppInstallGuide,
     EditConnectedDeviceInfo,
     EditConnectedDeviceAddressSearch,
     HelpInquiry,
@@ -150,6 +166,7 @@ fun SettingsTabRoute(
     val profileImageUiState by profileImageViewModel.uiState.collectAsStateWithLifecycle()
     val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val saveableStateHolder = rememberSaveableStateHolder()
     var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCameraCleanupUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -280,7 +297,24 @@ fun SettingsTabRoute(
         profileImageUrl = profileImageUiState.profileImageUrl,
         profileImageRevision = profileImageUiState.profileImageRevision,
         isProfileImageUploading = profileImageUiState.isUploading,
+        isUsingDefaultProfileImage = profileImageUiState.isUsingDefaultImage,
     )
+
+    LaunchedEffect(
+        destination,
+        displayUiState.hasLoadedOverview,
+        displayUiState.device,
+    ) {
+        if (
+            destination == SettingsDestination.ConnectedDevices &&
+            shouldOpenSeniorAppInstallGuide(
+                hasLoadedOverview = displayUiState.hasLoadedOverview,
+                hasRegisteredDevice = displayUiState.device != null,
+            )
+        ) {
+            destination = SettingsDestination.SeniorAppInstallGuide
+        }
+    }
 
     val navigateBack = {
         if (destination == SettingsDestination.EditConnectedDeviceInfo) {
@@ -295,6 +329,7 @@ fun SettingsTabRoute(
                 SettingsDestination.EditConnectedDeviceInfo
             SettingsDestination.MyAccount,
             SettingsDestination.ConnectedDevices,
+            SettingsDestination.SeniorAppInstallGuide,
             SettingsDestination.HelpInquiry,
             SettingsDestination.Feedback -> SettingsDestination.Main
             SettingsDestination.ConnectionGuide -> connectionGuideReturnDestination
@@ -308,16 +343,33 @@ fun SettingsTabRoute(
         onBack = navigateBack
     )
 
-    when (destination) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clearFocusOnBackgroundTap(focusManager)
+    ) {
+        when (destination) {
         SettingsDestination.Main -> SettingsScreen(
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
             profile = profile,
             onMyAccountClick = { destination = SettingsDestination.MyAccount },
-            onConnectedDevicesClick = { destination = SettingsDestination.ConnectedDevices },
+            onConnectedDevicesClick = {
+                destination = if (
+                    shouldOpenSeniorAppInstallGuide(
+                        hasLoadedOverview = displayUiState.hasLoadedOverview,
+                        hasRegisteredDevice = displayUiState.device != null,
+                    )
+                ) {
+                    SettingsDestination.SeniorAppInstallGuide
+                } else {
+                    SettingsDestination.ConnectedDevices
+                }
+            },
             onHelpClick = { destination = SettingsDestination.HelpInquiry },
             onFeedbackClick = { destination = SettingsDestination.Feedback },
             onSelectAlbumClick = launchAlbum,
             onTakePhotoClick = launchCamera,
+            onApplyDefaultImageClick = profileImageViewModel::applyDefaultProfileImage,
             onLogoutConfirm = viewModel::logout,
             onWithdrawConfirm = viewModel::withdraw,
             isLoggingOut = settingsUiState.isLoggingOut,
@@ -331,7 +383,8 @@ fun SettingsTabRoute(
             onChangePasswordClick = { destination = SettingsDestination.ChangePassword },
             onSelectAlbumClick = launchAlbum,
             onTakePhotoClick = launchCamera,
-            modifier = modifier
+            onApplyDefaultImageClick = profileImageViewModel::applyDefaultProfileImage,
+            modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.ChangeName -> ChangeNameRoute(
@@ -341,7 +394,7 @@ fun SettingsTabRoute(
                 profileName = newName
                 destination = SettingsDestination.MyAccount
             },
-            modifier = modifier
+            modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.ChangePassword -> ChangePasswordRoute(
@@ -350,7 +403,7 @@ fun SettingsTabRoute(
             onPasswordChanged = {
                 destination = SettingsDestination.MyAccount
             },
-            modifier = modifier
+            modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
@@ -371,8 +424,12 @@ fun SettingsTabRoute(
                     destination = SettingsDestination.EditConnectedDeviceInfo
                 }
             },
-            onDisconnectConfirm = { displayViewModel.disconnectDevice() },
-            modifier = modifier
+            onDisconnectConfirm = {
+                displayViewModel.disconnectDevice {
+                    destination = SettingsDestination.SeniorAppInstallGuide
+                }
+            },
+            modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.DeviceConnection -> DeviceConnectionScreen(
@@ -392,7 +449,32 @@ fun SettingsTabRoute(
                 connectionGuideReturnDestination = SettingsDestination.DeviceConnection
                 destination = SettingsDestination.ConnectionGuide
             },
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        SettingsDestination.SeniorAppInstallGuide -> SeniorAppInstallGuideScreen(
+            modifier = Modifier.fillMaxSize(),
+            onBackClick = navigateBack,
+            onKakaoSendClick = {
+                KakaoShareLauncher.launch(
+                    context = context,
+                    content = seniorAppInstallShareContent(),
+                    onResult = { result ->
+                        if (result is ShareLaunchResult.Failure) {
+                            Toast.makeText(
+                                context,
+                                result.userMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
+                )
+            },
+            onAppInstallMethodClick = {
+                connectionGuideReturnDestination =
+                    SettingsDestination.SeniorAppInstallGuide
+                destination = SettingsDestination.ConnectionGuide
+            },
         )
 
         SettingsDestination.EditConnectedDeviceInfo -> {
@@ -425,14 +507,14 @@ fun SettingsTabRoute(
                                 destination = SettingsDestination.ConnectedDevices
                             }
                         },
-                        modifier = modifier,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }
         }
 
         SettingsDestination.EditConnectedDeviceAddressSearch -> AddressSearchScreen(
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
             onBackClick = navigateBack,
             onAddressSelected = { result ->
                 selectedParentAddress = result.selectedAddress
@@ -449,27 +531,33 @@ fun SettingsTabRoute(
                 connectionGuideReturnDestination = SettingsDestination.HelpInquiry
                 destination = SettingsDestination.ConnectionGuide
             },
-            modifier = modifier
+            modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.ConnectionGuide -> ConnectionGuideScreen(
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
             onBackClick = navigateBack,
         )
 
         SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryRoute(
             inquiryRepository = inquiryRepository,
             onBackClick = navigateBack,
-            modifier = modifier
+            modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.Feedback -> OneOnOneInquiryRoute(
             inquiryRepository = inquiryRepository,
             onBackClick = navigateBack,
-            modifier = modifier
+            modifier = Modifier.fillMaxSize()
         )
+        }
     }
 }
+
+internal fun shouldOpenSeniorAppInstallGuide(
+    hasLoadedOverview: Boolean,
+    hasRegisteredDevice: Boolean,
+): Boolean = hasLoadedOverview && !hasRegisteredDevice
 
 @Composable
 fun SettingsScreen(
@@ -484,6 +572,7 @@ fun SettingsScreen(
     onWithdrawConfirm: () -> Unit = {},
     onSelectAlbumClick: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
+    onApplyDefaultImageClick: () -> Unit = {},
     isLoggingOut: Boolean = false,
     isWithdrawing: Boolean = false,
 ) {
@@ -495,7 +584,6 @@ fun SettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
     ) {
         SettingsTopBar()
 
@@ -506,14 +594,14 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
             SettingsProfileSection(
                 profile = profile,
                 onEditClick = { showProfilePhotoSheet = true }
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             SettingsMenuSectionCard(
                 title = "관리",
@@ -553,7 +641,7 @@ fun SettingsScreen(
                     ),
                     SettingsMenuItem(
                         label = "탈퇴하기",
-                        textColor = SeniorOnColors.Red400,
+                        textColor = SeniorOnColors.Red300,
                         onClick = { showWithdrawDialog = true }
                     )
                 )
@@ -565,6 +653,7 @@ fun SettingsScreen(
 
     if (showProfilePhotoSheet) {
         SettingsProfilePhotoBottomSheet(
+            showApplyDefaultOption = profile.hasCustomProfileImage,
             onDismiss = { showProfilePhotoSheet = false },
             onSelectAlbumClick = {
                 showProfilePhotoSheet = false
@@ -573,6 +662,10 @@ fun SettingsScreen(
             onTakePhotoClick = {
                 showProfilePhotoSheet = false
                 onTakePhotoClick()
+            },
+            onApplyDefaultImageClick = {
+                showProfilePhotoSheet = false
+                onApplyDefaultImageClick()
             }
         )
     }
@@ -618,6 +711,7 @@ private fun SettingsLogoutDialog(
         },
         description = "로그인 화면으로 이동해요",
         descriptionAnnotated = null,
+        dialogHeight = 207.dp,
         titleToDescriptionSpacing = 24.dp,
         cancelText = "취소",
         confirmText = "로그아웃",
@@ -649,6 +743,7 @@ private fun SettingsWithdrawDialog(
                 append("모든 데이터가\n 복구되지 않아요")
             }
         },
+        dialogHeight = 229.dp,
         titleToDescriptionSpacing = 24.dp,
         cancelText = "취소",
         confirmText = "탈퇴",
@@ -668,6 +763,7 @@ private fun SettingsConfirmBottomDialog(
     confirmText: String,
     confirmBackgroundColor: Color,
     onConfirm: () -> Unit,
+    dialogHeight: Dp,
     titleToDescriptionSpacing: Dp = 12.dp,
     isConfirmEnabled: Boolean = true,
 ) {
@@ -678,7 +774,7 @@ private fun SettingsConfirmBottomDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SeniorOnColors.Black.copy(alpha = 0.4f))
+                .background(SeniorOnColors.Black.copy(alpha = 0.5f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -689,6 +785,7 @@ private fun SettingsConfirmBottomDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(dialogHeight)
                     .clip(
                         RoundedCornerShape(
                             topStart = SeniorOnRadius.XLarge,
@@ -702,11 +799,12 @@ private fun SettingsConfirmBottomDialog(
                         onClick = {}
                     )
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 24.dp)
             ) {
                 Text(
                     text = title,
-                    style = SeniorOnTextStyles.BodyLBold,
+                    style = SeniorOnTextStyles.HeadingXS,
                     color = SeniorOnColors.Gray800,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -717,7 +815,7 @@ private fun SettingsConfirmBottomDialog(
                 if (descriptionAnnotated != null) {
                     Text(
                         text = descriptionAnnotated,
-                        style = SeniorOnTextStyles.BodySMedium,
+                        style = SeniorOnTextStyles.BodyMMedium,
                         color = SeniorOnColors.Gray500,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -725,14 +823,14 @@ private fun SettingsConfirmBottomDialog(
                 } else if (description != null) {
                     Text(
                         text = description,
-                        style = SeniorOnTextStyles.BodySMedium,
+                        style = SeniorOnTextStyles.BodyMMedium,
                         color = SeniorOnColors.Gray500,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(34.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -793,15 +891,32 @@ private fun SettingsTopBar(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(SeniorOnDimensions.TopBarHeight)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
+            .zIndex(1f)
+            .dropShadow(
+                shape = RectangleShape,
+                shadow = Shadow(
+                    radius = 12.dp,
+                    spread = 0.dp,
+                    color = SeniorOnColors.Black.copy(alpha = 0.06f),
+                    offset = DpOffset(x = 0.dp, y = 4.dp),
+                )
+            )
+            .background(SeniorOnColors.White)
+            .statusBarsPadding()
     ) {
-        Text(
-            text = "설정",
-            style = SeniorOnTextStyles.HeadingM,
-            color = SeniorOnColors.Gray800
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(SeniorOnDimensions.TopBarHeight)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                text = "설정",
+                style = SeniorOnTextStyles.HeadingS,
+                color = SeniorOnColors.Gray800
+            )
+        }
     }
 }
 
@@ -816,12 +931,14 @@ private fun SettingsProfileSection(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(98.dp),
-            contentAlignment = Alignment.Center
+            modifier = Modifier
+                .width(98.dp)
+                .height(100.dp),
+            contentAlignment = Alignment.TopCenter,
         ) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(98.dp)
                     .clip(CircleShape)
                     .background(SeniorOnColors.Background1)
                     .border(1.dp, SeniorOnColors.Gray200, CircleShape),
@@ -842,8 +959,8 @@ private fun SettingsProfileSection(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_dependent2),
                         contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = SeniorOnColors.Gray300
+                        modifier = Modifier.size(64.dp),
+                        tint = Color(0xFFD2D2CF),
                     )
                 }
                 if (profile.isProfileImageUploading) {
@@ -866,7 +983,8 @@ private fun SettingsProfileSection(
                 painter = painterResource(id = R.drawable.ic_pencil2),
                 contentDescription = "프로필 사진 수정",
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.TopStart)
+                    .offset(x = 68.dp, y = 70.dp)
                     .size(30.dp)
                     .clickable(
                         enabled = !profile.isProfileImageUploading,
@@ -882,7 +1000,7 @@ private fun SettingsProfileSection(
 
         Text(
             text = profile.name,
-            style = SeniorOnTextStyles.HeadingS,
+            style = SeniorOnTextStyles.HeadingXS,
             color = SeniorOnColors.Gray800
         )
 
@@ -905,23 +1023,25 @@ private fun SettingsMenuSectionCard(
 ) {
     Column(
         modifier = modifier
-            .width(328.dp)
-            .defaultMinSize(minHeight = cardHeight)
+            .fillMaxWidth()
+            .height(cardHeight)
             .clip(RoundedCornerShape(12.dp))
             .background(SeniorOnColors.Background1)
-            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 10.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 6.dp)
     ) {
         Text(
             text = title,
+            modifier = Modifier.padding(start = 6.dp),
             style = SeniorOnTextStyles.BodyMBold,
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Box(
             modifier = Modifier
-                .width(36.dp)
+                .padding(start = 6.dp)
+                .width(40.dp)
                 .height(1.dp)
                 .background(SeniorOnColors.Gray200)
         )
@@ -972,9 +1092,11 @@ private fun SettingsMenuRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsProfilePhotoBottomSheet(
+    showApplyDefaultOption: Boolean,
     onDismiss: () -> Unit,
     onSelectAlbumClick: () -> Unit,
     onTakePhotoClick: () -> Unit,
+    onApplyDefaultImageClick: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -982,42 +1104,68 @@ internal fun SettingsProfilePhotoBottomSheet(
         scrimColor = SeniorOnColors.Black.copy(alpha = 0.2f),
         tonalElevation = 0.dp,
         shape = RoundedCornerShape(
-            topStart = SeniorOnRadius.XLarge,
-            topEnd = SeniorOnRadius.XLarge
+            topStart = 20.dp,
+            topEnd = 20.dp,
         ),
         dragHandle = null
     ) {
-        Column(
+        SettingsProfilePhotoSheetContent(
+            showApplyDefaultOption = showApplyDefaultOption,
+            onSelectAlbumClick = onSelectAlbumClick,
+            onTakePhotoClick = onTakePhotoClick,
+            onApplyDefaultImageClick = onApplyDefaultImageClick,
+        )
+    }
+}
+
+@Composable
+private fun SettingsProfilePhotoSheetContent(
+    showApplyDefaultOption: Boolean,
+    onSelectAlbumClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onApplyDefaultImageClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, bottom = 20.dp)
+    ) {
+        Spacer(modifier = Modifier.height(26.dp))
+
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp)
-        ) {
-            Spacer(modifier = Modifier.height(26.dp))
+                .align(Alignment.CenterHorizontally)
+                .width(32.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(SeniorOnRadius.XLarge))
+                .background(SeniorOnColors.Gray800)
+        )
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(SeniorOnRadius.XLarge))
-                    .background(SeniorOnColors.Gray800)
-            )
+        Spacer(modifier = Modifier.height(36.dp))
 
+        SettingsProfilePhotoOption(
+            text = "내 앨범에서 선택",
+            iconResId = R.drawable.ic_photo_line,
+            onClick = onSelectAlbumClick
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        SettingsProfilePhotoOption(
+            text = "사진 찍기",
+            iconResId = R.drawable.ic_camera_line,
+            onClick = onTakePhotoClick
+        )
+
+        if (showApplyDefaultOption) {
             Spacer(modifier = Modifier.height(20.dp))
 
             SettingsProfilePhotoOption(
-                text = "내 앨범에서 선택",
-                iconResId = R.drawable.ic_photo_line,
-                onClick = onSelectAlbumClick
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SettingsProfilePhotoOption(
-                text = "사진 찍기",
-                iconResId = R.drawable.ic_camera_line,
-                onClick = onTakePhotoClick
+                text = "기본 이미지 적용",
+                iconResId = R.drawable.ic_mi_user,
+                onClick = onApplyDefaultImageClick,
             )
         }
     }
@@ -1060,66 +1208,111 @@ internal fun SettingsBackTopAppBar(
     title: String,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    centerTitle: Boolean = true
+    centerTitle: Boolean = true,
+    showShadow: Boolean = true,
 ) {
     if (centerTitle) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(SeniorOnDimensions.TopBarHeight)
+                .zIndex(1f)
+                .then(
+                    if (showShadow) {
+                        Modifier.dropShadow(
+                            shape = RectangleShape,
+                            shadow = Shadow(
+                                radius = 12.dp,
+                                spread = 0.dp,
+                                color = SeniorOnColors.Black.copy(alpha = 0.06f),
+                                offset = DpOffset(x = 0.dp, y = 4.dp),
+                            )
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
                 .background(SeniorOnColors.White)
+                .statusBarsPadding()
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로가기",
+            Box(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 16.dp)
-                    .size(26.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onBackClick
-                    ),
-                tint = SeniorOnColors.Gray800
-            )
+                    .fillMaxWidth()
+                    .height(SeniorOnDimensions.TopBarHeight)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 16.dp)
+                        .size(26.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onBackClick
+                        ),
+                    tint = SeniorOnColors.Gray800
+                )
 
-            Text(
-                text = title,
-                modifier = Modifier.align(Alignment.Center),
-                style = SeniorOnTextStyles.BodyLBold,
-                color = SeniorOnColors.Gray800
-            )
+                Text(
+                    text = title,
+                    modifier = Modifier.align(Alignment.Center),
+                    style = SeniorOnTextStyles.BodyLBold,
+                    color = SeniorOnColors.Gray800
+                )
+            }
         }
     } else {
-        Row(
+        Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(SeniorOnDimensions.TopBarHeight)
+                .zIndex(1f)
+                .then(
+                    if (showShadow) {
+                        Modifier.dropShadow(
+                            shape = RectangleShape,
+                            shadow = Shadow(
+                                radius = 12.dp,
+                                spread = 0.dp,
+                                color = SeniorOnColors.Black.copy(alpha = 0.06f),
+                                offset = DpOffset(x = 0.dp, y = 4.dp),
+                            )
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
                 .background(SeniorOnColors.White)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .statusBarsPadding()
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로가기",
+            Row(
                 modifier = Modifier
-                    .size(26.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onBackClick
-                    ),
-                tint = SeniorOnColors.Gray800
-            )
+                    .fillMaxWidth()
+                    .height(SeniorOnDimensions.TopBarHeight)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onBackClick
+                        ),
+                    tint = SeniorOnColors.Gray800
+                )
 
-            Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-            Text(
-                text = title,
-                style = SeniorOnTextStyles.BodyLBold,
-                color = SeniorOnColors.Gray800
-            )
+                Text(
+                    text = title,
+                    style = SeniorOnTextStyles.BodyLBold,
+                    color = SeniorOnColors.Gray800
+                )
+            }
         }
     }
 }
@@ -1163,7 +1356,7 @@ internal fun SettingsAccountMenuRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(24.dp)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -1188,8 +1381,8 @@ internal fun SettingsAccountMenuRow(
         if (trailingText != null) {
             Text(
                 text = trailingText,
-                style = SeniorOnTextStyles.BodyMMedium,
-                color = SeniorOnColors.Gray400
+                style = SeniorOnTextStyles.BodyMRegular,
+                color = SeniorOnColors.Gray500
             )
         }
 
@@ -1197,8 +1390,8 @@ internal fun SettingsAccountMenuRow(
             Icon(
                 painter = painterResource(id = R.drawable.ic_arrow_next),
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = SeniorOnColors.Gray300
+                modifier = Modifier.size(24.dp),
+                tint = SeniorOnColors.Gray500
             )
         }
     }
@@ -1217,14 +1410,27 @@ internal fun SettingsProfileAvatar(
     imageUrl: String? = null,
     imageRevision: Long = 0L,
     isUploading: Boolean = false,
+    editIconOffsetX: Dp? = null,
+    editIconOffsetY: Dp? = null,
 ) {
     val editOverflow = if (onEditClick != null) 8.dp else 0.dp
+    val hasExplicitEditOffset = editIconOffsetX != null && editIconOffsetY != null
+    val containerWidth = if (onEditClick != null && hasExplicitEditOffset) {
+        maxOf(width, editIconOffsetX!! + editIconSize)
+    } else {
+        width + editOverflow
+    }
+    val containerHeight = if (onEditClick != null && hasExplicitEditOffset) {
+        maxOf(height, editIconOffsetY!! + editIconSize)
+    } else {
+        height + editOverflow
+    }
     Box(
         modifier = modifier.size(
-            width = width + editOverflow,
-            height = height + editOverflow
+            width = containerWidth,
+            height = containerHeight,
         ),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopStart,
     ) {
         Box(
             modifier = Modifier
@@ -1279,8 +1485,21 @@ internal fun SettingsProfileAvatar(
                 painter = painterResource(id = R.drawable.ic_pencil2),
                 contentDescription = "프로필 사진 수정",
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .then(
+                        if (hasExplicitEditOffset) {
+                            Modifier
+                                .align(Alignment.TopStart)
+                                .offset(
+                                    x = editIconOffsetX!!,
+                                    y = editIconOffsetY!!,
+                                )
+                        } else {
+                            Modifier.align(Alignment.BottomEnd)
+                        }
+                    )
                     .size(editIconSize)
+                    .clip(CircleShape)
+                    .border(1.dp, SeniorOnColors.White, CircleShape)
                     .clickable(
                         enabled = !isUploading,
                         interactionSource = remember { MutableInteractionSource() },
@@ -1352,6 +1571,59 @@ private fun SettingsScreenPreview() {
                 email = "caregiver@example.com",
             ),
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Preview(
+    name = "Profile Photo Sheet - Default Image",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 280,
+)
+@Composable
+private fun SettingsProfilePhotoSheetDefaultPreview() {
+    SENIOR_ONTheme {
+        SettingsProfilePhotoSheetPreview(showApplyDefaultOption = false)
+    }
+}
+
+@Preview(
+    name = "Profile Photo Sheet - Custom Image",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 280,
+)
+@Composable
+private fun SettingsProfilePhotoSheetCustomPreview() {
+    SENIOR_ONTheme {
+        SettingsProfilePhotoSheetPreview(showApplyDefaultOption = true)
+    }
+}
+
+@Composable
+private fun SettingsProfilePhotoSheetPreview(
+    showApplyDefaultOption: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.Black.copy(alpha = 0.2f))
+    ) {
+        SettingsProfilePhotoSheetContent(
+            showApplyDefaultOption = showApplyDefaultOption,
+            onSelectAlbumClick = {},
+            onTakePhotoClick = {},
+            onApplyDefaultImageClick = {},
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 20.dp,
+                        topEnd = 20.dp,
+                    )
+                )
+                .background(SeniorOnColors.White),
         )
     }
 }

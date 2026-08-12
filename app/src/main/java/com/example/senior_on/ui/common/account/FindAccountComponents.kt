@@ -169,6 +169,8 @@ internal fun FindAccountTextField(
     isError: Boolean = false,
     errorMessage: String? = null,
     supportMessage: String? = null,
+    errorBorderColor: Color = SeniorOnColors.Red300,
+    showErrorIcon: Boolean = false,
     showClearIcon: Boolean = true,
     clearIconResId: Int = R.drawable.ic_close_filled,
     clearIconSize: Dp = 18.dp,
@@ -176,9 +178,9 @@ internal fun FindAccountTextField(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = if (isError) SeniorOnColors.Red300 else SeniorOnColors.Primary600,
-        unfocusedBorderColor = if (isError) SeniorOnColors.Red300 else SeniorOnColors.Gray200,
-        errorBorderColor = SeniorOnColors.Red300,
+        focusedBorderColor = if (isError) errorBorderColor else SeniorOnColors.Primary600,
+        unfocusedBorderColor = if (isError) errorBorderColor else SeniorOnColors.Gray200,
+        errorBorderColor = errorBorderColor,
         focusedContainerColor = SeniorOnColors.SupportWhite100,
         unfocusedContainerColor = SeniorOnColors.SupportWhite100,
         cursorColor = SeniorOnColors.Primary600
@@ -273,12 +275,27 @@ internal fun FindAccountTextField(
 
         when {
             isError && errorMessage != null -> {
-                Text(
-                    text = errorMessage,
+                Row(
                     modifier = Modifier.padding(top = 6.dp),
-                    style = SeniorOnTextStyles.CaptionRegular,
-                    color = SeniorOnColors.Red300
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (showErrorIcon) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_sm_alertfilled),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Unspecified,
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
+                    Text(
+                        text = errorMessage,
+                        style = SeniorOnTextStyles.CaptionRegular,
+                        color = SeniorOnColors.Red300
+                    )
+                }
             }
             supportMessage != null -> {
                 Text(
@@ -303,7 +320,10 @@ internal fun FindAccountPasswordTextField(
     modifier: Modifier = Modifier,
     isError: Boolean = false,
     errorMessage: String? = null,
-    supportMessage: String? = null
+    supportMessage: String? = null,
+    errorBorderColor: Color = SeniorOnColors.Red300,
+    showErrorIcon: Boolean = false,
+    visibilityIconColor: Color = SeniorOnColors.Gray400,
 ) {
     FindAccountTextField(
         label = label,
@@ -325,6 +345,8 @@ internal fun FindAccountPasswordTextField(
         isError = isError,
         errorMessage = errorMessage,
         supportMessage = supportMessage,
+        errorBorderColor = errorBorderColor,
+        showErrorIcon = showErrorIcon,
         showClearIcon = false,
         trailingContent = {
             Box(
@@ -343,7 +365,7 @@ internal fun FindAccountPasswordTextField(
                     ),
                     contentDescription = if (isVisible) "비밀번호 숨기기" else "비밀번호 보기",
                     modifier = Modifier.size(24.dp),
-                    tint = SeniorOnColors.Gray400
+                    tint = visibilityIconColor,
                 )
             }
         }

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -205,7 +204,6 @@ private fun OneOnOneInquiryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SeniorOnColors.White)
-                .statusBarsPadding()
         ) {
             SettingsBackTopAppBar(
                 title = "1:1 문의하기",
@@ -213,9 +211,12 @@ private fun OneOnOneInquiryScreen(
                 centerTitle = false
             )
 
+            Spacer(modifier = Modifier.height(4.dp))
+
             OneOnOneInquiryTabRow(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
+                onTabSelected = { selectedTab = it },
+                modifier = Modifier.height(57.dp),
             )
 
             when (selectedTab) {
@@ -321,6 +322,7 @@ private fun OneOnOneInquiryTabItem(
 ) {
     Column(
         modifier = modifier
+            .height(57.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -373,7 +375,7 @@ private fun OneOnOneInquiryWriteContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -389,7 +391,8 @@ private fun OneOnOneInquiryWriteContent(
                         withStyle(
                             SpanStyle(
                                 color = SeniorOnColors.Gray800,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = SeniorOnTextStyles.BodySSemiBold.fontWeight,
+                                fontSize = SeniorOnTextStyles.BodySSemiBold.fontSize,
                             )
                         ) {
                             append("앱 알림")
@@ -398,7 +401,8 @@ private fun OneOnOneInquiryWriteContent(
                         withStyle(
                             SpanStyle(
                                 color = SeniorOnColors.Gray800,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = SeniorOnTextStyles.BodySSemiBold.fontWeight,
+                                fontSize = SeniorOnTextStyles.BodySSemiBold.fontSize,
                             )
                         ) {
                             append("이메일")
@@ -410,7 +414,7 @@ private fun OneOnOneInquiryWriteContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             InquirySingleLineField(
                 value = title,
@@ -418,13 +422,13 @@ private fun OneOnOneInquiryWriteContent(
                 placeholder = "문의 제목 입력"
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             InquiryMultiLineField(
                 value = content,
                 onValueChange = onContentChange,
                 placeholder = "문의 내용 입력",
-                modifier = Modifier.height(180.dp)
+                modifier = Modifier.height(193.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -443,8 +447,8 @@ private fun OneOnOneInquiryWriteContent(
                     withStyle(
                         SpanStyle(
                             color = SeniorOnColors.Gray500,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = SeniorOnTextStyles.BodySMedium.fontSize
+                            fontWeight = SeniorOnTextStyles.ButtonS.fontWeight,
+                            fontSize = SeniorOnTextStyles.ButtonS.fontSize
                         )
                     ) {
                         append("(최대 5장)")
@@ -453,7 +457,7 @@ private fun OneOnOneInquiryWriteContent(
                 style = SeniorOnTextStyles.BodyMSemiBold
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier
@@ -480,7 +484,7 @@ private fun OneOnOneInquiryWriteContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
-                .height(48.dp)
+                .height(50.dp)
         )
     }
 }
@@ -498,11 +502,11 @@ private fun InquirySingleLineField(
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(43.dp)
             .border(1.dp, SeniorOnColors.Gray200, shape)
             .clip(shape)
             .background(SeniorOnColors.White)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         singleLine = true,
         textStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800),
         cursorBrush = SolidColor(SeniorOnColors.Primary600),
@@ -537,7 +541,7 @@ private fun InquiryMultiLineField(
             .border(1.dp, SeniorOnColors.Gray200, shape)
             .clip(shape)
             .background(SeniorOnColors.White)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         textStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800),
         cursorBrush = SolidColor(SeniorOnColors.Primary600),
         decorationBox = { innerTextField ->
@@ -590,7 +594,7 @@ private fun InquiryImageThumbnail(
         model = uri,
         contentDescription = null,
         modifier = modifier
-            .size(72.dp)
+            .size(60.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .border(1.dp, SeniorOnColors.Gray200, RoundedCornerShape(SeniorOnRadius.Small)),
         contentScale = ContentScale.Crop
@@ -612,17 +616,19 @@ private fun InquirySubmitSuccessDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SeniorOnColors.Black.copy(alpha = 0.4f)),
+                .background(SeniorOnColors.Black.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
-                    .width(280.dp)
+                    .size(width = 265.dp, height = 304.dp)
                     .clip(RoundedCornerShape(SeniorOnRadius.Large))
                     .background(SeniorOnColors.White)
-                    .padding(horizontal = 24.dp, vertical = 28.dp),
+                    .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Spacer(modifier = Modifier.height(32.dp))
+
                 Icon(
                     painter = painterResource(id = R.drawable.ic_modal_check),
                     contentDescription = null,
@@ -634,12 +640,12 @@ private fun InquirySubmitSuccessDialog(
 
                 Text(
                     text = "접수가 완료됐어요",
-                    style = SeniorOnTextStyles.BodyLBold,
+                    style = SeniorOnTextStyles.HeadingXS,
                     color = SeniorOnColors.Gray800,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
                     text = "문의하신 내역은 설정 > 도움말·문의 > 내 문의내역에서 확인하실 수 있습니다 :)",
@@ -648,12 +654,12 @@ private fun InquirySubmitSuccessDialog(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(26.dp))
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(40.dp)
+                        .height(36.dp)
                         .clip(RoundedCornerShape(SeniorOnRadius.Small))
                         .background(SeniorOnColors.Primary600)
                         .clickable(onClick = onConfirmClick),
@@ -786,7 +792,7 @@ private fun InquiryHistoryCard(
     ) {
         InquiryStatusBadge(status = item.status)
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = item.createdAtLabel,
@@ -835,7 +841,7 @@ private fun InquiryHistoryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(top = 12.dp)
+                    .padding(top = 8.dp)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(SeniorOnRadius.Small))
                     .background(SeniorOnColors.White)
@@ -857,7 +863,7 @@ private fun InquiryHistoryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(top = 12.dp)
+                    .padding(top = 8.dp)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(SeniorOnRadius.Small))
                     .background(SeniorOnColors.White)
@@ -865,7 +871,7 @@ private fun InquiryHistoryCard(
             ) {
                 Text(
                     text = item.answer.orEmpty(),
-                    style = SeniorOnTextStyles.BodySRegular,
+                    style = SeniorOnTextStyles.CaptionRegular,
                     color = SeniorOnColors.Gray600
                 )
             }
@@ -883,9 +889,11 @@ private fun InquiryStatusBadge(
         InquiryAnswerStatus.Waiting -> {
             Box(
                 modifier = modifier
+                    .size(width = 86.dp, height = 25.dp)
                     .border(1.dp, SeniorOnColors.Gray200, shape)
                     .clip(shape)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "답변 대기 중",

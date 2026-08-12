@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +43,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
 import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
+import com.example.senior_on.ui.common.seniorinfo.formatPhoneNumber
 import com.example.senior_on.ui.common.seniorinfo.parseBirthDate
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -91,20 +91,21 @@ fun ConnectedDevicesScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
-            .statusBarsPadding()
+            .background(SeniorOnColors.White)
     ) {
         SettingsBackTopAppBar(
             title = "연결된 기기",
-            onBackClick = onBackClick
+            onBackClick = onBackClick,
+            showShadow = false,
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(SeniorOnColors.Background1)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 20.dp, bottom = 24.dp)
+                .padding(top = 24.dp, bottom = 24.dp)
         ) {
             Text(
                 text = "연결된 시니어 기기",
@@ -112,7 +113,7 @@ fun ConnectedDevicesScreen(
                 color = SeniorOnColors.Gray800
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(13.dp))
 
             if (device != null) {
                 ConnectedSeniorDeviceCard(
@@ -153,6 +154,7 @@ private fun ConnectedSeniorDeviceCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .height(226.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(SeniorOnColors.Primary600)
             .padding(16.dp)
@@ -206,7 +208,7 @@ private fun ConnectedSeniorDeviceCard(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -216,7 +218,7 @@ private fun ConnectedSeniorDeviceCard(
                         color = SeniorOnColors.White
                     )
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Box(
                         modifier = Modifier
@@ -241,7 +243,7 @@ private fun ConnectedSeniorDeviceCard(
                 Text(
                     text = device.birthDateWithAgeLabel,
                     style = SeniorOnTextStyles.BodySMedium,
-                    color = SeniorOnColors.White.copy(alpha = 0.9f)
+                    color = SeniorOnColors.SupportWhite100
                 )
             }
 
@@ -265,20 +267,27 @@ private fun ConnectedSeniorDeviceCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_home),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.White
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = device.address.ifBlank { "주소 없음" },
-                style = SeniorOnTextStyles.CaptionMedium,
-                color = SeniorOnColors.White
-            )
-
-            Spacer(modifier = Modifier.width(10.dp))
+            Row(
+                modifier = Modifier.weight(170f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_home),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = SeniorOnColors.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = device.address.ifBlank { "주소 없음" },
+                    modifier = Modifier.weight(1f),
+                    style = SeniorOnTextStyles.CaptionMedium,
+                    color = SeniorOnColors.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.width(22.dp))
+            }
 
             Box(
                 modifier = Modifier
@@ -287,27 +296,36 @@ private fun ConnectedSeniorDeviceCard(
                     .background(SeniorOnColors.White.copy(alpha = 0.4f))
             )
 
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Icon(
-                painter = painterResource(id = R.drawable.ic_call),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.White
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = device.phoneNumber.ifBlank { "연락처 없음" },
-                style = SeniorOnTextStyles.CaptionMedium,
-                color = SeniorOnColors.White
-            )
+            Row(
+                modifier = Modifier.weight(158f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(modifier = Modifier.width(22.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_call),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = SeniorOnColors.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = device.phoneNumber
+                        .takeIf { it.isNotBlank() }
+                        ?.let(::formatPhoneNumber)
+                        .orEmpty()
+                        .ifBlank { "연락처 없음" },
+                    style = SeniorOnTextStyles.CaptionMedium,
+                    color = SeniorOnColors.White,
+                    maxLines = 1,
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Box(
             modifier = Modifier
-                .width(304.dp)
+                .fillMaxWidth()
                 .height(42.dp)
                 .align(Alignment.CenterHorizontally)
                 .clip(RoundedCornerShape(SeniorOnRadius.Small))
@@ -326,7 +344,7 @@ private fun ConnectedSeniorDeviceCard(
         ) {
             Text(
                 text = "연결 해제",
-                style = SeniorOnTextStyles.ButtonS,
+                style = SeniorOnTextStyles.ButtonM,
                 color = SeniorOnColors.White
             )
         }
@@ -345,7 +363,7 @@ private fun DisconnectDeviceDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SeniorOnColors.Black.copy(alpha = 0.4f))
+                .background(SeniorOnColors.Black.copy(alpha = 0.5f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -356,10 +374,11 @@ private fun DisconnectDeviceDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(230.dp)
                     .clip(
                         RoundedCornerShape(
-                            topStart = SeniorOnRadius.XLarge,
-                            topEnd = SeniorOnRadius.XLarge
+                            topStart = 28.dp,
+                            topEnd = 28.dp
                         )
                     )
                     .background(SeniorOnColors.White)
@@ -369,17 +388,18 @@ private fun DisconnectDeviceDialog(
                         onClick = {}
                     )
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 24.dp)
             ) {
                 Text(
                     text = "연결을 해제할까요?",
-                    style = SeniorOnTextStyles.BodyLBold,
+                    style = SeniorOnTextStyles.HeadingXS,
                     color = SeniorOnColors.Gray800,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
                     text = buildAnnotatedString {
@@ -389,13 +409,13 @@ private fun DisconnectDeviceDialog(
                         }
                         append("되고 알림 수신이 중단돼요")
                     },
-                    style = SeniorOnTextStyles.BodySMedium,
+                    style = SeniorOnTextStyles.BodyMMedium,
                     color = SeniorOnColors.Gray500,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(34.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -417,7 +437,7 @@ private fun DisconnectDeviceDialog(
                         Text(
                             text = "취소",
                             style = SeniorOnTextStyles.ButtonM,
-                            color = SeniorOnColors.Gray500
+                            color = SeniorOnColors.Gray400
                         )
                     }
 
