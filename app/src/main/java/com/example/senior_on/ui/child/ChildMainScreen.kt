@@ -54,6 +54,7 @@ import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.HospitalRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
+import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
@@ -107,6 +108,7 @@ fun ChildMainScreen(
     userSettingsRepository: UserSettingsRepository,
     medicationRepository: MedicationRepository? = null,
     hospitalRepository: HospitalRepository? = null,
+    hospitalSpecialtyRepository: HospitalSpecialtyRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
     deviceRepository: DeviceRepository? = null,
@@ -283,6 +285,7 @@ fun ChildMainScreen(
             notificationRepository = notificationRepository,
             medicationRepository = medicationRepository,
             hospitalRepository = hospitalRepository,
+            hospitalSpecialtyRepository = hospitalSpecialtyRepository,
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
@@ -379,6 +382,7 @@ private fun ChildMainTabContent(
     notificationRepository: NotificationRepository,
     medicationRepository: MedicationRepository?,
     hospitalRepository: HospitalRepository?,
+    hospitalSpecialtyRepository: HospitalSpecialtyRepository?,
     familyServerRepository: FamilyServerRepository,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
@@ -411,12 +415,14 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Health) {
         if (
             medicationRepository != null &&
-            hospitalRepository != null
+            hospitalRepository != null &&
+            hospitalSpecialtyRepository != null
         ) {
             HealthMainRoute(
                 medicationRepository = medicationRepository,
                 hospitalRepository = hospitalRepository,
                 familyRepository = familyServerRepository,
+                hospitalSpecialtyRepository = hospitalSpecialtyRepository,
                 modifier = modifier,
             )
         } else {

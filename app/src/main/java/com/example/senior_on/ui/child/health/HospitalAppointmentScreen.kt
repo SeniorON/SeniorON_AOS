@@ -66,24 +66,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val PreviewHospitalSpecialtyRepository: HospitalSpecialtyRepository =
+internal val PreviewHospitalSpecialtyRepository: HospitalSpecialtyRepository =
     HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
-
-enum class HospitalEditorMode { Add, View, Edit }
-
-enum class HospitalReminder(val label: String) {
-    DayBefore("하루 전"),
-    SameDay("당일"),
-    None("받지 않음")
-}
-
-data class HospitalAppointmentDraft(
-    val hospitalName: String,
-    val specialty: String,
-    val date: LocalDate,
-    val time: LocalTime,
-    val reminder: HospitalReminder
-)
 
 @Composable
 fun HospitalAppointmentScreen(
@@ -158,7 +142,7 @@ fun HospitalAppointmentScreen(
                 )
             }
     ) {
-        HospitalEditorTopBar(
+        HealthEditorTopBar(
             title = when (mode) {
                 HospitalEditorMode.Add -> "진료 추가하기"
                 HospitalEditorMode.View -> "${selectedDate.monthValue}월 ${selectedDate.dayOfMonth}일 진료"
@@ -172,8 +156,8 @@ fun HospitalAppointmentScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            HospitalFormSection(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp)) {
-                HospitalFormLabel("병원 이름")
+            HealthFormSection(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp)) {
+                HealthFormLabel("병원 이름")
                 Spacer(modifier = Modifier.height(12.dp))
                 HospitalTextInput(
                     value = hospitalName,
@@ -186,8 +170,8 @@ fun HospitalAppointmentScreen(
 
             Spacer(modifier = Modifier.height(10.dp).fillMaxWidth().background(SeniorOnColors.Background3))
 
-            HospitalFormSection(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)) {
-                HospitalFormLabel("진료 과목")
+            HealthFormSection(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)) {
+                HealthFormLabel("진료 과목")
                 Spacer(modifier = Modifier.height(12.dp))
                 HospitalSpecialtySelectionField(
                     value = specialty,
@@ -210,7 +194,7 @@ fun HospitalAppointmentScreen(
                     enabled = true
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                HospitalFormLabel("진료일")
+                HealthFormLabel("진료일")
                 Spacer(modifier = Modifier.height(10.dp))
                 HospitalSelectionField(
                     text = selectedDate.format(DateTimeFormatter.ofPattern("M월 d일")),
@@ -224,7 +208,7 @@ fun HospitalAppointmentScreen(
                     enabled = true
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                HospitalFormLabel("진료 시간")
+                HealthFormLabel("진료 시간")
                 Spacer(modifier = Modifier.height(12.dp))
                 HospitalSelectionField(
                     text = selectedTime?.toKoreanTime().orEmpty(),
@@ -239,7 +223,7 @@ fun HospitalAppointmentScreen(
                     enabled = true
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                HospitalFormLabel("알림 선택")
+                HealthFormLabel("알림 선택")
                 Text(
                     text = "일정 알림을 받을 시간을 선택하세요.",
                     style = SeniorOnTextStyles.BodySMedium,
@@ -362,54 +346,6 @@ fun HospitalAppointmentScreen(
             onConfirm = onDeleteClick
         )
     }
-}
-
-@Composable
-private fun HospitalEditorTopBar(title: String, onBackClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .dropShadow(
-                shape = RectangleShape,
-                shadow = Shadow(
-                    radius = 12.dp,
-                    spread = 0.dp,
-                    color = Color.Black.copy(alpha = 15f / 255f),
-                    offset = DpOffset(x = 0.dp, y = 4.dp)
-                )
-            )
-            .background(SeniorOnColors.SupportWhite100)
-            .statusBarsPadding()
-            .height(SeniorOnDimensions.TopBarHeight)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로가기",
-                tint = SeniorOnColors.Gray800,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, style = SeniorOnTextStyles.BodyLBold, color = SeniorOnColors.Gray800)
-    }
-}
-
-@Composable
-private fun HospitalFormSection(modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier = modifier.fillMaxWidth()) { content() }
-}
-
-@Composable
-private fun HospitalFormLabel(text: String) {
-    Text(text = text, style = SeniorOnTextStyles.BodyMSemiBold, color = SeniorOnColors.Gray800)
 }
 
 @Composable
