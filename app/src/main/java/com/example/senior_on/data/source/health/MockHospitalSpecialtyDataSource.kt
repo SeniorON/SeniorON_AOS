@@ -2,9 +2,6 @@ package com.example.senior_on.data.source.health
 
 object MockHospitalSpecialtyDataSource : HospitalSpecialtyDataSource {
     val specialties = listOf(
-        "직접 작성",
-        "피부과",
-        "내과",
         "안과",
         "외과",
         "정형외과",
@@ -25,7 +22,10 @@ object MockHospitalSpecialtyDataSource : HospitalSpecialtyDataSource {
         "정신건강의학과",
         "흉부외과",
         "성형외과",
-        "비뇨기과"
+        "비뇨기과",
+        "피부과",
+        "내과",
+        "직접 작성"
     )
 
     override suspend fun getSpecialties(): List<String> = specialties

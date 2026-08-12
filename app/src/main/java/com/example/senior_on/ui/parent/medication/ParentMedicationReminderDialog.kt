@@ -18,13 +18,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -55,57 +58,68 @@ fun ParentMedicationReminderDialog(
                 .background(SeniorOnColors.Black.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                modifier = Modifier
-                    .size(width = 263.dp, height = 368.dp)
-                    .clip(RoundedCornerShape(SeniorOnRadius.XLarge))
-                    .background(SeniorOnColors.SupportWhite100)
-                    .padding(start = 16.dp, top = 32.dp, end = 16.dp, bottom = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                ParentMedicationReminderIcon()
+            ParentMedicationReminderContent(
+                medication = medication,
+                onConfirmClick = onConfirmClick,
+            )
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(12.dp))
+@Composable
+private fun ParentMedicationReminderContent(
+    medication: ParentMedication,
+    onConfirmClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .size(width = 263.dp, height = 400.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.XLarge))
+            .background(SeniorOnColors.SupportWhite100)
+            .padding(start = 16.dp, top = 32.dp, end = 16.dp, bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ParentMedicationReminderIcon()
 
-                Text(
-                    text = "약 드실\n시간이에요",
-                    style = SeniorOnTextStyles.HeadingXXL,
-                    color = SeniorOnColors.Gray800,
-                    textAlign = TextAlign.Center,
-                )
+        Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = SeniorOnColors.Primary700)) {
-                            append(medication.scheduledTime.toMedicationTime())
-                            append(" ${medication.name}")
-                        }
-                        append("을\n복용해 주세요.")
-                    },
-                    modifier = Modifier.padding(top = 18.dp),
-                    style = SeniorOnTextStyles.HeadingS,
-                    color = SeniorOnColors.Gray500,
-                    textAlign = TextAlign.Center,
-                )
+        Text(
+            text = "약 드실\n시간이에요",
+            style = SeniorOnTextStyles.HeadingXL,
+            color = SeniorOnColors.Gray800,
+            textAlign = TextAlign.Center,
+        )
 
-                Spacer(modifier = Modifier.height(38.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(SeniorOnRadius.Medium))
-                        .background(SeniorOnColors.Primary600)
-                        .clickable(onClick = onConfirmClick),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "복약 확인하기",
-                        style = SeniorOnTextStyles.HeadingM,
-                        color = SeniorOnColors.SupportWhite100,
-                    )
+        Text(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = SeniorOnColors.Primary700)) {
+                    append(medication.scheduledTime.toMedicationTime())
+                    append(" ${medication.name}")
                 }
-            }
+                append("을\n복용해 주세요.")
+            },
+            modifier = Modifier.padding(top = 18.dp),
+            style = SeniorOnTextStyles.HeadingXS,
+            color = SeniorOnColors.Gray500,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(38.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                .background(SeniorOnColors.Primary600)
+                .clickable(onClick = onConfirmClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "복약 확인하기",
+                style = SeniorOnTextStyles.HeadingS,
+                color = SeniorOnColors.SupportWhite100,
+            )
         }
     }
 }
@@ -114,8 +128,16 @@ fun ParentMedicationReminderDialog(
 private fun ParentMedicationReminderIcon() {
     Box(
         modifier = Modifier
-            .size(54.dp)
-            .shadow(5.dp, CircleShape)
+            .size(58.dp)
+            .dropShadow(
+                shape = CircleShape,
+                shadow = Shadow(
+                    radius = 6.69.dp,
+                    spread = 0.dp,
+                    color = Color.Black.copy(alpha = 0.08f),
+                    offset = DpOffset(x = 0.dp, y = 1.12.dp),
+                ),
+            )
             .clip(CircleShape)
             .background(SeniorOnColors.SupportWhite100),
         contentAlignment = Alignment.Center,
@@ -124,7 +146,7 @@ private fun ParentMedicationReminderIcon() {
             painter = painterResource(R.drawable.ic_illust_medication),
             contentDescription = null,
             modifier = Modifier.size(34.dp),
-            tint = androidx.compose.ui.graphics.Color.Unspecified,
+            tint = Color.Unspecified,
         )
     }
 }
@@ -143,13 +165,20 @@ private fun LocalTime.toMedicationTime(): String {
 @Composable
 private fun ParentMedicationReminderDialogPreview() {
     SENIOR_ONTheme {
-        ParentMedicationReminderDialog(
-            medication = ParentMedication(
-                id = "preview",
-                name = "혈압약",
-                scheduledTime = LocalTime.of(14, 0),
-            ),
-            onConfirmClick = {},
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SeniorOnColors.Black.copy(alpha = 0.8f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            ParentMedicationReminderContent(
+                medication = ParentMedication(
+                    id = "preview",
+                    name = "혈압약",
+                    scheduledTime = LocalTime.of(14, 0),
+                ),
+                onConfirmClick = {},
+            )
+        }
     }
 }

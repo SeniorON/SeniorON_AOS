@@ -26,7 +26,13 @@ internal fun MedicationEditorRoute(
     if (mode == MedicationEditorMode.Add) {
         MedicationDetailScreen(
             mode = MedicationEditorMode.Add,
-            initialDraft = MedicationDraft("", "", emptyList(), emptySet()),
+            initialDraft = MedicationDraft(
+                category = "",
+                name = "",
+                times = emptyList(),
+                weekdays = emptySet(),
+                startDate = uiState.addMedicationStartDate,
+            ),
             modifier = modifier,
             onBackClick = onBackClick,
             onSaveClick = onSaveClick,

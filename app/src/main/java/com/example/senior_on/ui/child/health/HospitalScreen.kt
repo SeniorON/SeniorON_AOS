@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.common.time.koreaYearMonth
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -20,8 +22,8 @@ fun HospitalScreen(
     modifier: Modifier = Modifier,
     appointments: List<HospitalAppointmentUiState> = previewHospitalAppointments(),
     upcomingAppointments: List<HospitalAppointmentUiState> = appointments,
-    displayedMonth: YearMonth = YearMonth.now(),
-    selectedDate: LocalDate = LocalDate.now(),
+    displayedMonth: YearMonth = koreaYearMonth(),
+    selectedDate: LocalDate = koreaToday(),
     selectedAppointments: List<HospitalAppointmentUiState> = appointments.filter { it.date == selectedDate },
     onDisplayedMonthChange: (YearMonth) -> Unit = {},
     onSelectedDateChange: (LocalDate) -> Unit = {},

@@ -112,7 +112,8 @@ fun HealthMainRoute(
                 hospitalViewModel.closeEditor()
             },
             onMedicationDateSelected = medicationViewModel::selectDate,
-            onAddMedicationClick = medicationViewModel::openAddMedication,
+            onAddTodayMedicationClick = medicationViewModel::openAddTodayMedication,
+            onAddRegisteredMedicationClick = medicationViewModel::openAddMedication,
             onMedicationClick = medicationViewModel::openMedication,
             onMedicationRefresh = medicationViewModel::refreshMedicationData,
             onHospitalMonthSelected = hospitalViewModel::selectMonth,

@@ -3,6 +3,8 @@ package com.example.senior_on.ui.child.health.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.common.time.koreaYearMonth
 import com.example.senior_on.domain.model.server.HospitalAppointment
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HospitalRepository
@@ -25,14 +27,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HospitalUiState(
-    val displayedMonth: YearMonth = YearMonth.now(),
-    val selectedDate: LocalDate = LocalDate.now(),
+    val displayedMonth: YearMonth = koreaYearMonth(),
+    val selectedDate: LocalDate = koreaToday(),
     val monthlyAppointments: List<HospitalAppointmentUiState> = emptyList(),
     val selectedDateAppointments: List<HospitalAppointmentUiState> = emptyList(),
     val upcomingAppointments: List<HospitalAppointmentUiState> = emptyList(),
     val editorMode: HospitalEditorMode? = null,
     val editingAppointment: HospitalAppointmentUiState? = null,
-    val editorDate: LocalDate = LocalDate.now(),
+    val editorDate: LocalDate = koreaToday(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
@@ -222,21 +224,25 @@ class HospitalViewModel(
         monthLoadJob?.cancel()
         monthLoadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val requestedDate = _uiState.value.selectedDate
             runCatching {
                 val parentId = resolveParentUserId()
                 val monthly = hospitalRepository.getMonthly(parentId, month.year, month.monthValue)
                     .map { it.toUiState(highlighted = false) }
-                val selectedDate = _uiState.value.selectedDate
-                val daily = hospitalRepository.getDaily(parentId, selectedDate.toString())
+                val daily = hospitalRepository.getDaily(parentId, requestedDate.toString())
                     .map { it.toUiState(highlighted = false) }
                 monthly to daily
             }.onSuccess { (monthly, daily) ->
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        monthlyAppointments = monthly,
-                        selectedDateAppointments = daily,
-                    )
+                    if (it.displayedMonth == month && it.selectedDate == requestedDate) {
+                        it.copy(
+                            isLoading = false,
+                            monthlyAppointments = monthly,
+                            selectedDateAppointments = daily,
+                        )
+                    } else {
+                        it
+                    }
                 }
             }.onFailure { throwable ->
                 if (throwable is CancellationException) throw throwable
@@ -336,8 +342,8 @@ private data class RemoteHospitalData(
 )
 
 private fun HospitalAppointment.toUiState(highlighted: Boolean): HospitalAppointmentUiState {
-    val parsedDate = date.toLocalDateOrNull() ?: LocalDate.now()
-    val daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), parsedDate).toInt().coerceAtLeast(0)
+    val parsedDate = date.toLocalDateOrNull() ?: koreaToday()
+    val daysLeft = ChronoUnit.DAYS.between(koreaToday(), parsedDate).toInt().coerceAtLeast(0)
     return HospitalAppointmentUiState(
         id = id,
         date = parsedDate,
