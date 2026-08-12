@@ -7,12 +7,16 @@ import com.example.senior_on.ui.child.notification.NotificationDetectionTimeSett
 @Composable
 internal fun InactivitySettingRoute(
     initialHours: Int,
+    isLoading: Boolean,
+    isSaving: Boolean,
     onBackClick: () -> Unit,
     onSaveClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NotificationDetectionTimeSettingScreen(
         initialHours = initialHours,
+        isLoading = isLoading,
+        isSaving = isSaving,
         modifier = modifier,
         onBackClick = onBackClick,
         onSaveClick = onSaveClick,

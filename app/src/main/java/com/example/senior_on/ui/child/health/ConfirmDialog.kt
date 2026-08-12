@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -65,16 +66,20 @@ internal fun SeniorOnConfirmDialog(
 internal fun SeniorOnDeleteConfirmDialog(
     title: String,
     onCancel: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    isConfirmLoading: Boolean = false,
 ) {
     Dialog(
-        onDismissRequest = onCancel,
+        onDismissRequest = {
+            if (!isConfirmLoading) onCancel()
+        },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         SeniorOnDeleteConfirmDialogContent(
             title = title,
             onCancel = onCancel,
-            onConfirm = onConfirm
+            onConfirm = onConfirm,
+            isConfirmLoading = isConfirmLoading,
         )
     }
 }
@@ -148,7 +153,8 @@ private fun SeniorOnConfirmDialogContent(
 private fun SeniorOnDeleteConfirmDialogContent(
     title: String,
     onCancel: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    isConfirmLoading: Boolean = false,
 ) {
     Column(
         modifier = Modifier
@@ -182,6 +188,7 @@ private fun SeniorOnDeleteConfirmDialogContent(
                 color = SeniorOnColors.Gray200,
                 contentColor = SeniorOnColors.Gray500,
                 onClick = onCancel,
+                enabled = !isConfirmLoading,
                 modifier = Modifier.weight(1f)
             )
             ConfirmDialogButton(
@@ -189,6 +196,8 @@ private fun SeniorOnDeleteConfirmDialogContent(
                 color = SeniorOnColors.Red400,
                 contentColor = SeniorOnColors.SupportWhite100,
                 onClick = onConfirm,
+                enabled = !isConfirmLoading,
+                isLoading = isConfirmLoading,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -201,19 +210,24 @@ private fun ConfirmDialogButton(
     color: Color,
     contentColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
 ) {
-    Row(
-        modifier = modifier
-            .height(34.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(color)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, style = SeniorOnTextStyles.ButtonS, color = contentColor)
-    }
+    SeniorOnActionButton(
+        text = label,
+        onClick = onClick,
+        modifier = modifier.height(34.dp),
+        enabled = enabled,
+        isLoading = isLoading,
+        containerColor = color,
+        contentColor = contentColor,
+        disabledContainerColor = color,
+        disabledContentColor = contentColor,
+        minHeight = 34.dp,
+        textStyle = SeniorOnTextStyles.ButtonS,
+        loadingIndicatorSize = 18.dp,
+    )
 }
 
 @Composable

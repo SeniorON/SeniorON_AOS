@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -54,6 +55,8 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -76,6 +79,8 @@ fun NotificationDetailScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    isDirectionsLoading: Boolean = false,
     onCallClick: () -> Unit = {},
     onDirectionsClick: () -> Unit = {}
 ) {
@@ -102,6 +107,7 @@ fun NotificationDetailScreen(
             RiskLinkDetailSheet(
                 detail = detail,
                 onRefreshClick = onRefreshClick,
+                isRefreshing = isRefreshing,
                 onCallClick = onCallClick,
                 modifier = Modifier
             )
@@ -109,8 +115,10 @@ fun NotificationDetailScreen(
             LocationDetailSheet(
                 detail = detail,
                 onRefreshClick = onRefreshClick,
+                isRefreshing = isRefreshing,
                 onCallClick = onCallClick,
                 onDirectionsClick = onDirectionsClick,
+                isDirectionsLoading = isDirectionsLoading,
                 modifier = Modifier
             )
         }
@@ -322,8 +330,10 @@ private val NotificationCategory.heroSpacingRatio: Pair<Float, Float>
 private fun LocationDetailSheet(
     detail: NotificationDetailUiState,
     onRefreshClick: () -> Unit,
+    isRefreshing: Boolean,
     onCallClick: () -> Unit,
     onDirectionsClick: () -> Unit,
+    isDirectionsLoading: Boolean,
     modifier: Modifier = Modifier
 ) {
     val sheetShape = RoundedCornerShape(
@@ -358,7 +368,8 @@ private fun LocationDetailSheet(
         DetailSheetHeader(
             iconResId = R.drawable.ic_location,
             title = if (detail.category == NotificationCategory.Sos) "현재 위치" else "위치",
-            onRefreshClick = onRefreshClick
+            onRefreshClick = onRefreshClick,
+            isRefreshing = isRefreshing,
         )
 
         Text(
@@ -424,7 +435,8 @@ private fun LocationDetailSheet(
             containerColor = SeniorOnColors.SupportWhite100,
             contentColor = SeniorOnColors.Gray800,
             outlined = true,
-            onClick = onDirectionsClick
+            onClick = onDirectionsClick,
+            isLoading = isDirectionsLoading,
         )
     }
 }
@@ -433,6 +445,7 @@ private fun LocationDetailSheet(
 private fun RiskLinkDetailSheet(
     detail: NotificationDetailUiState,
     onRefreshClick: () -> Unit,
+    isRefreshing: Boolean,
     onCallClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -456,7 +469,8 @@ private fun RiskLinkDetailSheet(
         DetailSheetHeader(
             iconResId = R.drawable.ic_link,
             title = "감지된 URL",
-            onRefreshClick = onRefreshClick
+            onRefreshClick = onRefreshClick,
+            isRefreshing = isRefreshing,
         )
 
         Text(
@@ -507,7 +521,8 @@ private fun RiskLinkDetailSheet(
 private fun DetailSheetHeader(
     iconResId: Int,
     title: String,
-    onRefreshClick: () -> Unit
+    onRefreshClick: () -> Unit,
+    isRefreshing: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -526,14 +541,26 @@ private fun DetailSheetHeader(
             color = SeniorOnColors.Gray700,
             modifier = Modifier.weight(1f)
         )
-        Icon(
-            painter = painterResource(id = R.drawable.ic_refresh),
-            contentDescription = "새로고침",
-            tint = SeniorOnColors.Gray600,
+        Box(
             modifier = Modifier
                 .size(24.dp)
-                .clickable(onClick = onRefreshClick)
-        )
+                .clickable(enabled = !isRefreshing, onClick = onRefreshClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isRefreshing) {
+                SeniorOnLoadingIndicator(
+                    color = SeniorOnColors.Gray600,
+                    size = 20.dp,
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_refresh),
+                    contentDescription = "새로고침",
+                    tint = SeniorOnColors.Gray600,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
     }
 }
 
@@ -602,29 +629,24 @@ private fun DetailActionButton(
     containerColor: Color,
     contentColor: Color,
     onClick: () -> Unit,
-    outlined: Boolean = false
+    outlined: Boolean = false,
+    isLoading: Boolean = false,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
-    Box(
+    SeniorOnActionButton(
+        text = label,
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
-            .then(
-                if (outlined) {
-                    Modifier.background(SeniorOnColors.Gray200, shape).padding(1.dp)
-                } else {
-                    Modifier
-                }
-            )
-            .clip(shape)
-            .background(containerColor)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            .height(48.dp),
+        enabled = !isLoading,
+        isLoading = isLoading,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        border = if (outlined) BorderStroke(1.dp, SeniorOnColors.Gray200) else null,
+        shape = shape,
+        minHeight = 48.dp,
+        leadingContent = {
             Icon(
                 painter = painterResource(id = iconResId),
                 contentDescription = null,
@@ -632,9 +654,8 @@ private fun DetailActionButton(
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = label, style = SeniorOnTextStyles.ButtonM, color = contentColor)
-        }
-    }
+        },
+    )
 }
 
 private data class NotificationDetailUiState(

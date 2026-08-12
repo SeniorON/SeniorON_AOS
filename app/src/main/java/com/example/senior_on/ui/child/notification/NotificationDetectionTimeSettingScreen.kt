@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.sp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnFontFamily
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -61,6 +62,8 @@ import kotlin.math.roundToInt
 fun NotificationDetectionTimeSettingScreen(
     initialHours: Int = 12,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    isSaving: Boolean = false,
     onBackClick: () -> Unit = {},
     onSaveClick: (Int) -> Unit = {}
 ) {
@@ -103,13 +106,15 @@ fun NotificationDetectionTimeSettingScreen(
 
             DetectionTimeSliderCard(
                 selectedHours = selectedHours,
-                onHoursChange = { selectedHours = it }
+                onHoursChange = { selectedHours = it },
+                enabled = !isLoading && !isSaving,
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
             DetectionTimeSaveButton(
-                onClick = { onSaveClick(selectedHours) }
+                onClick = { onSaveClick(selectedHours) },
+                isLoading = isLoading || isSaving,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -238,6 +243,7 @@ private fun DetectionTimeDescriptionChip(
 private fun DetectionTimeSliderCard(
     selectedHours: Int,
     onHoursChange: (Int) -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Medium)
@@ -263,6 +269,7 @@ private fun DetectionTimeSliderCard(
         ) {
             Slider(
                 value = selectedHours.toFloat(),
+                enabled = enabled,
                 onValueChange = { value ->
                     onHoursChange(
                         value.roundToInt().coerceIn(MinDetectionHours, MaxDetectionHours)
@@ -350,27 +357,18 @@ private fun DetectionTimeSliderLabel(
 @Composable
 private fun DetectionTimeSaveButton(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
-    Box(
+    SeniorOnActionButton(
+        text = "저장",
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Primary600)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "저장",
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.SupportWhite100
-        )
-    }
+            .height(50.dp),
+        enabled = !isLoading,
+        isLoading = isLoading,
+    )
 }
 
 private const val MinDetectionHours = 1
