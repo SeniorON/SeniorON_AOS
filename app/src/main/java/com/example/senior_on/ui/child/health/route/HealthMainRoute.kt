@@ -80,12 +80,10 @@ fun HealthMainRoute(
         medicationViewModel.consumeError()
     }
 
-    LaunchedEffect(hospitalUiState.isSaving, appointmentToDelete) {
-        if (appointmentToDelete == null) {
-            wasDeletingAppointment = false
-        } else if (hospitalUiState.isSaving) {
+    LaunchedEffect(hospitalUiState.isSaving) {
+        if (hospitalUiState.isSaving && appointmentToDelete != null) {
             wasDeletingAppointment = true
-        } else if (wasDeletingAppointment) {
+        } else if (!hospitalUiState.isSaving && wasDeletingAppointment) {
             appointmentToDelete = null
             wasDeletingAppointment = false
         }
@@ -124,7 +122,8 @@ fun HealthMainRoute(
                 hospitalViewModel.closeEditor()
             },
             onMedicationDateSelected = medicationViewModel::selectDate,
-            onAddMedicationClick = medicationViewModel::openAddMedication,
+            onAddTodayMedicationClick = medicationViewModel::openAddTodayMedication,
+            onAddRegisteredMedicationClick = medicationViewModel::openAddMedication,
             onMedicationClick = medicationViewModel::openMedication,
             onMedicationRefresh = medicationViewModel::refreshMedicationData,
             onHospitalMonthSelected = hospitalViewModel::selectMonth,

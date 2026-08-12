@@ -2,6 +2,7 @@ package com.example.senior_on.ui.child.health
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -29,15 +30,17 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.common.time.koreaNow
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -78,17 +81,24 @@ data class RegisteredMedicationUiState(
     val isEveryday: Boolean
         get() = weekdays.size == MedicationWeekdayLabels.size
 
-    fun isScheduledOn(date: LocalDate): Boolean {
+    fun isActiveOn(date: LocalDate): Boolean {
         if (startDate != null && date.isBefore(startDate)) return false
-        val effectiveEndDate = when (repeat.duration) {
+
+        // 서버가 확정한 종료일이 있으면 종료 유형과 관계없이 그 값을 우선한다.
+        // 과거/혼합 응답에서 repeatEndType과 durationWeeks가 실제 endDate와
+        // 다르더라도 다음 날까지 등록 약이 노출되지 않도록 하기 위함이다.
+        val effectiveEndDate = repeat.endDate ?: when (repeat.duration) {
             MedicationRepeatDuration.Continuous -> null
-            MedicationRepeatDuration.Period -> {
-                val weeks = repeat.periodValue.coerceAtLeast(1).toLong()
-                (startDate ?: date).plusWeeks(weeks).minusDays(1)
-            }
-            MedicationRepeatDuration.Date -> repeat.endDate
+            MedicationRepeatDuration.Period -> startDate
+                ?.plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+            MedicationRepeatDuration.Date -> null
         }
-        if (effectiveEndDate != null && date.isAfter(effectiveEndDate)) return false
+
+        return effectiveEndDate == null || !date.isAfter(effectiveEndDate)
+    }
+
+    fun isScheduledOn(date: LocalDate): Boolean {
+        if (!isActiveOn(date)) return false
 
         val cycle = repeat.cycleValue.coerceAtLeast(1).toLong()
         val anchor = startDate ?: date
@@ -154,7 +164,7 @@ internal fun buildTodayMedicationsFromRegistered(
 
 private fun defaultDoseStatus(date: LocalDate, time: LocalTime): MedicationDoseStatus {
     val dateTime = LocalDateTime.of(date, time)
-    return if (dateTime.isBefore(LocalDateTime.now())) {
+    return if (dateTime.isBefore(koreaNow())) {
         MedicationDoseStatus.Missed
     } else {
         MedicationDoseStatus.Scheduled
@@ -168,6 +178,7 @@ data class TodayMedicationUiState(
     val time: LocalTime,
     val status: MedicationDoseStatus,
     val medicationLogId: Long = 0L,
+    val takenTime: LocalTime? = null,
 )
 
 @Composable
@@ -187,7 +198,7 @@ internal fun TodayMedicationSection(
         modifier = modifier
             .fillMaxWidth()
             .background(SeniorOnColors.Primary600)
-            .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 24.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp)
     ) {
         HealthYearSelector(
             year = selectedDate.year,
@@ -234,7 +245,7 @@ private fun HealthYearSelector(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -267,11 +278,12 @@ private fun HealthDateNavigator(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_sm_arrow_left),
+            painter = painterResource(id = R.drawable.ic_arrow_next),
             contentDescription = "이전 날",
             tint = SeniorOnColors.SupportWhite100,
             modifier = Modifier
-                .size(18.dp)
+                .size(24.dp)
+                .rotate(180f)
                 .clickable(onClick = onPreviousDayClick)
         )
         Text(
@@ -281,7 +293,7 @@ private fun HealthDateNavigator(
             modifier = Modifier.padding(horizontal = 12.dp)
         )
         Icon(
-            painter = painterResource(id = R.drawable.ic_sm_arrow_right),
+            painter = painterResource(id = R.drawable.ic_arrow_next),
             contentDescription = "다음 날",
             tint = SeniorOnColors.SupportWhite100,
             modifier = Modifier
@@ -341,7 +353,6 @@ internal val HealthCalendarCardWidth = 296.dp
 internal val HealthCalendarCardHeight = 320.dp
 internal val HealthCalendarCardPadding = 16.dp
 internal val HealthCalendarCardTopOffset = 52.dp
-internal val HealthCalendarCardStartOffset = 32.dp
 
 @Composable
 private fun HealthGreenSectionTitle(
@@ -352,7 +363,7 @@ private fun HealthGreenSectionTitle(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = painterResource(id = iconResId),
@@ -363,7 +374,7 @@ private fun HealthGreenSectionTitle(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = title,
-            style = SeniorOnTextStyles.BodyLBold,
+            style = SeniorOnTextStyles.HeadingXS,
             color = SeniorOnColors.SupportWhite100,
             modifier = Modifier.weight(1f)
         )
@@ -379,7 +390,7 @@ private fun HealthGreenOutlineAddButton(
     label: String,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(38.dp)
     Row(
         modifier = Modifier
             .width(120.dp)
@@ -395,7 +406,7 @@ private fun HealthGreenOutlineAddButton(
             painter = painterResource(id = R.drawable.ic_plus),
             contentDescription = null,
             tint = SeniorOnColors.SupportWhite100,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(20.dp)
         )
         Text(
             text = label,
@@ -412,7 +423,7 @@ private fun TodayMedicationStatusCard(
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
     val backgroundColor = if (medications.isEmpty()) {
-        SeniorOnColors.Primary100
+        SeniorOnColors.SupportWhite80
     } else {
         SeniorOnColors.SupportWhite100
     }
@@ -423,25 +434,26 @@ private fun TodayMedicationStatusCard(
             .clip(shape)
             .background(backgroundColor)
             .padding(
-                start = if (medications.isEmpty()) 14.dp else 16.dp,
-                top = if (medications.isEmpty()) 31.dp else 16.dp,
-                end = if (medications.isEmpty()) 14.dp else 16.dp,
-                bottom = if (medications.isEmpty()) 31.dp else 16.dp
+                start = 14.dp,
+                top = 10.dp,
+                end = 14.dp,
+                bottom = 10.dp
             ),
         horizontalAlignment = Alignment.Start
     ) {
         if (medications.isEmpty()) {
             Text(
                 text = "오늘 복용할 약이 없어요",
+                modifier = Modifier.padding(vertical = 21.dp),
                 style = SeniorOnTextStyles.BodyMSemiBold,
                 color = SeniorOnColors.Gray500
             )
         } else {
-            medications.forEachIndexed { index, medication ->
-                TodayMedicationItemRow(medication = medication)
-                if (index != medications.lastIndex) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
+            medications.forEach { medication ->
+                TodayMedicationItemRow(
+                    medication = medication,
+                    modifier = Modifier.padding(vertical = 12.dp),
+                )
             }
         }
     }
@@ -449,10 +461,11 @@ private fun TodayMedicationStatusCard(
 
 @Composable
 private fun TodayMedicationItemRow(
-    medication: TodayMedicationUiState
+    medication: TodayMedicationUiState,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -468,17 +481,30 @@ private fun TodayMedicationItemRow(
                 style = SeniorOnTextStyles.BodyMSemiBold,
                 color = SeniorOnColors.Gray800
             )
+            Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = "${medication.time.toMedicationTime()} · ${medication.name}",
                 style = SeniorOnTextStyles.BodySRegular,
                 color = SeniorOnColors.Gray500
             )
         }
-        Text(
-            text = medication.status.label,
-            style = SeniorOnTextStyles.BodySMedium,
-            color = medication.status.labelColor()
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = medication.status.label,
+                style = SeniorOnTextStyles.BodySMedium,
+                color = medication.status.labelColor(),
+                textDecoration = TextDecoration.None,
+            )
+            if (medication.status == MedicationDoseStatus.Taken) {
+                medication.takenTime?.let { takenTime ->
+                    Text(
+                        text = takenTime.toMedicationTime(),
+                        style = SeniorOnTextStyles.BodySRegular,
+                        color = SeniorOnColors.Gray500,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -502,21 +528,20 @@ internal fun RegisteredMedicationsSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "등록된 약",
-                    style = SeniorOnTextStyles.BodyLBold,
+                    style = SeniorOnTextStyles.HeadingM,
                     color = SeniorOnColors.Gray800
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 RegisteredMedicationCountText(count = medications.size)
             }
             if (medications.isNotEmpty()) {
-                OutlineAddButton(
-                    label = "복약 추가",
+                RegisteredMedicationAddButton(
                     onClick = onAddMedicationClick
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (medications.isEmpty()) {
             EmptyRegisteredMedicationsContent(onAddMedicationClick = onAddMedicationClick)
@@ -534,16 +559,50 @@ internal fun RegisteredMedicationsSection(
 }
 
 @Composable
+private fun RegisteredMedicationAddButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(38.dp)
+    Row(
+        modifier = modifier
+            .width(96.dp)
+            .height(32.dp)
+            .clip(shape)
+            .border(
+                width = 1.dp,
+                color = SeniorOnColors.Primary500,
+                shape = shape,
+            )
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_sm_plus),
+            contentDescription = null,
+            tint = SeniorOnColors.Primary500,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = "복약 추가",
+            style = SeniorOnTextStyles.BodySMedium,
+            color = SeniorOnColors.Primary500,
+        )
+    }
+}
+
+@Composable
 private fun RegisteredMedicationCountText(count: Int) {
     Text(
         text = buildAnnotatedString {
             append("현재 ")
             if (count > 0) {
                 withStyle(
-                    SpanStyle(
-                        color = SeniorOnColors.Primary700,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    SeniorOnTextStyles.BodySSemiBold
+                        .toSpanStyle()
+                        .copy(color = SeniorOnColors.Primary700)
                 ) {
                     append("${count}개의 약")
                 }
@@ -564,7 +623,7 @@ private fun EmptyRegisteredMedicationsContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp, bottom = 8.dp),
+            .padding(top = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -591,7 +650,7 @@ private fun EmptyRegisteredMedicationsContent(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         HospitalFilledActionButton(
             label = "약 추가하기",
@@ -606,28 +665,39 @@ private fun RegisteredMedicationCard(
     medication: RegisteredMedicationUiState,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(SeniorOnRadius.Large))
-            .background(SeniorOnColors.Gray50)
+            .height(72.dp)
+            .clip(shape)
+            .background(SeniorOnColors.Background1)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .border(
+                width = 1.dp,
+                color = SeniorOnColors.Background4,
+                shape = shape,
+            )
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
-            modifier = Modifier.width(88.dp),
+            modifier = Modifier.width(118.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = medication.category,
                 style = SeniorOnTextStyles.BodySRegular,
-                color = SeniorOnColors.Gray500
+                color = SeniorOnColors.Gray500,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = medication.name,
                 style = SeniorOnTextStyles.BodyMSemiBold,
-                color = SeniorOnColors.Gray800
+                color = SeniorOnColors.Gray800,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -636,7 +706,7 @@ private fun RegisteredMedicationCard(
                 .padding(horizontal = 10.dp)
                 .width(2.dp)
                 .height(40.dp)
-                .background(SeniorOnColors.Gray100)
+                .background(SeniorOnColors.Background4)
         )
 
         Column(
@@ -654,9 +724,9 @@ private fun RegisteredMedicationCard(
         }
 
         Icon(
-            painter = painterResource(id = R.drawable.ic_sm_arrow_right),
+            painter = painterResource(id = R.drawable.ic_arrow_next),
             contentDescription = null,
-            tint = SeniorOnColors.Gray300,
+            tint = SeniorOnColors.Gray500,
             modifier = Modifier.size(24.dp)
         )
     }
@@ -667,7 +737,10 @@ private fun RegisteredMedicationMetaRow(
     @DrawableRes iconResId: Int,
     label: String
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Icon(
             painter = painterResource(id = iconResId),
             contentDescription = null,
@@ -678,7 +751,9 @@ private fun RegisteredMedicationMetaRow(
         Text(
             text = label,
             style = SeniorOnTextStyles.CaptionMedium,
-            color = SeniorOnColors.Gray800
+            color = SeniorOnColors.Gray800,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -745,7 +820,8 @@ internal fun previewTodayMedications() = listOf(
         category = "혈압약",
         name = "아암로디핀",
         time = LocalTime.of(8, 0),
-        status = MedicationDoseStatus.Taken
+        status = MedicationDoseStatus.Taken,
+        takenTime = LocalTime.of(14, 0),
     ),
     TodayMedicationUiState(
         date = LocalDate.of(2026, 6, 12),

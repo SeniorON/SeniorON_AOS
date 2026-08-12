@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.onFocusChanged
@@ -41,14 +42,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.shadow.Shadow
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
 import com.example.senior_on.R
+import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -168,6 +172,33 @@ fun MedicationDetailScreen(
             else -> weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
         }
 
+    fun isEndDateBeforeStartDate(
+        selectedStartDate: LocalDate? = startDate,
+        selectedRepeat: MedicationRepeatSelection = repeatSelection,
+    ): Boolean =
+        selectedRepeat.duration == MedicationRepeatDuration.Date &&
+            selectedStartDate != null &&
+            selectedRepeat.endDate?.isBefore(selectedStartDate) == true
+
+    fun saveMedicationIfValid() {
+        if (isEndDateBeforeStartDate()) {
+            snackbarMessage = "복용 종료일은 시작일보다 빠를 수 없어요."
+            return
+        }
+        onSaveClick(
+            MedicationDraft(
+                category = category.trim(),
+                name = name.trim(),
+                times = times,
+                weekdays = resolvedWeekdaysForSave(),
+                startDate = startDate,
+                repeat = repeatSelection.copy(
+                    weekdays = resolvedWeekdaysForSave(),
+                ),
+            )
+        )
+    }
+
     LaunchedEffect(snackbarMessage) {
         if (snackbarMessage != null) {
             delay(2_000)
@@ -189,13 +220,11 @@ fun MedicationDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SeniorOnColors.SupportWhite100)
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { focusManager.clearFocus() })
-                }
+                .clearFocusOnBackgroundTap(focusManager)
         ) {
             HealthEditorTopBar(
                 title = when (mode) {
-                    MedicationEditorMode.Add -> "복약 등록하기"
+                    MedicationEditorMode.Add -> "복약 추가하기"
                     MedicationEditorMode.View -> "복약 정보"
                     MedicationEditorMode.Edit -> "복약 수정하기"
                 },
@@ -256,7 +285,7 @@ fun MedicationDetailScreen(
                         enabled = isEditable
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -351,21 +380,13 @@ fun MedicationDetailScreen(
                         }
                     )
 
-                    snackbarMessage?.let { message ->
-                        Spacer(modifier = Modifier.height(12.dp))
-                        MedicationSnackbar(
-                            message = message,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         when (mode) {
                             MedicationEditorMode.Add -> {
@@ -373,20 +394,7 @@ fun MedicationDetailScreen(
                                     label = "약 추가하기",
                                     enabled = isComplete && !isSaving,
                                     isLoading = isSaving,
-                                    onClick = {
-                                        onSaveClick(
-                                            MedicationDraft(
-                                                category = category.trim(),
-                                                name = name.trim(),
-                                                times = times,
-                                                weekdays = resolvedWeekdaysForSave(),
-                                                startDate = startDate,
-                                                repeat = repeatSelection.copy(
-                                                    weekdays = resolvedWeekdaysForSave(),
-                                                ),
-                                            )
-                                        )
-                                    },
+                                    onClick = ::saveMedicationIfValid,
                                     iconResId = R.drawable.ic_plus,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -394,11 +402,12 @@ fun MedicationDetailScreen(
                             MedicationEditorMode.View -> {
                                 MedicationDeleteButton(
                                     onClick = { showDeleteDialog = true },
+                                    enabled = !isSaving,
                                     modifier = Modifier.weight(1f)
                                 )
                                 MedicationPrimaryButton(
                                     label = "수정하기",
-                                    enabled = true,
+                                    enabled = !isSaving,
                                     onClick = onEditClick,
                                     iconResId = R.drawable.ic_pencil,
                                     modifier = Modifier.weight(1f)
@@ -409,20 +418,8 @@ fun MedicationDetailScreen(
                                     label = "수정하기",
                                     enabled = isComplete && !isSaving,
                                     isLoading = isSaving,
-                                    onClick = {
-                                        onSaveClick(
-                                            MedicationDraft(
-                                                category = category.trim(),
-                                                name = name.trim(),
-                                                times = times,
-                                                weekdays = resolvedWeekdaysForSave(),
-                                                startDate = startDate,
-                                                repeat = repeatSelection.copy(
-                                                    weekdays = resolvedWeekdaysForSave(),
-                                                ),
-                                            )
-                                        )
-                                    },
+                                    onClick = ::saveMedicationIfValid,
+                                    iconResId = R.drawable.ic_pencil,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -430,6 +427,16 @@ fun MedicationDetailScreen(
                     }
                 }
             }
+        }
+
+        snackbarMessage?.let { message ->
+            MedicationSnackbar(
+                message = message,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .width(328.dp)
+                    .padding(vertical = 24.dp)
+            )
         }
     }
 
@@ -449,10 +456,14 @@ fun MedicationDetailScreen(
     }
     if (showDateSheet) {
         ScheduleDatePickerBottomSheet(
-            initialDate = startDate ?: LocalDate.now(),
+            initialDate = startDate ?: koreaToday(),
             onDismiss = { showDateSheet = false },
             onConfirm = { selected ->
-                startDate = selected
+                if (isEndDateBeforeStartDate(selectedStartDate = selected)) {
+                    snackbarMessage = "복용 종료일은 시작일보다 빠를 수 없어요."
+                } else {
+                    startDate = selected
+                }
                 showDateSheet = false
             }
         )
@@ -462,6 +473,11 @@ fun MedicationDetailScreen(
             initial = repeatSelection,
             onCancel = { showRepeatSheet = false },
             onConfirm = { selected ->
+                if (isEndDateBeforeStartDate(selectedRepeat = selected)) {
+                    snackbarMessage = "복용 종료일은 시작일보다 빠를 수 없어요."
+                    showRepeatSheet = false
+                    return@MedicationRepeatBottomSheet
+                }
                 val resolvedWeekdays = when (selected.frequency) {
                     MedicationRepeatFrequency.Daily ->
                         MedicationWeekdayLabels.indices.toSet()
@@ -589,10 +605,10 @@ private fun MedicationEditableTimeChip(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(43.dp)
             .clip(shape)
             .background(SeniorOnColors.Background2)
-            .padding(start = 12.dp, end = 2.dp),
+            .padding(start = 12.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -601,19 +617,13 @@ private fun MedicationEditableTimeChip(
             color = SeniorOnColors.Primary700,
             modifier = Modifier.weight(1f)
         )
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clickable(onClick = onDeleteClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_trash),
-                contentDescription = "복용 시간 삭제",
-                tint = SeniorOnColors.Gray400,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+
+        Icon(
+            painter = painterResource(id = R.drawable.ic_trash),
+            contentDescription = "복용 시간 삭제",
+            tint = SeniorOnColors.Gray400,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 
@@ -632,7 +642,7 @@ private fun MedicationSnackbar(
         modifier = modifier
             .height(60.dp)
             .clip(shape)
-            .background(SeniorOnColors.Toast)
+            .background(SeniorOnColors.Toast.copy(alpha = 0.9f))
             .padding(horizontal = 12.dp, vertical = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -648,6 +658,24 @@ private fun MedicationSnackbar(
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.SupportWhite100
         )
+    }
+}
+
+@Preview(name = "복약 중복 시간 스낵바", showBackground = true, widthDp = 360)
+@Composable
+private fun MedicationSnackbarPreview() {
+    SENIOR_ONTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(108.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            MedicationSnackbar(
+                message = "이미 등록된 복용 시간입니다.",
+                modifier = Modifier.width(328.dp),
+            )
+        }
     }
 }
 
@@ -681,6 +709,7 @@ private fun MedicationTextInput(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
+    val focusManager = LocalFocusManager.current
 
     BasicTextField(
         value = value,
@@ -688,6 +717,10 @@ private fun MedicationTextInput(
         enabled = enabled,
         textStyle = SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800),
         cursorBrush = SolidColor(SeniorOnColors.Primary600),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = { focusManager.clearFocus() }
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .height(inputHeight)
@@ -696,7 +729,7 @@ private fun MedicationTextInput(
         decorationBox = { inner ->
             val borderColor = when {
                 !enabled -> SeniorOnColors.Gray200
-                isFocused || (!filled && value.isNotEmpty()) -> SeniorOnColors.Primary600
+                isFocused -> SeniorOnColors.Primary600
                 else -> SeniorOnColors.Gray200
             }
             Row(
@@ -707,10 +740,16 @@ private fun MedicationTextInput(
                         if (filled) SeniorOnColors.Background3
                         else SeniorOnColors.SupportWhite100
                     )
-                    .border(
-                        width = 1.dp,
-                        color = borderColor,
-                        shape = shape
+                    .then(
+                        if (filled) {
+                            Modifier
+                        } else {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = borderColor,
+                                shape = shape
+                            )
+                        }
                     )
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -744,20 +783,20 @@ private fun MedicationTextInput(
 @Composable
 private fun MedicationTimeChip(text: String) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(43.dp)
             .clip(shape)
             .background(SeniorOnColors.Background2)
-            .border(width = 1.dp, color = SeniorOnColors.Gray200, shape = shape)
-            .padding(12.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
             style = SeniorOnTextStyles.BodyMMedium,
-            color = SeniorOnColors.Primary700
+            color = SeniorOnColors.Primary700,
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -774,7 +813,7 @@ private fun MedicationRepeatField(
             .fillMaxWidth()
             .height(68.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(SeniorOnColors.Background2)
+            .background(SeniorOnColors.Background3)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -795,7 +834,7 @@ private fun MedicationRepeatField(
         Icon(
             painter = painterResource(id = R.drawable.ic_sm_arrow_right),
             contentDescription = null,
-            tint = SeniorOnColors.Gray400,
+            tint = SeniorOnColors.Gray500,
             modifier = Modifier.size(24.dp)
         )
     }
@@ -804,6 +843,7 @@ private fun MedicationRepeatField(
 @Composable
 private fun MedicationDeleteButton(
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -811,7 +851,7 @@ private fun MedicationDeleteButton(
             .height(48.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .border(1.dp, SeniorOnColors.Red300, RoundedCornerShape(SeniorOnRadius.Small))
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -834,10 +874,10 @@ private fun MedicationDeleteButton(
 private fun MedicationPrimaryButton(
     label: String,
     enabled: Boolean,
+    isLoading: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconResId: Int? = null,
-    isLoading: Boolean = false,
+    iconResId: Int? = null
 ) {
     SeniorOnActionButton(
         text = label,
@@ -846,15 +886,16 @@ private fun MedicationPrimaryButton(
         enabled = enabled,
         isLoading = isLoading,
         minHeight = 48.dp,
+        shape = RoundedCornerShape(SeniorOnRadius.Small),
         leadingContent = iconResId?.let { iconId ->
             {
-                Icon(
-                    painter = painterResource(id = iconId),
-                    contentDescription = null,
-                    tint = SeniorOnColors.SupportWhite100,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+            Icon(
+                painter = painterResource(id = iconId),
+                contentDescription = null,
+                tint = SeniorOnColors.SupportWhite100,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             }
         },
     )
