@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -52,6 +53,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 fun DisplayFontEditScreen(
     initialFontSize: SeniorFontSize,
     buttons: List<SeniorHomeButtonType>,
+    buttonItems: List<DisplayHomeButton> = emptyList(),
     customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
     weather: DisplayWeather? = null,
     isWeatherLoading: Boolean = false,
@@ -97,6 +99,7 @@ fun DisplayFontEditScreen(
 
             FontPreviewCard(
                 configuration = previewConfiguration,
+                buttonItems = buttonItems,
                 weather = weather,
                 isWeatherLoading = isWeatherLoading,
                 todaySchedule = todaySchedule,
@@ -180,6 +183,7 @@ private fun FontEditTopBar(
 @Composable
 private fun FontPreviewCard(
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton>,
     weather: DisplayWeather?,
     isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
@@ -224,6 +228,7 @@ private fun FontPreviewCard(
         ) {
             SeniorPhonePreview(
                 configuration = configuration,
+                buttonItems = buttonItems,
                 weather = weather,
                 isWeatherLoading = isWeatherLoading,
                 todaySchedule = todaySchedule,

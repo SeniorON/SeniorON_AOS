@@ -112,6 +112,11 @@ data class SettingsProfileUiState(
         get() = !profileImageUrl.isNullOrBlank() && !isUsingDefaultProfileImage
 }
 
+internal fun settingsSessionViewModelKey(
+    sessionKey: String,
+    viewModelName: String,
+): String = "settings:${viewModelName.trim()}:${sessionKey.trim()}"
+
 private enum class SettingsDestination {
     Main,
     MyAccount,
@@ -136,6 +141,7 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    sessionKey: String,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
     displayViewModel: DisplayViewModel,
@@ -152,6 +158,7 @@ fun SettingsTabRoute(
     onWithdrawConfirm: () -> Unit = {},
 ) {
     val viewModel: SettingsViewModel = viewModel(
+        key = settingsSessionViewModelKey(sessionKey, "actions"),
         factory = SettingsViewModel.factory(
             authRepository = authRepository,
             sessionRepository = sessionRepository,
@@ -159,6 +166,7 @@ fun SettingsTabRoute(
         ),
     )
     val profileImageViewModel: ProfileImageViewModel = viewModel(
+        key = settingsSessionViewModelKey(sessionKey, "profile"),
         factory = ProfileImageViewModel.factory(
             userSettingsRepository = userSettingsRepository,
             photoUploadPreparer = familyPhotoUploadPreparer,
@@ -170,11 +178,15 @@ fun SettingsTabRoute(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val saveableStateHolder = rememberSaveableStateHolder()
-    var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingCameraCleanupUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var wasProfileImageUploading by remember { mutableStateOf(false) }
+    var pendingCameraPhotoUri by rememberSaveable(sessionKey) {
+        mutableStateOf<String?>(null)
+    }
+    var pendingCameraCleanupUri by rememberSaveable(sessionKey) {
+        mutableStateOf<String?>(null)
+    }
+    var wasProfileImageUploading by remember(sessionKey) { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(profileImageViewModel) {
         profileImageViewModel.loadSettingsProfile()
     }
 
@@ -266,16 +278,22 @@ fun SettingsTabRoute(
         Unit
     }
 
-    var destination by rememberSaveable { mutableStateOf(SettingsDestination.Main) }
-    var connectionGuideReturnDestination by rememberSaveable {
+    var destination by rememberSaveable(sessionKey) {
+        mutableStateOf(SettingsDestination.Main)
+    }
+    var connectionGuideReturnDestination by rememberSaveable(sessionKey) {
         mutableStateOf(SettingsDestination.HelpInquiry)
     }
-    var selectedParentAddress by rememberSaveable { mutableStateOf("") }
-    var selectedParentAddressLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var selectedParentAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var profileName by rememberSaveable { mutableStateOf("") }
-    var profileAccountType by rememberSaveable { mutableStateOf("계정") }
-    var profileEmail by rememberSaveable { mutableStateOf("") }
+    var selectedParentAddress by rememberSaveable(sessionKey) { mutableStateOf("") }
+    var selectedParentAddressLatitude by rememberSaveable(sessionKey) {
+        mutableStateOf<Double?>(null)
+    }
+    var selectedParentAddressLongitude by rememberSaveable(sessionKey) {
+        mutableStateOf<Double?>(null)
+    }
+    var profileName by rememberSaveable(sessionKey) { mutableStateOf("") }
+    var profileAccountType by rememberSaveable(sessionKey) { mutableStateOf("계정") }
+    var profileEmail by rememberSaveable(sessionKey) { mutableStateOf("") }
 
     LaunchedEffect(profileImageUiState.profileName) {
         profileImageUiState.profileName?.let { serverName ->

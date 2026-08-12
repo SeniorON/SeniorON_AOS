@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
@@ -66,6 +67,7 @@ internal fun FamilyBackTopAppBar(
         modifier = modifier
             .fillMaxWidth()
             .height(SeniorOnDimensions.TopBarHeight)
+            .zIndex(1f)
             .background(SeniorOnColors.White),
     ) {
         Icon(
@@ -554,13 +556,31 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Crop,
         )
-        is FamilyImageSource.Remote -> AsyncImage(
-            model = imageSource.url,
-            contentDescription = null,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
-            error = painterResource(id = R.drawable.ic_dependent),
-        )
+        is FamilyImageSource.Remote -> {
+            val context = LocalContext.current
+            val cacheKey = remember(member.id, imageSource.url) {
+                familyMemberImageCacheKey(
+                    memberId = member.id,
+                    imageUrl = imageSource.url,
+                )
+            }
+            val imageRequest = remember(context, imageSource.url, cacheKey) {
+                ImageRequest.Builder(context)
+                    .data(imageSource.url)
+                    .memoryCacheKey(cacheKey)
+                    .diskCacheKey(cacheKey)
+                    .placeholderMemoryCacheKey(cacheKey)
+                    .build()
+            }
+
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = R.drawable.ic_dependent),
+            )
+        }
         is FamilyImageSource.Uri -> AsyncImage(
             model = imageSource.value,
             contentDescription = null,
@@ -592,6 +612,7 @@ internal fun BoxScope.SharedFamilyPhotoImage(
                     .data(imageSource.url)
                     .memoryCacheKey(cacheKey)
                     .diskCacheKey(cacheKey)
+                    .placeholderMemoryCacheKey(cacheKey)
                     .build()
             }
 
@@ -615,6 +636,17 @@ internal fun BoxScope.SharedFamilyPhotoImage(
         )
         null -> SharedPhotoImagePlaceholder()
     }
+}
+
+internal fun familyMemberImageCacheKey(
+    memberId: String,
+    imageUrl: String,
+): String {
+    val stableImagePath = imageUrl
+        .trim()
+        .substringBefore('#')
+        .substringBefore('?')
+    return "family-member:${memberId.trim()}:$stableImagePath"
 }
 
 internal fun familyPhotoCacheKey(photoId: String): String = "family-photo:$photoId"

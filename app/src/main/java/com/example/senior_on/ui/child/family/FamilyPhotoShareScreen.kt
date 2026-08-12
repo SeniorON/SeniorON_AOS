@@ -36,8 +36,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -46,17 +44,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
@@ -75,12 +70,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -103,20 +98,10 @@ fun FamilyPhotoShareScreen(
     uploadErrorMessage: String? = null,
     selectedPhoto: (@Composable BoxScope.() -> Unit)? = null
 ) {
+    val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
-    val messageBringIntoViewRequester = remember { BringIntoViewRequester() }
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
-    var isMessageFocused by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isKeyboardVisible, isMessageFocused) {
-        if (isKeyboardVisible && isMessageFocused) {
-            delay(200L)
-            messageBringIntoViewRequester.bringIntoView()
-        } else if (scrollState.value > 0) {
-            scrollState.animateScrollTo(0)
-        }
-    }
 
     Column(
         modifier = modifier
@@ -130,6 +115,7 @@ fun FamilyPhotoShareScreen(
                     }
                 }
             }
+            .clearFocusOnBackgroundTap(focusManager)
             .statusBarsPadding()
     ) {
         FamilyBackTopAppBar(
@@ -142,6 +128,7 @@ fun FamilyPhotoShareScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .clipToBounds()
                 .verticalScroll(scrollState)
                 .imePadding()
                 .padding(horizontal = 16.dp),
@@ -173,8 +160,6 @@ fun FamilyPhotoShareScreen(
                 FamilyPhotoMessageInput(
                     message = message,
                     onMessageChange = onMessageChange,
-                    bringIntoViewRequester = messageBringIntoViewRequester,
-                    onFocusChange = { isMessageFocused = it },
                     errorMessage = uploadErrorMessage,
                 )
 
@@ -334,8 +319,6 @@ private fun BoxScope.FamilySelectedPhotoUriImage(photoUri: String) {
 private fun FamilyPhotoMessageInput(
     message: String,
     onMessageChange: (String) -> Unit,
-    bringIntoViewRequester: BringIntoViewRequester,
-    onFocusChange: (Boolean) -> Unit,
     errorMessage: String?,
 ) {
     val focusManager = LocalFocusManager.current
@@ -377,9 +360,7 @@ private fun FamilyPhotoMessageInput(
             onValueChange = onMessageChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .bringIntoViewRequester(bringIntoViewRequester)
-                .onFocusChanged { onFocusChange(it.isFocused) },
+                .height(48.dp),
             textStyle = SeniorOnTextStyles.BodyMMedium.copy(
                 color = SeniorOnColors.Gray800
             ),
