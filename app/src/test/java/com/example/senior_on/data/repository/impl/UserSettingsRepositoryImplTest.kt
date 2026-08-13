@@ -11,6 +11,8 @@ import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import kotlinx.coroutines.runBlocking
 import okhttp3.MultipartBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UserSettingsRepositoryImplTest {
@@ -25,8 +27,55 @@ class UserSettingsRepositoryImplTest {
         assertEquals("CHILD", settings.role)
         assertEquals("caregiver@example.com", settings.email)
         assertEquals("https://example.com/profile.png", settings.profileImageUrl)
+        assertFalse(settings.isDefaultProfileImage)
         assertEquals(1, source.accountRequestCount)
         assertEquals(1, source.profileImageRequestCount)
+    }
+
+    @Test
+    fun `default profile image flag comes from profile image API`() = runBlocking {
+        val source = FakeUserSettingsDataSource(
+            profileImageResponse = ProfileImageResponse(
+                profileImageUrl = null,
+                isDefaultProfileImage = true,
+            )
+        )
+        val repository = UserSettingsRepositoryImpl(source)
+
+        val settings = repository.getSettings()
+
+        assertEquals(null, settings.profileImageUrl)
+        assertTrue(settings.isDefaultProfileImage)
+    }
+
+    @Test
+    fun `missing default flag falls back to whether profile image URL exists`() = runBlocking {
+        val source = FakeUserSettingsDataSource(
+            profileImageResponse = ProfileImageResponse(
+                profileImageUrl = null,
+                isDefaultProfileImage = null,
+            )
+        )
+        val repository = UserSettingsRepositoryImpl(source)
+
+        assertTrue(repository.getSettings().isDefaultProfileImage)
+    }
+
+    @Test
+    fun `profile image reset result uses server default image response`() = runBlocking {
+        val source = FakeUserSettingsDataSource(
+            resetProfileImageResponse = ProfileImageResponse(
+                profileImageUrl = null,
+                isDefaultProfileImage = true,
+            )
+        )
+        val repository = UserSettingsRepositoryImpl(source)
+
+        val resetImage = repository.resetProfileImage()
+
+        assertEquals(null, resetImage.profileImageUrl)
+        assertTrue(resetImage.isDefaultProfileImage)
+        assertEquals(1, source.profileImageResetRequestCount)
     }
 
     @Test
@@ -39,9 +88,19 @@ class UserSettingsRepositoryImplTest {
     }
 }
 
-private class FakeUserSettingsDataSource : UserSettingsDataSource {
+private class FakeUserSettingsDataSource(
+    private val profileImageResponse: ProfileImageResponse = ProfileImageResponse(
+        profileImageUrl = "https://example.com/profile.png",
+        isDefaultProfileImage = false,
+    ),
+    private val resetProfileImageResponse: ProfileImageResponse = ProfileImageResponse(
+        profileImageUrl = null,
+        isDefaultProfileImage = true,
+    ),
+) : UserSettingsDataSource {
     var accountRequestCount = 0
     var profileImageRequestCount = 0
+    var profileImageResetRequestCount = 0
 
     override suspend fun getAccount(): UserAccountResponse {
         accountRequestCount += 1
@@ -54,9 +113,12 @@ private class FakeUserSettingsDataSource : UserSettingsDataSource {
 
     override suspend fun getProfileImage(): ProfileImageResponse {
         profileImageRequestCount += 1
-        return ProfileImageResponse(
-            profileImageUrl = "https://example.com/profile.png",
-        )
+        return profileImageResponse
+    }
+
+    override suspend fun resetProfileImage(): ProfileImageResponse {
+        profileImageResetRequestCount += 1
+        return resetProfileImageResponse
     }
 
     override suspend fun updateName(request: NameUpdateRequest): NameUpdateResponse =

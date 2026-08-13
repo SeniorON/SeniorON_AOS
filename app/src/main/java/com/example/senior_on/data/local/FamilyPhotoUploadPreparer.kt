@@ -10,9 +10,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import androidx.annotation.DrawableRes
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import java.io.File
@@ -21,7 +18,6 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 class FamilyPhotoUploadPreparer(context: Context) {
     private val appContext = context.applicationContext
@@ -141,61 +137,6 @@ class FamilyPhotoUploadPreparer(context: Context) {
             }
         }
 
-    suspend fun prepareDrawable(
-        @DrawableRes drawableResId: Int,
-        displayName: String,
-    ): PreparedFamilyPhoto = withContext(Dispatchers.IO) {
-        val drawable = requireNotNull(ContextCompat.getDrawable(appContext, drawableResId)) {
-            "기본 프로필 이미지를 불러오지 못했습니다."
-        }
-        val uploadDirectory = File(appContext.cacheDir, UploadDirectory).apply {
-            mkdirs()
-        }
-        val uploadFile = File.createTempFile(
-            "profile_default_",
-            ".png",
-            uploadDirectory,
-        )
-
-        try {
-            val iconSize = calculateDefaultProfileIconSize(DefaultProfileImageSize)
-            val iconBitmap = drawable.toBitmap(
-                width = iconSize,
-                height = iconSize,
-                config = Bitmap.Config.ARGB_8888,
-            )
-            val bitmap = Bitmap.createBitmap(
-                DefaultProfileImageSize,
-                DefaultProfileImageSize,
-                Bitmap.Config.ARGB_8888,
-            )
-            Canvas(bitmap).drawBitmap(
-                iconBitmap,
-                (DefaultProfileImageSize - iconSize) / 2f,
-                (DefaultProfileImageSize - iconSize) / 2f,
-                null,
-            )
-            iconBitmap.recycle()
-            try {
-                uploadFile.outputStream().use { output ->
-                    check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
-                        "기본 프로필 이미지를 변환하지 못했습니다."
-                    }
-                }
-            } finally {
-                bitmap.recycle()
-            }
-            PreparedFamilyPhoto(
-                file = uploadFile,
-                mimeType = "image/png",
-                displayName = displayName,
-            )
-        } catch (exception: Exception) {
-            uploadFile.delete()
-            throw exception
-        }
-    }
-
     suspend fun deleteOwnedSource(photoUri: String) = withContext(Dispatchers.IO) {
         val uri = photoUri.toUri()
         if (uri.authority == "${appContext.packageName}.fileprovider") {
@@ -264,16 +205,8 @@ class FamilyPhotoUploadPreparer(context: Context) {
         const val MaxDisplayNameLength = 120
         const val MaxProfileImageDimension = 1600
         const val ProfileJpegQuality = 88
-        const val DefaultProfileImageSize = 256
     }
 }
-
-internal fun calculateDefaultProfileIconSize(canvasSize: Int): Int =
-    (canvasSize * DefaultProfileIconSizeDp / DefaultProfileContainerSizeDp)
-        .roundToInt()
-
-private const val DefaultProfileIconSizeDp = 64f
-private const val DefaultProfileContainerSizeDp = 98f
 
 private val AllowedFamilyPhotoMimeTypes = setOf(
     "image/jpeg",

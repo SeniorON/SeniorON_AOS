@@ -101,6 +101,7 @@ interface UserSettingsRepository {
     suspend fun updateName(name: String): String
     suspend fun changePassword(current: String, new: String, confirmation: String): Boolean
     suspend fun getProfileImageUrl(): String?
+    suspend fun resetProfileImage(): UserProfileImage
     suspend fun updateProfileImage(photo: PreparedFamilyPhoto): String?
 }
 

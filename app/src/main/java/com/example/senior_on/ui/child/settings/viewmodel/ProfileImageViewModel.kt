@@ -3,7 +3,6 @@ package com.example.senior_on.ui.child.settings.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.senior_on.R
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +54,7 @@ class ProfileImageViewModel(
                         profileRole = settings.role.takeIf(String::isNotBlank),
                         profileEmail = settings.email.takeIf(String::isNotBlank),
                         profileImageUrl = profileImageUrl,
-                        isUsingDefaultImage = profileImageUrl == null,
+                        isUsingDefaultImage = settings.isDefaultProfileImage,
                     )
                 }
             }.onFailure { throwable ->
@@ -135,27 +134,19 @@ class ProfileImageViewModel(
                 )
             }
             runCatching {
-                val prepared = photoUploadPreparer.prepareDrawable(
-                    drawableResId = R.drawable.ic_dependent2,
-                    displayName = "default_profile.png",
-                )
-                try {
-                    val uploadedUrl = userSettingsRepository.updateProfileImage(prepared)
-                    val verifiedUrl = runCatching {
-                        userSettingsRepository.getProfileImageUrl()
-                    }.getOrNull()
-                    verifiedUrl
-                        ?.takeIf(String::isNotBlank)
-                        ?: uploadedUrl?.takeIf(String::isNotBlank)
-                        ?: error("서버에서 기본 프로필 이미지 주소를 받지 못했습니다.")
-                } finally {
-                    runCatching { prepared.file.delete() }
+                userSettingsRepository.resetProfileImage().also { resetImage ->
+                    check(
+                        resetImage.isDefaultProfileImage &&
+                            resetImage.profileImageUrl.isNullOrBlank()
+                    ) {
+                        "서버에서 프로필 이미지 초기화 결과를 확인하지 못했습니다."
+                    }
                 }
-            }.onSuccess { url ->
+            }.onSuccess {
                 _uiState.update {
                     it.copy(
                         isUploading = false,
-                        profileImageUrl = url,
+                        profileImageUrl = null,
                         profileImageRevision = it.profileImageRevision + 1,
                         isUsingDefaultImage = true,
                     )

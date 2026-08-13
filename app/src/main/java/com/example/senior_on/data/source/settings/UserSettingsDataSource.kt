@@ -11,6 +11,7 @@ interface UserSettingsDataSource {
     suspend fun updateName(request: NameUpdateRequest): NameUpdateResponse
     suspend fun changePassword(request: PasswordChangeRequest): PasswordChangeResponse
     suspend fun getProfileImage(): ProfileImageResponse
+    suspend fun resetProfileImage(): ProfileImageResponse
     suspend fun updateProfileImage(image: MultipartBody.Part): ProfileImageUpdateResponse
 }
 
@@ -29,6 +30,10 @@ class RemoteUserSettingsDataSource(private val api: UserSettingsApi) : UserSetti
 
     override suspend fun getProfileImage() = remoteRequest {
         api.getProfileImage().requireData()
+    }
+
+    override suspend fun resetProfileImage() = remoteRequest {
+        api.resetProfileImage().requireData()
     }
 
     override suspend fun updateProfileImage(image: MultipartBody.Part) = remoteRequest {

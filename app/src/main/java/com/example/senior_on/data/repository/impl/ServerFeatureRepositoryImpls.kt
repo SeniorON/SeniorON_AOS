@@ -564,6 +564,8 @@ class UserSettingsRepositoryImpl(
             role = account.role.orEmpty(),
             email = account.email.orEmpty(),
             profileImageUrl = profileImage.profileImageUrl,
+            isDefaultProfileImage = profileImage.isDefaultProfileImage
+                ?: profileImage.profileImageUrl.isNullOrBlank(),
         )
     }
 
@@ -578,6 +580,15 @@ class UserSettingsRepositoryImpl(
 
     override suspend fun getProfileImageUrl(): String? =
         source.getProfileImage().profileImageUrl
+
+    override suspend fun resetProfileImage(): UserProfileImage =
+        source.resetProfileImage().let { response ->
+            UserProfileImage(
+                profileImageUrl = response.profileImageUrl,
+                isDefaultProfileImage = response.isDefaultProfileImage
+                    ?: response.profileImageUrl.isNullOrBlank(),
+            )
+        }
 
     override suspend fun updateProfileImage(photo: PreparedFamilyPhoto): String? {
         val part = MultipartBody.Part.createFormData(
