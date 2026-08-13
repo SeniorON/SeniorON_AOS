@@ -2,6 +2,7 @@ package com.example.senior_on.device
 
 import android.content.Context
 import android.util.Log
+import com.example.senior_on.common.time.KoreaZoneId
 import com.example.senior_on.domain.model.location.GeoLocation
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
@@ -9,7 +10,6 @@ import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -94,7 +94,7 @@ class ParentInactivityMonitor(
 
     private fun Long.toLocalDateTimeText(): String = LocalDateTime.ofInstant(
         Instant.ofEpochMilli(this),
-        ZoneId.systemDefault(),
+        KoreaZoneId,
     ).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 
     private companion object {

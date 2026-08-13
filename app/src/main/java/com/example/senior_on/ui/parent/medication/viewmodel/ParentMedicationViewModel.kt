@@ -4,12 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.senior_on.common.time.koreaNow
+import com.example.senior_on.common.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.domain.model.server.MedicationSchedule
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -69,7 +70,7 @@ class ParentMedicationViewModel(
             }
 
             runCatching {
-                repository.getMySchedules(LocalDate.now().toString())
+                repository.getMySchedules(koreaToday().toString())
             }.onSuccess { schedules ->
                 val medications = schedules
                     .sortedBy { it.plannedTime.toLocalTimeOrNull() ?: LocalTime.MAX }
@@ -208,7 +209,9 @@ private fun MedicationSchedule.toParentMedication(): ParentMedication = ParentMe
     takenAt = if (taken) takenAt.toInstantOrNull() ?: Instant.EPOCH else null,
 )
 
-private fun ParentMedication.isWithinTakingWindow(now: LocalTime = LocalTime.now()): Boolean {
+private fun ParentMedication.isWithinTakingWindow(
+    now: LocalTime = koreaNow().toLocalTime(),
+): Boolean {
     val directDifference = Duration.between(scheduledTime, now).abs()
     val wrappedDifference = Duration.ofDays(1).minus(directDifference)
     return minOf(directDifference, wrappedDifference) <= Duration.ofHours(3)
