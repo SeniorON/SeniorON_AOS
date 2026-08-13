@@ -13,9 +13,7 @@ import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
-import com.example.senior_on.domain.repository.server.DeviceRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
-import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
@@ -35,9 +33,7 @@ fun NotificationRoute(
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
-    deviceRepository: DeviceRepository? = null,
     locationRepository: LocationRepository? = null,
-    addressSearchRepository: AddressSearchRepository? = null,
     navigationEvent: NotificationNavigationEvent? = null,
     onNavigationEventConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -47,8 +43,6 @@ fun NotificationRoute(
         familyRepository = familyRepository,
         homeRepository = homeRepository,
         eventRepository = eventRepository,
-        deviceRepository = deviceRepository,
-        addressSearchRepository = addressSearchRepository,
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var destination by rememberSaveable {
@@ -73,18 +67,21 @@ fun NotificationRoute(
     fun openDetail(
         category: NotificationCategory,
         message: NotificationMessageUiState,
+        loadDetail: Boolean = true,
     ) {
         detailReturnDestination = destination
         selectedCategory = category
         selectedMessage = message
-        viewModel.openNotification(category, message)
+        if (loadDetail) {
+            viewModel.openNotification(category, message)
+        }
         destination = NotificationDestination.Detail
     }
 
     LaunchedEffect(navigationEvent) {
         val event = navigationEvent ?: return@LaunchedEffect
-        val category = event.type.toNotificationCategory()
         val eventId = event.eventId
+        val category = event.type.toNotificationCategory()
 
         if (category != null && eventId != null) {
             openDetail(
@@ -102,6 +99,21 @@ fun NotificationRoute(
                     eventId = eventId,
                 ),
             )
+        } else if (eventId != null) {
+            val resolved = viewModel.resolveNotificationNavigation(
+                eventId = eventId,
+                notificationId = event.notificationId,
+                title = event.title,
+            )
+            if (resolved != null) {
+                openDetail(
+                    category = resolved.first,
+                    message = resolved.second,
+                    loadDetail = false,
+                )
+            } else {
+                destination = NotificationDestination.Home
+            }
         } else {
             destination = NotificationDestination.Home
         }
@@ -135,6 +147,8 @@ fun NotificationRoute(
                 NotificationHistoryRoute(
                     category = category,
                     messages = uiState.histories[category].orEmpty(),
+                    isRefreshing = uiState.isHistoryRefreshing,
+                    onRefresh = { viewModel.refreshHistory(category) },
                     onBackClick = {
                         destination = NotificationDestination.Home
                     },

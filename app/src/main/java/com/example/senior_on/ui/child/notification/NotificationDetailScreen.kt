@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -55,7 +56,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.R
-import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -524,6 +524,19 @@ private fun DetailSheetHeader(
     onRefreshClick: () -> Unit,
     isRefreshing: Boolean,
 ) {
+    val refreshTransition = rememberInfiniteTransition(
+        label = "NotificationDetailRefresh",
+    )
+    val refreshRotation by refreshTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "NotificationDetailRefreshRotation",
+    )
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -547,19 +560,14 @@ private fun DetailSheetHeader(
                 .clickable(enabled = !isRefreshing, onClick = onRefreshClick),
             contentAlignment = Alignment.Center,
         ) {
-            if (isRefreshing) {
-                SeniorOnLoadingIndicator(
-                    color = SeniorOnColors.Gray600,
-                    size = 20.dp,
-                )
-            } else {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_refresh),
-                    contentDescription = "새로고침",
-                    tint = SeniorOnColors.Gray600,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
+            Icon(
+                painter = painterResource(id = R.drawable.ic_refresh),
+                contentDescription = "새로고침",
+                tint = SeniorOnColors.Gray600,
+                modifier = Modifier
+                    .size(24.dp)
+                    .rotate(if (isRefreshing) refreshRotation else 0f),
+            )
         }
     }
 }
@@ -580,6 +588,7 @@ private fun DetailInformationRow(
         modifier = modifier
             .fillMaxWidth()
             .height(32.dp)
+            .background(SeniorOnColors.Gray50)
     ) {
         Row(
             modifier = Modifier

@@ -8,17 +8,16 @@ import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
-import com.example.senior_on.domain.repository.server.DeviceRepository
-import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.model.server.DeviceInfo
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
 import com.example.senior_on.ui.child.notification.NotificationScreenUiState
+import com.example.senior_on.ui.child.notification.NotificationSeverity
 import com.example.senior_on.ui.child.notification.apiType
 import com.example.senior_on.ui.child.notification.emptyNotificationScreenUiState
 import com.example.senior_on.ui.child.notification.parentNotConnectedNotificationScreenUiState
 import com.example.senior_on.ui.child.notification.toUiState
-import com.example.senior_on.ui.child.notification.toEpochMillisOrNull
+import com.example.senior_on.ui.child.notification.toNotificationCategory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +29,7 @@ import kotlinx.coroutines.launch
 data class NotificationUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isHistoryRefreshing: Boolean = false,
     val home: NotificationScreenUiState = emptyNotificationScreenUiState(),
     val histories: Map<NotificationCategory, List<NotificationMessageUiState>> =
         emptyMap(),
@@ -47,8 +47,6 @@ class NotificationViewModel(
     private val familyRepository: FamilyServerRepository?,
     private val homeRepository: HomeServerRepository?,
     private val eventRepository: EventRepository?,
-    private val deviceRepository: DeviceRepository?,
-    private val addressSearchRepository: AddressSearchRepository?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NotificationUiState())
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
@@ -56,6 +54,7 @@ class NotificationViewModel(
     private val confirmedSettings = mutableMapOf<NotificationCategory, Boolean>()
     private val desiredSettings = mutableMapOf<NotificationCategory, Boolean>()
     private val settingSyncJobs = mutableMapOf<NotificationCategory, Job>()
+    private val historyLoadJobs = mutableMapOf<NotificationCategory, Job>()
     private var homeLoadJob: Job? = null
     private var hasEnteredScreen = false
 
@@ -195,8 +194,26 @@ class NotificationViewModel(
     }
 
     fun loadHistory(category: NotificationCategory) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        loadHistory(category = category, isPullRefresh = false)
+    }
+
+    fun refreshHistory(category: NotificationCategory) {
+        loadHistory(category = category, isPullRefresh = true)
+    }
+
+    private fun loadHistory(
+        category: NotificationCategory,
+        isPullRefresh: Boolean,
+    ) {
+        if (historyLoadJobs[category]?.isActive == true) return
+        historyLoadJobs[category] = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = !isPullRefresh,
+                    isHistoryRefreshing = isPullRefresh,
+                    errorMessage = null,
+                )
+            }
             runCatching {
                 repository.getNotifications(category.apiType).items
                     .map { notification -> notification.toUiState(category) }
@@ -204,6 +221,7 @@ class NotificationViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isHistoryRefreshing = false,
                         histories = it.histories + (category to messages),
                     )
                 }
@@ -211,6 +229,7 @@ class NotificationViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isHistoryRefreshing = false,
                         errorMessage = throwable.message,
                     )
                 }
@@ -254,29 +273,9 @@ class NotificationViewModel(
                 it.copy(isDetailLoading = true, errorMessage = null)
             }
             runCatching {
-                var detail = events.getDetail(eventId).toUiState(category, message)
-                if (category == NotificationCategory.Outing) {
-                    val latestLocation = runCatching {
-                        deviceRepository?.getLatestLocation()
-                    }.getOrNull()
-                    if (latestLocation != null) {
-                        val latestAddress = runCatching {
-                            addressSearchRepository?.getAddressFromCoordinates(
-                                latitude = latestLocation.latitude,
-                                longitude = latestLocation.longitude,
-                            )?.selectedAddress
-                        }.getOrNull()
-                        detail = detail.copy(
-                            address = latestAddress ?: detail.address,
-                            latitude = latestLocation.latitude,
-                            longitude = latestLocation.longitude,
-                            lastLocationUpdatedAtMillis =
-                                latestLocation.lastLocationUpdatedAt
-                                    .toEpochMillisOrNull(),
-                        )
-                    }
-                }
-                detail
+                // History/detail screens represent the event snapshot. Do not replace its
+                // coordinates or battery information with the senior device's latest state.
+                events.getDetail(eventId).toUiState(category, message)
             }.onSuccess { detail ->
                 Log.d(
                     DetailLogTag,
@@ -299,6 +298,51 @@ class NotificationViewModel(
                 }
             }
         }
+    }
+
+    suspend fun resolveNotificationNavigation(
+        eventId: Long,
+        notificationId: Long?,
+        title: String?,
+    ): Pair<NotificationCategory, NotificationMessageUiState>? {
+        notificationId?.let(::markNotificationRead)
+        val events = eventRepository ?: return null
+        _uiState.update {
+            it.copy(isDetailLoading = true, errorMessage = null)
+        }
+
+        return runCatching {
+            val event = events.getDetail(eventId)
+            val category = event.type.toNotificationCategory()
+                ?: error("지원하지 않는 알림 유형입니다: ${event.type}")
+            val fallback = NotificationMessageUiState(
+                time = "",
+                title = title.orEmpty(),
+                severity = if (category == NotificationCategory.Outing) {
+                    NotificationSeverity.Normal
+                } else {
+                    NotificationSeverity.Danger
+                },
+                tintBackground = category != NotificationCategory.Outing,
+                notificationId = notificationId,
+                eventId = eventId,
+            )
+            val detail = event.toUiState(category, fallback)
+            _uiState.update {
+                it.copy(
+                    detailMessages = it.detailMessages + (eventId to detail),
+                    isDetailLoading = false,
+                )
+            }
+            category to detail
+        }.onFailure { throwable ->
+            _uiState.update {
+                it.copy(
+                    isDetailLoading = false,
+                    errorMessage = throwable.message,
+                )
+            }
+        }.getOrNull()
     }
 
     fun loadInactivitySetting() {
@@ -480,8 +524,6 @@ class NotificationViewModel(
         private val familyRepository: FamilyServerRepository?,
         private val homeRepository: HomeServerRepository?,
         private val eventRepository: EventRepository?,
-        private val deviceRepository: DeviceRepository?,
-        private val addressSearchRepository: AddressSearchRepository?,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -491,8 +533,6 @@ class NotificationViewModel(
                 familyRepository = familyRepository,
                 homeRepository = homeRepository,
                 eventRepository = eventRepository,
-                deviceRepository = deviceRepository,
-                addressSearchRepository = addressSearchRepository,
             ) as T
         }
     }
