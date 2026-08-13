@@ -622,7 +622,9 @@ private fun MedicationEditableTimeChip(
             painter = painterResource(id = R.drawable.ic_trash),
             contentDescription = "복용 시간 삭제",
             tint = SeniorOnColors.Gray400,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier
+                .size(24.dp)
+                .clickable(onClick = onDeleteClick)
         )
     }
 }
