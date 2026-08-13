@@ -475,6 +475,7 @@ private fun MyAccountProfileHeader(
             editIconOffsetY = 36.dp,
             imageUrl = profile.profileImageUrl,
             imageRevision = profile.profileImageRevision,
+            isUsingDefaultImage = profile.isUsingDefaultProfileImage,
             isUploading = profile.isProfileImageUploading,
             onEditClick = onEditClick
         )

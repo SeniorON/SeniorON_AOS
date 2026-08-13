@@ -542,6 +542,7 @@ internal fun SharedPhotoCard(
 
 @Composable
 internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
+    val defaultProfilePainter = painterResource(id = R.drawable.img_default_profile)
     when (val imageSource = member.imageSource) {
         is FamilyImageSource.Local -> Image(
             painter = painterResource(id = imageSource.drawableResId),
@@ -571,7 +572,8 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Crop,
-                error = painterResource(id = R.drawable.ic_dependent),
+                error = defaultProfilePainter,
+                fallback = defaultProfilePainter,
             )
         }
         is FamilyImageSource.Uri -> AsyncImage(
@@ -579,9 +581,15 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
             contentDescription = null,
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Crop,
-            error = painterResource(id = R.drawable.ic_dependent),
+            error = defaultProfilePainter,
+            fallback = defaultProfilePainter,
         )
-        null -> FamilyMemberImagePlaceholder()
+        null -> Image(
+            painter = defaultProfilePainter,
+            contentDescription = null,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
@@ -643,18 +651,6 @@ internal fun familyMemberImageCacheKey(
 }
 
 internal fun familyPhotoCacheKey(photoId: String): String = "family-photo:$photoId"
-
-@Composable
-private fun BoxScope.FamilyMemberImagePlaceholder() {
-    Icon(
-        painter = painterResource(id = R.drawable.ic_dependent),
-        contentDescription = null,
-        modifier = Modifier
-            .align(Alignment.Center)
-            .size(38.dp),
-        tint = SeniorOnColors.Gray400,
-    )
-}
 
 @Composable
 private fun BoxScope.SharedPhotoImagePlaceholder() {

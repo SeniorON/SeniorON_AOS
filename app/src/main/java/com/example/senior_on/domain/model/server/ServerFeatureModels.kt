@@ -183,6 +183,11 @@ data class UserAccountSettings(
     val role: String,
     val email: String,
     val profileImageUrl: String?,
+    val isDefaultProfileImage: Boolean,
+)
+data class UserProfileImage(
+    val profileImageUrl: String?,
+    val isDefaultProfileImage: Boolean,
 )
 data class SeniorProfileUpdate(
     val seniorId: Long, val name: String, val relation: String,

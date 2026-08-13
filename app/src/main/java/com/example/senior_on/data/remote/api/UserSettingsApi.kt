@@ -13,6 +13,8 @@ interface UserSettingsApi {
     suspend fun changePassword(@Body request: PasswordChangeRequest): ApiResponse<PasswordChangeResponse>
     @GET("api/users/settings/profile-image")
     suspend fun getProfileImage(): ApiResponse<ProfileImageResponse>
+    @DELETE("api/users/settings/profile-image")
+    suspend fun resetProfileImage(): ApiResponse<ProfileImageResponse>
     @Multipart @PATCH("api/users/settings/profile-image")
     suspend fun updateProfileImage(@Part image: MultipartBody.Part): ApiResponse<ProfileImageUpdateResponse>
 }

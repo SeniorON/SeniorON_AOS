@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -966,22 +967,28 @@ private fun SettingsProfileSection(
                 contentAlignment = Alignment.Center
             ) {
                 val imageUrl = profile.profileImageUrl
-                if (!imageUrl.isNullOrBlank()) {
+                val defaultProfilePainter = painterResource(
+                    id = R.drawable.img_default_profile
+                )
+                if (!profile.isUsingDefaultProfileImage && !imageUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = rememberSettingsProfileImageRequest(
                             imageData = imageUrl,
                             revision = profile.profileImageRevision,
                         ),
+                        placeholder = defaultProfilePainter,
+                        error = defaultProfilePainter,
+                        fallback = defaultProfilePainter,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_dependent2),
+                    Image(
+                        painter = defaultProfilePainter,
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color(0xFFD2D2CF),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
                     )
                 }
                 if (profile.isProfileImageUploading) {
@@ -1419,6 +1426,7 @@ internal fun SettingsProfileAvatar(
     editIconSize: Dp = 30.dp,
     imageUrl: String? = null,
     imageRevision: Long = 0L,
+    isUsingDefaultImage: Boolean = false,
     isUploading: Boolean = false,
     editIconOffsetX: Dp? = null,
     editIconOffsetY: Dp? = null,
@@ -1456,22 +1464,28 @@ internal fun SettingsProfileAvatar(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            if (!imageUrl.isNullOrBlank()) {
+            val defaultProfilePainter = painterResource(
+                id = R.drawable.img_default_profile
+            )
+            if (!isUsingDefaultImage && !imageUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = rememberSettingsProfileImageRequest(
                         imageData = imageUrl,
                         revision = imageRevision,
                     ),
+                    placeholder = defaultProfilePainter,
+                    error = defaultProfilePainter,
+                    fallback = defaultProfilePainter,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_dependent),
+                Image(
+                    painter = defaultProfilePainter,
                     contentDescription = null,
-                    modifier = Modifier.size(minOf(width, height) * 0.5f),
-                    tint = SeniorOnColors.Gray300
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
                 )
             }
             if (isUploading) {
