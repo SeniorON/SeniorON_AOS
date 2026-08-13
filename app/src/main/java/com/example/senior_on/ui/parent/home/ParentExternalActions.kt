@@ -78,23 +78,14 @@ internal fun openExternalBrowser(context: Context, url: String): Boolean {
 }
 
 private fun Context.findExternalBrowserPackage(intent: Intent): String? {
-    val browserLauncher = Intent.makeMainSelectorActivity(
-        Intent.ACTION_MAIN,
-        Intent.CATEGORY_APP_BROWSER,
-    )
-    val launcherPackage = packageManager.resolveActivity(
-        browserLauncher,
-        android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
-    )?.activityInfo?.packageName
-        ?.takeUnless { it == packageName }
-    if (launcherPackage != null) return launcherPackage
-
     val candidates = packageManager.queryIntentActivities(
         intent,
         android.content.pm.PackageManager.MATCH_ALL,
     ).map { it.activityInfo.packageName }
         .distinct()
-        .filterNot { it == packageName }
+        .filterNot { candidate ->
+            candidate == packageName || candidate == AndroidResolverPackage
+        }
 
     return candidates.firstOrNull { it == PreferredBrowserPackage }
         ?: candidates.firstOrNull()
@@ -162,3 +153,4 @@ private fun startIntent(context: Context, intent: Intent) {
 }
 
 private const val PreferredBrowserPackage = "com.android.chrome"
+private const val AndroidResolverPackage = "android"
