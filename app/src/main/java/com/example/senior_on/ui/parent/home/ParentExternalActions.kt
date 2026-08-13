@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
 
 internal fun openSeniorHomeButton(
     context: Context,
@@ -16,7 +17,7 @@ internal fun openSeniorHomeButton(
         SeniorHomeButtonType.Call ->
             startIntent(context, Intent(Intent.ACTION_DIAL))
         SeniorHomeButtonType.Message ->
-            startIntent(context, Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")))
+            startDefaultHomeButtonAction(context, "MESSAGE")
         SeniorHomeButtonType.Camera ->
             startIntent(context, Intent(MediaStore.ACTION_IMAGE_CAPTURE))
         SeniorHomeButtonType.Calendar -> startIntent(
@@ -66,20 +67,31 @@ internal fun openSeniorHomeButton(
     }
 }
 
-internal fun openExternalBrowser(context: Context, url: String) {
+internal fun openExternalBrowser(context: Context, url: String): Boolean {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
         addCategory(Intent.CATEGORY_BROWSABLE)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    val externalBrowserPackage = context.findExternalBrowserPackage(intent) ?: return
+    val externalBrowserPackage = context.findExternalBrowserPackage(intent) ?: return false
     intent.setPackage(externalBrowserPackage)
-    startIntent(context, intent)
+    return runCatching { context.startActivity(intent) }.isSuccess
 }
 
 private fun Context.findExternalBrowserPackage(intent: Intent): String? {
+    val browserLauncher = Intent.makeMainSelectorActivity(
+        Intent.ACTION_MAIN,
+        Intent.CATEGORY_APP_BROWSER,
+    )
+    val launcherPackage = packageManager.resolveActivity(
+        browserLauncher,
+        android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
+    )?.activityInfo?.packageName
+        ?.takeUnless { it == packageName }
+    if (launcherPackage != null) return launcherPackage
+
     val candidates = packageManager.queryIntentActivities(
         intent,
-        android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
+        android.content.pm.PackageManager.MATCH_ALL,
     ).map { it.activityInfo.packageName }
         .distinct()
         .filterNot { it == packageName }

@@ -59,6 +59,10 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MESSAGING" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.APP_GALLERY" />
         </intent>
         <intent>

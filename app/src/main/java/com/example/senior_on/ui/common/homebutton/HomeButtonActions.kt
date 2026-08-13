@@ -21,7 +21,10 @@ internal fun createDefaultHomeButtonIntent(actionValue: String): Intent? =
 internal fun createDefaultHomeButtonIntents(actionValue: String): List<Intent> =
     when (actionValue.canonicalDefaultAction()) {
         "PHONE" -> listOf(Intent(Intent.ACTION_DIAL))
-        "MESSAGE" -> listOf(Intent(Intent.ACTION_SENDTO, "smsto:".toUri()))
+        "MESSAGE" -> listOf(
+            createMainAppIntent(Intent.CATEGORY_APP_MESSAGING),
+            Intent(Intent.ACTION_SENDTO, "smsto:".toUri()),
+        )
         "CAMERA" -> listOf(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
         "PHOTO" -> listOf(
             Intent(Intent.ACTION_VIEW).apply {
@@ -77,11 +80,11 @@ internal fun createDefaultHomeButtonIntents(actionValue: String): List<Intent> =
             ),
         )
         "INTERNET" -> listOf(
+            createMainAppIntent(Intent.CATEGORY_APP_BROWSER),
             Intent(
                 Intent.ACTION_VIEW,
                 "https://www.google.com".toUri(),
             ).apply { addCategory(Intent.CATEGORY_BROWSABLE) },
-            createMainAppIntent(Intent.CATEGORY_APP_BROWSER),
         )
         "MAP" -> listOf(
             Intent(Intent.ACTION_VIEW, "geo:0,0?q=".toUri()),

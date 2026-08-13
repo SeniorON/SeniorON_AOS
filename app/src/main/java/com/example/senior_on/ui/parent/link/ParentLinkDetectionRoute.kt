@@ -31,9 +31,11 @@ fun ParentLinkDetectionRoute(
 
     LaunchedEffect(uiState.status) {
         if (uiState.status == ParentLinkDetectionStatus.Safe) {
-            uiState.url?.let { openExternalBrowser(context, it) }
-            viewModel.reset()
-            onBackClick()
+            val opened = uiState.url?.let { openExternalBrowser(context, it) } == true
+            if (opened) {
+                viewModel.reset()
+                onBackClick()
+            }
         }
     }
 
