@@ -6,7 +6,8 @@ data class PasswordResetVerificationDelivery(
 )
 
 data class FoundLoginId(
-    val loginId: String
+    val loginId: String,
+    val createdAt: String,
 )
 
 data class AuthSession(

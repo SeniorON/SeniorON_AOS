@@ -9,12 +9,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 data class AccountRecoveryUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val verificationId: Long? = null,
     val foundLoginId: String = "",
+    val foundJoinDate: String = "",
     val recoveryName: String = "",
     val passwordResetVerified: Boolean = false,
     val passwordResetComplete: Boolean = false
@@ -38,6 +41,7 @@ class AccountRecoveryViewModel(
             val result = repository.findLoginId(name = name, email = email)
             _uiState.value = _uiState.value.copy(
                 foundLoginId = result.loginId,
+                foundJoinDate = result.createdAt.toJoinDate(),
                 recoveryName = name.trim()
             )
             onResult(result)
@@ -161,3 +165,10 @@ class AccountRecoveryViewModel(
         const val DEFAULT_ERROR_MESSAGE = "계정 정보를 확인하지 못했습니다."
     }
 }
+
+private val JOIN_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
+
+private fun String.toJoinDate(): String =
+    runCatching {
+        LocalDateTime.parse(trim()).toLocalDate().format(JOIN_DATE_FORMATTER)
+    }.getOrDefault("")

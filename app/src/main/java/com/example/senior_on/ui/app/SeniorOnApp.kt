@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.di.AppContainer
+import com.example.senior_on.data.local.SessionExpirationEventStore
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.location.tracking.ParentOutingTrackingController
@@ -31,6 +32,8 @@ fun SeniorOnApp(
     val context = LocalContext.current
     val notificationNavigationEvent by
         NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
+    val sessionExpirationEvent by
+        SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
     var destination by rememberSaveable {
         mutableStateOf(AppDestination.Onboarding)
     }
@@ -44,6 +47,12 @@ fun SeniorOnApp(
         authenticatedUserId = ""
         onboardingInstance += 1
         destination = AppDestination.Onboarding
+    }
+
+    LaunchedEffect(sessionExpirationEvent) {
+        sessionExpirationEvent ?: return@LaunchedEffect
+        openOnboarding()
+        SessionExpirationEventStore.consume()
     }
 
     when (destination) {
