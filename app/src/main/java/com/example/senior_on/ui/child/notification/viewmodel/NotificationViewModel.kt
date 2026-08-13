@@ -119,7 +119,13 @@ class NotificationViewModel(
                         }.getOrNull()
                     }
                 }
-                val parentHome = async { homeRepository?.getHome() }
+                // 홈 주소는 외출·귀가 토글 안내에만 필요한 보조 정보다.
+                // 홈 조회 실패가 알림 설정과 연결 상태 조회까지 실패시키지 않도록 분리한다.
+                val parentHome = async {
+                    homeRepository?.let { repository ->
+                        runCatching { repository.getHome() }.getOrNull()
+                    }
+                }
                 val parentHomeSnapshot = parentHome.await()
                 val parentDeviceResult = parentDevice?.await()
                 val isParentPhoneRegistered = when {

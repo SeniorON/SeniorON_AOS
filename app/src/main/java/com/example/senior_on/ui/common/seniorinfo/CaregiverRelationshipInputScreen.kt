@@ -222,6 +222,7 @@ fun CaregiverRelationshipInputScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = isNextEnabled && !isSubmitting,
                 height = 50.dp,
+                isLoading = isSubmitting,
             )
         }
     }

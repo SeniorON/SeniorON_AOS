@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import kotlinx.coroutines.delay
 
 private const val VerificationTimeoutSeconds = 5 * 60
@@ -129,6 +130,7 @@ fun SignupEmailVerificationScreen(
                     text = if (shouldShowVerificationCodeInput) "재전송" else "인증 요청",
                     width = if (shouldShowVerificationCodeInput) 53.dp else 68.dp,
                     enabled = canRequestVerification,
+                    isLoading = isRequestingCode,
                     onClick = {
                         onEmailChange()
                         isRequestingCode = true
@@ -192,6 +194,7 @@ fun SignupEmailVerificationScreen(
                     SignupCodeVerificationButton(
                         verified = isVerified,
                         enabled = canVerifyCode,
+                        isLoading = isVerifyingCode,
                         onClick = {
                             isVerifyingCode = true
                             onVerifyCode(email, verificationCode) { verified ->
@@ -327,25 +330,33 @@ private fun SignupEmailRequestButton(
     text: String,
     width: Dp,
     enabled: Boolean,
+    isLoading: Boolean,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .width(width)
             .height(36.dp)
-            .alpha(if (enabled) 1f else 0.5f)
+            .alpha(if (enabled || isLoading) 1f else 0.5f)
             .background(
                 color = SeniorOnColors.Primary600,
                 shape = RoundedCornerShape(8.dp)
             )
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonS,
-            color = SeniorOnColors.SupportWhite100
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(
+                color = SeniorOnColors.SupportWhite100,
+                size = 16.dp,
+            )
+        } else {
+            Text(
+                text = text,
+                style = SeniorOnTextStyles.ButtonS,
+                color = SeniorOnColors.SupportWhite100
+            )
+        }
     }
 }
 
@@ -353,6 +364,7 @@ private fun SignupEmailRequestButton(
 private fun SignupCodeVerificationButton(
     verified: Boolean,
     enabled: Boolean,
+    isLoading: Boolean,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(8.dp)
@@ -363,16 +375,23 @@ private fun SignupCodeVerificationButton(
         modifier = Modifier
             .width(65.dp)
             .height(36.dp)
-            .alpha(if (enabled || verified) 1f else 0.5f)
+            .alpha(if (enabled || verified || isLoading) 1f else 0.5f)
             .border(width = 1.dp, color = borderColor, shape = shape)
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = if (verified) "인증완료" else "인증하기",
-            style = SeniorOnTextStyles.ButtonS,
-            color = contentColor
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(
+                color = SeniorOnColors.Primary600,
+                size = 16.dp,
+            )
+        } else {
+            Text(
+                text = if (verified) "인증완료" else "인증하기",
+                style = SeniorOnTextStyles.ButtonS,
+                color = contentColor
+            )
+        }
     }
 }
 

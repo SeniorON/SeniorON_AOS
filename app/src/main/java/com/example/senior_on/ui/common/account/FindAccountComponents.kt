@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -406,9 +407,10 @@ internal fun FindAccountSmallPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     width: Dp = 53.dp,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
 ) {
-    val backgroundColor = if (enabled) {
+    val backgroundColor = if (enabled || isLoading) {
         SeniorOnColors.Primary600
     } else {
         SeniorOnColors.Primary600.copy(alpha = 0.5f)
@@ -419,14 +421,21 @@ internal fun FindAccountSmallPrimaryButton(
             .width(width)
             .height(43.dp)
             .background(backgroundColor, RoundedCornerShape(SeniorOnRadius.Small))
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonS,
-            color = SeniorOnColors.SupportWhite100
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(
+                modifier = Modifier.size(16.dp),
+                color = SeniorOnColors.SupportWhite100,
+            )
+        } else {
+            Text(
+                text = text,
+                style = SeniorOnTextStyles.ButtonS,
+                color = SeniorOnColors.SupportWhite100
+            )
+        }
     }
 }
 
@@ -508,9 +517,10 @@ internal fun FindAccountPrimaryButton(
     text: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
-    val backgroundColor = if (enabled) {
+    val backgroundColor = if (enabled || isLoading) {
         SeniorOnColors.Primary600
     } else {
         SeniorOnColors.Primary600.copy(alpha = 0.5f)
@@ -520,18 +530,22 @@ internal fun FindAccountPrimaryButton(
         modifier = modifier
             .fillMaxWidth()
             .background(backgroundColor, RoundedCornerShape(SeniorOnRadius.Small))
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 14.dp),
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.SupportWhite100,
-            textAlign = TextAlign.Center
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(color = SeniorOnColors.SupportWhite100)
+        } else {
+            Text(
+                text = text,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 14.dp),
+                style = SeniorOnTextStyles.ButtonM,
+                color = SeniorOnColors.SupportWhite100,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

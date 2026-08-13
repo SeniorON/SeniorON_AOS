@@ -78,9 +78,7 @@ fun FindPasswordVerifyRoute(
         onBackClick = onBackClick,
         onVerifySuccess = onVerifySuccess,
         onVerifyCode = viewModel::verifyPasswordResetCode,
-        onResendCode = {
-            viewModel.resendPasswordResetVerificationCode()
-        },
+        onResendCode = viewModel::resendPasswordResetVerificationCode,
         onTabSelected = onTabSelected
     )
 }

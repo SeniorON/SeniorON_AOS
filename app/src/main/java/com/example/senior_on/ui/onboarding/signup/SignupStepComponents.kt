@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -281,9 +282,10 @@ internal fun SignupNextButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    text: String = "다음"
+    text: String = "다음",
+    isLoading: Boolean = false,
 ) {
-    val backgroundColor = if (enabled) {
+    val backgroundColor = if (enabled || isLoading) {
         SeniorOnColors.Primary600
     } else {
         SeniorOnColors.Primary600.copy(alpha = 0.5f)
@@ -294,14 +296,18 @@ internal fun SignupNextButton(
             .fillMaxWidth()
             .height(50.dp)
             .background(backgroundColor, shape = RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonM,
-            color = SeniorOnColors.SupportWhite100
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(color = SeniorOnColors.SupportWhite100)
+        } else {
+            Text(
+                text = text,
+                style = SeniorOnTextStyles.ButtonM,
+                color = SeniorOnColors.SupportWhite100
+            )
+        }
     }
 }
 

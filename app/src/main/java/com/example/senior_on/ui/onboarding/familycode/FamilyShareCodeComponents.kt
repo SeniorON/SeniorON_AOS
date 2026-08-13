@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -71,9 +72,10 @@ internal fun FamilyShareCodeBottomButton(
     text: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
-    val backgroundColor = if (enabled) {
+    val backgroundColor = if (enabled || isLoading) {
         SeniorOnColors.Primary600
     } else {
         SeniorOnColors.Primary600.copy(alpha = 0.5f)
@@ -92,17 +94,21 @@ internal fun FamilyShareCodeBottomButton(
                 .clip(RoundedCornerShape(SeniorOnRadius.Small))
                 .background(backgroundColor)
                 .clickable(
-                    enabled = enabled,
+                    enabled = enabled && !isLoading,
                     onClick = onClick
                 )
                 .padding(horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = text,
-                style = SeniorOnTextStyles.ButtonM,
-                color = SeniorOnColors.White
-            )
+            if (isLoading) {
+                SeniorOnLoadingIndicator(color = SeniorOnColors.White)
+            } else {
+                Text(
+                    text = text,
+                    style = SeniorOnTextStyles.ButtonM,
+                    color = SeniorOnColors.White
+                )
+            }
         }
     }
 }

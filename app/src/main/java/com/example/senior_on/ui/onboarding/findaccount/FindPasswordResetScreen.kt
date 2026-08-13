@@ -56,6 +56,7 @@ fun FindPasswordResetScreen(
                 FindAccountPrimaryButton(
                     text = if (canComplete) "완료" else "다음",
                     enabled = canComplete && !isSubmitting,
+                    isLoading = isSubmitting,
                     onClick = {
                         isSubmitting = true
                         onComplete(password, passwordConfirm) { isReset ->

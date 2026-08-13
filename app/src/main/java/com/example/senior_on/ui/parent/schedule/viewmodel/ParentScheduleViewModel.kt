@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.senior_on.common.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentSchedule
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import java.time.LocalDate
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ParentScheduleUiState(
-    val date: LocalDate = LocalDate.now(),
+    val date: LocalDate = koreaToday(),
     val schedules: List<ParentSchedule> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
@@ -33,7 +34,7 @@ class ParentScheduleViewModel(
     fun loadTodaySchedules(isRefresh: Boolean = false) {
         if (_uiState.value.isRefreshing) return
         viewModelScope.launch {
-            val today = LocalDate.now()
+            val today = koreaToday()
             _uiState.update {
                 it.copy(
                     date = today,
