@@ -3,6 +3,8 @@ package com.example.senior_on.ui.child.health.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.common.time.koreaNow
+import com.example.senior_on.common.time.koreaToday
 import com.example.senior_on.domain.model.server.MedicationInfo
 import com.example.senior_on.domain.model.server.MedicationSchedule
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
@@ -32,13 +34,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MedicationUiState(
-    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedDate: LocalDate = koreaToday(),
     val registeredMedications: List<RegisteredMedicationUiState> = emptyList(),
     val todayMedications: List<TodayMedicationUiState> = emptyList(),
     val medicationMarkedDates: Set<LocalDate> = emptySet(),
     val editorMode: MedicationEditorMode? = null,
     val editingMedication: RegisteredMedicationUiState? = null,
+    val addMedicationStartDate: LocalDate? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -53,6 +57,7 @@ class MedicationViewModel(
     private var parentUserId: Long? = null
     private var fullLoadJob: Job? = null
     private var scheduleLoadJob: Job? = null
+    private var hasEnteredScreen = false
 
     init {
         loadMedicationData()
@@ -76,10 +81,19 @@ class MedicationViewModel(
     }
 
     fun openAddMedication() {
+        openAddMedication(startDate = null)
+    }
+
+    fun openAddTodayMedication() {
+        openAddMedication(startDate = koreaToday())
+    }
+
+    private fun openAddMedication(startDate: LocalDate?) {
         _uiState.update {
             it.copy(
                 editorMode = MedicationEditorMode.Add,
                 editingMedication = null,
+                addMedicationStartDate = startDate,
             )
         }
     }
@@ -100,7 +114,11 @@ class MedicationViewModel(
 
     fun closeMedicationEditor() {
         _uiState.update {
-            it.copy(editorMode = null, editingMedication = null)
+            it.copy(
+                editorMode = null,
+                editingMedication = null,
+                addMedicationStartDate = null,
+            )
         }
     }
 
@@ -109,7 +127,11 @@ class MedicationViewModel(
             if (state.editorMode == MedicationEditorMode.Edit) {
                 state.copy(editorMode = MedicationEditorMode.View)
             } else {
-                state.copy(editorMode = null, editingMedication = null)
+                state.copy(
+                    editorMode = null,
+                    editingMedication = null,
+                    addMedicationStartDate = null,
+                )
             }
         }
     }
@@ -175,6 +197,20 @@ class MedicationViewModel(
         loadMedicationData()
     }
 
+    fun loadLatestMedicationData() {
+        if (!hasEnteredScreen) {
+            hasEnteredScreen = true
+            return
+        }
+        if (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) return
+        loadMedicationData(isPullRefresh = false)
+    }
+
+    fun refreshMedicationData() {
+        if (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) return
+        loadMedicationData(isPullRefresh = true)
+    }
+
     fun onMedicationChecked(
         checkedParentUserId: Long,
         medicationLogId: Long,
@@ -188,7 +224,7 @@ class MedicationViewModel(
             if (resolvedParentUserId != checkedParentUserId) return@launch
 
             val selectedDate = _uiState.value.selectedDate
-            if (selectedDate != LocalDate.now()) return@launch
+            if (selectedDate != koreaToday()) return@launch
 
             _uiState.update { state ->
                 state.copy(
@@ -205,12 +241,18 @@ class MedicationViewModel(
         }
     }
 
-    private fun loadMedicationData() {
+    private fun loadMedicationData(isPullRefresh: Boolean = false) {
         scheduleLoadJob?.cancel()
         fullLoadJob?.cancel()
         val requestedDate = _uiState.value.selectedDate
         fullLoadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = !isPullRefresh,
+                    isRefreshing = isPullRefresh,
+                    errorMessage = null,
+                )
+            }
             runCatching {
                 val parentId = resolveParentUserId()
                 loadRemoteData(parentId, requestedDate)
@@ -219,7 +261,11 @@ class MedicationViewModel(
                     if (throwable is CancellationException) return@onFailure
                     _uiState.update {
                         if (it.selectedDate == requestedDate) {
-                            it.copy(isLoading = false, errorMessage = throwable.message)
+                            it.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                errorMessage = throwable.message,
+                            )
                         } else {
                             it
                         }
@@ -311,7 +357,11 @@ class MedicationViewModel(
     ) {
         _uiState.update { state ->
             if (state.selectedDate != result.requestedDate) {
-                return@update state.copy(isLoading = false, isSaving = false)
+                return@update state.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    isSaving = false,
+                )
             }
             val selectedDate = state.selectedDate
             state.copy(
@@ -325,65 +375,7 @@ class MedicationViewModel(
                 editorMode = if (closeEditor) null else state.editorMode,
                 editingMedication = if (closeEditor) null else state.editingMedication,
                 isLoading = false,
-                isSaving = false,
-                errorMessage = null,
-            )
-        }
-    }
-
-    private fun applyLocalSave(draft: MedicationDraft) {
-        val current = _uiState.value.editingMedication
-        val isEdit = _uiState.value.editorMode == MedicationEditorMode.Edit && current != null
-        val saved = draft.toUiState(
-            id = if (isEdit) current.id else "local-${System.currentTimeMillis()}",
-        )
-        _uiState.update { state ->
-            val registered = if (isEdit) {
-                state.registeredMedications.map { medication ->
-                    if (medication.id == current.id) saved else medication
-                }
-            } else {
-                state.registeredMedications + saved
-            }
-            val selectedDate = state.selectedDate
-            state.copy(
-                registeredMedications = registered,
-                todayMedications = buildTodayMedicationsFromRegistered(
-                    date = selectedDate,
-                    registered = registered,
-                ),
-                medicationMarkedDates = markedDatesFor(
-                    registered = registered,
-                    month = YearMonth.from(selectedDate),
-                    existing = state.medicationMarkedDates,
-                ),
-                editorMode = null,
-                editingMedication = null,
-                isLoading = false,
-                isSaving = false,
-                errorMessage = null,
-            )
-        }
-    }
-
-    private fun applyLocalDelete(medicationId: String) {
-        _uiState.update { state ->
-            val registered = state.registeredMedications.filterNot { it.id == medicationId }
-            val selectedDate = state.selectedDate
-            state.copy(
-                registeredMedications = registered,
-                todayMedications = buildTodayMedicationsFromRegistered(
-                    date = selectedDate,
-                    registered = registered,
-                ),
-                medicationMarkedDates = markedDatesFor(
-                    registered = registered,
-                    month = YearMonth.from(selectedDate),
-                    existing = state.medicationMarkedDates,
-                ),
-                editorMode = null,
-                editingMedication = null,
-                isLoading = false,
+                isRefreshing = false,
                 isSaving = false,
                 errorMessage = null,
             )
@@ -480,7 +472,7 @@ private fun MedicationSchedule.toUiState(
         "SCHEDULED" -> MedicationDoseStatus.Scheduled
         else -> when {
         taken -> MedicationDoseStatus.Taken
-        LocalDateTime.of(date, time).isBefore(LocalDateTime.now()) -> MedicationDoseStatus.Missed
+        LocalDateTime.of(date, time).isBefore(koreaNow()) -> MedicationDoseStatus.Missed
         else -> MedicationDoseStatus.Scheduled
         }
     }
@@ -493,36 +485,14 @@ private fun MedicationSchedule.toUiState(
         time = time,
         status = uiStatus,
         medicationLogId = logId,
+        takenTime = takenTime?.toLocalTimeOrNull(),
     )
-}
-
-private fun MedicationDraft.toUiState(id: String): RegisteredMedicationUiState =
-    RegisteredMedicationUiState(
-        id = id,
-        category = category.trim(),
-        name = name.trim(),
-        times = times.sorted().distinct(),
-        weekdays = weekdays,
-        startDate = startDate,
-        repeat = repeat.copy(weekdays = weekdays),
-    )
-
-private fun markedDatesFor(
-    registered: List<RegisteredMedicationUiState>,
-    month: YearMonth,
-    existing: Set<LocalDate>,
-): Set<LocalDate> {
-    val monthDates = (1..month.lengthOfMonth()).mapNotNull { day ->
-        val date = month.atDay(day)
-        date.takeIf { registered.any { medication -> medication.isScheduledOn(date) } }
-    }.toSet()
-    return existing.filterNot { YearMonth.from(it) == month }.toSet() + monthDates
 }
 
 private fun MedicationDraft.toDomain(
     current: RegisteredMedicationUiState?,
 ): MedicationInfo {
-    val resolvedStartDate = startDate ?: LocalDate.now()
+    val resolvedStartDate = startDate ?: koreaToday()
     val repeatType = when (repeat.frequency) {
         MedicationRepeatFrequency.Daily -> "DAILY"
         MedicationRepeatFrequency.Weekly -> "WEEKLY"
@@ -541,7 +511,6 @@ private fun MedicationDraft.toDomain(
         MedicationRepeatDuration.Period ->
             resolvedStartDate
                 .plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
-                .minusDays(1)
         MedicationRepeatDuration.Continuous -> null
     }
     return MedicationInfo(

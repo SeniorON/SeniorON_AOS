@@ -50,6 +50,7 @@ import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
 import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
@@ -121,6 +122,7 @@ fun DisplayTabScreen(
                         parentInfo = uiState.parentInfo,
                         relationshipLabel = uiState.relationshipLabel,
                         configuration = uiState.screenConfiguration,
+                        buttonItems = uiState.configuredButtonItems,
                         weather = uiState.weather,
                         isWeatherLoading = uiState.isWeatherLoading,
                         todaySchedule = uiState.todaySchedule,
@@ -489,6 +491,7 @@ private fun ScreenEditSection(
     parentInfo: ParentInfo?,
     relationshipLabel: String?,
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton>,
     weather: DisplayWeather?,
     isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
@@ -537,6 +540,7 @@ private fun ScreenEditSection(
                 null
             },
             configuration = configuration,
+            buttonItems = buttonItems,
             weather = weather,
             isWeatherLoading = isWeatherLoading,
             todaySchedule = todaySchedule,
@@ -616,6 +620,7 @@ private fun SeniorScreenPreviewHeader(
 private fun SeniorScreenPreviewCard(
     phoneLabel: String?,
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton>,
     weather: DisplayWeather?,
     isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
@@ -658,6 +663,7 @@ private fun SeniorScreenPreviewCard(
         ) {
             SeniorPhonePreview(
                 configuration = configuration,
+                buttonItems = buttonItems,
                 previewWidth = phonePreviewWidth,
                 previewHeight = phonePreviewHeight,
                 weather = weather,

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -101,7 +99,6 @@ fun HelpInquiryScreen(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
     ) {
         SettingsBackTopAppBar(
             title = "도움말 · 문의",
@@ -122,40 +119,52 @@ fun HelpInquiryScreen(
             Text(
                 text = "무엇을\n도와드릴까요?",
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp),
-                style = SeniorOnTextStyles.HeadingM,
+                style = SeniorOnTextStyles.HeadingS,
                 color = SeniorOnColors.Gray800
             )
 
-            Spacer(modifier = Modifier.height(34.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "자주 묻는 질문",
-                modifier = Modifier.padding(start = 26.dp),
-                style = SeniorOnTextStyles.BodyLBold,
-                color = SeniorOnColors.Gray800
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(45.dp)
+                    .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+                    .background(SeniorOnColors.Background2)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    text = "자주 묻는 질문",
+                    style = SeniorOnTextStyles.BodyLBold,
+                    color = SeniorOnColors.Gray800
+                )
+            }
 
-            Spacer(modifier = Modifier.height(26.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             HelpFaqItems.forEachIndexed { index, item ->
                 HelpFaqRow(
                     question = item.question,
                     answer = item.answer,
                     expanded = expandedFaqId == item.id,
-                    topPadding = if (index == 0) 0.dp else 14.dp,
                     onClick = {
                         expandedFaqId = if (expandedFaqId == item.id) null else item.id
                     }
                 )
+                if (index < HelpFaqItems.lastIndex) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .background(SeniorOnColors.Gray50)
+                    .height(12.dp)
+                    .background(SeniorOnColors.Gray100)
             )
 
             HelpGuideRow(
@@ -163,7 +172,7 @@ fun HelpInquiryScreen(
                 onClick = onInstallGuideClick,
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(34.dp))
 
             Text(
                 text = buildAnnotatedString {
@@ -207,7 +216,6 @@ private fun HelpFaqRow(
     expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    topPadding: Dp = 14.dp,
 ) {
     Column(
         modifier = modifier
@@ -217,16 +225,17 @@ private fun HelpFaqRow(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 16.dp)
-            .padding(top = topPadding, bottom = 14.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(25.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Q",
-                style = SeniorOnTextStyles.BodyMBold,
+                style = SeniorOnTextStyles.BodyLSemiBold,
                 color = SeniorOnColors.Primary600
             )
 
@@ -236,7 +245,7 @@ private fun HelpFaqRow(
                 text = question,
                 modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.BodySMedium,
-                color = SeniorOnColors.Gray800
+                color = SeniorOnColors.Gray700
             )
 
             Icon(
@@ -260,15 +269,16 @@ private fun HelpFaqRow(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(top = 10.dp, start = 22.dp)
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 12.dp)
                     .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                    .background(SeniorOnColors.Gray50)
+                    .background(SeniorOnColors.Background1)
                     .padding(12.dp)
             ) {
                 Text(
                     text = answer,
-                    style = SeniorOnTextStyles.BodySRegular,
+                    style = SeniorOnTextStyles.CaptionRegular,
                     color = SeniorOnColors.Gray600
                 )
             }
@@ -290,7 +300,8 @@ private fun HelpGuideRow(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

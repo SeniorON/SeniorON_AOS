@@ -1,11 +1,20 @@
 package com.example.senior_on.ui.child.health
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,9 +47,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.senior_on.R
+import com.example.senior_on.common.time.koreaToday
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -80,9 +92,8 @@ data class MedicationRepeatSelection(
         when (duration) {
             MedicationRepeatDuration.Continuous -> "계속 복용"
             MedicationRepeatDuration.Period -> {
-                val end = (startDate ?: LocalDate.now())
+                val end = (startDate ?: koreaToday())
                     .plusWeeks(periodValue.toLong())
-                    .minusDays(1)
                 "${periodValue}주 · ${end.monthValue}월${end.dayOfMonth}일까지"
             }
             MedicationRepeatDuration.Date -> {
@@ -139,7 +150,7 @@ private fun MedicationRepeatSheetContent(
             color = SeniorOnColors.Gray800
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         MedicationRepeatFrequencySelector(
             selected = frequency,
@@ -151,49 +162,61 @@ private fun MedicationRepeatSheetContent(
             }
         )
 
-        if (frequency == MedicationRepeatFrequency.Weekly) {
-            Spacer(modifier = Modifier.height(16.dp))
+        AnimatedVisibility(
+            visible = frequency == MedicationRepeatFrequency.Weekly,
+            enter = fadeIn(tween(220)) + expandVertically(
+                animationSpec = tween(280, easing = FastOutSlowInEasing),
+                expandFrom = Alignment.Top
+            ),
+            exit = fadeOut(tween(160)) + shrinkVertically(
+                animationSpec = tween(240, easing = FastOutSlowInEasing),
+                shrinkTowards = Alignment.Top
+            )
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "반복 주기",
+                        style = SeniorOnTextStyles.BodyMSemiBold,
+                        color = SeniorOnColors.Gray800,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MedicationRepeatStepper(
+                        label = cycleLabel(MedicationRepeatFrequency.Weekly, cycleValue),
+                        onDecrease = { if (cycleValue > 1) cycleValue -= 1 },
+                        onIncrease = { cycleValue += 1 },
+                        circleSize = CycleStepperCircleSize,
+                        iconSize = CycleStepperIconSize,
+                        iconStroke = CycleStepperIconStroke,
+                        iconGap = CycleStepperIconGap
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Text(
-                    text = "반복 주기",
-                    style = SeniorOnTextStyles.BodyMSemiBold,
-                    color = SeniorOnColors.Gray800,
-                    modifier = Modifier.weight(1f)
+                    text = "무슨 요일에 드시나요?",
+                    style = SeniorOnTextStyles.BodySMedium,
+                    color = SeniorOnColors.Gray600,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                MedicationRepeatStepper(
-                    label = cycleLabel(frequency, cycleValue),
-                    onDecrease = { if (cycleValue > 1) cycleValue -= 1 },
-                    onIncrease = { cycleValue += 1 },
-                    circleSize = CycleStepperCircleSize,
-                    iconSize = CycleStepperIconSize,
-                    iconStroke = CycleStepperIconStroke,
-                    iconGap = CycleStepperIconGap
+                Spacer(modifier = Modifier.height(4.dp))
+                MedicationRepeatWeekdaySelector(
+                    selectedDays = weekdays,
+                    onDayToggle = { dayIndex ->
+                        weekdays = if (dayIndex in weekdays) {
+                            weekdays - dayIndex
+                        } else {
+                            weekdays + dayIndex
+                        }
+                    }
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "무슨 요일에 드시나요?",
-                style = SeniorOnTextStyles.BodySMedium,
-                color = SeniorOnColors.Gray600,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            MedicationRepeatWeekdaySelector(
-                selectedDays = weekdays,
-                onDayToggle = { dayIndex ->
-                    weekdays = if (dayIndex in weekdays) {
-                        weekdays - dayIndex
-                    } else {
-                        weekdays + dayIndex
-                    }
-                }
-            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -242,15 +265,17 @@ private fun MedicationRepeatSheetContent(
                     if (duration == MedicationRepeatDuration.Date && endDate != null) {
                         Text(
                             text = "${endDate!!.monthValue}월 ${endDate!!.dayOfMonth}일",
-                            style = SeniorOnTextStyles.BodyMMedium,
-                            color = SeniorOnColors.Gray700,
+                            style = SeniorOnTextStyles.BodyMMedium.copy(
+                                lineHeight = 16.sp
+                            ),
+                            color = SeniorOnColors.Gray800,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                     }
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_calendar),
+                        painter = painterResource(id = R.drawable.ic_calendar2),
                         contentDescription = null,
-                        tint = SeniorOnColors.Gray300,
+                        tint = SeniorOnColors.Gray400,
                         modifier = Modifier
                             .size(24.dp)
                             .clickable(
@@ -266,7 +291,7 @@ private fun MedicationRepeatSheetContent(
             }
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -307,7 +332,7 @@ private fun MedicationRepeatSheetContent(
 
     if (showEndDateCalendar) {
         MedicationEndDateCalendarDialog(
-            initialDate = endDate ?: LocalDate.now(),
+            initialDate = endDate ?: koreaToday(),
             onCancel = { showEndDateCalendar = false },
             onConfirm = { selected ->
                 endDate = selected
@@ -338,11 +363,10 @@ private fun MedicationEndDateCalendarDialog(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
+                .width(302.dp)
                 .clip(RoundedCornerShape(28.dp))
                 .background(SeniorOnColors.SupportWhite100)
-                .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 16.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
         ) {
             ScheduleCalendar(
                 displayedMonth = displayedMonth,
@@ -354,21 +378,24 @@ private fun MedicationEndDateCalendarDialog(
                 onNextMonthClick = {
                     displayedMonth = displayedMonth.plusMonths(1)
                 },
-                mode = ScheduleCalendarMode.BottomSheet
+                mode = ScheduleCalendarMode.BottomSheet,
+                modifier = Modifier
+                    .width(264.dp)
+                    .align(Alignment.CenterHorizontally),
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 MedicationRepeatSheetButton(
                     label = "취소",
                     backgroundColor = SeniorOnColors.Gray100,
                     contentColor = SeniorOnColors.Gray600,
                     onClick = onCancel,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(91f)
                 )
                 MedicationRepeatSheetButton(
                     label = "확인",
@@ -377,7 +404,7 @@ private fun MedicationEndDateCalendarDialog(
                     onClick = {
                         onConfirm(displayedMonth.atDay(adjustedDay))
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(174f)
                 )
             }
         }
@@ -396,48 +423,54 @@ private fun MedicationRepeatFrequencySelector(
     onSelected: (MedicationRepeatFrequency) -> Unit
 ) {
     val shape = RoundedCornerShape(69.dp)
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
             .clip(shape)
-            .background(SeniorOnColors.Background3),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .background(SeniorOnColors.Background3)
     ) {
-        MedicationRepeatFrequency.entries.forEach { option ->
-            val isSelected = option == selected
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(shape)
-                    .background(
-                        if (isSelected) SeniorOnColors.Primary100 else Color.Transparent
-                    )
-                    .then(
-                        if (isSelected) {
-                            Modifier.border(1.dp, SeniorOnColors.Primary400, shape)
+        val tabWidth = maxWidth / MedicationRepeatFrequency.entries.size
+        val indicatorOffset by animateDpAsState(
+            targetValue = if (selected == MedicationRepeatFrequency.Daily) 0.dp else tabWidth,
+            animationSpec = tween(280, easing = FastOutSlowInEasing),
+            label = "medicationRepeatIndicatorOffset"
+        )
+
+        Box(
+            modifier = Modifier
+                .offset(x = indicatorOffset)
+                .width(tabWidth)
+                .fillMaxHeight()
+                .clip(shape)
+                .background(SeniorOnColors.Primary100)
+                .border(1.dp, SeniorOnColors.Primary400, shape)
+        )
+
+        Row(modifier = Modifier.fillMaxSize()) {
+            MedicationRepeatFrequency.entries.forEach { option ->
+                val isSelected = option == selected
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onSelected(option) }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = option.label,
+                        style = SeniorOnTextStyles.BodySSemiBold,
+                        color = if (isSelected) {
+                            SeniorOnColors.Primary600
                         } else {
-                            Modifier
+                            SeniorOnColors.Gray600
                         }
                     )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { onSelected(option) }
-                    )
-                    .padding(horizontal = 44.dp, vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = option.label,
-                    style = SeniorOnTextStyles.BodySSemiBold,
-                    color = if (isSelected) {
-                        SeniorOnColors.Primary600
-                    } else {
-                        SeniorOnColors.Gray600
-                    }
-                )
+                }
             }
         }
     }
@@ -536,7 +569,7 @@ private fun MedicationRepeatWeekdaySelector(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(
-                        if (selected) SeniorOnColors.Primary200 else SeniorOnColors.Background3
+                        if (selected) SeniorOnColors.Primary100 else SeniorOnColors.Background3
                     )
                     .then(
                         if (selected) {
@@ -554,7 +587,7 @@ private fun MedicationRepeatWeekdaySelector(
             ) {
                 Text(
                     text = label,
-                    style = SeniorOnTextStyles.BodySSemiBold,
+                    style = SeniorOnTextStyles.BodySMedium,
                     color = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray500
                 )
             }
@@ -579,8 +612,7 @@ private fun MedicationRepeatDurationOption(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onClick
-                )
-                .padding(vertical = 12.dp),
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -591,10 +623,10 @@ private fun MedicationRepeatDurationOption(
                 tint = SeniorOnColors.Primary600,
                 modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = label,
-                style = SeniorOnTextStyles.BodyMMedium,
+                style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray800,
                 modifier = Modifier.weight(1f)
             )
@@ -603,7 +635,7 @@ private fun MedicationRepeatDurationOption(
         if (showDivider) {
             HorizontalDivider(
                 thickness = 1.dp,
-                color = SeniorOnColors.Gray200
+                color = SeniorOnColors.Gray100
             )
         }
     }
@@ -621,7 +653,7 @@ private fun MedicationRepeatSheetButton(
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
     Box(
         modifier = modifier
-            .height(48.dp)
+            .height(46.dp)
             .clip(shape)
             .background(backgroundColor)
             .border(1.dp, borderColor, shape)
@@ -636,23 +668,19 @@ private fun MedicationRepeatSheetButton(
     }
 }
 
-@Preview(
-    name = "Medication Repeat Bottom Sheet",
-    showBackground = true,
-    widthDp = 360,
-    heightDp = 800
-)
 @Composable
-private fun MedicationRepeatBottomSheetPreview() {
+private fun MedicationRepeatSheetPreview(
+    initial: MedicationRepeatSelection,
+) {
     SENIOR_ONTheme {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .background(SeniorOnColors.Black.copy(alpha = 0.5f)),
             contentAlignment = Alignment.BottomCenter
         ) {
             MedicationRepeatSheetContent(
-                initial = MedicationRepeatSelection(),
+                initial = initial,
                 onCancel = {},
                 onConfirm = {},
                 modifier = Modifier
@@ -660,5 +688,128 @@ private fun MedicationRepeatBottomSheetPreview() {
                     .background(SeniorOnColors.SupportWhite100)
             )
         }
+    }
+}
+
+@Preview(
+    name = "반복 - 매일 - 계속 복용",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationRepeatDailyContinuousPreview() {
+    MedicationRepeatSheetPreview(
+        initial = MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.Daily,
+            duration = MedicationRepeatDuration.Continuous,
+        )
+    )
+}
+
+@Preview(
+    name = "반복 - 매일 - 복용 기간",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationRepeatDailyPeriodPreview() {
+    MedicationRepeatSheetPreview(
+        initial = MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.Daily,
+            duration = MedicationRepeatDuration.Period,
+            periodValue = 3,
+        )
+    )
+}
+
+@Preview(
+    name = "반복 - 매일 - 날짜 지정",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationRepeatDailyDatePreview() {
+    MedicationRepeatSheetPreview(
+        initial = MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.Daily,
+            duration = MedicationRepeatDuration.Date,
+            endDate = LocalDate.of(2026, 6, 17),
+        )
+    )
+}
+
+@Preview(
+    name = "반복 - 매주 - 계속 복용",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationRepeatWeeklyContinuousPreview() {
+    MedicationRepeatSheetPreview(
+        initial = MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.Weekly,
+            cycleValue = 1,
+            weekdays = setOf(1, 2, 3, 4),
+            duration = MedicationRepeatDuration.Continuous,
+        )
+    )
+}
+
+@Preview(
+    name = "반복 - 매주 - 복용 기간",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationRepeatWeeklyPeriodPreview() {
+    MedicationRepeatSheetPreview(
+        initial = MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.Weekly,
+            cycleValue = 2,
+            weekdays = setOf(1, 3, 5),
+            duration = MedicationRepeatDuration.Period,
+            periodValue = 4,
+        )
+    )
+}
+
+@Preview(
+    name = "반복 - 매주 - 날짜 지정",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationRepeatWeeklyDatePreview() {
+    MedicationRepeatSheetPreview(
+        initial = MedicationRepeatSelection(
+            frequency = MedicationRepeatFrequency.Weekly,
+            cycleValue = 1,
+            weekdays = setOf(1, 2, 3, 4),
+            duration = MedicationRepeatDuration.Date,
+            endDate = LocalDate.of(2026, 6, 17),
+        )
+    )
+}
+
+@Preview(
+    name = "복약 종료 날짜 선택",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun MedicationEndDateCalendarDialogPreview() {
+    SENIOR_ONTheme {
+        MedicationEndDateCalendarDialog(
+            initialDate = LocalDate.of(2026, 6, 17),
+            onCancel = {},
+            onConfirm = {},
+        )
     }
 }

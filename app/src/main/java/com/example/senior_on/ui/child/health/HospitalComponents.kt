@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
@@ -80,10 +81,12 @@ internal fun UpcomingAppointmentsSection(
             EmptyUpcomingAppointmentCard()
         } else {
             upcomingGroups.forEachIndexed { index, (_, dayAppointments) ->
-                val primary = dayAppointments.first()
                 UpcomingAppointmentCard(
-                    appointment = primary.copy(highlighted = index == 0),
-                    onClick = { onAppointmentClick(primary) }
+                    appointments = dayAppointments
+                        .sortedBy { it.time }
+                        .take(2),
+                    highlighted = index == 0,
+                    onAppointmentClick = onAppointmentClick,
                 )
             }
         }
@@ -92,13 +95,24 @@ internal fun UpcomingAppointmentsSection(
 
 @Composable
 private fun EmptyUpcomingAppointmentCard() {
+    val shape = RoundedCornerShape(SeniorOnRadius.Large)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .height(121.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Large))
-            .background(SeniorOnColors.Gray100)
-            .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom =36.dp),
+            .dropShadow(
+                shape = shape,
+                shadow = Shadow(
+                    radius = 12.dp,
+                    spread = 0.dp,
+                    color = Color(0x14000000),
+                    offset = DpOffset(x = 0.dp, y = 2.dp),
+                ),
+            )
+            .clip(shape)
+            .background(SeniorOnColors.SupportWhite80)
+            .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 36.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Text(
@@ -116,10 +130,11 @@ private fun EmptyUpcomingAppointmentCard() {
 
 @Composable
 private fun UpcomingAppointmentCard(
-    appointment: HospitalAppointmentUiState,
-    onClick: () -> Unit
+    appointments: List<HospitalAppointmentUiState>,
+    highlighted: Boolean,
+    onAppointmentClick: (HospitalAppointmentUiState) -> Unit,
 ) {
-    val highlighted = appointment.highlighted
+    val primaryAppointment = appointments.firstOrNull() ?: return
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
     val primaryColor = if (highlighted) SeniorOnColors.SupportWhite100 else SeniorOnColors.Gray700
     val secondaryColor = if (highlighted) SeniorOnColors.SupportWhite100 else SeniorOnColors.Gray500
@@ -144,11 +159,6 @@ private fun UpcomingAppointmentCard(
                         offset = DpOffset(x = 0.dp, y = 2.dp)
                     )
                 }
-            )
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
             ),
         shape = shape,
         color = if (highlighted) SeniorOnColors.Primary600 else SeniorOnColors.SupportWhite100,
@@ -170,34 +180,140 @@ private fun UpcomingAppointmentCard(
                         color = SeniorOnColors.White,
                         modifier = Modifier.weight(1f)
                     )
-                    DaysLeftBadge(appointment.daysLeft, highlighted = true)
+                    DaysLeftBadge(primaryAppointment.daysLeft, highlighted = true)
                 }
 
-                Spacer(modifier = Modifier.height(15.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AppointmentDateBadge(appointment.date, highlighted = true)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    AppointmentHospitalText(appointment, primaryColor, secondaryColor)
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                HighlightedAppointmentEntries(
+                    appointments = appointments,
+                    primaryColor = primaryColor,
+                    secondaryColor = secondaryColor,
+                    onAppointmentClick = onAppointmentClick,
+                )
             }
         } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 18.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top,
             ) {
-                AppointmentDateBadge(appointment.date, false)
+                AppointmentDateBadge(primaryAppointment.date, highlighted = false)
                 Spacer(modifier = Modifier.width(12.dp))
-                AppointmentHospitalText(
-                    appointment,
-                    primaryColor,
-                    secondaryColor,
-                    Modifier.weight(1f)
+                RegularAppointmentTextEntries(
+                    appointments = appointments,
+                    primaryColor = primaryColor,
+                    secondaryColor = secondaryColor,
+                    daysLeft = primaryAppointment.daysLeft,
+                    onAppointmentClick = onAppointmentClick,
+                    modifier = Modifier.weight(1f),
                 )
-                DaysLeftBadge(appointment.daysLeft, highlighted = false)
             }
+        }
+    }
+}
+
+@Composable
+private fun RegularAppointmentTextEntries(
+    appointments: List<HospitalAppointmentUiState>,
+    primaryColor: Color,
+    secondaryColor: Color,
+    daysLeft: Int,
+    onAppointmentClick: (HospitalAppointmentUiState) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        appointments.forEachIndexed { index, appointment ->
+            if (index > 0) {
+                Spacer(modifier = Modifier.height(11.dp))
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(SeniorOnColors.Gray100),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            if (index == 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppointmentHospitalText(
+                        appointment = appointment,
+                        primaryColor = primaryColor,
+                        secondaryColor = secondaryColor,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onAppointmentClick(appointment) },
+                            ),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    DaysLeftBadge(daysLeft, highlighted = false)
+                }
+            } else {
+                AppointmentHospitalText(
+                    appointment = appointment,
+                    primaryColor = primaryColor,
+                    secondaryColor = secondaryColor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onAppointmentClick(appointment) },
+                        ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HighlightedAppointmentEntries(
+    appointments: List<HospitalAppointmentUiState>,
+    primaryColor: Color,
+    secondaryColor: Color,
+    onAppointmentClick: (HospitalAppointmentUiState) -> Unit,
+) {
+    appointments.forEachIndexed { index, appointment ->
+        if (index > 0) {
+            Spacer(modifier = Modifier.height(11.dp))
+            Spacer(
+                modifier = Modifier
+                    .padding(start = 60.dp)
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(SeniorOnColors.SupportWhite20),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onAppointmentClick(appointment) },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (index == 0) {
+                AppointmentDateBadge(appointment.date, highlighted = true)
+            } else {
+                Spacer(modifier = Modifier.width(48.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            AppointmentHospitalText(
+                appointment = appointment,
+                primaryColor = primaryColor,
+                secondaryColor = secondaryColor,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -257,10 +373,14 @@ private fun AppointmentHospitalText(
 }
 
 @Composable
-private fun DaysLeftBadge(daysLeft: Int, highlighted: Boolean) {
+private fun DaysLeftBadge(
+    daysLeft: Int,
+    highlighted: Boolean,
+    width: Dp = 55.dp,
+) {
     Box(
         modifier = Modifier
-            .width(55.dp)
+            .width(width)
             .height(25.dp)
             .clip(RoundedCornerShape(17.dp))
             .background(
@@ -296,7 +416,7 @@ internal fun HospitalScheduleSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 20.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp)
     ) {
         ScheduleSectionTitle(
             title = "병원 일정",
@@ -352,7 +472,7 @@ private fun HospitalCalendarCard(
         shadowElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 18.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             ScheduleCalendar(
@@ -371,7 +491,6 @@ private fun HospitalCalendarCard(
                     .height(2.dp)
                     .background(SeniorOnColors.Gray100)
             )
-            Spacer(modifier = Modifier.height(18.dp))
             if (selectedAppointments.isEmpty()) {
                 EmptyAppointmentContent(
                     displayedMonth = displayedMonth,
@@ -395,25 +514,32 @@ private fun EmptyAppointmentContent(
     selectedDay: Int,
     onAddAppointmentClick: () -> Unit
 ) {
-    Icon(
-        painter = painterResource(id = R.drawable.ic_illust_hospital_schedule),
-        contentDescription = null,
-        tint = Color.Unspecified,
-        modifier = Modifier.size(30.dp)
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        text = "${displayedMonth.monthValue}월 ${selectedDay}일에는 예정된 진료가 없어요.",
-        style = SeniorOnTextStyles.BodyMMedium,
-        color = SeniorOnColors.Gray300,
-        textAlign = TextAlign.Center
-    )
-    Spacer(modifier = Modifier.height(12.dp))
-    HospitalFilledActionButton(
-        label = "${displayedMonth.monthValue}월 ${selectedDay}일 추가하기",
-        iconResId = R.drawable.ic_plus,
-        onClick = onAddAppointmentClick
-    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_illust_hospital_schedule),
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = Modifier.size(30.dp)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "${displayedMonth.monthValue}월 ${selectedDay}일에는 예정된 진료가 없어요.",
+            style = SeniorOnTextStyles.BodyMMedium,
+            color = SeniorOnColors.Gray300,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        HospitalFilledActionButton(
+            label = "${displayedMonth.monthValue}월 ${selectedDay}일 추가하기",
+            iconResId = R.drawable.ic_plus,
+            onClick = onAddAppointmentClick
+        )
+    }
 }
 
 @Composable
@@ -423,60 +549,72 @@ private fun SelectedAppointmentsContent(
     onDeleteClick: (HospitalAppointmentUiState) -> Unit
 ) {
     val firstAppointment = appointments.first()
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
     ) {
-        Text(
-            text = "${firstAppointment.date.monthValue}월 ${firstAppointment.date.dayOfMonth}일 진료",
-            style = SeniorOnTextStyles.BodyMBold,
-            color = SeniorOnColors.Primary600,
-            modifier = Modifier.weight(1f)
-        )
-        DaysLeftBadge(firstAppointment.daysLeft, highlighted = false)
-    }
-    Spacer(modifier = Modifier.height(12.dp))
-    appointments.forEachIndexed { index, appointment ->
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                .background(SeniorOnColors.Gray50)
-                .padding(12.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
         ) {
             Text(
-                text = appointment.hospitalName,
-                style = SeniorOnTextStyles.BodyLBold,
-                color = SeniorOnColors.Gray800,
-                modifier = Modifier.fillMaxWidth()
+                text = "${firstAppointment.date.monthValue}월 ${firstAppointment.date.dayOfMonth}일 진료",
+                style = SeniorOnTextStyles.BodyMBold,
+                color = SeniorOnColors.Primary600,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(bottom = 3.dp),
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = appointment.departmentAndTime,
-                style = SeniorOnTextStyles.BodySMedium,
-                color = SeniorOnColors.Gray500,
-                modifier = Modifier.fillMaxWidth()
+            DaysLeftBadge(
+                daysLeft = firstAppointment.daysLeft,
+                highlighted = false,
+                width = 45.dp,
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                HospitalOutlinedActionButton(
-                    label = "삭제하기",
-                    iconResId = R.drawable.ic_trash,
-                    color = SeniorOnColors.Red300,
-                    onClick = { onDeleteClick(appointment) },
-                    modifier = Modifier.weight(1f)
-                )
-                HospitalScheduleEditButton(
-                    onClick = { onEditClick(appointment) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
         }
-        if (index != appointments.lastIndex) {
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+        appointments.forEachIndexed { index, appointment ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .background(SeniorOnColors.Gray50)
+                    .padding(horizontal = 16.dp, vertical = 18.dp)
+            ) {
+                Text(
+                    text = appointment.hospitalName,
+                    style = SeniorOnTextStyles.BodyLBold,
+                    color = SeniorOnColors.Gray800,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = appointment.departmentAndTime,
+                    style = SeniorOnTextStyles.BodySMedium,
+                    color = SeniorOnColors.Gray500,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    HospitalOutlinedActionButton(
+                        label = "삭제하기",
+                        iconResId = R.drawable.ic_trash,
+                        color = SeniorOnColors.Red300,
+                        onClick = { onDeleteClick(appointment) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    HospitalScheduleEditButton(
+                        onClick = { onEditClick(appointment) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            if (index != appointments.lastIndex) {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
     }
 }
@@ -577,17 +715,117 @@ internal fun HospitalOutlinedActionButton(
 }
 
 @Preview(
-    name = "다가오는 진료",
+    name = "다가오는 진료 - 날짜 2개",
     showBackground = true,
     backgroundColor = 0xFFF7F8F5,
     widthDp = 360
 )
 @Composable
-private fun UpcomingAppointmentsSectionPreview() {
+private fun TwoUpcomingDatesSectionPreview() {
     SENIOR_ONTheme {
         UpcomingAppointmentsSection(
             appointments = previewHospitalAppointments(),
             onAppointmentClick = {}
+        )
+    }
+}
+
+@Preview(
+    name = "다가오는 진료 - 날짜 1개, 진료 1개",
+    showBackground = true,
+    backgroundColor = 0xFFF7F8F5,
+    widthDp = 360
+)
+@Composable
+private fun SingleUpcomingAppointmentSectionPreview() {
+    SENIOR_ONTheme {
+        UpcomingAppointmentsSection(
+            appointments = previewHospitalAppointments().take(1),
+            onAppointmentClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "다가오는 진료 - 날짜 1개, 진료 2개",
+    showBackground = true,
+    backgroundColor = 0xFFF7F8F5,
+    widthDp = 360
+)
+@Composable
+private fun TwoAppointmentsOnSameDateSectionPreview() {
+    val first = previewHospitalAppointments().first()
+    val second = first.copy(
+        id = 3L,
+        hospitalName = "서울대학교병원",
+        specialty = "내과",
+        time = LocalTime.of(14, 0),
+    )
+
+    SENIOR_ONTheme {
+        UpcomingAppointmentsSection(
+            appointments = listOf(first, second),
+            onAppointmentClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "다가오는 진료 - 날짜 2개, 첫 날짜 진료 2개",
+    showBackground = true,
+    backgroundColor = 0xFFF7F8F5,
+    widthDp = 360
+)
+@Composable
+private fun MixedUpcomingAppointmentsSectionPreview() {
+    val appointments = previewHospitalAppointments()
+    val first = appointments.first()
+    val sameDate = first.copy(
+        id = 3L,
+        hospitalName = "서울대학교병원",
+        specialty = "내과",
+        time = LocalTime.of(14, 0),
+    )
+
+    SENIOR_ONTheme {
+        UpcomingAppointmentsSection(
+            appointments = listOf(first, sameDate, appointments.last()),
+            onAppointmentClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "다가오는 진료 - 날짜별 진료 2개씩",
+    showBackground = true,
+    backgroundColor = 0xFFF7F8F5,
+    widthDp = 360
+)
+@Composable
+private fun TwoAppointmentsOnEachDateSectionPreview() {
+    val appointments = previewHospitalAppointments()
+    val firstDateAppointment = appointments.first()
+    val secondDateAppointment = appointments.last()
+
+    SENIOR_ONTheme {
+        UpcomingAppointmentsSection(
+            appointments = listOf(
+                firstDateAppointment,
+                firstDateAppointment.copy(
+                    id = 3L,
+                    hospitalName = "서울대학교병원",
+                    specialty = "내과",
+                    time = LocalTime.of(14, 0),
+                ),
+                secondDateAppointment,
+                secondDateAppointment.copy(
+                    id = 4L,
+                    hospitalName = "연세세브란스병원",
+                    specialty = "재활의학과",
+                    time = LocalTime.of(16, 30),
+                ),
+            ),
+            onAppointmentClick = {},
         )
     }
 }

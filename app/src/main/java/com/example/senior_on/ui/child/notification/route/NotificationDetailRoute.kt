@@ -7,7 +7,11 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
@@ -25,12 +29,15 @@ internal fun NotificationDetailRoute(
     locationRepository: LocationRepository?,
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit = {},
+    isRefreshing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    var isResolvingDirections by remember { mutableStateOf(false) }
 
     fun openDirectionsFromCurrentLocation() {
+        if (isResolvingDirections) return
         val destinationLatitude = message.latitude
         val destinationLongitude = message.longitude
         if (destinationLatitude == null || destinationLongitude == null) {
@@ -43,24 +50,29 @@ internal fun NotificationDetailRoute(
         }
 
         coroutineScope.launch {
-            val currentLocation = runCatching {
-                locationRepository?.getCurrentLocation()
-            }.getOrNull()
-            if (currentLocation == null) {
-                Toast.makeText(
-                    context,
-                    "현재 위치를 확인하지 못해 목적지만 전달합니다.",
-                    Toast.LENGTH_SHORT,
-                ).show()
+            isResolvingDirections = true
+            try {
+                val currentLocation = runCatching {
+                    locationRepository?.getCurrentLocation()
+                }.getOrNull()
+                if (currentLocation == null) {
+                    Toast.makeText(
+                        context,
+                        "현재 위치를 확인하지 못해 목적지만 전달합니다.",
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                openKakaoMapDirections(
+                    context = context,
+                    latitude = destinationLatitude,
+                    longitude = destinationLongitude,
+                    destinationName = message.senderName ?: "시니어 위치",
+                    startLatitude = currentLocation?.latitude,
+                    startLongitude = currentLocation?.longitude,
+                )
+            } finally {
+                isResolvingDirections = false
             }
-            openKakaoMapDirections(
-                context = context,
-                latitude = destinationLatitude,
-                longitude = destinationLongitude,
-                destinationName = message.senderName ?: "시니어 위치",
-                startLatitude = currentLocation?.latitude,
-                startLongitude = currentLocation?.longitude,
-            )
         }
     }
 
@@ -84,6 +96,8 @@ internal fun NotificationDetailRoute(
         modifier = modifier,
         onBackClick = onBackClick,
         onRefreshClick = onRefreshClick,
+        isRefreshing = isRefreshing,
+        isDirectionsLoading = isResolvingDirections,
         onCallClick = {
             if (!openPhoneDialer(context, parentPhoneNumber)) {
                 Toast.makeText(

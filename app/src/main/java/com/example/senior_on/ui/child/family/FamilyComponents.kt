@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.family
 
 import com.example.senior_on.ui.theme.SeniorOnDimensions
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -43,12 +43,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -66,6 +68,7 @@ internal fun FamilyBackTopAppBar(
         modifier = modifier
             .fillMaxWidth()
             .height(SeniorOnDimensions.TopBarHeight)
+            .zIndex(1f)
             .background(SeniorOnColors.White),
     ) {
         Icon(
@@ -105,6 +108,7 @@ internal fun FamilyActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    isLoading: Boolean = false,
     outlined: Boolean = false,
     buttonHeight: Dp = 44.dp,
     expandWidth: Boolean = true,
@@ -115,40 +119,37 @@ internal fun FamilyActionButton(
     val backgroundColor = if (outlined) SeniorOnColors.White else SeniorOnColors.Primary600
     val contentColor = if (outlined) SeniorOnColors.Primary600 else SeniorOnColors.White
 
-    Row(
+    SeniorOnActionButton(
+        text = text,
+        onClick = onClick,
         modifier = modifier
             .then(if (expandWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(buttonHeight)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(shape)
-            .background(backgroundColor)
-            .then(
-                if (outlined) {
-                    Modifier.border(1.dp, SeniorOnColors.Primary600, shape)
-                } else {
-                    Modifier
-                },
+            .height(buttonHeight),
+        enabled = enabled,
+        isLoading = isLoading,
+        containerColor = backgroundColor,
+        contentColor = contentColor,
+        disabledContainerColor = backgroundColor.copy(alpha = 0.5f),
+        disabledContentColor = contentColor.copy(alpha = 0.5f),
+        border = if (outlined) {
+            BorderStroke(1.dp, SeniorOnColors.Primary600)
+        } else {
+            null
+        },
+        shape = shape,
+        minHeight = buttonHeight,
+        horizontalPadding = 12.dp,
+        textStyle = SeniorOnTextStyles.ButtonM,
+        leadingContent = {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = androidx.compose.material3.LocalContentColor.current,
             )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(id = iconResId),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = contentColor,
-        )
-        Spacer(modifier = Modifier.width(iconSpacing))
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonM,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+            Spacer(modifier = Modifier.width(iconSpacing))
+        },
+    )
 }
 
 @Composable
@@ -160,31 +161,25 @@ internal fun FamilyTextActionButton(
     modifier: Modifier = Modifier,
     borderColor: Color? = null,
     enabled: Boolean = true,
+    isLoading: Boolean = false,
     buttonHeight: Dp = 48.dp,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
-    Box(
-        modifier = modifier
-            .height(buttonHeight)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clip(shape)
-            .background(backgroundColor)
-            .then(
-                if (borderColor == null) {
-                    Modifier
-                } else {
-                    Modifier.border(1.dp, borderColor, shape)
-                },
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonS,
-            color = contentColor,
-        )
-    }
+    SeniorOnActionButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier.height(buttonHeight),
+        enabled = enabled,
+        isLoading = isLoading,
+        containerColor = backgroundColor,
+        contentColor = contentColor,
+        disabledContainerColor = backgroundColor.copy(alpha = 0.5f),
+        disabledContentColor = contentColor.copy(alpha = 0.5f),
+        border = borderColor?.let { BorderStroke(1.dp, it) },
+        shape = shape,
+        minHeight = buttonHeight,
+        textStyle = SeniorOnTextStyles.ButtonS,
+    )
 }
 
 @Composable
@@ -547,6 +542,7 @@ internal fun SharedPhotoCard(
 
 @Composable
 internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
+    val defaultProfilePainter = painterResource(id = R.drawable.img_default_profile)
     when (val imageSource = member.imageSource) {
         is FamilyImageSource.Local -> Image(
             painter = painterResource(id = imageSource.drawableResId),
@@ -554,21 +550,46 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Crop,
         )
-        is FamilyImageSource.Remote -> AsyncImage(
-            model = imageSource.url,
-            contentDescription = null,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
-            error = painterResource(id = R.drawable.ic_dependent),
-        )
+        is FamilyImageSource.Remote -> {
+            val context = LocalContext.current
+            val cacheKey = remember(member.id, imageSource.url) {
+                familyMemberImageCacheKey(
+                    memberId = member.id,
+                    imageUrl = imageSource.url,
+                )
+            }
+            val imageRequest = remember(context, imageSource.url, cacheKey) {
+                ImageRequest.Builder(context)
+                    .data(imageSource.url)
+                    .memoryCacheKey(cacheKey)
+                    .diskCacheKey(cacheKey)
+                    .placeholderMemoryCacheKey(cacheKey)
+                    .build()
+            }
+
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                error = defaultProfilePainter,
+                fallback = defaultProfilePainter,
+            )
+        }
         is FamilyImageSource.Uri -> AsyncImage(
             model = imageSource.value,
             contentDescription = null,
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Crop,
-            error = painterResource(id = R.drawable.ic_dependent),
+            error = defaultProfilePainter,
+            fallback = defaultProfilePainter,
         )
-        null -> FamilyMemberImagePlaceholder()
+        null -> Image(
+            painter = defaultProfilePainter,
+            contentDescription = null,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
@@ -592,6 +613,7 @@ internal fun BoxScope.SharedFamilyPhotoImage(
                     .data(imageSource.url)
                     .memoryCacheKey(cacheKey)
                     .diskCacheKey(cacheKey)
+                    .placeholderMemoryCacheKey(cacheKey)
                     .build()
             }
 
@@ -617,19 +639,18 @@ internal fun BoxScope.SharedFamilyPhotoImage(
     }
 }
 
-internal fun familyPhotoCacheKey(photoId: String): String = "family-photo:$photoId"
-
-@Composable
-private fun BoxScope.FamilyMemberImagePlaceholder() {
-    Icon(
-        painter = painterResource(id = R.drawable.ic_dependent),
-        contentDescription = null,
-        modifier = Modifier
-            .align(Alignment.Center)
-            .size(38.dp),
-        tint = SeniorOnColors.Gray400,
-    )
+internal fun familyMemberImageCacheKey(
+    memberId: String,
+    imageUrl: String,
+): String {
+    val stableImagePath = imageUrl
+        .trim()
+        .substringBefore('#')
+        .substringBefore('?')
+    return "family-member:${memberId.trim()}:$stableImagePath"
 }
+
+internal fun familyPhotoCacheKey(photoId: String): String = "family-photo:$photoId"
 
 @Composable
 private fun BoxScope.SharedPhotoImagePlaceholder() {

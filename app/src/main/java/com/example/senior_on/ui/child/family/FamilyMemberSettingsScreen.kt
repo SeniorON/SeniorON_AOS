@@ -33,7 +33,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -46,6 +45,7 @@ import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
+import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -149,6 +149,8 @@ fun FamilyMemberSettingsScreen(
                 selectedMemberId = selectedMember?.id,
                 selectedMemberCanBecomePrimary = selectedMember?.canBecomePrimary == true,
                 isOperationInProgress = uiState.isMemberMutationInProgress,
+                isChangingPrimary = uiState.changingPrimaryMemberId == selectedMember?.id,
+                isDeletingMember = uiState.deletingMemberId == selectedMember?.id,
                 errorMessage = uiState.memberMutationErrorMessage,
                 onAddFamilyClick = onAddFamilyClick,
                 onChangePrimaryRequest = {
@@ -521,6 +523,8 @@ private fun FamilyMemberSettingsActions(
     selectedMemberId: String?,
     selectedMemberCanBecomePrimary: Boolean,
     isOperationInProgress: Boolean,
+    isChangingPrimary: Boolean,
+    isDeletingMember: Boolean,
     errorMessage: String?,
     onAddFamilyClick: () -> Unit,
     onChangePrimaryRequest: () -> Unit,
@@ -556,6 +560,7 @@ private fun FamilyMemberSettingsActions(
                 text = "주 담당자로 변경",
                 iconResId = R.drawable.ic_change,
                 enabled = canChangePrimary,
+                isLoading = isChangingPrimary,
                 onClick = onChangePrimaryRequest,
                 buttonHeight = BottomActionHeight,
                 iconSpacing = 6.dp,
@@ -563,32 +568,28 @@ private fun FamilyMemberSettingsActions(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier
-                    .height(48.dp)
-                    .alpha(if (canDeleteMember) 1f else 0.5f)
-                    .clickable(
-                        enabled = canDeleteMember,
-                        onClick = onDeleteMemberRequest
+            SeniorOnActionButton(
+                text = "구성원 삭제",
+                onClick = onDeleteMemberRequest,
+                modifier = Modifier.height(48.dp),
+                enabled = canDeleteMember,
+                isLoading = isDeletingMember,
+                containerColor = SeniorOnColors.Background1,
+                contentColor = SeniorOnColors.Red300,
+                disabledContainerColor = SeniorOnColors.Background1,
+                disabledContentColor = SeniorOnColors.Red300.copy(alpha = 0.5f),
+                minHeight = 48.dp,
+                horizontalPadding = 12.dp,
+                leadingContent = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_trash),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = androidx.compose.material3.LocalContentColor.current,
                     )
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_trash),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = SeniorOnColors.Red300
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                Text(
-                    text = "구성원 삭제",
-                    style = SeniorOnTextStyles.ButtonM,
-                    color = SeniorOnColors.Red300
-                )
-            }
+                    Spacer(modifier = Modifier.width(6.dp))
+                },
+            )
         } else {
             FamilyActionButton(
                 text = "가족 추가하기",

@@ -2,6 +2,7 @@ package com.example.senior_on.ui.parent.photo
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -9,8 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.senior_on.data.source.mock.fixtures.MockAuthFixtures
-import com.example.senior_on.domain.repository.parent.ParentFamilyPhotoRepository
+import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoViewModel
 
 private enum class ParentPhotoDestination {
@@ -21,18 +21,17 @@ private enum class ParentPhotoDestination {
 
 @Composable
 fun ParentFamilyPhotoRoute(
-    repository: ParentFamilyPhotoRepository,
+    repository: FamilyServerRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // TODO(parent API): Replace the fixture with the authenticated user's family identifier.
     val viewModel: ParentFamilyPhotoViewModel = viewModel(
-        factory = ParentFamilyPhotoViewModel.factory(
-            repository = repository,
-            familyCode = MockAuthFixtures.DISPLAY_FAMILY_SHARE_CODE,
-        )
+        factory = ParentFamilyPhotoViewModel.factory(repository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        viewModel.loadAlbums()
+    }
     var destination by rememberSaveable {
         mutableStateOf(ParentPhotoDestination.FamilyMembers)
     }
@@ -57,9 +56,12 @@ fun ParentFamilyPhotoRoute(
             onBackClick = onBackClick,
             onMemberClick = { memberId ->
                 selectedMemberId = memberId
+                viewModel.selectMember(memberId)
                 destination = ParentPhotoDestination.MemberPhotos
             },
-            onRetryClick = viewModel::loadFamilyPhotos,
+            onRetryClick = viewModel::loadAlbums,
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = viewModel::refresh,
             modifier = modifier,
         )
 
@@ -73,19 +75,27 @@ fun ParentFamilyPhotoRoute(
                     onBackClick = onBackClick,
                     onMemberClick = { memberId ->
                         selectedMemberId = memberId
+                        viewModel.selectMember(memberId)
                         destination = ParentPhotoDestination.MemberPhotos
                     },
-                    onRetryClick = viewModel::loadFamilyPhotos,
+                    onRetryClick = viewModel::loadAlbums,
                     modifier = modifier,
                 )
             } else {
                 ParentMemberPhotoGridScreen(
                     member = member,
+                    isLoading = uiState.isPhotoLoading,
+                    errorMessage = uiState.photoErrorMessage,
+                    hasMorePhotos = uiState.hasMorePhotos,
+                    isRefreshing = uiState.isRefreshing,
                     onBackClick = ::goBack,
                     onPhotoClick = { photoId ->
                         selectedPhotoId = photoId
                         destination = ParentPhotoDestination.Viewer
                     },
+                    onLoadMore = viewModel::loadMorePhotos,
+                    onRetryClick = viewModel::retrySelectedMember,
+                    onRefresh = viewModel::refresh,
                     modifier = modifier,
                 )
             }
@@ -104,7 +114,7 @@ fun ParentFamilyPhotoRoute(
                         selectedMemberId = memberId
                         destination = ParentPhotoDestination.MemberPhotos
                     },
-                    onRetryClick = viewModel::loadFamilyPhotos,
+                    onRetryClick = viewModel::loadAlbums,
                     modifier = modifier,
                 )
             } else {
@@ -112,6 +122,7 @@ fun ParentFamilyPhotoRoute(
                     member = member,
                     initialPhotoId = photoId,
                     onBackClick = ::goBack,
+                    onPhotoViewed = viewModel::markPhotoViewed,
                     modifier = modifier,
                 )
             }

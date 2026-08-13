@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,6 +50,7 @@ fun MyAccountScreen(
     modifier: Modifier = Modifier,
     onSelectAlbumClick: () -> Unit = {},
     onTakePhotoClick: () -> Unit = {},
+    onApplyDefaultImageClick: () -> Unit = {},
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -58,11 +58,11 @@ fun MyAccountScreen(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
     ) {
         SettingsBackTopAppBar(
             title = "내 계정",
-            onBackClick = onBackClick
+            onBackClick = onBackClick,
+            showShadow = false,
         )
 
         MyAccountProfileHeader(
@@ -70,15 +70,21 @@ fun MyAccountScreen(
             onEditClick = { showProfilePhotoSheet = true }
         )
 
+        Spacer(modifier = Modifier.height(24.dp))
+
         SettingsAccountMenuRow(
             label = "이름 변경",
             onClick = onChangeNameClick
         )
 
+        Spacer(modifier = Modifier.height(25.dp))
+
         SettingsAccountMenuRow(
             label = "비밀번호 변경",
             onClick = onChangePasswordClick
         )
+
+        Spacer(modifier = Modifier.height(25.dp))
 
         SettingsAccountMenuRow(
             label = "이메일",
@@ -89,6 +95,7 @@ fun MyAccountScreen(
 
     if (showProfilePhotoSheet) {
         SettingsProfilePhotoBottomSheet(
+            showApplyDefaultOption = profile.hasCustomProfileImage,
             onDismiss = { showProfilePhotoSheet = false },
             onSelectAlbumClick = {
                 showProfilePhotoSheet = false
@@ -97,6 +104,10 @@ fun MyAccountScreen(
             onTakePhotoClick = {
                 showProfilePhotoSheet = false
                 onTakePhotoClick()
+            },
+            onApplyDefaultImageClick = {
+                showProfilePhotoSheet = false
+                onApplyDefaultImageClick()
             }
         )
     }
@@ -155,20 +166,21 @@ fun ChangeNameScreen(
     isSaving: Boolean = false,
 ) {
     var newName by rememberSaveable { mutableStateOf("") }
+    var hasSaveAttempted by rememberSaveable { mutableStateOf(false) }
     val trimmedNewName = newName.trim()
     val isSameAsCurrent = trimmedNewName.isNotEmpty() &&
         trimmedNewName == currentName.trim()
-    val canSave = trimmedNewName.isNotEmpty() && !isSameAsCurrent && !isSaving
+    val showSameNameError = hasSaveAttempted && isSameAsCurrent
+    val canSave = trimmedNewName.isNotEmpty() && !isSaving
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
     ) {
         SettingsBackTopAppBar(
             title = "이름 변경하기",
-            onBackClick = onBackClick
+            onBackClick = onBackClick,
         )
 
         Column(
@@ -206,34 +218,45 @@ fun ChangeNameScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             FindAccountTextField(
                 label = "새 이름",
                 value = newName,
-                onValueChange = { newName = it.take(20) },
+                onValueChange = {
+                    newName = it.take(20)
+                    hasSaveAttempted = false
+                },
                 placeholder = "새 이름 입력",
-                isError = isSameAsCurrent,
-                errorMessage = if (isSameAsCurrent) {
+                isError = showSameNameError,
+                errorMessage = if (showSameNameError) {
                     "현재 사용 중인 이름과 동일해요."
                 } else {
                     null
                 },
+                errorBorderColor = SeniorOnColors.Red200,
+                showErrorIcon = true,
                 showClearIcon = false
             )
         }
 
-            SettingsPrimaryButton(
-                text = "저장",
-                enabled = canSave,
-                onClick = { onSaveClick(trimmedNewName) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp)
-                    .height(48.dp)
-            )
+        SettingsPrimaryButton(
+            text = "저장",
+            enabled = canSave,
+            isLoading = isSaving,
+            onClick = {
+                hasSaveAttempted = true
+                if (!isSameAsCurrent) {
+                    onSaveClick(trimmedNewName)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .height(50.dp)
+        )
     }
 }
 
@@ -292,34 +315,36 @@ fun ChangePasswordScreen(
     var isCurrentVisible by rememberSaveable { mutableStateOf(false) }
     var isNewVisible by rememberSaveable { mutableStateOf(false) }
     var isConfirmVisible by rememberSaveable { mutableStateOf(false) }
+    var hasCompleteAttempted by rememberSaveable { mutableStateOf(false) }
 
     val isSameAsCurrent = newPassword.isNotEmpty() && newPassword == currentPassword
-    val isNewPasswordFormatValid = newPassword.isEmpty() || isValidPassword(newPassword)
-    val isConfirmValid = confirmPassword.isEmpty() || confirmPassword == newPassword
+    val isNewPasswordFormatValid = isValidPassword(newPassword)
+    val isConfirmValid = confirmPassword == newPassword
 
-    val newPasswordError = when {
-        newPassword.isEmpty() -> null
-        isSameAsCurrent -> "현재 사용 중인 비밀번호와 동일해요."
-        !isNewPasswordFormatValid -> "영문과 숫자를 포함해 8자 이상 입력해 주세요."
-        else -> null
+    val newPasswordError = if (hasCompleteAttempted) {
+        when {
+            isSameAsCurrent -> "현재 사용 중인 비밀번호와 동일해요."
+            !isNewPasswordFormatValid -> "영문과 숫자를 포함해 8자 이상 입력해 주세요."
+            else -> null
+        }
+    } else {
+        null
     }
+    val showConfirmPasswordError = hasCompleteAttempted && !isConfirmValid
 
     val canComplete = currentPassword.isNotBlank() &&
-        isValidPassword(newPassword) &&
-        !isSameAsCurrent &&
-        confirmPassword.isNotEmpty() &&
-        confirmPassword == newPassword &&
+        newPassword.isNotBlank() &&
+        confirmPassword.isNotBlank() &&
         !isSaving
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.White)
-            .statusBarsPadding()
     ) {
         SettingsBackTopAppBar(
             title = "비밀번호 변경",
-            onBackClick = onBackClick
+            onBackClick = onBackClick,
         )
 
         Column(
@@ -327,7 +352,6 @@ fun ChangePasswordScreen(
                 .weight(1f)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
                 .padding(top = 24.dp)
         ) {
             FindAccountPasswordTextField(
@@ -335,27 +359,48 @@ fun ChangePasswordScreen(
                 value = currentPassword,
                 onValueChange = {
                     currentPassword = it.take(30)
+                    hasCompleteAttempted = false
                     onClearCurrentPasswordError()
                 },
                 placeholder = "비밀번호 입력",
                 isVisible = isCurrentVisible,
                 onVisibilityToggle = { isCurrentVisible = !isCurrentVisible },
                 isError = currentPasswordErrorMessage != null,
-                errorMessage = currentPasswordErrorMessage
+                errorMessage = currentPasswordErrorMessage,
+                errorBorderColor = SeniorOnColors.Red200,
+                showErrorIcon = true,
+                visibilityIconColor = SeniorOnColors.Gray300,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
 
-            Spacer(modifier = Modifier.height(58.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .background(SeniorOnColors.Background1)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             FindAccountPasswordTextField(
                 label = "새 비밀번호",
                 value = newPassword,
-                onValueChange = { newPassword = it.take(30) },
+                onValueChange = {
+                    newPassword = it.take(30)
+                    hasCompleteAttempted = false
+                },
                 placeholder = "새 비밀번호 입력",
                 isVisible = isNewVisible,
                 onVisibilityToggle = { isNewVisible = !isNewVisible },
                 isError = newPasswordError != null,
                 errorMessage = newPasswordError,
-                supportMessage = "영문, 숫자 포함 8자 이상"
+                supportMessage = "영문, 숫자 포함 8자 이상",
+                errorBorderColor = SeniorOnColors.Red200,
+                showErrorIcon = true,
+                visibilityIconColor = SeniorOnColors.Gray300,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -363,31 +408,46 @@ fun ChangePasswordScreen(
             FindAccountPasswordTextField(
                 label = "새 비밀번호 확인",
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it.take(30) },
+                onValueChange = {
+                    confirmPassword = it.take(30)
+                    hasCompleteAttempted = false
+                },
                 placeholder = "새 비밀번호 재입력",
                 isVisible = isConfirmVisible,
                 onVisibilityToggle = { isConfirmVisible = !isConfirmVisible },
-                isError = !isConfirmValid,
-                errorMessage = if (!isConfirmValid) {
+                isError = showConfirmPasswordError,
+                errorMessage = if (showConfirmPasswordError) {
                     "비밀번호가 일치하지 않아요."
                 } else {
                     null
-                }
+                },
+                errorBorderColor = SeniorOnColors.Red200,
+                showErrorIcon = true,
+                visibilityIconColor = SeniorOnColors.Gray300,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
 
         SettingsPrimaryButton(
             text = "변경 완료",
             enabled = canComplete,
+            isLoading = isSaving,
             onClick = {
-                onCompleteClick(currentPassword, newPassword, confirmPassword)
+                hasCompleteAttempted = true
+                if (
+                    isNewPasswordFormatValid &&
+                    !isSameAsCurrent &&
+                    isConfirmValid
+                ) {
+                    onCompleteClick(currentPassword, newPassword, confirmPassword)
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
-                .height(48.dp)
+                .height(50.dp)
         )
     }
 }
@@ -401,17 +461,21 @@ private fun MyAccountProfileHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .height(141.dp)
             .background(SeniorOnColors.Background1)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SettingsProfileAvatar(
-            width = 65.dp,
+            width = 60.dp,
             height = 60.dp,
             borderWidth = 1.dp,
             editIconSize = 24.dp,
+            editIconOffsetX = 41.dp,
+            editIconOffsetY = 36.dp,
             imageUrl = profile.profileImageUrl,
             imageRevision = profile.profileImageRevision,
+            isUsingDefaultImage = profile.isUsingDefaultProfileImage,
             isUploading = profile.isProfileImageUploading,
             onEditClick = onEditClick
         )
@@ -421,11 +485,11 @@ private fun MyAccountProfileHeader(
         Column {
             Text(
                 text = profile.name,
-                style = SeniorOnTextStyles.BodyLBold,
+                style = SeniorOnTextStyles.HeadingXS,
                 color = SeniorOnColors.Gray800
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = profile.accountTypeLabel,

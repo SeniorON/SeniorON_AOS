@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -83,7 +84,7 @@ private fun ScheduleDatePickerSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 24.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
     ) {
         ScheduleCalendar(
             displayedMonth = displayedMonth,
@@ -107,7 +108,7 @@ private fun ScheduleDatePickerSheetContent(
                     color = SeniorOnColors.Primary600,
                     modifier = Modifier
                         .clickable(onClick = onDismiss)
-                        .padding(horizontal = 4.dp, vertical = 8.dp)
+                        .padding(all = 10.dp)
                 )
             },
             mode = ScheduleCalendarMode.BottomSheet
@@ -178,7 +179,7 @@ private fun ScheduleTimePickerSheetContent(
         Spacer(modifier = Modifier.height(14.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
+            verticalAlignment = Alignment.CenterVertically
         ) {
             WheelPicker(
                 values = periods,
@@ -186,12 +187,27 @@ private fun ScheduleTimePickerSheetContent(
                 onValueSelected = { periodIndex = periods.indexOf(it) },
                 modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(20.dp))
             WheelPicker(
                 values = (1..12).toList(),
                 selectedValue = hour,
                 onValueSelected = { hour = it },
                 modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(7.dp))
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .height(PickerViewportHeight),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = ":",
+                    style = SeniorOnTextStyles.HeadingXS,
+                    color = SeniorOnColors.Gray400
+                )
+            }
+            Spacer(modifier = Modifier.width(7.dp))
             WheelPicker(
                 values = (0..59).toList(),
                 selectedValue = minute,

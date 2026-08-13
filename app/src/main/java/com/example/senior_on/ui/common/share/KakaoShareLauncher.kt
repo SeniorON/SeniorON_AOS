@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.example.senior_on.BuildConfig
 import com.kakao.sdk.common.util.KakaoCustomTabsClient
 import com.kakao.sdk.share.ShareClient
@@ -12,12 +13,15 @@ import com.kakao.sdk.template.model.Link
 import com.kakao.sdk.template.model.TextTemplate
 
 object KakaoShareLauncher {
+    private const val LogTag = "SeniorOnKakaoShare"
+
     fun launch(
         context: Context,
         content: ShareContent,
         onResult: (ShareLaunchResult) -> Unit,
     ) {
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isBlank()) {
+            Log.e(LogTag, "Kakao native app key is missing")
             onResult(
                 ShareLaunchResult.Failure(
                     userMessage = "카카오 네이티브 앱 키가 설정되지 않았어요.",
@@ -35,7 +39,8 @@ object KakaoShareLauncher {
 
         runCatching {
             ShareClient.instance.isKakaoTalkSharingAvailable(context)
-        }.onFailure {
+        }.onFailure { throwable ->
+            Log.e(LogTag, "Failed to check KakaoTalk sharing availability", throwable)
             onResult(
                 ShareLaunchResult.Failure(
                     userMessage = "카카오톡 공유를 시작하지 못했어요.",
@@ -65,6 +70,7 @@ object KakaoShareLauncher {
     ) {
         ShareClient.instance.shareDefault(context, template) { result, error ->
             if (error != null || result == null) {
+                Log.e(LogTag, "KakaoTalk shareDefault failed", error)
                 onResult(
                     ShareLaunchResult.Failure(
                         userMessage = "카카오톡 공유를 시작하지 못했어요.",
@@ -82,7 +88,8 @@ object KakaoShareLauncher {
                 context.startActivity(intent)
             }.fold(
                 onSuccess = { onResult(ShareLaunchResult.Success) },
-                onFailure = {
+                onFailure = { throwable ->
+                    Log.e(LogTag, "Failed to open KakaoTalk share intent", throwable)
                     onResult(
                         ShareLaunchResult.Failure(
                             userMessage = "카카오톡을 열지 못했어요.",
@@ -108,6 +115,7 @@ object KakaoShareLauncher {
         }.fold(
             onSuccess = { onResult(ShareLaunchResult.Success) },
             onFailure = { throwable ->
+                Log.e(LogTag, "Kakao web share failed", throwable)
                 val userMessage = if (throwable is ActivityNotFoundException) {
                     "카카오톡 또는 웹 브라우저를 찾을 수 없어요."
                 } else {

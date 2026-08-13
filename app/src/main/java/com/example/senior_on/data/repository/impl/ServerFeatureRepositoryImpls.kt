@@ -1,5 +1,6 @@
 package com.example.senior_on.data.repository.impl
 
+import com.example.senior_on.common.time.koreaToday
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.DeviceIdentifierDataSource
@@ -21,6 +22,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 
 class HomeServerRepositoryImpl(
     private val source: HomeDataSource
@@ -193,6 +195,15 @@ class FamilyServerRepositoryImpl(
         source.changePrimaryManager(FamilyPrimaryManagerUpdateRequest(userId))
     }
     override suspend fun deleteMember(userId: Long) = source.deleteMember(userId)
+    override suspend fun getPhotoAlbums() = source.getAlbums().map { album ->
+        ServerFamilyPhotoAlbum(
+            uploaderId = album.uploaderUserId.requirePositiveFamilyId("uploaderUserId"),
+            uploaderName = album.uploaderName.orEmpty(),
+            latestPhotoUrl = album.latestPhotoUrl.orEmpty(),
+            photoCount = album.photoCount ?: 0L,
+            hasNewPhotos = album.hasNewPhotos == true,
+        )
+    }
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,
@@ -394,22 +405,31 @@ class MedicationRepositoryImpl(
         source.getParentSchedules(parentId, date.trim()).map(MedicationScheduleResponse::toDomain)
 
     override suspend fun getParentMonthlySchedules(parentId: Long, year: Int, month: Int) =
-        source.getParentMonthlySchedules(parentId, year, month).let { response ->
-            MedicationMonthlySchedule(
-                year = response.year ?: year,
-                month = response.month ?: month,
-                scheduledDates = response.scheduledDates.orEmpty()
-                    .mapNotNull { value ->
-                        runCatching { LocalDate.parse(value) }.getOrNull()
-                    }
-                    .toSet(),
-            )
-        }
+        source.getParentMonthlySchedules(parentId, year, month)
+            .toDomain(requestedYear = year, requestedMonth = month)
 
     override suspend fun markNearestTaken() = source.checkNearest().toDomain()
 
     override suspend fun markTaken(medicationLogId: Long) =
         source.check(medicationLogId).toDomain()
+}
+
+internal fun MedicationMonthlyScheduleResponse.toDomain(
+    requestedYear: Int,
+    requestedMonth: Int,
+): MedicationMonthlySchedule {
+    val requestedYearMonth = YearMonth.of(requestedYear, requestedMonth)
+    return MedicationMonthlySchedule(
+        year = requestedYear,
+        month = requestedMonth,
+        scheduledDates = scheduledDates.orEmpty()
+            .mapNotNull { value ->
+                runCatching { LocalDate.parse(value.trim()) }.getOrNull()
+            }
+            .filterTo(mutableSetOf()) { date ->
+                YearMonth.from(date) == requestedYearMonth
+            },
+    )
 }
 
 class NotificationRepositoryImpl(
@@ -544,6 +564,8 @@ class UserSettingsRepositoryImpl(
             role = account.role.orEmpty(),
             email = account.email.orEmpty(),
             profileImageUrl = profileImage.profileImageUrl,
+            isDefaultProfileImage = profileImage.isDefaultProfileImage
+                ?: profileImage.profileImageUrl.isNullOrBlank(),
         )
     }
 
@@ -558,6 +580,15 @@ class UserSettingsRepositoryImpl(
 
     override suspend fun getProfileImageUrl(): String? =
         source.getProfileImage().profileImageUrl
+
+    override suspend fun resetProfileImage(): UserProfileImage =
+        source.resetProfileImage().let { response ->
+            UserProfileImage(
+                profileImageUrl = response.profileImageUrl,
+                isDefaultProfileImage = response.isDefaultProfileImage
+                    ?: response.profileImageUrl.isNullOrBlank(),
+            )
+        }
 
     override suspend fun updateProfileImage(photo: PreparedFamilyPhoto): String? {
         val part = MultipartBody.Part.createFormData(
@@ -658,7 +689,7 @@ private fun MedicationInfo.toCreateRequest() =
         medicineName = name.trim(),
         ingredientName = ingredient?.trim()?.takeIf(String::isNotEmpty),
         medicineTimes = times,
-        startDate = startDate?.takeIf(String::isNotBlank) ?: LocalDate.now().toString(),
+        startDate = startDate?.takeIf(String::isNotBlank) ?: koreaToday().toString(),
         repeatType = repeatType,
         repeatInterval = repeatInterval.coerceAtLeast(1),
         medicineDays = days,
@@ -678,7 +709,7 @@ private fun MedicationInfo.toUpdateRequest() =
         medicineName = name.trim(),
         ingredientName = ingredient?.trim()?.takeIf(String::isNotEmpty),
         medicineTimes = times,
-        startDate = startDate?.takeIf(String::isNotBlank) ?: LocalDate.now().toString(),
+        startDate = startDate?.takeIf(String::isNotBlank) ?: koreaToday().toString(),
         repeatType = repeatType,
         repeatInterval = repeatInterval.coerceAtLeast(1),
         medicineDays = days,

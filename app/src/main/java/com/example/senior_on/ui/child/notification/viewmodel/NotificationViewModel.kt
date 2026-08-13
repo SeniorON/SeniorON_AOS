@@ -10,6 +10,7 @@ import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
+import com.example.senior_on.domain.model.server.DeviceInfo
 import com.example.senior_on.ui.child.notification.NotificationCategory
 import com.example.senior_on.ui.child.notification.NotificationMessageUiState
 import com.example.senior_on.ui.child.notification.NotificationScreenUiState
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 
 data class NotificationUiState(
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val home: NotificationScreenUiState = emptyNotificationScreenUiState(),
     val histories: Map<NotificationCategory, List<NotificationMessageUiState>> =
         emptyMap(),
@@ -54,14 +56,41 @@ class NotificationViewModel(
     private val confirmedSettings = mutableMapOf<NotificationCategory, Boolean>()
     private val desiredSettings = mutableMapOf<NotificationCategory, Boolean>()
     private val settingSyncJobs = mutableMapOf<NotificationCategory, Job>()
+    private var homeLoadJob: Job? = null
+    private var hasEnteredScreen = false
 
     init {
         loadHome()
     }
 
     fun loadHome() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        loadHome(isPullRefresh = false)
+    }
+
+    fun loadLatestHome() {
+        if (!hasEnteredScreen) {
+            hasEnteredScreen = true
+            return
+        }
+        if (homeLoadJob?.isActive == true) return
+        loadHome(isPullRefresh = false)
+    }
+
+    fun refreshHome() {
+        if (homeLoadJob?.isActive == true) return
+        loadHome(isPullRefresh = true)
+    }
+
+    private fun loadHome(isPullRefresh: Boolean) {
+        homeLoadJob?.cancel()
+        homeLoadJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = !isPullRefresh,
+                    isRefreshing = isPullRefresh,
+                    errorMessage = null,
+                )
+            }
             runCatching {
                 val familyMembers = familyRepository?.getMembers()
                 val parentUserId = familyMembers
@@ -79,6 +108,11 @@ class NotificationViewModel(
 
                 val home = async { repository.getHome() }
                 val parentOnline = async { repository.isParentDeviceOnline() }
+                val parentDevice = homeRepository?.let { repository ->
+                    async {
+                        runCatching { repository.getDevice() }
+                    }
+                }
                 val inactivitySetting = parentUserId?.let { targetUserId ->
                     async {
                         runCatching {
@@ -88,14 +122,25 @@ class NotificationViewModel(
                 }
                 val parentHome = async { homeRepository?.getHome() }
                 val parentHomeSnapshot = parentHome.await()
+                val parentDeviceResult = parentDevice?.await()
+                val isParentPhoneRegistered = when {
+                    parentDeviceResult == null -> true
+                    parentDeviceResult.isFailure -> true
+                    else -> parentDeviceResult.getOrNull()
+                        ?.hasRegisteredDeviceInformation() == true
+                }
                 NotificationHomeLoadResult(
-                    home = home.await().toUiState(
-                        isParentDeviceOnline = parentOnline.await(),
-                        hasHomeAddress = parentHomeSnapshot
-                            ?.seniorAddress
-                            ?.isNotBlank()
-                            ?: true,
-                    ),
+                    home = if (isParentPhoneRegistered) {
+                        home.await().toUiState(
+                            isParentDeviceOnline = parentOnline.await(),
+                            hasHomeAddress = parentHomeSnapshot
+                                ?.seniorAddress
+                                ?.isNotBlank()
+                                ?: true,
+                        )
+                    } else {
+                        parentNotConnectedNotificationScreenUiState()
+                    },
                     inactivityThresholdHours = inactivitySetting
                         ?.await()
                         ?.thresholdHours,
@@ -129,6 +174,7 @@ class NotificationViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         home = mergedHome,
                         inactivityThresholdHours =
                             result.inactivityThresholdHours
@@ -140,6 +186,7 @@ class NotificationViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         errorMessage = throwable.message,
                     )
                 }
@@ -478,5 +525,13 @@ private fun NotificationScreenUiState.withInactivityThresholdHours(
 
 private fun formatThresholdHours(thresholdHours: Int): String =
     "${thresholdHours}시간"
+
+private fun DeviceInfo.hasRegisteredDeviceInformation(): Boolean =
+    name.isNotBlank() ||
+        connected ||
+        networkConnected ||
+        batteryLevel != null ||
+        !lastConnectedAt.isNullOrBlank() ||
+        !lastLocationUpdatedAt.isNullOrBlank()
 
 private const val DefaultInactivityThresholdHours = 12
