@@ -6,7 +6,10 @@ data class PasswordChangeRequest(
 data class PasswordChangeResponse(val changed: Boolean?)
 data class NameUpdateRequest(val name: String)
 data class NameUpdateResponse(val name: String?)
-data class ProfileImageResponse(val profileImageUrl: String?)
+data class ProfileImageResponse(
+    val profileImageUrl: String?,
+    val isDefaultProfileImage: Boolean?,
+)
 data class ProfileImageUpdateResponse(val profileImageUrl: String?)
 data class UserAccountResponse(
     val name: String?,

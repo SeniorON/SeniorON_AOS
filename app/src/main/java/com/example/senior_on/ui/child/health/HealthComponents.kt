@@ -121,7 +121,7 @@ internal fun ScheduleSectionTitle(
         }
         Text(
             text = title,
-            style = SeniorOnTextStyles.HeadingS,
+            style = SeniorOnTextStyles.BodyLBold,
             color = SeniorOnColors.Gray800,
             modifier = Modifier.weight(1f)
         )

@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -203,6 +204,7 @@ private fun FamilyPhotoDetailActions(
             iconResId = R.drawable.ic_big_download,
             contentDescription = "사진 다운로드",
             enabled = !isSaving,
+            isLoading = isSaving,
             onClick = onDownloadClick
         )
 
@@ -211,6 +213,7 @@ private fun FamilyPhotoDetailActions(
                 iconResId = R.drawable.ic_big_trash2,
                 contentDescription = "사진 삭제",
                 enabled = !isDeleting,
+                isLoading = isDeleting,
                 onClick = onDeleteClick
             )
         }
@@ -222,24 +225,32 @@ private fun FamilyPhotoDetailActionIcon(
     iconResId: Int,
     contentDescription: String,
     enabled: Boolean,
+    isLoading: Boolean = false,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .size(30.dp)
-            .alpha(if (enabled) 1f else 0.5f)
+            .alpha(if (enabled || isLoading) 1f else 0.5f)
             .clickable(
-                enabled = enabled,
+                enabled = enabled && !isLoading,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            painter = painterResource(id = iconResId),
-            contentDescription = contentDescription,
-            modifier = Modifier.size(30.dp),
-            tint = SeniorOnColors.Gray800
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(
+                color = SeniorOnColors.Gray800,
+                size = 22.dp,
+            )
+        } else {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(30.dp),
+                tint = SeniorOnColors.Gray800
+            )
+        }
     }
 }
 

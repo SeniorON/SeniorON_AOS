@@ -34,6 +34,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
+import com.example.senior_on.data.local.SessionExpirationEventStore
 import com.example.senior_on.device.ParentDeviceStatusScheduler
 import com.example.senior_on.device.ParentInactivityMonitor
 import com.example.senior_on.ui.parent.chat.ParentChatBuddyRoute
@@ -77,6 +78,17 @@ fun ParentLauncherRoute(
 ) {
     RequestDefaultParentRolesOnEntry()
 
+    val sessionExpirationEvent by
+        SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
+    var sessionExpirationRequest by rememberSaveable { mutableStateOf(0) }
+
+    LaunchedEffect(sessionExpirationEvent) {
+        sessionExpirationEvent ?: return@LaunchedEffect
+        appContainer.sessionRepository.clearSession()
+        sessionExpirationRequest += 1
+        SessionExpirationEventStore.consume()
+    }
+
     val familyMembershipViewModel: ParentFamilyMembershipViewModel = viewModel(
         factory = ParentFamilyMembershipViewModel.factory(
             repository = appContainer.familyServerRepository,
@@ -84,6 +96,15 @@ fun ParentLauncherRoute(
     )
     val familyMembershipUiState by familyMembershipViewModel.uiState
         .collectAsStateWithLifecycle()
+
+    if (sessionExpirationRequest > 0) {
+        ParentLauncherContent(
+            appContainer = appContainer,
+            sessionExpirationRequest = sessionExpirationRequest,
+            modifier = modifier,
+        )
+        return
+    }
 
     when (familyMembershipUiState.status) {
         ParentFamilyMembershipStatus.Checking ->
@@ -100,12 +121,14 @@ fun ParentLauncherRoute(
         ParentFamilyMembershipStatus.Error ->
             ParentLauncherContent(
                 appContainer = appContainer,
+                sessionExpirationRequest = sessionExpirationRequest,
                 modifier = modifier,
             )
 
         ParentFamilyMembershipStatus.Connected ->
             ParentLauncherContent(
                 appContainer = appContainer,
+                sessionExpirationRequest = sessionExpirationRequest,
                 modifier = modifier,
             )
     }
@@ -114,6 +137,7 @@ fun ParentLauncherRoute(
 @Composable
 private fun ParentLauncherContent(
     appContainer: AppContainer,
+    sessionExpirationRequest: Int,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -148,28 +172,50 @@ private fun ParentLauncherContent(
     var highlightedMedicationLogId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
+    var linkDetectionUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
     val notificationNavigationEvent by
         NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
 
+    LaunchedEffect(sessionExpirationRequest) {
+        if (sessionExpirationRequest == 0) return@LaunchedEffect
+        destination = ParentDestination.Home
+        highlightedMedicationLogId = null
+        linkDetectionUrl = null
+    }
+
     LaunchedEffect(notificationNavigationEvent) {
         val event = notificationNavigationEvent ?: return@LaunchedEffect
-        when {
-            event.isMedicationNotification -> {
-                highlightedMedicationLogId = event.medicationLogId
-                MedicationReminderEventStore.consume()
-                destination = ParentDestination.Medication
+        try {
+            when {
+                event.isMedicationNotification -> {
+                    highlightedMedicationLogId = event.medicationLogId
+                    MedicationReminderEventStore.consume()
+                    destination = ParentDestination.Medication
+                }
+                else -> {
+                    val eventDetail = event.eventId
+                        ?.takeIf { event.type == null || event.linkUrl == null }
+                        ?.let { eventId ->
+                            runCatching {
+                                appContainer.eventRepository.getDetail(eventId)
+                            }.getOrNull()
+                        }
+                    val eventType = event.type ?: eventDetail?.type
+
+                    if (eventType == "RISK_LINK") {
+                        linkDetectionUrl = event.linkUrl ?: eventDetail?.linkUrl
+                        destination = ParentDestination.LinkDetection
+                    } else {
+                        destination = ParentDestination.Home
+                    }
+                }
             }
-            event.type == "RISK_LINK" -> {
-                destination = ParentDestination.LinkDetection
-            }
-            else -> {
-                destination = ParentDestination.Home
-            }
+        } finally {
+            NotificationNavigationEventStore.consume()
         }
-        NotificationNavigationEventStore.consume()
     }
 
     ParentDeviceStatusLifecycleEffect(
@@ -183,6 +229,7 @@ private fun ParentLauncherContent(
     fun openHome() {
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
+        linkDetectionUrl = null
     }
 
     BackHandler {
@@ -234,12 +281,13 @@ private fun ParentLauncherContent(
 
         ParentDestination.LinkDetection -> ParentLinkDetectionRoute(
             repository = appContainer.parentLinkSafetyRepository,
+            url = linkDetectionUrl,
             onBackClick = ::openHome,
             modifier = modifier,
         )
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
-            repository = appContainer.parentFamilyPhotoRepository,
+            repository = appContainer.familyServerRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )

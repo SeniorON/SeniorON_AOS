@@ -522,12 +522,28 @@ private fun SeniorProfileUpdateResponse.toParentInfo(current: ParentInfo): Paren
 private fun ConnectionResponse?.toDisplayDevice(): DisplayDevice? {
     if (this == null) return null
     val deviceName = device_name?.trim().orEmpty()
-    if (deviceName.isEmpty() && connected != true && battery == null) return null
+    val normalizedStatus = connection_status.normalizedConnectionStatus()
+    if (normalizedStatus == DEVICE_STATUS_DISCONNECTED) return null
+
+    val hasKnownDevice =
+        deviceName.isNotEmpty() ||
+            connected == true ||
+            battery != null ||
+            normalizedStatus == DEVICE_STATUS_ONLINE ||
+            normalizedStatus == DEVICE_STATUS_OFFLINE
+    if (!hasKnownDevice) return null
+
+    val isOnline = when (normalizedStatus) {
+        DEVICE_STATUS_ONLINE,
+        DEVICE_STATUS_CONNECTED -> true
+        DEVICE_STATUS_OFFLINE -> false
+        else -> connected == true
+    }
 
     return DisplayDevice(
         id = deviceName.ifEmpty { DEFAULT_DEVICE_ID },
         name = deviceName.ifEmpty { DEFAULT_DEVICE_NAME },
-        connectionStatus = if (connected == true) {
+        connectionStatus = if (isOnline) {
             DisplayDeviceConnectionStatus.Online
         } else {
             DisplayDeviceConnectionStatus.Offline
@@ -550,8 +566,8 @@ private fun DeviceDetailResponse.toDisplayDevice(): DisplayDevice? {
     val normalizedStatus = connectionStatus?.trim()?.uppercase()
     val isOnline = connected == true ||
         networkConnected == true ||
-        normalizedStatus == "ONLINE" ||
-        normalizedStatus == "CONNECTED"
+        normalizedStatus == DEVICE_STATUS_ONLINE ||
+        normalizedStatus == DEVICE_STATUS_CONNECTED
 
     return DisplayDevice(
         id = resolvedName.ifEmpty { DEFAULT_DEVICE_ID },
@@ -566,6 +582,9 @@ private fun DeviceDetailResponse.toDisplayDevice(): DisplayDevice? {
         lastLocationUpdatedAtLabel = lastLocationUpdatedAt,
     )
 }
+
+private fun String?.normalizedConnectionStatus(): String? =
+    this?.trim()?.uppercase()
 
 private fun HomeButtonResponse.toButtonType(): SeniorHomeButtonType? =
     resolveButtonType(
@@ -1219,6 +1238,10 @@ private val BUTTON_TYPE_BY_KEY: Map<String, SeniorHomeButtonType> = buildMap {
 }
 
 private const val DEFAULT_DEVICE_ID = "connected-senior-device"
+private const val DEVICE_STATUS_ONLINE = "ONLINE"
+private const val DEVICE_STATUS_OFFLINE = "OFFLINE"
+private const val DEVICE_STATUS_DISCONNECTED = "DISCONNECTED"
+private const val DEVICE_STATUS_CONNECTED = "CONNECTED"
 private const val DEFAULT_DEVICE_NAME = "시니어폰"
 private const val PRIMARY_MANAGER_TYPE = "PRIMARY"
 private const val MINIMUM_BUTTON_COUNT = 8

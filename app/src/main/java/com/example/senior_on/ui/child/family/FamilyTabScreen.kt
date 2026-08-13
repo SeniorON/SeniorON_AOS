@@ -263,7 +263,7 @@ private fun FamilyOverviewSection(
                 }
             }
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         FamilySectionIntroduction()
 

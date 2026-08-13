@@ -54,6 +54,7 @@ import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
 import com.example.senior_on.domain.repository.server.HospitalRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
+import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
@@ -82,7 +83,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
 import java.util.UUID
 
-private enum class ChildFamilyDestination {
+internal enum class ChildFamilyDestination {
     Overview,
     MemberSettings,
     Invitation,
@@ -107,6 +108,7 @@ fun ChildMainScreen(
     userSettingsRepository: UserSettingsRepository,
     medicationRepository: MedicationRepository? = null,
     hospitalRepository: HospitalRepository? = null,
+    hospitalSpecialtyRepository: HospitalSpecialtyRepository? = null,
     homeServerRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
     deviceRepository: DeviceRepository? = null,
@@ -144,6 +146,9 @@ fun ChildMainScreen(
     }
     var photoDetailReturnDestination by rememberSaveable {
         mutableStateOf(ChildFamilyDestination.PhotoGallery)
+    }
+    var photoShareReturnDestination by rememberSaveable {
+        mutableStateOf(ChildFamilyDestination.Overview)
     }
     var selectedPhotoId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -189,6 +194,9 @@ fun ChildMainScreen(
         familyDestination = ChildFamilyDestination.PhotoDetail
     }
     val navigateToPhotoShare = { photoUri: String ->
+        if (familyDestination != ChildFamilyDestination.PhotoShare) {
+            photoShareReturnDestination = familyDestination
+        }
         selectedPhotoUri = photoUri
         selectedPhotoSessionId = UUID.randomUUID().toString()
         familyDestination = ChildFamilyDestination.PhotoShare
@@ -225,14 +233,12 @@ fun ChildMainScreen(
         Unit
     }
     val navigateBackInFamily = {
-        familyDestination = when (familyDestination) {
-            ChildFamilyDestination.Invitation -> invitationReturnDestination
-            ChildFamilyDestination.MemberSettings -> ChildFamilyDestination.Overview
-            ChildFamilyDestination.PhotoGallery -> ChildFamilyDestination.Overview
-            ChildFamilyDestination.PhotoShare -> ChildFamilyDestination.PhotoGallery
-            ChildFamilyDestination.PhotoDetail -> photoDetailReturnDestination
-            ChildFamilyDestination.Overview -> ChildFamilyDestination.Overview
-        }
+        familyDestination = resolveChildFamilyBackDestination(
+            currentDestination = familyDestination,
+            invitationReturnDestination = invitationReturnDestination,
+            photoShareReturnDestination = photoShareReturnDestination,
+            photoDetailReturnDestination = photoDetailReturnDestination,
+        )
     }
 
     BackHandler(
@@ -255,6 +261,7 @@ fun ChildMainScreen(
             familyViewModel = familyViewModel,
             familyPhotoUploadViewModel = familyPhotoUploadViewModel,
             familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
+            settingsSessionKey = childSessionViewModelKey,
             displayViewModel = displayViewModel,
             parentInfo = displayUiState.parentInfo,
             connectedDevice = connectedDevice,
@@ -278,6 +285,7 @@ fun ChildMainScreen(
             notificationRepository = notificationRepository,
             medicationRepository = medicationRepository,
             hospitalRepository = hospitalRepository,
+            hospitalSpecialtyRepository = hospitalSpecialtyRepository,
             familyServerRepository = familyServerRepository,
             homeServerRepository = homeServerRepository,
             eventRepository = eventRepository,
@@ -335,6 +343,20 @@ fun ChildMainScreen(
     }
 }
 
+internal fun resolveChildFamilyBackDestination(
+    currentDestination: ChildFamilyDestination,
+    invitationReturnDestination: ChildFamilyDestination = ChildFamilyDestination.Overview,
+    photoShareReturnDestination: ChildFamilyDestination = ChildFamilyDestination.Overview,
+    photoDetailReturnDestination: ChildFamilyDestination = ChildFamilyDestination.PhotoGallery,
+): ChildFamilyDestination = when (currentDestination) {
+    ChildFamilyDestination.Invitation -> invitationReturnDestination
+    ChildFamilyDestination.MemberSettings -> ChildFamilyDestination.Overview
+    ChildFamilyDestination.PhotoGallery -> ChildFamilyDestination.Overview
+    ChildFamilyDestination.PhotoShare -> photoShareReturnDestination
+    ChildFamilyDestination.PhotoDetail -> photoDetailReturnDestination
+    ChildFamilyDestination.Overview -> ChildFamilyDestination.Overview
+}
+
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
@@ -345,6 +367,7 @@ private fun ChildMainTabContent(
     familyViewModel: FamilyViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     familyInvitationViewModelKey: String,
+    settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
@@ -359,6 +382,7 @@ private fun ChildMainTabContent(
     notificationRepository: NotificationRepository,
     medicationRepository: MedicationRepository?,
     hospitalRepository: HospitalRepository?,
+    hospitalSpecialtyRepository: HospitalSpecialtyRepository?,
     familyServerRepository: FamilyServerRepository,
     homeServerRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
@@ -391,12 +415,14 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Health) {
         if (
             medicationRepository != null &&
-            hospitalRepository != null
+            hospitalRepository != null &&
+            hospitalSpecialtyRepository != null
         ) {
             HealthMainRoute(
                 medicationRepository = medicationRepository,
                 hospitalRepository = hospitalRepository,
                 familyRepository = familyServerRepository,
+                hospitalSpecialtyRepository = hospitalSpecialtyRepository,
                 modifier = modifier,
             )
         } else {
@@ -493,6 +519,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            sessionKey = settingsSessionKey,
             parentInfo = parentInfo,
             connectedDevice = connectedDevice,
             displayViewModel = displayViewModel,

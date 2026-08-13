@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.example.senior_on.ui.parent.photo
 
 import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoUiState
@@ -36,7 +38,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -73,6 +77,8 @@ fun ParentFamilyMembersPhotoScreen(
     onBackClick: () -> Unit,
     onMemberClick: (String) -> Unit,
     onRetryClick: () -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -86,6 +92,11 @@ fun ParentFamilyMembersPhotoScreen(
             onBackClick = onBackClick
         )
 
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
         when {
             uiState.isLoading -> ParentPhotoLoading()
             uiState.errorMessage != null -> ParentPhotoError(
@@ -116,6 +127,7 @@ fun ParentFamilyMembersPhotoScreen(
         }
     }
 }
+}
 
 @Composable
 private fun ParentPhotoMemberCard(
@@ -123,7 +135,7 @@ private fun ParentPhotoMemberCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val latestPhoto = member.latestPhoto ?: return
+    val latestPhotoSource = member.latestPhotoSource ?: return
 
     Box(
         modifier = modifier
@@ -140,7 +152,7 @@ private fun ParentPhotoMemberCard(
             .clickable(onClick = onClick)
     ) {
         ParentPhotoImage(
-            imageSource = latestPhoto.imageSource,
+            imageSource = latestPhotoSource,
             contentDescription = "${member.memberName}님의 최근 사진",
             modifier = Modifier.fillMaxSize()
         )
@@ -169,13 +181,13 @@ private fun ParentPhotoMemberCard(
                 color = SeniorOnColors.SupportWhite100
             )
             Text(
-                text = "사진 ${member.photos.size}장",
+                text = "사진 ${member.photoCount}장",
                 style = SeniorOnTextStyles.HeadingXS,
                 color = SeniorOnColors.SupportWhite100
             )
         }
 
-        if (latestPhoto.isNew) {
+        if (member.hasNewPhotos) {
             Text(
                 text = "새로운 사진",
                 modifier = Modifier
@@ -196,8 +208,15 @@ private fun ParentPhotoMemberCard(
 @Composable
 fun ParentMemberPhotoGridScreen(
     member: ParentPhotoMemberUiModel,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    hasMorePhotos: Boolean = false,
+    isRefreshing: Boolean = false,
     onBackClick: () -> Unit,
     onPhotoClick: (String) -> Unit,
+    onLoadMore: () -> Unit = {},
+    onRetryClick: () -> Unit = {},
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -218,6 +237,11 @@ fun ParentMemberPhotoGridScreen(
             color = SeniorOnColors.Gray800
         )
 
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
@@ -238,6 +262,20 @@ fun ParentMemberPhotoGridScreen(
                     onClick = { onPhotoClick(photo.id) }
                 )
             }
+            if (hasMorePhotos && member.photos.isNotEmpty()) {
+                item(key = "load-more") {
+                    LaunchedEffect(member.photos.size) { onLoadMore() }
+                }
+            }
+            if (isLoading) {
+                item(key = "loading") { ParentPhotoLoading() }
+            }
+            if (errorMessage != null) {
+                item(key = "error") {
+                    ParentPhotoError(errorMessage, onRetryClick)
+                }
+            }
+        }
         }
     }
 }
@@ -293,6 +331,7 @@ fun ParentPhotoViewerScreen(
     member: ParentPhotoMemberUiModel,
     initialPhotoId: String,
     onBackClick: () -> Unit,
+    onPhotoViewed: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val initialPage = remember(initialPhotoId, member.photos) {
@@ -304,6 +343,10 @@ fun ParentPhotoViewerScreen(
         pageCount = { member.photos.size }
     )
     val currentPhoto = member.photos.getOrNull(pagerState.currentPage)
+
+    LaunchedEffect(currentPhoto?.id) {
+        currentPhoto?.id?.let(onPhotoViewed)
+    }
 
     Column(
         modifier = modifier
@@ -563,6 +606,13 @@ private fun parentPhotoPreviewMember(
     return ParentPhotoMemberUiModel(
         memberId = memberId,
         memberName = memberName,
+        photoCount = 10,
+        hasNewPhotos = true,
+        latestPhotoSource = if (memberId == MockUserFixtures.ASSISTANT_CAREGIVER_USER_ID) {
+            assistantImage
+        } else {
+            primaryImage
+        },
         photos = List(10) { index ->
             val photoNumber = index + 1
             ParentFamilyPhotoUiModel(

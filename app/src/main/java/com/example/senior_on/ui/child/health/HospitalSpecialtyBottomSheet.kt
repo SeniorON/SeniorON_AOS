@@ -38,7 +38,6 @@ import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
-private const val CollapsedSpecialtyCount = 9
 private const val DirectInputOption = "직접 작성"
 
 @Composable
@@ -58,8 +57,9 @@ internal fun HospitalSpecialtyBottomSheet(
             }
         )
     }
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val visibleSpecialties = if (expanded) specialties else specialties.take(CollapsedSpecialtyCount)
+    val orderedSpecialties = specialties
+        .filterNot { it == DirectInputOption }
+        .plus(DirectInputOption)
     val canSave = pending.isNotEmpty() && pending != DirectInputOption
     NonDraggableBottomSheet {
         Column(
@@ -80,7 +80,7 @@ internal fun HospitalSpecialtyBottomSheet(
                     .fillMaxWidth()
                     .animateContentSize(animationSpec = tween(durationMillis = 250))
             ) {
-                visibleSpecialties.chunked(3).forEach { rowItems ->
+                orderedSpecialties.chunked(3).forEach { rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -106,30 +106,6 @@ internal fun HospitalSpecialtyBottomSheet(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
-
-            Row(
-                modifier = Modifier
-                    .clickable { expanded = !expanded }
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(
-                        id = if (expanded) R.drawable.ic_sm_fold
-                        else R.drawable.ic_sm_chevron_down_2
-                    ),
-                    contentDescription = null,
-                    tint = SeniorOnColors.Primary600,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(
-                    text = if (expanded) "접기" else "더보기",
-                    style = SeniorOnTextStyles.BodySMedium,
-                    color = SeniorOnColors.Primary600
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -180,11 +156,25 @@ private fun SpecialtyOption(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            style = SeniorOnTextStyles.BodySMedium,
-            color = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray800
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            if (label == DirectInputOption) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_pencil),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray800,
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+            Text(
+                text = label,
+                style = SeniorOnTextStyles.BodySMedium,
+                color = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray800,
+            )
+        }
     }
 }
 
@@ -255,7 +245,6 @@ private fun HospitalSpecialtyBottomSheetPreview() {
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 MockHospitalSpecialtyDataSource.specialties
-                    .take(CollapsedSpecialtyCount)
                     .chunked(3)
                     .forEach { rowItems ->
                         Row(
@@ -273,24 +262,6 @@ private fun HospitalSpecialtyBottomSheetPreview() {
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                     }
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_sm_chevron_down_2),
-                        contentDescription = null,
-                        tint = SeniorOnColors.Primary600,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "더보기",
-                        style = SeniorOnTextStyles.BodySMedium,
-                        color = SeniorOnColors.Primary600
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -373,24 +344,6 @@ private fun HospitalSpecialtyBottomSheetExpandedPreview() {
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                     }
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_sm_fold),
-                        contentDescription = null,
-                        tint = SeniorOnColors.Primary600,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "접기",
-                        style = SeniorOnTextStyles.BodySMedium,
-                        color = SeniorOnColors.Primary600
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)

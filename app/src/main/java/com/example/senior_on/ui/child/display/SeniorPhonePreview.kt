@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
 import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
@@ -56,6 +57,7 @@ import kotlin.math.roundToInt
 @Composable
 internal fun SeniorPhonePreview(
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton> = emptyList(),
     previewWidth: Dp = 116.dp,
     previewHeight: Dp = 263.dp,
     weather: DisplayWeather? = null,
@@ -84,6 +86,7 @@ internal fun SeniorPhonePreview(
             content = {
                 SeniorPhoneDesign(
                     configuration = configuration,
+                    buttonItems = buttonItems,
                     weather = weather,
                     isWeatherLoading = isWeatherLoading,
                     todaySchedule = todaySchedule,
@@ -118,29 +121,19 @@ internal fun SeniorPhonePreview(
 @Composable
 private fun SeniorPhoneDesign(
     configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton>,
     weather: DisplayWeather?,
     isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
     scrollEnabled: Boolean,
 ) {
     val now = rememberKoreaDateTime()
-    val musicButtonType = configuration.buttons.firstOrNull {
-        it.isMusicButton()
-    }
-    val musicButton = musicButtonType?.toPreviewButton(
-        id = -1L,
-        label = configuration.customButtonLabels[musicButtonType]
-            ?: musicButtonType.displayLabel(),
+    val previewButtons = resolvePreviewButtons(
+        configuration = configuration,
+        buttonItems = buttonItems,
     )
-    val buttons = configuration.buttons
-        .filterNot { it.isMusicButton() }
-        .mapIndexed { index, type ->
-            type.toPreviewButton(
-                id = index.toLong(),
-                label = configuration.customButtonLabels[type]
-                    ?: type.displayLabel(),
-            )
-        }
+    val musicButton = previewButtons.firstOrNull { it.type.isMusicButton() }
+    val buttons = previewButtons.filterNot { it.type.isMusicButton() }
 
     Column(
         modifier = Modifier
@@ -252,6 +245,32 @@ private fun SeniorHomeButtonType.toPreviewButton(
     actionType = null,
     actionValue = name,
     packageName = null,
+)
+
+internal fun resolvePreviewButtons(
+    configuration: SeniorScreenConfiguration,
+    buttonItems: List<DisplayHomeButton>,
+): List<ParentHomeButtonUiModel> {
+    if (buttonItems.isNotEmpty()) {
+        return buttonItems.map(DisplayHomeButton::toPreviewButton)
+    }
+
+    return configuration.buttons.mapIndexed { index, type ->
+        type.toPreviewButton(
+            id = index.toLong(),
+            label = configuration.customButtonLabels[type]
+                ?: type.displayLabel(),
+        )
+    }
+}
+
+private fun DisplayHomeButton.toPreviewButton() = ParentHomeButtonUiModel(
+    id = id,
+    type = type,
+    label = name,
+    actionType = actionType,
+    actionValue = actionValue,
+    packageName = packageName,
 )
 
 private fun DisplayTodaySchedule?.toPreviewScheduleUiState() =

@@ -10,7 +10,8 @@ data class VerifyPasswordResetVerificationCodeResponse(
 )
 
 data class FindLoginIdResponse(
-    val loginId: String
+    val loginId: String,
+    val createdAt: String,
 )
 
 data class ResetPasswordResponse(

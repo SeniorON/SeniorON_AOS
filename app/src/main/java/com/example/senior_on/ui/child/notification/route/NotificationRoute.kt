@@ -166,6 +166,7 @@ fun NotificationRoute(
                     onRefreshClick = {
                         viewModel.openNotification(category, message)
                     },
+                    isRefreshing = uiState.isDetailLoading,
                     modifier = modifier,
                 )
             }
@@ -173,6 +174,8 @@ fun NotificationRoute(
 
         NotificationDestination.InactivitySetting -> InactivitySettingRoute(
             initialHours = uiState.inactivityThresholdHours,
+            isLoading = uiState.isInactivitySettingLoading,
+            isSaving = uiState.isInactivitySettingSaving,
             onBackClick = {
                 destination = NotificationDestination.Home
             },

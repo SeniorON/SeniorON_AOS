@@ -76,14 +76,26 @@ fun DisplayTabRoute(
         mutableStateOf<PickedInstalledApp?>(null)
     }
     var autoSelectKey by remember { mutableStateOf<String?>(null) }
+    var autoSelectMusicButton by remember {
+        mutableStateOf<SeniorHomeButtonType?>(null)
+    }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
 
     fun importButton(button: DisplayHomeButton) {
+        val importedMusicButton = button.importedMusicButtonTypeOrNull()
+        if (importedMusicButton != null) {
+            autoSelectKey = null
+            autoSelectMusicButton = importedMusicButton
+            autoSelectEvent += 1
+            return
+        }
+
         if (button.actionType.equals("APP", ignoreCase = true)) {
             transientImportedButtons = (
                 transientImportedButtons + button
                 ).distinctBy(DisplayHomeButton::stableKey)
         }
+        autoSelectMusicButton = null
         autoSelectKey = button.stableKey
         autoSelectEvent += 1
     }
@@ -96,15 +108,15 @@ fun DisplayTabRoute(
         if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
         val pickedApp = readPickedInstalledApp(context, result.data)
             ?: return@rememberLauncherForActivityResult
+        if (pickedApp.requiresManualNameInput) {
+            pendingAppNameInput = pickedApp
+            return@rememberLauncherForActivityResult
+        }
         val importedButton = pickedApp.toDisplayHomeButton(
             context = context,
             defaultButtons = uiState.availableButtonOptions,
         )
-        if (importedButton == null) {
-            pendingAppNameInput = pickedApp
-        } else {
-            importButton(importedButton)
-        }
+        importedButton?.let(::importButton)
     }
 
     fun navigateBack() {
@@ -116,6 +128,7 @@ fun DisplayTabRoute(
             )
             transientImportedButtons = emptyList()
             autoSelectKey = null
+            autoSelectMusicButton = null
             saveableStateHolder.removeState(DisplayDestination.ButtonAdd.name)
         }
         destination = when (destination) {
@@ -150,6 +163,7 @@ fun DisplayTabRoute(
         buttonAddEntryItems = emptyList()
         transientImportedButtons = emptyList()
         autoSelectKey = null
+        autoSelectMusicButton = null
         listOf(
             DisplayDestination.ButtonEditGuide,
             DisplayDestination.ButtonEditSelected,
@@ -233,6 +247,7 @@ fun DisplayTabRoute(
                             buttonAddEntryItems = emptyList()
                             transientImportedButtons = emptyList()
                             autoSelectKey = null
+                            autoSelectMusicButton = null
                             destination = DisplayDestination.ButtonEditGuide
                             onButtonEditClick()
                         }
@@ -243,6 +258,8 @@ fun DisplayTabRoute(
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
                 device = uiState.device,
                 relationshipLabel = uiState.relationshipLabel ?: "부모님",
+                isRefreshing = uiState.isRefreshingDevice,
+                isDisconnecting = uiState.isSaving,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onRefreshClick = {
@@ -304,6 +321,7 @@ fun DisplayTabRoute(
                 selectedAddress = selectedAddress,
                 selectedAddressLatitude = selectedAddressLatitude,
                 selectedAddressLongitude = selectedAddressLongitude,
+                isSubmitting = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSearchAddressClick = {
                     destination = DisplayDestination.AddressSearch
@@ -337,12 +355,14 @@ fun DisplayTabRoute(
             DisplayDestination.FontEdit -> DisplayFontEditScreen(
                 initialFontSize = uiState.screenConfiguration.fontSize,
                 buttons = uiState.screenConfiguration.buttons,
+                buttonItems = uiState.configuredButtonItems,
                 customButtonLabels =
                     uiState.screenConfiguration.customButtonLabels,
                 weather = uiState.weather,
                 isWeatherLoading = uiState.isWeatherLoading,
                 todaySchedule = uiState.todaySchedule,
                 modifier = modifier,
+                isSaving = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSaveClick = { fontSize ->
                     viewModel.updateFontSize(
@@ -372,6 +392,7 @@ fun DisplayTabRoute(
                 initialButtons = buttonEditDraftItems
                     .ifEmpty { uiState.configuredButtonItems },
                 modifier = modifier,
+                isSaving = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSaveClick = { buttons ->
                     val savedButtons = buttons.withRequiredSeniorHomeButtons()
@@ -388,6 +409,7 @@ fun DisplayTabRoute(
                     buttonAddEntryItems = buttons
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
+                    autoSelectMusicButton = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -406,6 +428,7 @@ fun DisplayTabRoute(
                     .firstOrNull(SeniorHomeButtonType::isMusicButton),
                 transientImportedButtons = transientImportedButtons,
                 autoSelectKey = autoSelectKey,
+                autoSelectMusicButton = autoSelectMusicButton,
                 autoSelectEvent = autoSelectEvent,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
@@ -436,6 +459,7 @@ fun DisplayTabRoute(
                     )
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
+                    autoSelectMusicButton = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -450,6 +474,7 @@ fun DisplayTabRoute(
                 initialButtons = buttonEditDraftItems
                     .ifEmpty { uiState.configuredButtonItems },
                 modifier = modifier,
+                isSaving = uiState.isSaving,
                 onBackClick = ::navigateBack,
                 onSaveClick = { orderedButtons ->
                     val savedButtons = orderedButtons.withRequiredSeniorHomeButtons()
@@ -473,11 +498,9 @@ fun DisplayTabRoute(
     }
 
     pendingAppNameInput?.let { pickedApp ->
-        ButtonNameEditBottomSheet(
-            initialName = "",
-            title = "버튼 이름 설정",
+        MissingAppNameDialog(
             onDismiss = { pendingAppNameInput = null },
-            onSave = { name ->
+            onConfirm = { name ->
                 pickedApp.toDisplayHomeButton(
                     context = context,
                     defaultButtons = uiState.availableButtonOptions,
@@ -491,6 +514,7 @@ fun DisplayTabRoute(
     if (showLargePreview) {
         SeniorScreenLargePreviewDialog(
             configuration = uiState.screenConfiguration,
+            buttonItems = uiState.configuredButtonItems,
             onDismiss = { showLargePreview = false },
             weather = uiState.weather,
             isWeatherLoading = uiState.isWeatherLoading,

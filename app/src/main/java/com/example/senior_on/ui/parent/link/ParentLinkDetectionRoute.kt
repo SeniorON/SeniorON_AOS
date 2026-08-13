@@ -39,6 +39,7 @@ fun ParentLinkDetectionRoute(
 
     ParentLinkDetectionScreen(
         uiState = uiState,
+        onBackClick = onBackClick,
         modifier = modifier,
     )
 }

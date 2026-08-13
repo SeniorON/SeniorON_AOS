@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.common.time.koreaToday
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -30,7 +31,7 @@ fun HealthScreen(
     registeredMedications: List<RegisteredMedicationUiState> = previewRegisteredMedications(),
     todayMedications: List<TodayMedicationUiState> = previewTodayMedications(),
     medicationMarkedDates: Set<LocalDate> = previewMedicationMarkedDates(),
-    selectedDate: LocalDate = LocalDate.now(),
+    selectedDate: LocalDate = koreaToday(),
     onSelectedDateChange: (LocalDate) -> Unit = {},
     onAddTodayMedicationClick: () -> Unit = {},
     onAddRegisteredMedicationClick: () -> Unit = {},
@@ -38,11 +39,16 @@ fun HealthScreen(
 ) {
     var showCalendar by rememberSaveable { mutableStateOf(false) }
     val displayedMonth = remember(selectedDate) { YearMonth.from(selectedDate) }
+    val activeRegisteredMedications = remember(registeredMedications, selectedDate) {
+        registeredMedications.filter { medication ->
+            medication.isActiveOn(selectedDate)
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SeniorOnColors.Background1)
+            .background(SeniorOnColors.SupportWhite100)
     ) {
         Column(
             modifier = Modifier
@@ -64,7 +70,7 @@ fun HealthScreen(
             )
 
             RegisteredMedicationsSection(
-                medications = registeredMedications,
+                medications = activeRegisteredMedications,
                 onAddMedicationClick = onAddRegisteredMedicationClick,
                 onMedicationClick = onRegisteredMedicationClick
             )
@@ -107,11 +113,8 @@ fun HealthScreen(
                     )
                 },
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(
-                        start = HealthCalendarCardStartOffset,
-                        top = HealthCalendarCardTopOffset
-                    )
+                    .align(Alignment.TopCenter)
+                    .padding(top = HealthCalendarCardTopOffset)
                     .zIndex(2f)
             )
         }

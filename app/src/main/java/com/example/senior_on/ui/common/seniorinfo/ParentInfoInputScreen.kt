@@ -278,6 +278,7 @@ fun ParentInfoInputScreen(
             ParentInfoScreenMode.Edit -> SeniorInfoEditBottomAction(
                 onSaveClick = saveParentInfo,
                 isSaveEnabled = isSaveEnabled,
+                isSubmitting = isSubmitting,
             )
         }
     }

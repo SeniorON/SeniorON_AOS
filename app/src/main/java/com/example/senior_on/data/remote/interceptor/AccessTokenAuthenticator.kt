@@ -1,6 +1,7 @@
 package com.example.senior_on.data.remote.interceptor
 
 import com.example.senior_on.data.local.AccessTokenStore
+import com.example.senior_on.data.local.SessionExpirationEventStore
 import com.example.senior_on.data.remote.api.UserApi
 import com.example.senior_on.data.remote.dto.TokenRefreshRequest
 import okhttp3.Authenticator
@@ -14,9 +15,12 @@ class AccessTokenAuthenticator(
     private val refreshLock = Any()
 
     override fun authenticate(route: Route?, response: Response): Request? {
-        if (responseCount(response) >= MAX_AUTH_ATTEMPTS) return null
-
         val failedAuthorization = response.request.header(AUTHORIZATION_HEADER) ?: return null
+
+        if (responseCount(response) >= MAX_AUTH_ATTEMPTS) {
+            expireSession()
+            return null
+        }
 
         return synchronized(refreshLock) {
             val currentAuthorization = AccessTokenStore.getBearerToken() ?: return@synchronized null
@@ -25,7 +29,8 @@ class AccessTokenAuthenticator(
                 return@synchronized response.request.withAuthorization(currentAuthorization)
             }
 
-            val refreshToken = AccessTokenStore.getRefreshToken() ?: return@synchronized null
+            val refreshToken = AccessTokenStore.getRefreshToken()
+                ?: return@synchronized expireSession()
             val refreshResponse = runCatching {
                 userApi.refreshToken(
                     TokenRefreshRequest(
@@ -37,7 +42,7 @@ class AccessTokenAuthenticator(
 
             if (!refreshResponse.isSuccessful) {
                 if (refreshResponse.code() in INVALID_REFRESH_TOKEN_STATUS_CODES) {
-                    AccessTokenStore.clear()
+                    expireSession()
                 }
                 refreshResponse.errorBody()?.close()
                 return@synchronized null
@@ -48,7 +53,7 @@ class AccessTokenAuthenticator(
                 ?.removePrefix(BEARER_PREFIX)
                 ?.trim()
                 ?.takeIf(String::isNotEmpty)
-                ?: return@synchronized null
+                ?: return@synchronized expireSession()
             val newRefreshToken = refreshedTokens.refreshToken
                 ?.trim()
                 ?.takeIf(String::isNotEmpty)
@@ -60,6 +65,12 @@ class AccessTokenAuthenticator(
             )
             response.request.withAuthorization("$BEARER_PREFIX$newAccessToken")
         }
+    }
+
+    private fun expireSession(): Request? {
+        AccessTokenStore.clear()
+        SessionExpirationEventStore.publish()
+        return null
     }
 
     private fun Request.withAuthorization(token: String): Request =

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.example.senior_on.ui.parent.schedule
 
 import androidx.compose.foundation.background
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +53,7 @@ import java.time.LocalTime
 fun ParentScheduleScreen(
     uiState: ParentScheduleUiState,
     onBackClick: () -> Unit,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -69,9 +73,15 @@ fun ParentScheduleScreen(
             )
         }
 
-        when {
-            uiState.isLoading -> ParentScheduleLoadingContent()
-            else -> ParentScheduleListContent(schedules = uiState.schedules)
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when {
+                uiState.isLoading -> ParentScheduleLoadingContent()
+                else -> ParentScheduleListContent(schedules = uiState.schedules)
+            }
         }
     }
 }

@@ -19,5 +19,5 @@ internal fun distanceMeters(
     return result[0]
 }
 
-internal const val OutingBoundaryMeters = 3_000f
-internal const val ReturnBoundaryMeters = 2_700f
+internal const val OutingBoundaryMeters = 1_000f
+internal const val ReturnBoundaryMeters = 800f

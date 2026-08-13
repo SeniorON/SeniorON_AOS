@@ -57,7 +57,7 @@ fun FindIdResultRoute(
         isSuccess = uiState.foundLoginId.isNotBlank(),
         name = uiState.recoveryName,
         userId = uiState.foundLoginId,
-        joinDate = "",
+        joinDate = uiState.foundJoinDate,
         onBackClick = onBackClick,
         onLoginClick = onLoginClick,
         onFindPasswordClick = onFindPasswordClick

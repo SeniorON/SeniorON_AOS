@@ -1,6 +1,7 @@
 package com.example.senior_on.data.source.health
 
 import com.example.senior_on.data.remote.api.HospitalApi
+import com.example.senior_on.data.remote.dto.ApiResponse
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.requireData
 
@@ -27,10 +28,14 @@ class RemoteHospitalDataSource(private val api: HospitalApi) : HospitalDataSourc
         api.create(parentId, request).requireData()
 
     override suspend fun update(parentId: Long, hospitalId: Long, request: HospitalUpdateRequest) {
-        api.update(parentId, hospitalId, request)
+        api.update(parentId, hospitalId, request).requireSuccess()
     }
 
     override suspend fun delete(parentId: Long, hospitalId: Long) {
-        api.delete(parentId, hospitalId)
+        api.delete(parentId, hospitalId).requireSuccess()
     }
+}
+
+private fun ApiResponse<Unit>.requireSuccess() {
+    check(status.startsWith("2")) { message }
 }

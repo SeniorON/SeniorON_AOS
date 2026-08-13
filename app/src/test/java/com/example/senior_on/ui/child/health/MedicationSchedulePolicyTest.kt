@@ -41,7 +41,7 @@ class MedicationSchedulePolicyTest {
     }
 
     @Test
-    fun `일주 복용 기간의 마지막 날은 시작일부터 칠 일째 전날이다`() {
+    fun `일주 복용 기간은 시작일과 같은 요일까지 포함한다`() {
         val medication = medication(
             weekdays = (0..6).toSet(),
             startDate = LocalDate.of(2026, 8, 1),
@@ -53,7 +53,25 @@ class MedicationSchedulePolicyTest {
         )
 
         assertTrue(medication.isScheduledOn(LocalDate.of(2026, 8, 7)))
-        assertFalse(medication.isScheduledOn(LocalDate.of(2026, 8, 8)))
+        assertTrue(medication.isScheduledOn(LocalDate.of(2026, 8, 8)))
+        assertFalse(medication.isScheduledOn(LocalDate.of(2026, 8, 9)))
+    }
+
+    @Test
+    fun `서버 종료일이 있으면 복용 기간 계산보다 우선한다`() {
+        val medication = medication(
+            weekdays = (0..6).toSet(),
+            startDate = LocalDate.of(2026, 8, 5),
+            repeat = MedicationRepeatSelection(
+                frequency = MedicationRepeatFrequency.Daily,
+                duration = MedicationRepeatDuration.Period,
+                periodValue = 4,
+                endDate = LocalDate.of(2026, 8, 31),
+            ),
+        )
+
+        assertTrue(medication.isActiveOn(LocalDate.of(2026, 8, 31)))
+        assertFalse(medication.isActiveOn(LocalDate.of(2026, 9, 1)))
     }
 
     @Test
