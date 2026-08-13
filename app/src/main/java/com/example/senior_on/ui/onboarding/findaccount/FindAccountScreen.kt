@@ -63,6 +63,7 @@ fun FindAccountScreen(
                     FindAccountPrimaryButton(
                         text = "다음",
                         enabled = isFindIdNextEnabled && !isSubmitting,
+                        isLoading = isSubmitting,
                         onClick = {
                             isSubmitting = true
                             onFindIdNextClick(name.trim(), email.trim()) {
@@ -82,6 +83,7 @@ fun FindAccountScreen(
                         FindAccountPrimaryButton(
                             text = "다음",
                             enabled = isFindPasswordNextEnabled && !isSubmitting,
+                            isLoading = isSubmitting,
                             onClick = {
                                 isSubmitting = true
                                 onFindPasswordNextClick(

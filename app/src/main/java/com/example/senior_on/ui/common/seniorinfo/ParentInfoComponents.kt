@@ -56,6 +56,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import com.example.senior_on.R
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -465,6 +466,7 @@ internal fun SeniorInfoBottomActions(
     onSaveClick: () -> Unit,
     isSaveEnabled: Boolean,
     errorMessage: String? = null,
+    isSubmitting: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -505,7 +507,8 @@ internal fun SeniorInfoBottomActions(
                 onClick = onSaveClick,
                 modifier = Modifier.weight(1f),
                 style = SeniorInfoButtonStyle.Filled,
-                enabled = isSaveEnabled
+                enabled = isSaveEnabled,
+                isLoading = isSubmitting,
             )
         }
     }
@@ -586,12 +589,13 @@ internal fun SeniorInfoActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     height: Dp = 60.dp,
+    isLoading: Boolean = false,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
     val backgroundColor = when (style) {
         SeniorInfoButtonStyle.Outlined -> SeniorOnColors.White
         SeniorInfoButtonStyle.Filled -> {
-            if (enabled) {
+            if (enabled || isLoading) {
                 SeniorOnColors.Primary600
             } else {
                 SeniorOnColors.Primary600.copy(alpha = 0.5f)
@@ -618,16 +622,20 @@ internal fun SeniorInfoActionButton(
                 shape = shape
             )
             .clickable(
-                enabled = enabled,
+                enabled = enabled && !isLoading,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonM,
-            color = contentColor
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(color = contentColor)
+        } else {
+            Text(
+                text = text,
+                style = SeniorOnTextStyles.ButtonM,
+                color = contentColor
+            )
+        }
     }
 }
 

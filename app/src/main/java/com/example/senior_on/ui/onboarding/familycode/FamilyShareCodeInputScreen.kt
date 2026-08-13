@@ -112,6 +112,7 @@ fun FamilyShareCodeInputScreen(
         FamilyShareCodeBottomButton(
             text = "로그인",
             enabled = isLoginEnabled,
+            isLoading = isLoading,
             onClick = {
                 focusManager.clearFocus()
                 submitFamilyShareCode()

@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.CareManagerType
@@ -135,6 +136,7 @@ fun OnboardingRoute(
     var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     val saveableStateHolder = rememberSaveableStateHolder()
     val authViewModel = onboardingAuthViewModel(appContainer)
+    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
     val activity = LocalContext.current.findActivity()
 
     fun clearSavedRouteStates(routes: Set<SeniorOnRoute>) {
@@ -515,6 +517,7 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.OnboardingStatusError -> OnboardingStatusErrorScreen(
                 message = onboardingStatusErrorMessage,
+                isRetrying = authUiState.isLoading,
                 onRetryClick = {
                     if (retryStatusAfterFamilyJoin) {
                         resolveAfterFamilyJoin()

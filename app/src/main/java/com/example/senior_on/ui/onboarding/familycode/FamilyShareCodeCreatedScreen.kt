@@ -39,6 +39,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -76,6 +77,18 @@ fun FamilyShareCodeCreatedScreen(
             FamilyShareCodeCreatedTitle()
             Spacer(modifier = Modifier.height(52.dp))
             if (isLoading || errorMessage != null) {
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        SeniorOnLoadingIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = SeniorOnColors.Primary600,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 Text(
                     text = errorMessage ?: "가족 공유 코드를 생성하고 있어요.",
                     modifier = Modifier.fillMaxWidth(),
@@ -113,6 +126,7 @@ fun FamilyShareCodeCreatedScreen(
         FamilyShareCodeBottomButton(
             text = if (errorMessage != null) "다시 시도" else "다음",
             enabled = !isLoading && (errorMessage != null || familyShareCode.isNotBlank()),
+            isLoading = isLoading,
             onClick = {
                 if (errorMessage != null) {
                     onRetryClick()

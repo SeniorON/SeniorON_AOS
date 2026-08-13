@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -267,11 +268,18 @@ private fun SignupDuplicateCheckButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = if (isChecking) "확인 중" else "중복 확인",
-            style = SeniorOnTextStyles.ButtonS,
-            color = SeniorOnColors.Primary600
-        )
+        if (isChecking) {
+            SeniorOnLoadingIndicator(
+                modifier = Modifier.size(16.dp),
+                color = SeniorOnColors.Primary600,
+            )
+        } else {
+            Text(
+                text = "중복 확인",
+                style = SeniorOnTextStyles.ButtonS,
+                color = SeniorOnColors.Primary600
+            )
+        }
     }
 }
 

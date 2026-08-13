@@ -168,6 +168,7 @@ fun SignupTermsAgreementScreen(
 
         SignupNextButton(
             enabled = isRequiredAgreed && !isSubmitting,
+            isLoading = isSubmitting,
             onClick = {
                 isSubmitting = true
                 onCompleteClick(

@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -36,6 +37,7 @@ fun OnboardingStatusErrorScreen(
     onRetryClick: () -> Unit,
     onLoginWithAnotherAccountClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isRetrying: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -71,6 +73,7 @@ fun OnboardingStatusErrorScreen(
             containerColor = SeniorOnColors.Primary600,
             contentColor = SeniorOnColors.SupportWhite100,
             onClick = onRetryClick,
+            isLoading = isRetrying,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -80,6 +83,7 @@ fun OnboardingStatusErrorScreen(
             containerColor = SeniorOnColors.Gray100,
             contentColor = SeniorOnColors.Gray700,
             onClick = onLoginWithAnotherAccountClick,
+            enabled = !isRetrying,
         )
     }
 }
@@ -90,6 +94,8 @@ private fun OnboardingStatusActionButton(
     containerColor: Color,
     contentColor: Color,
     onClick: () -> Unit,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
 ) {
     Column(
         modifier = Modifier
@@ -97,15 +103,22 @@ private fun OnboardingStatusActionButton(
             .height(52.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
             .background(containerColor)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled && !isLoading, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = text,
-            style = SeniorOnTextStyles.ButtonM,
-            color = contentColor,
-        )
+        if (isLoading) {
+            SeniorOnLoadingIndicator(
+                modifier = Modifier.size(20.dp),
+                color = contentColor,
+            )
+        } else {
+            Text(
+                text = text,
+                style = SeniorOnTextStyles.ButtonM,
+                color = contentColor,
+            )
+        }
     }
 }
 

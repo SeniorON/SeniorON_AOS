@@ -39,13 +39,14 @@ fun FindPasswordVerifyScreen(
         verificationCode: String,
         onResult: (Boolean) -> Unit
     ) -> Unit,
-    onResendCode: () -> Unit,
+    onResendCode: (onResult: (Boolean) -> Unit) -> Unit,
     onTabSelected: (FindAccountTab) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var verificationCode by rememberSaveable { mutableStateOf("") }
     var isVerificationError by rememberSaveable { mutableStateOf(false) }
     var isVerifying by rememberSaveable { mutableStateOf(false) }
+    var isResending by rememberSaveable { mutableStateOf(false) }
 
     val isVerifyEnabled = verificationCode.length == 6 && !isVerifying
 
@@ -65,6 +66,7 @@ fun FindPasswordVerifyScreen(
                 FindAccountPrimaryButton(
                     text = "인증하기",
                     enabled = isVerifyEnabled,
+                    isLoading = isVerifying,
                     onClick = {
                         isVerifying = true
                         onVerifyCode(verificationCode) { verified ->
@@ -142,10 +144,15 @@ fun FindPasswordVerifyScreen(
 
                     FindAccountSmallPrimaryButton(
                         text = "재전송",
+                        enabled = !isVerifying && !isResending,
+                        isLoading = isResending,
                         onClick = {
                             verificationCode = ""
                             isVerificationError = false
-                            onResendCode()
+                            isResending = true
+                            onResendCode {
+                                isResending = false
+                            }
                         }
                     )
                 }
@@ -172,7 +179,7 @@ private fun FindPasswordVerifyScreenPreview() {
             onBackClick = {},
             onVerifySuccess = {},
             onVerifyCode = { code, onResult -> onResult(code == "123456") },
-            onResendCode = {}
+            onResendCode = { onResult -> onResult(true) }
         )
     }
 }
@@ -186,7 +193,7 @@ private fun FindPasswordVerifyErrorPreview() {
             onBackClick = {},
             onVerifySuccess = {},
             onVerifyCode = { _, onResult -> onResult(false) },
-            onResendCode = {}
+            onResendCode = { onResult -> onResult(false) }
         )
     }
 }
