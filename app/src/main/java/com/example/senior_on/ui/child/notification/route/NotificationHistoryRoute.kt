@@ -10,6 +10,8 @@ import com.example.senior_on.ui.child.notification.NotificationMessageUiState
 internal fun NotificationHistoryRoute(
     category: NotificationCategory,
     messages: List<NotificationMessageUiState>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onBackClick: () -> Unit,
     onMessageClick: (NotificationMessageUiState) -> Unit,
     modifier: Modifier = Modifier,
@@ -17,6 +19,8 @@ internal fun NotificationHistoryRoute(
     NotificationHistoryScreen(
         category = category,
         messages = messages,
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
         modifier = modifier,
         onBackClick = onBackClick,
         onMessageClick = onMessageClick,

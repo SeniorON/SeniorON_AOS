@@ -17,12 +17,16 @@ import com.example.senior_on.domain.repository.server.HospitalRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
 import com.example.senior_on.notification.MedicationCheckedEventStore
+import com.example.senior_on.notification.NotificationNavigationEvent
+import com.example.senior_on.notification.isHospitalNotification
+import com.example.senior_on.notification.isMedicationNotification
 import com.example.senior_on.ui.child.health.HealthSection
 import com.example.senior_on.ui.child.health.HealthMainScreen
 import com.example.senior_on.ui.child.health.HospitalAppointmentUiState
 import com.example.senior_on.ui.child.health.SeniorOnDeleteConfirmDialog
 import com.example.senior_on.ui.child.health.viewmodel.HospitalViewModel
 import com.example.senior_on.ui.child.health.viewmodel.MedicationViewModel
+import java.time.LocalDate
 
 @Composable
 fun HealthMainRoute(
@@ -30,6 +34,8 @@ fun HealthMainRoute(
     hospitalRepository: HospitalRepository,
     familyRepository: FamilyServerRepository,
     hospitalSpecialtyRepository: HospitalSpecialtyRepository,
+    navigationEvent: NotificationNavigationEvent? = null,
+    onNavigationEventConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val medicationViewModel: MedicationViewModel = viewModel(
@@ -51,6 +57,7 @@ fun HealthMainRoute(
     var selectedSection by rememberSaveable { mutableStateOf(HealthSection.Health) }
     var appointmentToDelete by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
     var wasDeletingAppointment by remember { mutableStateOf(false) }
+    var pendingHospitalId by rememberSaveable { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(medicationCheckedEvent) {
@@ -61,6 +68,33 @@ fun HealthMainRoute(
             )
             MedicationCheckedEventStore.consume()
         }
+    }
+
+    LaunchedEffect(navigationEvent) {
+        val event = navigationEvent ?: return@LaunchedEffect
+        when {
+            event.isMedicationNotification -> {
+                selectedSection = HealthSection.Health
+                event.plannedDate.toLocalDateOrNull()?.let(medicationViewModel::selectDate)
+                onNavigationEventConsumed()
+            }
+
+            event.isHospitalNotification -> {
+                selectedSection = HealthSection.Hospital
+                pendingHospitalId = event.hospitalId
+                event.scheduleDate.toLocalDateOrNull()?.let(hospitalViewModel::selectDate)
+                onNavigationEventConsumed()
+            }
+        }
+    }
+
+    LaunchedEffect(pendingHospitalId, hospitalUiState.selectedDateAppointments) {
+        val hospitalId = pendingHospitalId ?: return@LaunchedEffect
+        val appointment = hospitalUiState.selectedDateAppointments
+            .firstOrNull { it.id == hospitalId }
+            ?: return@LaunchedEffect
+        hospitalViewModel.openView(appointment)
+        pendingHospitalId = null
     }
 
     LaunchedEffect(medicationViewModel, hospitalViewModel) {
@@ -148,3 +182,6 @@ fun HealthMainRoute(
         )
     }
 }
+
+private fun String?.toLocalDateOrNull(): LocalDate? =
+    runCatching { this?.let(LocalDate::parse) }.getOrNull()

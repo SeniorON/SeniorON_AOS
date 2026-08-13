@@ -6,8 +6,6 @@ import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
 import com.example.senior_on.domain.repository.server.NotificationRepository
-import com.example.senior_on.domain.repository.server.DeviceRepository
-import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.ui.child.notification.viewmodel.NotificationViewModel
 
 @Composable
@@ -16,8 +14,6 @@ internal fun notificationViewModel(
     familyRepository: FamilyServerRepository?,
     homeRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
-    deviceRepository: DeviceRepository?,
-    addressSearchRepository: AddressSearchRepository?,
 ): NotificationViewModel {
     return viewModel(
         key = "notification",
@@ -26,8 +22,6 @@ internal fun notificationViewModel(
             familyRepository = familyRepository,
             homeRepository = homeRepository,
             eventRepository = eventRepository,
-            deviceRepository = deviceRepository,
-            addressSearchRepository = addressSearchRepository,
         ),
     )
 }

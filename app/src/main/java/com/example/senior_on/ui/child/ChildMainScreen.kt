@@ -63,6 +63,7 @@ import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
+import com.example.senior_on.notification.isHospitalNotification
 import com.example.senior_on.notification.isMedicationNotification
 import com.example.senior_on.ui.child.display.DisplayTabRoute
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
@@ -130,9 +131,8 @@ fun ChildMainScreen(
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
     LaunchedEffect(notificationNavigationEvent) {
         notificationNavigationEvent?.let { event ->
-            if (event.isMedicationNotification) {
+            if (event.isMedicationNotification || event.isHospitalNotification) {
                 selectedTab = ChildMainTab.Health
-                onNotificationNavigationConsumed()
             } else {
                 selectedTab = ChildMainTab.Notification
             }
@@ -423,6 +423,8 @@ private fun ChildMainTabContent(
                 hospitalRepository = hospitalRepository,
                 familyRepository = familyServerRepository,
                 hospitalSpecialtyRepository = hospitalSpecialtyRepository,
+                navigationEvent = notificationNavigationEvent,
+                onNavigationEventConsumed = onNotificationNavigationConsumed,
                 modifier = modifier,
             )
         } else {
@@ -507,9 +509,7 @@ private fun ChildMainTabContent(
             familyRepository = familyServerRepository,
             homeRepository = homeServerRepository,
             eventRepository = eventRepository,
-            deviceRepository = deviceRepository,
             locationRepository = locationRepository,
-            addressSearchRepository = addressSearchRepository,
             navigationEvent = notificationNavigationEvent,
             onNavigationEventConsumed = onNotificationNavigationConsumed,
             modifier = modifier,

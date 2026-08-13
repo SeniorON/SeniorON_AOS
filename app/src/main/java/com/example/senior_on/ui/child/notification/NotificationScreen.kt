@@ -146,20 +146,21 @@ fun NotificationScreen(
                             onNotificationClick(section.category, message)
                         },
                         onToggleClick = {
+                            val isEnabling = !section.enabled
                             when {
+                                section.category == NotificationCategory.Outing &&
+                                    isEnabling &&
+                                    !uiState.hasHomeAddress -> {
+                                    showHomeAddressMissingDialog = true
+                                }
+
                                 !uiState.isParentPhoneRegistered ||
                                     !uiState.isParentPhoneInternetConnected -> {
                                     showParentPhoneInternetRequiredDialog = true
                                 }
 
-                                section.category == NotificationCategory.Outing &&
-                                    !uiState.hasHomeAddress -> {
-                                    showHomeAddressMissingDialog = true
-                                }
-
                                 else -> {
-                                    val toggledEnabled = !section.enabled
-                                    onNotificationToggle(section.category, toggledEnabled)
+                                    onNotificationToggle(section.category, isEnabling)
                                 }
                             }
                         },

@@ -51,6 +51,7 @@ import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.notification.isMedicationNotification
+import com.example.senior_on.notification.isHospitalNotification
 import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
@@ -194,6 +195,9 @@ private fun ParentLauncherContent(
                     highlightedMedicationLogId = event.medicationLogId
                     MedicationReminderEventStore.consume()
                     destination = ParentDestination.Medication
+                }
+                event.isHospitalNotification -> {
+                    destination = ParentDestination.Schedule
                 }
                 else -> {
                     val eventDetail = event.eventId
