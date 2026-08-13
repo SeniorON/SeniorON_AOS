@@ -1,20 +1,30 @@
 package com.example.senior_on.ui.child.health
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
 import com.example.senior_on.ui.child.health.viewmodel.HospitalUiState
 import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.delay
 
 enum class HealthSection {
     Health,
@@ -64,17 +74,19 @@ fun HealthMainScreen(
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
-                HealthScreen(
-                    registeredMedications = medicationUiState.registeredMedications,
-                    todayMedications = medicationUiState.todayMedications,
-                    medicationMarkedDates = medicationUiState.medicationMarkedDates,
-                    selectedDate = medicationUiState.selectedDate,
-                    modifier = Modifier.fillMaxSize(),
-                    onSelectedDateChange = onMedicationDateSelected,
-                    onAddRegisteredMedicationClick = onAddRegisteredMedicationClick,
-                    onAddTodayMedicationClick = onAddTodayMedicationClick,
-                    onRegisteredMedicationClick = onMedicationClick,
-                )
+                HealthLoadingContainer(isLoading = medicationUiState.isLoading) {
+                    HealthScreen(
+                        registeredMedications = medicationUiState.registeredMedications,
+                        todayMedications = medicationUiState.todayMedications,
+                        medicationMarkedDates = medicationUiState.medicationMarkedDates,
+                        selectedDate = medicationUiState.selectedDate,
+                        modifier = Modifier.fillMaxSize(),
+                        onSelectedDateChange = onMedicationDateSelected,
+                        onAddRegisteredMedicationClick = onAddRegisteredMedicationClick,
+                        onAddTodayMedicationClick = onAddTodayMedicationClick,
+                        onRegisteredMedicationClick = onMedicationClick,
+                    )
+                }
             }
 
             HealthSection.Hospital -> PullToRefreshBox(
@@ -84,19 +96,56 @@ fun HealthMainScreen(
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
-                HospitalScreen(
-                    appointments = hospitalUiState.monthlyAppointments,
-                    selectedAppointments = hospitalUiState.selectedDateAppointments,
-                    upcomingAppointments = hospitalUiState.upcomingAppointments,
-                    displayedMonth = hospitalUiState.displayedMonth,
-                    selectedDate = hospitalUiState.selectedDate,
-                    modifier = Modifier.fillMaxSize(),
-                    onDisplayedMonthChange = onHospitalMonthSelected,
-                    onSelectedDateChange = onHospitalDateSelected,
-                    onAddAppointmentClick = onAddHospitalClick,
-                    onAppointmentClick = onHospitalClick,
-                    onEditAppointmentClick = onHospitalEditClick,
-                    onDeleteAppointmentClick = onHospitalDeleteClick,
+                HealthLoadingContainer(isLoading = hospitalUiState.isLoading) {
+                    HospitalScreen(
+                        appointments = hospitalUiState.monthlyAppointments,
+                        selectedAppointments = hospitalUiState.selectedDateAppointments,
+                        upcomingAppointments = hospitalUiState.upcomingAppointments,
+                        displayedMonth = hospitalUiState.displayedMonth,
+                        selectedDate = hospitalUiState.selectedDate,
+                        modifier = Modifier.fillMaxSize(),
+                        onDisplayedMonthChange = onHospitalMonthSelected,
+                        onSelectedDateChange = onHospitalDateSelected,
+                        onAddAppointmentClick = onAddHospitalClick,
+                        onAppointmentClick = onHospitalClick,
+                        onEditAppointmentClick = onHospitalEditClick,
+                        onDeleteAppointmentClick = onHospitalDeleteClick,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthLoadingContainer(
+    isLoading: Boolean,
+    content: @Composable () -> Unit,
+) {
+    var showIndicator by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLoading) {
+        showIndicator = false
+        if (isLoading) {
+            delay(300)
+            showIndicator = true
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        content()
+
+        if (showIndicator) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(SeniorOnColors.SupportWhite100),
+                contentAlignment = Alignment.Center,
+            ) {
+                SeniorOnLoadingIndicator(
+                    color = SeniorOnColors.Primary600,
+                    size = 32.dp,
+                    strokeWidth = 3.dp,
                 )
             }
         }
