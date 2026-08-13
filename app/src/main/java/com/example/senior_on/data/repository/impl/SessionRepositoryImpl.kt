@@ -76,5 +76,8 @@ class SessionRepositoryImpl(
         }
     }
 
-    override fun clearSession() = dataSource.clearSession()
+    override fun clearSession() {
+        AccessTokenStore.clear()
+        dataSource.clearSession()
+    }
 }
