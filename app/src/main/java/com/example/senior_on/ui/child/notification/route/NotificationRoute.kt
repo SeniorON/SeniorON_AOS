@@ -134,6 +134,7 @@ fun NotificationRoute(
                 viewModel.loadInactivitySetting()
                 destination = NotificationDestination.InactivitySetting
             },
+            isLoading = uiState.isLoading,
             isRefreshing = uiState.isRefreshing,
             onRefresh = viewModel::refreshHome,
             modifier = modifier,

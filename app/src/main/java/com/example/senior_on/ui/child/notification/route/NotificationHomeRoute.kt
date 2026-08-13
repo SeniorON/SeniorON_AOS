@@ -17,6 +17,7 @@ internal fun NotificationHomeRoute(
     ) -> Unit,
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit,
     onDetectionTimeClick: () -> Unit,
+    isLoading: Boolean,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
@@ -28,6 +29,7 @@ internal fun NotificationHomeRoute(
         onNotificationClick = onNotificationClick,
         onNotificationToggle = onNotificationToggle,
         onDetectionTimeClick = onDetectionTimeClick,
+        isLoading = isLoading,
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
     )

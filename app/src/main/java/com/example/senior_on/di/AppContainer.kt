@@ -30,10 +30,10 @@ import com.example.senior_on.data.source.auth.AuthDataSource
 import com.example.senior_on.data.source.auth.MockAuthDataSource
 import com.example.senior_on.data.source.auth.PersistedSessionDataSource
 import com.example.senior_on.data.source.auth.SocialAuthDataSource
-import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
+import com.example.senior_on.data.source.health.HospitalSpecialtyCatalogDataSource
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
-import com.example.senior_on.data.source.parent.MockCaregiverRelationshipDataSource
+import com.example.senior_on.data.source.parent.InMemoryCaregiverRelationshipDataSource
 import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
 import com.example.senior_on.data.source.parent.InMemoryParentInfoDataSource
 import com.example.senior_on.data.source.parent.RemoteParentLinkSafetyDataSource
@@ -170,7 +170,7 @@ class DefaultAppContainer(
 
     private val primaryCaregiverRelationshipRepository:
         CaregiverRelationshipRepository = CaregiverRelationshipRepositoryImpl(
-            MockCaregiverRelationshipDataSource(
+            InMemoryCaregiverRelationshipDataSource(
                 activeSeniorId = MockSeniorFixtures.SENIOR_ID,
                 initialRelationship = CaregiverRelationship(
                     relation = SeniorRelationType.MOTHER,
@@ -179,7 +179,7 @@ class DefaultAppContainer(
         )
     private val assistantCaregiverRelationshipRepository:
         CaregiverRelationshipRepository = CaregiverRelationshipRepositoryImpl(
-            MockCaregiverRelationshipDataSource(
+            InMemoryCaregiverRelationshipDataSource(
                 activeSeniorId = MockSeniorFixtures.SENIOR_ID,
             )
         )
@@ -200,7 +200,7 @@ class DefaultAppContainer(
             familyDataSource = remoteFamilySource,
         )
     override val hospitalSpecialtyRepository: HospitalSpecialtyRepository =
-        HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
+        HospitalSpecialtyRepositoryImpl(HospitalSpecialtyCatalogDataSource)
     override val parentInfoRepository: ParentInfoRepository = ParentInfoRepositoryImpl(
         InMemoryParentInfoDataSource()
     )

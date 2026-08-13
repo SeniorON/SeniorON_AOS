@@ -36,6 +36,7 @@ fun NotificationScreen(
     onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
     onDetectionTimeClick: () -> Unit = {},
+    isLoading: Boolean = false,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
@@ -53,6 +54,7 @@ fun NotificationScreen(
         onNotificationClick = onNotificationClick,
         onNotificationToggle = onNotificationToggle,
         onDetectionTimeClick = onDetectionTimeClick,
+        isLoading = isLoading,
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
     )
@@ -67,6 +69,7 @@ fun NotificationScreen(
     onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
     onNotificationToggle: (NotificationCategory, Boolean) -> Unit = { _, _ -> },
     onDetectionTimeClick: () -> Unit = {},
+    isLoading: Boolean = false,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
@@ -123,7 +126,7 @@ fun NotificationScreen(
         )
 
         PullToRefreshBox(
-            isRefreshing = isRefreshing,
+            isRefreshing = isLoading || isRefreshing,
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxWidth()

@@ -8,18 +8,18 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class MockCaregiverRelationshipDataSourceTest {
+class InMemoryCaregiverRelationshipDataSourceTest {
     private val seniorId = MockSeniorFixtures.SENIOR_ID
 
     @Test
     fun `보조 담당자의 관계 변경은 주 담당자의 관계를 변경하지 않는다`() {
-        val primaryRepository = MockCaregiverRelationshipDataSource(
+        val primaryRepository = InMemoryCaregiverRelationshipDataSource(
             activeSeniorId = seniorId,
             initialRelationship = CaregiverRelationship(
                 relation = SeniorRelationType.MOTHER,
             ),
         )
-        val assistantRepository = MockCaregiverRelationshipDataSource(
+        val assistantRepository = InMemoryCaregiverRelationshipDataSource(
             activeSeniorId = seniorId,
         )
 
@@ -41,7 +41,7 @@ class MockCaregiverRelationshipDataSourceTest {
 
     @Test
     fun `다른 시니어 식별자에는 관계를 저장할 수 없다`() {
-        val repository = MockCaregiverRelationshipDataSource(
+        val repository = InMemoryCaregiverRelationshipDataSource(
             activeSeniorId = seniorId,
         )
 

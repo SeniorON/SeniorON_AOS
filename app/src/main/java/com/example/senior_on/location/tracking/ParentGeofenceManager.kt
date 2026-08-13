@@ -1,6 +1,7 @@
 package com.example.senior_on.location.tracking
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -18,6 +19,7 @@ internal class ParentGeofenceManager(context: Context) {
     private val applicationContext = context.applicationContext
     private val client = LocationServices.getGeofencingClient(applicationContext)
 
+    @SuppressLint("MissingPermission")
     suspend fun register(
         home: StoredHomeLocation,
         origin: String,
@@ -34,8 +36,9 @@ internal class ParentGeofenceManager(context: Context) {
                 "backgroundPermission=${applicationContext.hasBackgroundLocationPermission()}, " +
                 applicationContext.locationSettingsSummary(),
         )
-        check(applicationContext.hasRequiredGeofencePermissions()) {
-            "외출·귀가 감지를 위한 위치 권한이 필요합니다."
+        if (!applicationContext.hasRequiredGeofencePermissions()) {
+            Log.w(LogTag, "Skipping geofence registration because location permission is missing")
+            return
         }
 
         val geofence = Geofence.Builder()
@@ -60,16 +63,24 @@ internal class ParentGeofenceManager(context: Context) {
             .build()
 
         logFusedLocationSnapshot(stage = "before-registration", home = home)
-        runCatching {
+        try {
             client.addGeofences(request, geofencePendingIntent()).awaitResult()
-        }.onFailure { throwable ->
+        } catch (securityException: SecurityException) {
+            Log.w(
+                LogTag,
+                "Geofence registration stopped because location permission was revoked",
+                securityException,
+            )
+            return
+        } catch (throwable: Throwable) {
             Log.e(
                 LogTag,
                 "GeofencingClient rejected registration; origin=$origin, " +
                     "requestId=$HomeGeofenceRequestId",
                 throwable,
             )
-        }.getOrThrow()
+            throw throwable
+        }
         Log.d(
             LogTag,
             "GeofencingClient accepted registration; origin=$origin, " +
@@ -89,10 +100,16 @@ internal class ParentGeofenceManager(context: Context) {
             }
     }
 
+    @SuppressLint("MissingPermission")
     private suspend fun logFusedLocationSnapshot(
         stage: String,
         home: StoredHomeLocation,
     ) {
+        if (!applicationContext.hasForegroundLocationPermission()) {
+            Log.d(LogTag, "$stage: location snapshot skipped because permission is missing")
+            return
+        }
+
         val availability = runCatching {
             LocationServices.getFusedLocationProviderClient(applicationContext)
                 .locationAvailability

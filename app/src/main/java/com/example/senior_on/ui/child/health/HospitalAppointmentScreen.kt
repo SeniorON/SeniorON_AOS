@@ -56,7 +56,7 @@ import com.example.senior_on.R
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.domain.repository.health.HospitalSpecialtyRepository
 import com.example.senior_on.data.repository.impl.HospitalSpecialtyRepositoryImpl
-import com.example.senior_on.data.source.health.MockHospitalSpecialtyDataSource
+import com.example.senior_on.data.source.health.HospitalSpecialtyCatalogDataSource
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -67,7 +67,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 internal val PreviewHospitalSpecialtyRepository: HospitalSpecialtyRepository =
-    HospitalSpecialtyRepositoryImpl(MockHospitalSpecialtyDataSource)
+    HospitalSpecialtyRepositoryImpl(HospitalSpecialtyCatalogDataSource)
 
 @Composable
 fun HospitalAppointmentScreen(

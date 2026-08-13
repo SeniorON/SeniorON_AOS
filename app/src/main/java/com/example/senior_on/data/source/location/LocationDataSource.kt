@@ -1,6 +1,7 @@
 package com.example.senior_on.data.source.location
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
@@ -28,15 +29,18 @@ class AndroidLocationDataSource(
     override suspend fun getCurrentLocation(): GeoLocation {
         val runningOnEmulator = isEmulator()
 
-        check(context.hasLocationPermission()) {
-            "현재 위치를 전송하려면 위치 권한이 필요합니다."
+        if (!context.hasLocationPermission()) {
+            throw SecurityException("현재 위치를 전송하려면 위치 권한이 필요합니다.")
         }
 
         val currentLocation = runCatching { requestCurrentLocation() }
             .onFailure { throwable ->
                 Log.w(LOG_TAG, "Fresh location request failed", throwable)
             }
-            .getOrNull()
+            .getOrElse { throwable ->
+                if (throwable is SecurityException) throw throwable
+                null
+            }
         if (currentLocation != null) {
             Log.d(
                 LOG_TAG,
@@ -51,7 +55,10 @@ class AndroidLocationDataSource(
             .onFailure { throwable ->
                 Log.w(LOG_TAG, "Last location request failed", throwable)
             }
-            .getOrNull()
+            .getOrElse { throwable ->
+                if (throwable is SecurityException) throw throwable
+                null
+            }
             ?.takeIf { it.ageMillis() <= MAX_FALLBACK_LOCATION_AGE_MILLIS }
         if (lastLocation != null) {
             Log.w(
@@ -79,8 +86,16 @@ class AndroidLocationDataSource(
         error("현재 위치를 확인할 수 없습니다.")
     }
 
+    @SuppressLint("MissingPermission")
     private suspend fun requestCurrentLocation(): Location? =
         suspendCancellableCoroutine { continuation ->
+            if (!context.hasLocationPermission()) {
+                continuation.resumeWithException(
+                    SecurityException("현재 위치를 확인하려면 위치 권한이 필요합니다.")
+                )
+                return@suspendCancellableCoroutine
+            }
+
             val cancellationTokenSource = CancellationTokenSource()
             val request = CurrentLocationRequest.Builder()
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
@@ -88,9 +103,15 @@ class AndroidLocationDataSource(
                 .setDurationMillis(LOCATION_TIMEOUT_MILLIS)
                 .build()
 
-            locationClient
-                .getCurrentLocation(request, cancellationTokenSource.token)
-                .addOnSuccessListener { location ->
+            val task = runCatching {
+                locationClient.getCurrentLocation(request, cancellationTokenSource.token)
+            }.onFailure { throwable ->
+                if (continuation.isActive) {
+                    continuation.resumeWithException(throwable)
+                }
+            }.getOrNull() ?: return@suspendCancellableCoroutine
+
+            task.addOnSuccessListener { location ->
                     if (!continuation.isActive) return@addOnSuccessListener
                     continuation.resume(location)
                 }
@@ -105,10 +126,25 @@ class AndroidLocationDataSource(
             }
         }
 
+    @SuppressLint("MissingPermission")
     private suspend fun requestLastLocation(): Location? =
         suspendCancellableCoroutine { continuation ->
-            locationClient.lastLocation
-                .addOnSuccessListener { location ->
+            if (!context.hasLocationPermission()) {
+                continuation.resumeWithException(
+                    SecurityException("최근 위치를 확인하려면 위치 권한이 필요합니다.")
+                )
+                return@suspendCancellableCoroutine
+            }
+
+            val task = runCatching { locationClient.lastLocation }
+                .onFailure { throwable ->
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(throwable)
+                    }
+                }
+                .getOrNull() ?: return@suspendCancellableCoroutine
+
+            task.addOnSuccessListener { location ->
                     if (continuation.isActive) continuation.resume(location)
                 }
                 .addOnFailureListener { throwable ->

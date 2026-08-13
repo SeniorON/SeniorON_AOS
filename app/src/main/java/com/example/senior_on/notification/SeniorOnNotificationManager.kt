@@ -1,6 +1,7 @@
 package com.example.senior_on.notification
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,6 +11,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.media.RingtoneManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -47,6 +49,7 @@ object SeniorOnNotificationManager {
             .createNotificationChannel(channel)
     }
 
+    @SuppressLint("MissingPermission")
     fun showRemoteMessage(
         context: Context,
         message: RemoteMessage,
@@ -106,10 +109,18 @@ object SeniorOnNotificationManager {
             .setAutoCancel(true)
             .build()
 
-        NotificationManagerCompat.from(context).notify(
-            notificationId,
-            notification,
-        )
+        try {
+            NotificationManagerCompat.from(context).notify(
+                notificationId,
+                notification,
+            )
+        } catch (securityException: SecurityException) {
+            Log.w(
+                LogTag,
+                "Notification was not posted because notification permission is unavailable",
+                securityException,
+            )
+        }
     }
 
     private fun canPostNotifications(context: Context): Boolean =
@@ -118,4 +129,6 @@ object SeniorOnNotificationManager {
                 context,
                 Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
+
+    private const val LogTag = "SeniorOnNotification"
 }

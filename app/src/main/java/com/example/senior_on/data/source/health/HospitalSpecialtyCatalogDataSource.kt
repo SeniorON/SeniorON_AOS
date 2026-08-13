@@ -1,6 +1,12 @@
 package com.example.senior_on.data.source.health
 
-object MockHospitalSpecialtyDataSource : HospitalSpecialtyDataSource {
+/**
+ * 병원 일정 입력 화면에서 사용하는 고정 진료과 카탈로그입니다.
+ *
+ * 진료과 목록은 서버에서 변경되는 사용자 데이터가 아니며 현재 API 명세에도
+ * 별도의 진료과 조회 API가 없어 앱 리소스 성격의 정적 목록으로 관리합니다.
+ */
+object HospitalSpecialtyCatalogDataSource : HospitalSpecialtyDataSource {
     val specialties = listOf(
         "안과",
         "외과",
