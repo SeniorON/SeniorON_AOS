@@ -36,7 +36,10 @@ class AccountRecoveryRepositoryImpl(
 
     override suspend fun findLoginId(name: String, email: String): FoundLoginId {
         val response = dataSource.findLoginId(FindLoginIdRequest(name.trim(), email.trim()))
-        return FoundLoginId(response.loginId)
+        return FoundLoginId(
+            loginId = response.loginId,
+            createdAt = response.createdAt,
+        )
     }
 
     override suspend fun resetPassword(

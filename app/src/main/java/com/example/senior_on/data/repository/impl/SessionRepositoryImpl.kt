@@ -47,36 +47,30 @@ class SessionRepositoryImpl(
         mode: AppUserMode,
         keepLoggedIn: Boolean,
     ) {
-        if (keepLoggedIn) {
-            val tokensPersisted = AccessTokenStore.saveLoginTokens(
-                accessToken = accessToken,
-                newRefreshToken = refreshToken,
-                newDeviceIdentifier = deviceIdentifier,
-            )
+        // Even when automatic login is not requested, keep the access token across
+        // process death for the remainder of its server-defined lifetime. Omitting
+        // the refresh token prevents that session from being extended after expiry.
+        val tokensPersisted = AccessTokenStore.saveLoginTokens(
+            accessToken = accessToken,
+            newRefreshToken = refreshToken.takeIf { keepLoggedIn },
+            newDeviceIdentifier = deviceIdentifier,
+        )
 
-            if (tokensPersisted) {
-                dataSource.saveSession(
-                    SavedSession(
-                        role = when (mode) {
-                            AppUserMode.Child -> UserRole.CHILD
-                            AppUserMode.Senior -> UserRole.PARENT
-                        },
-                        userId = userId,
-                    )
+        if (tokensPersisted) {
+            dataSource.saveSession(
+                SavedSession(
+                    role = when (mode) {
+                        AppUserMode.Child -> UserRole.CHILD
+                        AppUserMode.Senior -> UserRole.PARENT
+                    },
+                    userId = userId,
                 )
-            } else {
-                dataSource.clearSession()
-                AccessTokenStore.saveTransientLoginTokens(
-                    accessToken = accessToken,
-                    newRefreshToken = refreshToken,
-                    newDeviceIdentifier = deviceIdentifier,
-                )
-            }
+            )
         } else {
             dataSource.clearSession()
             AccessTokenStore.saveTransientLoginTokens(
                 accessToken = accessToken,
-                newRefreshToken = refreshToken,
+                newRefreshToken = refreshToken.takeIf { keepLoggedIn },
                 newDeviceIdentifier = deviceIdentifier,
             )
         }
