@@ -3,4 +3,5 @@
     <string name="senior_on_alert_channel_id" translatable="false">senior_on_alerts</string>
     <string name="senior_on_alert_channel_name">SeniorON 주요 알림</string>
     <string name="senior_on_alert_channel_description">긴급 상황과 보호자 확인이 필요한 알림을 받습니다.</string>
+    <string name="default_app_unavailable_message">이 기기에서는 해당 앱을 사용할 수 없어요.</string>
 </resources>

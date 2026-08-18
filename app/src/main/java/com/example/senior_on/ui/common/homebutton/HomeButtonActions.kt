@@ -35,7 +35,6 @@ internal fun createDefaultHomeButtonIntents(actionValue: String): List<Intent> =
             },
             createMainAppIntent(Intent.CATEGORY_APP_GALLERY),
         )
-        // 기존 저장 데이터 호환용. 신규 기본 기능 목록에는 노출하지 않는다.
         "CALENDAR" -> listOf(
             createMainAppIntent(Intent.CATEGORY_APP_CALENDAR),
             Intent(

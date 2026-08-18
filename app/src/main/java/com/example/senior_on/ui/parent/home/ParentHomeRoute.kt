@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.parent.home
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -10,9 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.senior_on.R
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
-import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
 import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeViewModel
 import com.example.senior_on.ui.parent.photo.ParentPhotoSourceBottomSheet
@@ -86,13 +88,51 @@ private fun openParentHomeButton(
     val packageName = button.packageName?.trim().orEmpty()
     if (button.actionType.equals("APP", ignoreCase = true) && packageName.isNotEmpty()) {
         openAppOrPlayStore(context, packageName)
-    } else if (
-        button.actionType.equals("DEFAULT", ignoreCase = true) &&
-        !button.actionValue.isNullOrBlank() &&
-        startDefaultHomeButtonAction(context, button.actionValue)
-    ) {
         return
+    }
+
+    when (
+        evaluateDefaultAppLaunch(
+            actionType = button.actionType,
+            actionValue = button.actionValue,
+            launch = { actionValue ->
+                startDefaultHomeButtonAction(context, actionValue)
+            },
+        )
+    ) {
+        DefaultAppLaunchResult.Launched -> return
+        DefaultAppLaunchResult.Unavailable -> {
+            Toast.makeText(
+                context,
+                R.string.default_app_unavailable_message,
+                Toast.LENGTH_SHORT,
+            ).show()
+            return
+        }
+        DefaultAppLaunchResult.NotApplicable -> Unit
+    }
+
+    button.type?.let { openSeniorHomeButton(context, it) }
+}
+
+internal enum class DefaultAppLaunchResult {
+    NotApplicable,
+    Launched,
+    Unavailable,
+}
+
+internal fun evaluateDefaultAppLaunch(
+    actionType: String?,
+    actionValue: String?,
+    launch: (String) -> Boolean,
+): DefaultAppLaunchResult {
+    if (!actionType.equals("DEFAULT", ignoreCase = true) || actionValue.isNullOrBlank()) {
+        return DefaultAppLaunchResult.NotApplicable
+    }
+
+    return if (launch(actionValue)) {
+        DefaultAppLaunchResult.Launched
     } else {
-        button.type?.let { openSeniorHomeButton(context, it) }
+        DefaultAppLaunchResult.Unavailable
     }
 }
