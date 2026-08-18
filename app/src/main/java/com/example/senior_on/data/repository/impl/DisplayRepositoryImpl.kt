@@ -874,6 +874,7 @@ private val DEFAULT_INTENT_BUTTON_OPTIONS = listOf(
     defaultIntentButton("메시지", "MESSAGE", SeniorHomeButtonType.Message),
     defaultIntentButton("카메라", "CAMERA", SeniorHomeButtonType.Camera),
     defaultIntentButton("사진", "PHOTO", SeniorHomeButtonType.Photo),
+    defaultIntentButton("캘린더", "CALENDAR", SeniorHomeButtonType.Calendar),
     defaultIntentButton("메모", "MEMO", SeniorHomeButtonType.Memo),
     defaultIntentButton("알림", "ALARM", SeniorHomeButtonType.Alarm),
     defaultIntentButton("계산기", "CALCULATOR", SeniorHomeButtonType.Calculator),

@@ -834,6 +834,7 @@ class DisplayRepositoryImplTest {
                 "MESSAGE",
                 "CAMERA",
                 "PHOTO",
+                "CALENDAR",
                 "MEMO",
                 "ALARM",
                 "CALCULATOR",
