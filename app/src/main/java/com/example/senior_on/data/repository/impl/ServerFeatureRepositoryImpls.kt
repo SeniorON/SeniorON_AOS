@@ -1,6 +1,6 @@
 package com.example.senior_on.data.repository.impl
 
-import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.DeviceIdentifierDataSource

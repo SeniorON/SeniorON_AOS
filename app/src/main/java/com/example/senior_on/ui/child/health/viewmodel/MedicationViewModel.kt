@@ -3,8 +3,8 @@ package com.example.senior_on.ui.child.health.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.senior_on.common.time.koreaNow
-import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.core.time.koreaNow
+import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.server.MedicationInfo
 import com.example.senior_on.domain.model.server.MedicationSchedule
 import com.example.senior_on.domain.repository.server.FamilyServerRepository

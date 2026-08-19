@@ -2,7 +2,7 @@ package com.example.senior_on.device
 
 import android.content.Context
 import android.util.Log
-import com.example.senior_on.common.time.KoreaZoneId
+import com.example.senior_on.core.time.KoreaZoneId
 import com.example.senior_on.domain.model.location.GeoLocation
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.server.DeviceRepository
