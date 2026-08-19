@@ -592,7 +592,6 @@ fun SettingsScreen(
     profile: SettingsProfileUiState,
     onMyAccountClick: () -> Unit = {},
     onConnectedDevicesClick: () -> Unit = {},
-    onMembershipClick: () -> Unit = {},
     onHelpClick: () -> Unit = {},
     onFeedbackClick: () -> Unit = {},
     onLogoutConfirm: () -> Unit = {},
@@ -604,6 +603,7 @@ fun SettingsScreen(
     isWithdrawing: Boolean = false,
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
+    var showMembershipDialog by rememberSaveable { mutableStateOf(false) }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var showWithdrawDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -643,7 +643,7 @@ fun SettingsScreen(
                     ),
                     SettingsMenuItem(
                         label = "멤버십",
-                        onClick = onMembershipClick
+                        onClick = { showMembershipDialog = true }
                     )
                 )
             )
@@ -710,6 +710,12 @@ fun SettingsScreen(
         )
     }
 
+    if (showMembershipDialog) {
+        SettingsMembershipComingSoonDialog(
+            onDismiss = { showMembershipDialog = false },
+        )
+    }
+
     if (showWithdrawDialog) {
         SettingsWithdrawDialog(
             onDismiss = {
@@ -722,6 +728,30 @@ fun SettingsScreen(
             isConfirmLoading = isWithdrawing,
         )
     }
+}
+
+@Composable
+private fun SettingsMembershipComingSoonDialog(
+    onDismiss: () -> Unit,
+) {
+    SettingsConfirmBottomDialog(
+        onDismiss = onDismiss,
+        title = buildAnnotatedString {
+            withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
+                append("멤버십")
+            }
+            append(" 준비 중입니다")
+        },
+        description = "더 좋은 서비스로 찾아올게요",
+        descriptionAnnotated = null,
+        dialogHeight = 207.dp,
+        titleToDescriptionSpacing = 18.dp,
+        cancelText = "",
+        confirmText = "확인",
+        confirmBackgroundColor = SeniorOnColors.Primary600,
+        showCancelButton = false,
+        onConfirm = onDismiss,
+    )
 }
 
 @Composable
@@ -800,6 +830,7 @@ private fun SettingsConfirmBottomDialog(
     titleToDescriptionSpacing: Dp = 12.dp,
     isConfirmEnabled: Boolean = true,
     isConfirmLoading: Boolean = false,
+    showCancelButton: Boolean = true,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -870,24 +901,26 @@ private fun SettingsConfirmBottomDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                            .border(
-                                width = 1.dp,
-                                color = SeniorOnColors.Gray200,
-                                shape = RoundedCornerShape(SeniorOnRadius.Small)
+                    if (showCancelButton) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                                .border(
+                                    width = 1.dp,
+                                    color = SeniorOnColors.Gray200,
+                                    shape = RoundedCornerShape(SeniorOnRadius.Small)
+                                )
+                                .clickable(onClick = onDismiss),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = cancelText,
+                                style = SeniorOnTextStyles.ButtonM,
+                                color = SeniorOnColors.Gray500
                             )
-                            .clickable(onClick = onDismiss),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = cancelText,
-                            style = SeniorOnTextStyles.ButtonM,
-                            color = SeniorOnColors.Gray500
-                        )
+                        }
                     }
 
                     SeniorOnActionButton(
