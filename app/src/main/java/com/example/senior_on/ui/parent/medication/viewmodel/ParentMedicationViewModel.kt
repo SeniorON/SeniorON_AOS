@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.senior_on.common.time.koreaNow
-import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.core.time.koreaNow
+import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentMedication
 import com.example.senior_on.domain.model.server.MedicationSchedule
 import com.example.senior_on.domain.repository.server.MedicationRepository

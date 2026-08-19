@@ -1,4 +1,4 @@
-package com.example.senior_on.common.time
+package com.example.senior_on.core.time
 
 import java.time.LocalDate
 import java.time.LocalDateTime

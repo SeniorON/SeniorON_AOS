@@ -21,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
-import com.example.senior_on.common.time.koreaToday
+import com.example.senior_on.core.time.koreaToday
 import java.time.LocalDate
 import java.time.YearMonth
 

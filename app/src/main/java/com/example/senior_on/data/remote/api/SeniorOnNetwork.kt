@@ -12,6 +12,9 @@ object SeniorOnNetwork {
     private const val BASE_URL = "https://senioron.site/"
     private const val FAMILY_PHOTO_UPLOAD_WRITE_TIMEOUT_SECONDS = 120L
     private const val FAMILY_PHOTO_UPLOAD_CALL_TIMEOUT_SECONDS = 150L
+    private const val COMPANION_WRITE_TIMEOUT_SECONDS = 60L
+    private const val COMPANION_READ_TIMEOUT_SECONDS = 90L
+    private const val COMPANION_CALL_TIMEOUT_SECONDS = 120L
 
     private val refreshOkHttpClient by lazy {
         configuredClientBuilder()
@@ -82,6 +85,19 @@ object SeniorOnNetwork {
             .build()
     }
 
+    private val companionRetrofit by lazy {
+        val companionClient = okHttpClient.newBuilder()
+            .writeTimeout(COMPANION_WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(COMPANION_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .callTimeout(COMPANION_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(companionClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
     val userApi: UserApi by lazy {
         retrofit.create(UserApi::class.java)
     }
@@ -113,5 +129,8 @@ object SeniorOnNetwork {
     val deviceApi: DeviceApi by lazy { retrofit.create(DeviceApi::class.java) }
     val inquiryApi: InquiryApi by lazy {
         uploadRetrofit.create(InquiryApi::class.java)
+    }
+    val companionApi: CompanionApi by lazy {
+        companionRetrofit.create(CompanionApi::class.java)
     }
 }

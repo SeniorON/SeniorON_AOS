@@ -6,6 +6,10 @@ import com.example.senior_on.data.source.parent.ParentFamilyPhotoDataSource
 import com.example.senior_on.data.source.parent.ParentInfoDataSource
 import com.example.senior_on.data.source.parent.ParentLinkSafetyDataSource
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
+import com.example.senior_on.domain.model.parent.ChatBuddyAudio
+import com.example.senior_on.domain.model.parent.ChatBuddyConversation
+import com.example.senior_on.domain.model.parent.ChatBuddyConversationEnd
+import com.example.senior_on.domain.model.parent.ChatBuddyVoiceTurn
 import com.example.senior_on.domain.model.parent.ParentFamilyPhotoCollection
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.parent.ParentLinkSafetyResult
@@ -30,8 +34,22 @@ class CaregiverRelationshipRepositoryImpl(
 class ChatBuddyRepositoryImpl(
     private val dataSource: ChatBuddyDataSource
 ) : ChatBuddyRepository {
-    override suspend fun requestReply(message: String, turn: Int): String =
-        dataSource.requestReply(message.trim(), turn.coerceAtLeast(0))
+    override suspend fun startConversation(): ChatBuddyConversation =
+        dataSource.startConversation()
+
+    override suspend fun sendVoiceTurn(
+        conversationId: Long,
+        requestId: String,
+        audio: ChatBuddyAudio,
+    ): ChatBuddyVoiceTurn = dataSource.sendVoiceTurn(
+        conversationId = conversationId,
+        requestId = requestId,
+        audio = audio,
+    )
+
+    override suspend fun endConversation(
+        conversationId: Long,
+    ): ChatBuddyConversationEnd = dataSource.endConversation(conversationId)
 }
 
 class ParentFamilyPhotoRepositoryImpl(

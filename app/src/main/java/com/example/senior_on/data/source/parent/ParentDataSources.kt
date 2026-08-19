@@ -1,6 +1,10 @@
 package com.example.senior_on.data.source.parent
 
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
+import com.example.senior_on.domain.model.parent.ChatBuddyAudio
+import com.example.senior_on.domain.model.parent.ChatBuddyConversation
+import com.example.senior_on.domain.model.parent.ChatBuddyConversationEnd
+import com.example.senior_on.domain.model.parent.ChatBuddyVoiceTurn
 import com.example.senior_on.domain.model.parent.ParentFamilyPhotoCollection
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.parent.ParentLinkSafetyResult
@@ -12,7 +16,13 @@ interface CaregiverRelationshipDataSource {
 }
 
 interface ChatBuddyDataSource {
-    suspend fun requestReply(message: String, turn: Int): String
+    suspend fun startConversation(): ChatBuddyConversation
+    suspend fun sendVoiceTurn(
+        conversationId: Long,
+        requestId: String,
+        audio: ChatBuddyAudio,
+    ): ChatBuddyVoiceTurn
+    suspend fun endConversation(conversationId: Long): ChatBuddyConversationEnd
 }
 
 interface ParentFamilyPhotoDataSource {

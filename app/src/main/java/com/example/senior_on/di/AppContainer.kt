@@ -34,7 +34,8 @@ import com.example.senior_on.data.source.health.HospitalSpecialtyCatalogDataSour
 import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
 import com.example.senior_on.data.source.parent.InMemoryCaregiverRelationshipDataSource
-import com.example.senior_on.data.source.parent.MockChatBuddyDataSource
+import com.example.senior_on.data.source.parent.RemoteChatBuddyDataSource
+import com.example.senior_on.data.remote.api.SeniorOnNetwork
 import com.example.senior_on.data.source.parent.InMemoryParentInfoDataSource
 import com.example.senior_on.data.source.parent.RemoteParentLinkSafetyDataSource
 import com.example.senior_on.data.source.senior.SeniorDataSource
@@ -205,7 +206,9 @@ class DefaultAppContainer(
         InMemoryParentInfoDataSource()
     )
     override val chatBuddyRepository: ChatBuddyRepository =
-        ChatBuddyRepositoryImpl(MockChatBuddyDataSource())
+        ChatBuddyRepositoryImpl(
+            RemoteChatBuddyDataSource(SeniorOnNetwork.companionApi)
+        )
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
         ParentLinkSafetyRepositoryImpl(
             RemoteParentLinkSafetyDataSource(
