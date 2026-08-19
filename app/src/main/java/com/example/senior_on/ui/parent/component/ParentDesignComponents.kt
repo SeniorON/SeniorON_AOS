@@ -90,7 +90,7 @@ fun ParentDetailTopBar(
 
         Text(
             text = title,
-            style = SeniorOnTextStyles.HeadingL,
+            style = SeniorOnTextStyles.HeadingM,
             color = contentColor
         )
     }

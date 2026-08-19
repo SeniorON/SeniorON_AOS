@@ -7,7 +7,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 object HttpLoggingInterceptorFactory {
     fun create(tag: String): HttpLoggingInterceptor {
         return HttpLoggingInterceptor { message ->
-            Log.d(tag, message.redactSensitiveValues())
+            Log.d(tag, message.toSafeLogMessage().redactSensitiveValues())
         }.apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
@@ -17,6 +17,26 @@ object HttpLoggingInterceptorFactory {
             redactHeader("Authorization")
             redactHeader("Cookie")
             redactHeader("Set-Cookie")
+        }
+    }
+
+    private fun String.toSafeLogMessage(): String {
+        if (!contains("Content-Disposition: form-data", ignoreCase = true)) return this
+
+        val contentType = MultipartContentTypeRegex.find(this)?.groupValues?.get(1)
+        val isFileBody = contentType?.let { type ->
+            type.startsWith("audio/", ignoreCase = true) ||
+                type.startsWith("image/", ignoreCase = true) ||
+                type.equals("application/octet-stream", ignoreCase = true)
+        } == true
+        if (!isFileBody) return this
+
+        val fileName = MultipartFileNameRegex.find(this)?.groupValues?.get(1)
+        return buildString {
+            append("[multipart file body omitted")
+            fileName?.let { append(", filename=").append(it) }
+            contentType?.let { append(", contentType=").append(it) }
+            append(']')
         }
     }
 
@@ -35,6 +55,14 @@ object HttpLoggingInterceptorFactory {
     )
     private val SensitiveQueryValueRegex = Regex(
         pattern = """([?&](?:code|token|accessToken|refreshToken))=[^&\s]+""",
+        option = RegexOption.IGNORE_CASE,
+    )
+    private val MultipartFileNameRegex = Regex(
+        pattern = """filename="([^"]+)""",
+        option = RegexOption.IGNORE_CASE,
+    )
+    private val MultipartContentTypeRegex = Regex(
+        pattern = """Content-Type:\s*([^\r\n]+)""",
         option = RegexOption.IGNORE_CASE,
     )
     private const val RedactedValue = "██"
