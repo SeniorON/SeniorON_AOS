@@ -194,22 +194,7 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.SENIOR_ON" />
 
-        <activity
-            android:name=".ui.parent.link.ParentLinkDetectionActivity"
-            android:excludeFromRecents="true"
-            android:exported="true"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.SENIOR_ON">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-            </intent-filter>
-        </activity>
+        <!-- 유해링크 감지는 비활성화했습니다. 검사 코드는 보존하지만 Activity를 등록하지 않습니다. -->
 
         <activity-alias
             android:name=".ui.parent.launcher.ParentHomeAlias"

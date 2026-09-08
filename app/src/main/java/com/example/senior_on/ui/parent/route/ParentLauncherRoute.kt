@@ -40,7 +40,6 @@ import com.example.senior_on.device.ParentDeviceStatusScheduler
 import com.example.senior_on.device.ParentInactivityMonitor
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyRoute
 import com.example.senior_on.ui.parent.home.ParentHomeRoute
-import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentLocationTrackingViewModel
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentDeviceStatusViewModel
 import com.example.senior_on.location.tracking.hasBackgroundLocationPermission
@@ -56,7 +55,6 @@ import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
 import com.example.senior_on.ui.parent.launcher.ParentHomeRoleManager
-import com.example.senior_on.ui.parent.launcher.ParentBrowserRoleManager
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipStatus
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipViewModel
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
@@ -67,7 +65,7 @@ private enum class ParentDestination {
     ChatBuddy, // 이전 버전의 저장된 목적지 복원을 위해 유지하며 홈으로 표시합니다.
     Medication,
     Emergency,
-    LinkDetection,
+    LinkDetection, // 이전에 저장된 검사 화면 목적지는 홈으로 표시합니다.
     FamilyPhotos,
 }
 
@@ -77,7 +75,7 @@ fun ParentLauncherRoute(
     onExitToOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    RequestDefaultParentRolesOnEntry()
+    RequestDefaultParentHomeRoleOnEntry()
 
     val sessionExpirationEvent by
         SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
@@ -173,7 +171,6 @@ private fun ParentLauncherContent(
     var highlightedMedicationLogId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
-    var linkDetectionUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
@@ -184,7 +181,6 @@ private fun ParentLauncherContent(
         if (sessionExpirationRequest == 0) return@LaunchedEffect
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
-        linkDetectionUrl = null
     }
 
     LaunchedEffect(notificationNavigationEvent) {
@@ -200,21 +196,8 @@ private fun ParentLauncherContent(
                     destination = ParentDestination.Schedule
                 }
                 else -> {
-                    val eventDetail = event.eventId
-                        ?.takeIf { event.type == null || event.linkUrl == null }
-                        ?.let { eventId ->
-                            runCatching {
-                                appContainer.eventRepository.getDetail(eventId)
-                            }.getOrNull()
-                        }
-                    val eventType = event.type ?: eventDetail?.type
-
-                    if (eventType == "RISK_LINK") {
-                        linkDetectionUrl = event.linkUrl ?: eventDetail?.linkUrl
-                        destination = ParentDestination.LinkDetection
-                    } else {
-                        destination = ParentDestination.Home
-                    }
+                    // 기존 위험링크 푸시도 홈으로 이동하며 링크를 재검사하지 않습니다.
+                    destination = ParentDestination.Home
                 }
             }
         } finally {
@@ -233,7 +216,6 @@ private fun ParentLauncherContent(
     fun openHome() {
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
-        linkDetectionUrl = null
     }
 
     BackHandler {
@@ -244,6 +226,7 @@ private fun ParentLauncherContent(
 
     when (destination) {
         ParentDestination.Home,
+        ParentDestination.LinkDetection,
         ParentDestination.ChatBuddy -> ParentHomeRoute(
             repository = appContainer.homeServerRepository,
             refreshRequest = homeRefreshRequest,
@@ -277,13 +260,6 @@ private fun ParentLauncherContent(
         ParentDestination.Emergency -> ParentEmergencyRoute(
             repository = appContainer.eventRepository,
             locationRepository = appContainer.locationRepository,
-            onBackClick = ::openHome,
-            modifier = modifier,
-        )
-
-        ParentDestination.LinkDetection -> ParentLinkDetectionRoute(
-            repository = appContainer.parentLinkSafetyRepository,
-            url = linkDetectionUrl,
             onBackClick = ::openHome,
             modifier = modifier,
         )
@@ -370,28 +346,18 @@ private fun ParentDeviceStatusLifecycleEffect(
 }
 
 @Composable
-private fun RequestDefaultParentRolesOnEntry() {
+private fun RequestDefaultParentHomeRoleOnEntry() {
     if (LocalInspectionMode.current) return
     val activity = LocalContext.current.findActivity() ?: return
-    val browserRoleLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = {},
-    )
-    val requestBrowserRole = {
-        ParentBrowserRoleManager.createBrowserSelectionIntent(activity)
-            ?.let(browserRoleLauncher::launch)
-    }
     val roleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = { requestBrowserRole() },
+        onResult = {},
     )
 
     LaunchedEffect(activity) {
         val homeRoleIntent = ParentHomeRoleManager.createHomeSelectionIntent(activity)
         if (homeRoleIntent != null) {
             roleLauncher.launch(homeRoleIntent)
-        } else {
-            requestBrowserRole()
         }
     }
 }

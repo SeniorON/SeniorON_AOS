@@ -211,11 +211,13 @@ class DefaultAppContainer(
             RemoteChatBuddyDataSource(SeniorOnNetwork.companionApi)
         )
     }
-    override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
+    // 유해링크 감지 재활성화 전까지 검사 전용 객체를 생성하지 않습니다.
+    override val parentLinkSafetyRepository: ParentLinkSafetyRepository by lazy {
         ParentLinkSafetyRepositoryImpl(
             RemoteParentLinkSafetyDataSource(
                 eventDataSource = eventDataSource,
                 deviceStatusDataSource = localDeviceStatusDataSource,
             )
         )
+    }
 }
