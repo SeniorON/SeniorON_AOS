@@ -260,6 +260,7 @@ private fun ParentLauncherContent(
         ParentDestination.Emergency -> ParentEmergencyRoute(
             repository = appContainer.eventRepository,
             locationRepository = appContainer.locationRepository,
+            deviceRepository = appContainer.deviceRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )

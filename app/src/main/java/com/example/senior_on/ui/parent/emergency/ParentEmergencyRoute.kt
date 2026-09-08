@@ -3,7 +3,6 @@ package com.example.senior_on.ui.parent.emergency
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.BatteryManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,13 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.repository.server.EventRepository
+import com.example.senior_on.domain.repository.server.DeviceRepository
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertStatus
 import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertViewModel
@@ -26,16 +25,16 @@ import com.example.senior_on.ui.parent.emergency.viewmodel.ParentEmergencyAlertV
 fun ParentEmergencyRoute(
     repository: EventRepository,
     locationRepository: LocationRepository,
+    deviceRepository: DeviceRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val deviceBattery = remember(context) { context.currentBatteryLevel() }
     val viewModel: ParentEmergencyAlertViewModel = viewModel(
         factory = ParentEmergencyAlertViewModel.factory(
             repository = repository,
             locationRepository = locationRepository,
-            deviceBattery = deviceBattery,
+            deviceRepository = deviceRepository,
         )
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,14 +102,6 @@ private fun Context.hasLocationPermission(): Boolean =
             this,
             Manifest.permission.ACCESS_COARSE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
-
-private fun Context.currentBatteryLevel(): Int? {
-    val batteryManager = getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
-        ?: return null
-    return batteryManager
-        .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        .takeIf { it in 0..100 }
-}
 
 private val LOCATION_PERMISSIONS = arrayOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
