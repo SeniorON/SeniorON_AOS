@@ -205,10 +205,12 @@ class DefaultAppContainer(
     override val parentInfoRepository: ParentInfoRepository = ParentInfoRepositoryImpl(
         InMemoryParentInfoDataSource()
     )
-    override val chatBuddyRepository: ChatBuddyRepository =
+    // 말벗은 비활성화 상태이며, 재활성화 전까지 전용 네트워크 객체도 생성하지 않습니다.
+    override val chatBuddyRepository: ChatBuddyRepository by lazy {
         ChatBuddyRepositoryImpl(
             RemoteChatBuddyDataSource(SeniorOnNetwork.companionApi)
         )
+    }
     override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
         ParentLinkSafetyRepositoryImpl(
             RemoteParentLinkSafetyDataSource(

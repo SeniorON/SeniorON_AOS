@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,7 +38,6 @@ import com.example.senior_on.di.AppContainer
 import com.example.senior_on.data.local.SessionExpirationEventStore
 import com.example.senior_on.device.ParentDeviceStatusScheduler
 import com.example.senior_on.device.ParentInactivityMonitor
-import com.example.senior_on.ui.parent.chat.ParentChatBuddyRoute
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyRoute
 import com.example.senior_on.ui.parent.home.ParentHomeRoute
 import com.example.senior_on.ui.parent.link.ParentLinkDetectionRoute
@@ -64,7 +64,7 @@ import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
 private enum class ParentDestination {
     Home,
     Schedule,
-    ChatBuddy,
+    ChatBuddy, // 이전 버전의 저장된 목적지 복원을 위해 유지하며 홈으로 표시합니다.
     Medication,
     Emergency,
     LinkDetection,
@@ -243,11 +243,15 @@ private fun ParentLauncherContent(
     }
 
     when (destination) {
-        ParentDestination.Home -> ParentHomeRoute(
+        ParentDestination.Home,
+        ParentDestination.ChatBuddy -> ParentHomeRoute(
             repository = appContainer.homeServerRepository,
             refreshRequest = homeRefreshRequest,
             onScheduleClick = { destination = ParentDestination.Schedule },
-            onChatBuddyClick = { destination = ParentDestination.ChatBuddy },
+            // 말벗 로직은 보존하되 화면 진입과 ViewModel의 대화 세션 생성을 차단합니다.
+            onChatBuddyClick = {
+                Toast.makeText(context, "현재 제공하지 않는 기능입니다.", Toast.LENGTH_SHORT).show()
+            },
             onMedicationClick = {
                 highlightedMedicationLogId = null
                 destination = ParentDestination.Medication
@@ -259,12 +263,6 @@ private fun ParentLauncherContent(
 
         ParentDestination.Schedule -> ParentScheduleRoute(
             repository = appContainer.homeServerRepository,
-            onBackClick = ::openHome,
-            modifier = modifier,
-        )
-
-        ParentDestination.ChatBuddy -> ParentChatBuddyRoute(
-            repository = appContainer.chatBuddyRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )
