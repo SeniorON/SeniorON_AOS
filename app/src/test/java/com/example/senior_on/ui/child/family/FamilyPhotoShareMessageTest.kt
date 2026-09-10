@@ -1,6 +1,8 @@
 package com.example.senior_on.ui.child.family
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FamilyPhotoShareMessageTest {
@@ -16,5 +18,15 @@ class FamilyPhotoShareMessageTest {
         val message = "가".repeat(31)
 
         assertEquals("가".repeat(30), normalizeFamilyPhotoMessage(message))
+    }
+
+    @Test
+    fun `사진 업로드 중에는 상단 뒤로가기와 한마디 입력을 비활성화한다`() {
+        assertFalse(familyPhotoShareInteractionsEnabled(isUploading = true))
+    }
+
+    @Test
+    fun `사진 업로드 중이 아니면 한마디 입력을 활성화한다`() {
+        assertTrue(familyPhotoShareInteractionsEnabled(isUploading = false))
     }
 }

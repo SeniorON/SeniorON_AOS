@@ -50,11 +50,11 @@ object HttpLoggingInterceptorFactory {
     }
 
     private val SensitiveJsonValueRegex = Regex(
-        pattern = """("(?:password|passwordCheck|currentPassword|newPassword|newPasswordCheck|verificationCode|fcmToken|deviceIdentifier|kakaoAccessToken|firebaseIdToken|socialToken|accessToken|refreshToken)"\s*:\s*)"[^"]*"""",
+        pattern = """("(?:password|passwordCheck|currentPassword|newPassword|newPasswordCheck|verificationCode|fcmToken|deviceIdentifier|kakaoAccessToken|firebaseIdToken|socialToken|accessToken|refreshToken|uploadUrl)"\s*:\s*)"[^"]*"""",
         option = RegexOption.IGNORE_CASE,
     )
     private val SensitiveQueryValueRegex = Regex(
-        pattern = """([?&](?:code|token|accessToken|refreshToken))=[^&\s]+""",
+        pattern = """([?&](?:code|token|accessToken|refreshToken|X-Amz-Algorithm|X-Amz-Credential|X-Amz-Date|X-Amz-Expires|X-Amz-SignedHeaders|X-Amz-Signature|X-Amz-Security-Token))=[^&\s]+""",
         option = RegexOption.IGNORE_CASE,
     )
     private val MultipartFileNameRegex = Regex(

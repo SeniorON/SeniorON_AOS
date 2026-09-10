@@ -6,6 +6,7 @@ import com.example.senior_on.domain.model.server.FamilyCodeInfo
 import com.example.senior_on.domain.model.server.ServerFamilyHome
 import com.example.senior_on.domain.model.server.ServerFamilyMember
 import com.example.senior_on.domain.model.server.ServerFamilyPhoto
+import com.example.senior_on.domain.model.server.ServerFamilyPhotoAlbum
 import com.example.senior_on.domain.model.server.ServerFamilyPhotoPage
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import java.io.IOException
@@ -116,6 +117,31 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
+    fun `다운로드할 때마다 사진 상세를 다시 조회해 최신 URL을 사용한다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = EXPIRED_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+            )
+            val viewModel = FamilyViewModel(repository)
+            advanceUntilIdle()
+
+            val firstDownloadUrl = viewModel.getLatestPhotoUrlForDownload(PHOTO_ID.toString())
+            val secondDownloadUrl = viewModel.getLatestPhotoUrlForDownload(PHOTO_ID.toString())
+
+            assertEquals(FRESH_URL, firstDownloadUrl)
+            assertEquals(FRESH_URL, secondDownloadUrl)
+            assertEquals(2, repository.photoDetailRequestCount)
+            val displayedImageSource = viewModel.uiState.value.sharedPhotos.single().imageSource
+                as FamilyImageSource.Remote
+            assertEquals(EXPIRED_URL, displayedImageSource.url)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun `강제 갱신은 진행 중인 페이지 요청을 취소하고 첫 페이지를 다시 받는다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -201,6 +227,7 @@ private class FakeFamilyServerRepository(
     override suspend fun getMembers(): List<ServerFamilyMember> = emptyList()
     override suspend fun changePrimaryManager(userId: Long) = Unit
     override suspend fun deleteMember(userId: Long) = Unit
+    override suspend fun getPhotoAlbums(): List<ServerFamilyPhotoAlbum> = emptyList()
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,

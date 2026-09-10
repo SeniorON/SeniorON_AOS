@@ -63,6 +63,7 @@ internal fun FamilyBackTopAppBar(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     centerTitle: Boolean = true,
+    backEnabled: Boolean = true,
 ) {
     Box(
         modifier = modifier
@@ -79,11 +80,12 @@ internal fun FamilyBackTopAppBar(
                 .padding(start = 16.dp)
                 .size(26.dp)
                 .clickable(
+                    enabled = backEnabled,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onBackClick,
                 ),
-            tint = SeniorOnColors.Gray800,
+            tint = if (backEnabled) SeniorOnColors.Gray800 else SeniorOnColors.Gray300,
         )
 
         Text(

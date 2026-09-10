@@ -85,6 +85,19 @@ object SeniorOnNetwork {
             .build()
     }
 
+    private val familyPhotoStorageRetrofit by lazy {
+        val storageClient = configuredClientBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .writeTimeout(FAMILY_PHOTO_UPLOAD_WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .callTimeout(FAMILY_PHOTO_UPLOAD_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(storageClient)
+            .build()
+    }
+
     private val companionRetrofit by lazy {
         val companionClient = okHttpClient.newBuilder()
             .writeTimeout(COMPANION_WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -116,8 +129,8 @@ object SeniorOnNetwork {
 
     val homeApi: HomeApi by lazy { retrofit.create(HomeApi::class.java) }
     val familyApi: FamilyApi by lazy { retrofit.create(FamilyApi::class.java) }
-    val familyPhotoUploadApi: FamilyPhotoUploadApi by lazy {
-        uploadRetrofit.create(FamilyPhotoUploadApi::class.java)
+    val familyPhotoStorageApi: FamilyPhotoStorageApi by lazy {
+        familyPhotoStorageRetrofit.create(FamilyPhotoStorageApi::class.java)
     }
     val hospitalApi: HospitalApi by lazy { retrofit.create(HospitalApi::class.java) }
     val medicationApi: MedicationApi by lazy { retrofit.create(MedicationApi::class.java) }
