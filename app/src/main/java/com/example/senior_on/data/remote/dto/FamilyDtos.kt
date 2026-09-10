@@ -7,7 +7,19 @@ data class FamilyPrimaryManagerUpdateRequest(val targetUserId: Long)
 data class FamilyPrimaryManagerUpdateResponse(
     val usersId: Long?, val name: String?, val managerType: String?
 )
-data class FamilyPhotoCreateRequest(val image: String, val description: String?)
+data class FamilyPhotoUploadUrlRequest(
+    val contentType: String,
+    val fileSize: Long,
+)
+data class FamilyPhotoUploadUrlResponse(
+    val imageKey: String?,
+    val uploadUrl: String?,
+    val expiresInSeconds: Long?,
+)
+data class FamilyPhotoUploadCompleteRequest(
+    val imageKey: String,
+    val description: String?,
+)
 data class FamilyPhotoItemResponse(
     val familyPhotoId: Long?, val imageUrl: String?, val uploaderUserId: Long?,
     val uploaderName: String?, val description: String?, val canDelete: Boolean?,

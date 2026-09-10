@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.data.local.FamilyPhotoSaver
+import com.example.senior_on.domain.model.family.FamilyImageSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -63,19 +64,19 @@ fun FamilyPhotoDetailRoute(
         }
     }
 
-    val savePhoto: (SharedFamilyPhotoUiModel) -> Unit = savePhoto@{ photo ->
-        val imageSource = photo.imageSource ?: return@savePhoto
+    val savePhoto: () -> Unit = {
         if (!isSaving) {
             isSaving = true
             coroutineScope.launch {
                 runCatching {
+                    val latestImageUrl = viewModel.getLatestPhotoUrlForDownload(photoId)
                     photoSaver.save(
-                        imageSource = imageSource,
+                        imageSource = FamilyImageSource.Remote(latestImageUrl),
                         displayName = "SeniorON_${System.currentTimeMillis()}"
                     )
                 }.onSuccess {
                     isSaveSuccessVisible = true
-                    onDownloadClick(photo.id)
+                    onDownloadClick(photoId)
                 }
                 isSaving = false
             }
@@ -85,13 +86,13 @@ fun FamilyPhotoDetailRoute(
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            uiState.photo?.let(savePhoto)
+        if (isGranted && uiState.photo != null) {
+            savePhoto()
         }
     }
 
     val onDownloadRequest: () -> Unit = {
-        uiState.photo?.let { photo ->
+        if (uiState.photo != null) {
             val needsLegacyPermission =
                 Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
                     ContextCompat.checkSelfPermission(
@@ -104,7 +105,7 @@ fun FamilyPhotoDetailRoute(
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                 )
             } else {
-                savePhoto(photo)
+                savePhoto()
             }
         }
         Unit

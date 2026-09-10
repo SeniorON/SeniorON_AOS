@@ -474,6 +474,18 @@ class FamilyViewModel(
         }
     }
 
+    suspend fun getLatestPhotoUrlForDownload(photoId: String): String {
+        val serverPhotoId = photoId.toLongOrNull()
+            ?.takeIf { it > 0L }
+            ?: throw IllegalArgumentException("Invalid family photo id")
+        val photo = repository.getPhoto(serverPhotoId)
+        require(photo.id == serverPhotoId) {
+            "Family photo response id must match the requested id"
+        }
+        return photo.imageUrl.trim().takeIf(String::isNotEmpty)
+            ?: throw IllegalArgumentException("Family photo response is missing imageUrl")
+    }
+
     fun refreshPhotoUrlAfterLoadFailure(photoId: String, failedUrl: String) {
         val normalizedPhotoId = photoId.trim()
         val normalizedFailedUrl = failedUrl.trim()
