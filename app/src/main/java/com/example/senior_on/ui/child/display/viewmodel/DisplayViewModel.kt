@@ -7,7 +7,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.model.display.DisplayOverview
 import com.example.senior_on.domain.model.display.DisplayHomeButton
-import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
@@ -30,7 +29,6 @@ class DisplayViewModel(
 ) : ViewModel() {
     private val initialParentInfo = parentInfoRepository.parentInfo.value
     private val initialRelationshipLabel = initialParentInfo?.relationshipLabel
-    private var isInitialButtonSetupInProgress = false
     private var initialLoadJob: Job? = null
     private var overviewPullRefreshJob: Job? = null
     private var editPermissionRefreshJob: Job? = null
@@ -89,15 +87,7 @@ class DisplayViewModel(
                 )
             }
             overviewRequest.await()
-                .mapCatching { overview ->
-                    applyInitialButtonsIfNeeded(
-                        overview = overview,
-                        canEditScreen = canEditScreen,
-                    )
-                }
-                .onSuccess { overview ->
-                    applyOverview(overview)
-                }
+                .onSuccess(::applyOverview)
                 .onFailure(::handleLoadFailure)
         }
     }
@@ -242,34 +232,6 @@ class DisplayViewModel(
                 hasLoadedOverview = true,
             )
         }
-    }
-
-    private suspend fun applyInitialButtonsIfNeeded(
-        overview: DisplayOverview,
-        canEditScreen: Boolean,
-    ): DisplayOverview {
-        if (
-            overview.hasSavedButtonConfiguration ||
-            !canEditScreen ||
-            isInitialButtonSetupInProgress
-        ) {
-            return overview
-        }
-
-        isInitialButtonSetupInProgress = true
-        try {
-            displayRepository.saveButtons(
-                buttons = InitialSeniorHomeGridButtons,
-                customButtonLabels = emptyMap(),
-            )
-        } catch (throwable: Throwable) {
-            isInitialButtonSetupInProgress = false
-            throw throwable
-        }
-
-        return displayRepository.getOverview(
-            parentInfoRepository.parentInfo.value
-        )
     }
 
     fun refreshDevice() {

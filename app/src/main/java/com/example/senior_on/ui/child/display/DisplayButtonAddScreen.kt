@@ -50,10 +50,11 @@ import kotlinx.coroutines.delay
 
 internal const val MinimumButtonSelectionCount = 8
 private const val MaximumButtonSelectionCount = 18
+// 말벗은 이 화면에서만 숨기며 현재 저장 필수 정책에는 남아 있어 개수에 포함한다.
+private const val RequiredGeneralButtonCount = 4
 
 internal val ProvidedFeatureButtons = listOf(
     SeniorHomeButtonType.Medication,
-    SeniorHomeButtonType.ChatBuddy,
     SeniorHomeButtonType.Emergency,
     SeniorHomeButtonType.Photo,
     SeniorHomeButtonType.Schedule,
@@ -72,7 +73,7 @@ internal val MusicButtons = listOf(
 )
 
 internal fun buttonAddSelectedCount(selectedAppCount: Int): Int =
-    ProvidedFeatureButtons.count { it != SeniorHomeButtonType.Schedule } + selectedAppCount
+    RequiredGeneralButtonCount + selectedAppCount
 
 internal fun buttonAddMaximumCount(): Int = MaximumButtonSelectionCount
 

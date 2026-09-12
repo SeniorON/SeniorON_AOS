@@ -28,7 +28,6 @@ import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.DisplayHomeButton
-import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.parent.ParentInfo
@@ -147,7 +146,17 @@ class DisplayRepositoryImplTest {
             )
 
             savingRepository.saveButtons(
-                buttons = listOf(button) + InitialSeniorHomeGridButtons,
+                buttons = listOf(
+                    button,
+                    SeniorHomeButtonType.Call,
+                    SeniorHomeButtonType.Message,
+                    SeniorHomeButtonType.Camera,
+                    SeniorHomeButtonType.YouTube,
+                    SeniorHomeButtonType.ChatBuddy,
+                    SeniorHomeButtonType.Medication,
+                    SeniorHomeButtonType.Photo,
+                    SeniorHomeButtonType.Emergency,
+                ),
                 customButtonLabels = emptyMap(),
             )
 
@@ -486,102 +495,38 @@ class DisplayRepositoryImplTest {
         }
 
     @Test
-    fun initialGridButtonsUseRequestedOrderNamesAndTargets() = runBlocking {
-        val homeDataSource = FakeHomeDataSource()
-        val repository = DisplayRepositoryImpl(
-            homeDataSource = homeDataSource,
-            deviceDataSource = FakeDeviceDataSource(),
-        )
-
-        repository.saveButtons(
-            buttons = InitialSeniorHomeGridButtons,
-            customButtonLabels = emptyMap(),
-        )
-
-        val request = homeDataSource.savedButtonRequests.single()
-        assertEquals(null, request.musicApp)
-        assertEquals((1..10).toList(), request.buttons.map { it.buttonOrder })
-        assertEquals(
-            listOf(
-                "전화",
-                "메시지",
-                "카메라",
-                "사진",
-                "유튜브",
-                "말벗",
-                "복약",
-                "긴급알림",
-                "카카오톡",
-                "네이버",
-            ),
-            request.buttons.map { it.buttonName },
-        )
-        assertEquals(
-            listOf(
-                "PHONE",
-                "MESSAGE",
-                "CAMERA",
-                "PHOTO",
-                "YOUTUBE",
-                "COMPANION",
-                "MEDICATION",
-                "EMERGENCY",
-                "KAKAO_TALK",
-                "NAVER",
-            ),
-            request.buttons.map { it.actionValue },
-        )
-        assertEquals(
-            listOf(
-                null,
-                null,
-                null,
-                null,
-                "com.google.android.youtube",
-                null,
-                null,
-                null,
-                "com.kakao.talk",
-                "com.nhn.android.search",
-            ),
-            request.buttons.map { it.packageName },
-        )
-        assertEquals(
-            8,
-            request.buttons.single {
-                it.actionValue == "EMERGENCY"
-            }.buttonOrder,
-        )
-    }
-
-    @Test
-    fun getOverviewKeepsBackendInitialButtonsAndEmergencyAtOrderEight() =
+    fun getOverviewKeepsBackendButtonItemsAndOrder() =
         runBlocking {
-            val initialButtonNames = listOf(
-                "전화",
-                "메시지",
-                "카메라",
-                "사진",
-                "유튜브",
-                "말벗",
-                "복약",
-                "긴급알림",
-                "카카오톡",
-                "네이버",
+            val serverButtons = listOf(
+                HomeButtonResponse(
+                    icon = null,
+                    button_id = 1L,
+                    button_order = 1,
+                    button_name = "전화",
+                    action_type = "DEFAULT",
+                    action_value = "PHONE",
+                ),
+                HomeButtonResponse(
+                    icon = null,
+                    button_id = 2L,
+                    button_order = 2,
+                    button_name = "달력",
+                    action_type = "DEFAULT",
+                    action_value = "CALENDAR",
+                ),
+                HomeButtonResponse(
+                    icon = null,
+                    button_id = 3L,
+                    button_order = 3,
+                    button_name = "긴급알림",
+                    action_type = "DEFAULT",
+                    action_value = "EMERGENCY",
+                ),
             )
             val homeDataSource = FakeHomeDataSource(
                 homeResponse = HomeResponse(
                     connection = null,
-                    buttons = initialButtonNames.mapIndexed { index, name ->
-                        HomeButtonResponse(
-                            icon = null,
-                            button_id = index.toLong(),
-                            button_order = index + 1,
-                            button_name = name,
-                            action_type = null,
-                            action_value = null,
-                        )
-                    },
+                    buttons = serverButtons,
                     user_name = null,
                     senior_profile = null,
                     font_size = "LARGE",
@@ -594,14 +539,15 @@ class DisplayRepositoryImplTest {
                 deviceDataSource = FakeDeviceDataSource(),
             )
 
-            val gridButtons = repository
+            val buttonItems = repository
                 .getOverview(currentParentInfo = null)
-                .screenConfiguration
-                .buttons
-                .filterNot { it == SeniorHomeButtonType.Schedule }
+                .configuredButtonItems
+                .filterNot { it.isDefaultAction("SCHEDULE") }
 
-            assertEquals(InitialSeniorHomeGridButtons, gridButtons)
-            assertEquals(SeniorHomeButtonType.Emergency, gridButtons[7])
+            assertEquals(
+                listOf("PHONE", "CALENDAR", "EMERGENCY"),
+                buttonItems.map(DisplayHomeButton::actionValue),
+            )
         }
 
     @Test

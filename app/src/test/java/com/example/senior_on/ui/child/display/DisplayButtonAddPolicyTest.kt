@@ -13,7 +13,6 @@ class DisplayButtonAddPolicyTest {
         assertEquals(
             listOf(
                 SeniorHomeButtonType.Medication,
-                SeniorHomeButtonType.ChatBuddy,
                 SeniorHomeButtonType.Emergency,
                 SeniorHomeButtonType.Photo,
                 SeniorHomeButtonType.Schedule,
@@ -92,7 +91,7 @@ class DisplayButtonAddPolicyTest {
     }
 
     @Test
-    fun counterIncludesAllFourRequiredGeneralButtons() {
+    fun counterKeepsAllFourRequiredGeneralButtons() {
         assertEquals(9, buttonAddSelectedCount(selectedAppCount = 5))
     }
 
@@ -112,6 +111,8 @@ class DisplayButtonAddPolicyTest {
     @Test
     fun maximumCountsOnlyGeneralButtons() {
         assertEquals(18, buttonAddMaximumCount())
+        assertEquals(18, buttonAddSelectedCount(selectedAppCount = 14))
+        assertEquals(19, buttonAddSelectedCount(selectedAppCount = 15))
     }
 
     @Test
