@@ -103,26 +103,9 @@ data class DisplayHomeButton(
             actionValue.equals(action, ignoreCase = true)
 }
 
-val InitialSeniorHomeGridButtons = listOf(
-    SeniorHomeButtonType.Call,
-    SeniorHomeButtonType.Message,
-    SeniorHomeButtonType.Camera,
-    SeniorHomeButtonType.Photo,
-    SeniorHomeButtonType.YouTube,
-    SeniorHomeButtonType.ChatBuddy,
-    SeniorHomeButtonType.Medication,
-    SeniorHomeButtonType.Emergency,
-    SeniorHomeButtonType.KakaoTalk,
-    SeniorHomeButtonType.Naver,
-)
-
 data class SeniorScreenConfiguration(
     val fontSize: SeniorFontSize = SeniorFontSize.Large,
-    val buttons: List<SeniorHomeButtonType> =
-        listOf(
-            SeniorHomeButtonType.Melon,
-            SeniorHomeButtonType.Schedule,
-        ) + InitialSeniorHomeGridButtons,
+    val buttons: List<SeniorHomeButtonType> = emptyList(),
     val customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
 )
 
