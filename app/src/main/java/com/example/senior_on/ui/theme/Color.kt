@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 object SeniorOnColors {
     val Primary700 = Color(0xFF4D7615)
-    val Primary600 = Color(0xFF659423)
+    val Primary600 = Color(0xFF62852B)
     val Primary500 = Color(0xFF779F40)
     val Primary400 = Color(0xFFA5D069)
     val Primary300 = Color(0xFFDBECB0)
@@ -25,10 +25,11 @@ object SeniorOnColors {
 
     val DangerSOS = Color(0xFFFF0000)
     val Red500 = Color(0xFFC83333)
-    val Red400 = Color(0xFFED3838)
-    val Red300 = Color(0xFFFC4246)
-    val Red200 = Color(0xFFFC575A)
-    val Red100 = Color(0xFFFFEBEB)
+    val Red400 = Color(0xFFD23333)
+    val Red300 = Color(0xFFDD3939)
+    val Red200 = Color(0xFFD65151)
+    val Red100 = Color(0xFFF7D4D4)
+    val Red50 = Color(0xFFF9E6E6)
 
     val Communication = Primary600
     val Health = Color(0xFF6548B8)
