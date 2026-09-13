@@ -81,6 +81,7 @@ fun NotificationDetailScreen(
     onRefreshClick: () -> Unit = {},
     isRefreshing: Boolean = false,
     isDirectionsLoading: Boolean = false,
+    showLocationUpdate: Boolean = true,
     onCallClick: () -> Unit = {},
     onDirectionsClick: () -> Unit = {}
 ) {
@@ -114,6 +115,7 @@ fun NotificationDetailScreen(
         } else {
             LocationDetailSheet(
                 detail = detail,
+                showLocationUpdate = showLocationUpdate,
                 onRefreshClick = onRefreshClick,
                 isRefreshing = isRefreshing,
                 onCallClick = onCallClick,
@@ -329,6 +331,7 @@ private val NotificationCategory.heroSpacingRatio: Pair<Float, Float>
 @Composable
 private fun LocationDetailSheet(
     detail: NotificationDetailUiState,
+    showLocationUpdate: Boolean,
     onRefreshClick: () -> Unit,
     isRefreshing: Boolean,
     onCallClick: () -> Unit,
@@ -406,9 +409,9 @@ private fun LocationDetailSheet(
                 iconResId = R.drawable.ic_battery,
                 label = "기기 배터리",
                 value = detail.battery,
-                showBottomBorder = detail.inactivityHours == null
+                showBottomBorder = showLocationUpdate && detail.inactivityHours == null
             )
-            if (detail.inactivityHours == null) {
+            if (showLocationUpdate && detail.inactivityHours == null) {
                 DetailInformationRow(
                     iconResId = R.drawable.ic_share_location,
                     label = "마지막 위치 업데이트",
