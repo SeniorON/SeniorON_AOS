@@ -229,6 +229,7 @@ private fun ParentLauncherContent(
         ParentDestination.LinkDetection,
         ParentDestination.ChatBuddy -> ParentHomeRoute(
             repository = appContainer.homeServerRepository,
+            updatesRepository = appContainer.parentHomeUpdatesRepository,
             refreshRequest = homeRefreshRequest,
             onScheduleClick = { destination = ParentDestination.Schedule },
             // 말벗 로직은 보존하되 화면 진입과 ViewModel의 대화 세션 생성을 차단합니다.

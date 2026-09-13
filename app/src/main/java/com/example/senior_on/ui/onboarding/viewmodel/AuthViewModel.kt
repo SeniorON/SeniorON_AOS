@@ -108,6 +108,7 @@ class AuthViewModel(
                         refreshToken = result.refreshToken,
                         deviceIdentifier = deviceRegistration.deviceIdentifier,
                         userId = result.loginId,
+                        usersId = result.usersId,
                         mode = result.mode,
                         keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                     )
@@ -363,6 +364,7 @@ class AuthViewModel(
                     refreshToken = result.refreshToken,
                     deviceIdentifier = deviceRegistration.deviceIdentifier,
                     userId = resultUsersId.toString(),
+                    usersId = resultUsersId,
                     mode = resultMode,
                     keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )

@@ -46,6 +46,7 @@ class SessionRepositoryImpl(
         userId: String,
         mode: AppUserMode,
         keepLoggedIn: Boolean,
+        usersId: Long?,
     ) {
         // Even when automatic login is not requested, keep the access token across
         // process death for the remainder of its server-defined lifetime. Omitting
@@ -64,6 +65,7 @@ class SessionRepositoryImpl(
                         AppUserMode.Senior -> UserRole.PARENT
                     },
                     userId = userId,
+                    usersId = usersId,
                 )
             )
         } else {

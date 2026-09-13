@@ -66,6 +66,9 @@ import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
+import com.example.senior_on.data.repository.impl.ParentHomeUpdatesRepositoryImpl
+import com.example.senior_on.data.source.auth.PersistedSessionStore
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
@@ -80,6 +83,7 @@ interface AppContainer {
     val sessionRepository: SessionRepository
     val deviceRegistrationRepository: DeviceRegistrationRepository
     val homeServerRepository: HomeServerRepository
+    val parentHomeUpdatesRepository: ParentHomeUpdatesRepository
     val familyServerRepository: FamilyServerRepository
     val hospitalRepository: HospitalRepository
     val medicationRepository: MedicationRepository
@@ -140,6 +144,16 @@ class DefaultAppContainer(
             deviceIdentifierDataSource = deviceIdentifierDataSource
         )
     override val homeServerRepository = HomeServerRepositoryImpl(homeDataSource)
+    override val parentHomeUpdatesRepository: ParentHomeUpdatesRepository by lazy {
+        ParentHomeUpdatesRepositoryImpl(
+            sessionStore = PersistedSessionStore(context),
+            source = SeniorOnNetwork.parentHomeStompSource,
+            currentUsersId = {
+                SeniorOnNetwork.notificationApi.getMyInactivitySetting().data?.usersId
+            },
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
+        )
+    }
     override val familyServerRepository = FamilyServerRepositoryImpl(remoteFamilySource)
     override val hospitalRepository = HospitalRepositoryImpl(hospitalDataSource)
     override val medicationRepository = MedicationRepositoryImpl(medicationDataSource)

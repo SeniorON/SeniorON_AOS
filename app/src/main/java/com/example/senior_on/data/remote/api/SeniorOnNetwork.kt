@@ -3,6 +3,7 @@ package com.example.senior_on.data.remote.api
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.interceptor.AccessTokenAuthenticator
 import com.example.senior_on.data.remote.interceptor.HttpLoggingInterceptorFactory
+import com.example.senior_on.data.remote.websocket.ParentHomeStompSource
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -64,6 +65,21 @@ object SeniorOnNetwork {
             .readTimeout(30, TimeUnit.SECONDS)
             .callTimeout(45, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
+
+    val parentHomeStompSource: ParentHomeStompSource by lazy {
+        ParentHomeStompSource(
+            // newBuilder shares the same authenticator/refresh lock with REST requests.
+            socketFactory = okHttpClient.newBuilder()
+                .callTimeout(0, TimeUnit.SECONDS)
+                .pingInterval(30, TimeUnit.SECONDS)
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build(),
+            url = "${BASE_URL}ws",
+            bearerToken = AccessTokenStore::getBearerToken,
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
+        )
+    }
 
     private val retrofit by lazy {
         Retrofit.Builder()
