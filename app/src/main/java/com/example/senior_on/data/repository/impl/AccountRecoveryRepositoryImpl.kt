@@ -8,6 +8,7 @@ import com.example.senior_on.data.remote.dto.VerifyPasswordResetVerificationCode
 import com.example.senior_on.domain.model.auth.FoundLoginId
 import com.example.senior_on.domain.model.auth.PasswordResetVerificationDelivery
 import com.example.senior_on.domain.repository.auth.AccountRecoveryRepository
+import com.example.senior_on.domain.model.auth.VerificationRequestGate
 
 class AccountRecoveryRepositoryImpl(
     private val dataSource: AccountRecoveryDataSource
@@ -16,9 +17,11 @@ class AccountRecoveryRepositoryImpl(
         name: String,
         loginId: String
     ): PasswordResetVerificationDelivery {
-        val response = dataSource.sendPasswordResetVerificationCode(
-            SendPasswordResetVerificationCodeRequest(name.trim(), loginId.trim())
-        )
+        val response = VerificationRequestGate.send(VerificationRequestGate.recoveryKey(loginId), { it.sent }) {
+            dataSource.sendPasswordResetVerificationCode(
+                SendPasswordResetVerificationCodeRequest(name.trim(), loginId.trim())
+            )
+        }
         return PasswordResetVerificationDelivery(response.sent, response.verificationId)
     }
 

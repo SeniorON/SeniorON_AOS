@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
+import com.example.senior_on.domain.model.auth.VerificationRequestGate
+import com.example.senior_on.ui.onboarding.rememberVerificationRequestUi
 
 @Composable
 fun FindPasswordVerifyScreen(
@@ -41,14 +43,17 @@ fun FindPasswordVerifyScreen(
     ) -> Unit,
     onResendCode: (onResult: (Boolean) -> Unit) -> Unit,
     onTabSelected: (FindAccountTab) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    requestLoginId: String = "",
+    requestErrorMessage: String? = null,
 ) {
     var verificationCode by rememberSaveable { mutableStateOf("") }
     var isVerificationError by rememberSaveable { mutableStateOf(false) }
     var isVerifying by rememberSaveable { mutableStateOf(false) }
     var isResending by rememberSaveable { mutableStateOf(false) }
 
-    val isVerifyEnabled = verificationCode.length == 6 && !isVerifying
+    val requestUi = rememberVerificationRequestUi(VerificationRequestGate.recoveryKey(requestLoginId))
+    val isVerifyEnabled = verificationCode.length == 6 && !isVerifying && !isResending && requestUi.remainingCodeSeconds > 0
 
     FindAccountScaffold(
         modifier = modifier.systemBarsPadding(),
@@ -144,20 +149,29 @@ fun FindPasswordVerifyScreen(
 
                     FindAccountSmallPrimaryButton(
                         text = "재전송",
-                        enabled = !isVerifying && !isResending,
+                        enabled = !isVerifying && !isResending && !requestUi.locked,
                         isLoading = isResending,
                         onClick = {
-                            verificationCode = ""
-                            isVerificationError = false
                             isResending = true
-                            onResendCode {
+                            onResendCode { sent ->
                                 isResending = false
+                                if (sent) {
+                                    verificationCode = ""
+                                    isVerificationError = false
+                                }
                             }
                         }
                     )
                 }
 
-                if (isVerificationError) {
+                val notice = requestErrorMessage ?: requestUi.notice
+                if (notice != null) Text(notice, color = SeniorOnColors.Red300)
+                Text(
+                    if (requestUi.remainingCodeSeconds > 0) "인증 유효시간 ${requestUi.remainingCodeSeconds / 60}:${(requestUi.remainingCodeSeconds % 60).toString().padStart(2, '0')}"
+                    else "인증 시간이 만료됐어요. 새 코드를 요청해 주세요.",
+                    style = SeniorOnTextStyles.CaptionRegular,
+                )
+                if (isVerificationError && requestErrorMessage == null) {
                     Text(
                         text = "인증번호가 일치하지 않아요.",
                         modifier = Modifier.padding(top = 6.dp),

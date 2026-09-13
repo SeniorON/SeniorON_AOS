@@ -19,8 +19,11 @@ fun FindAccountRoute(
     onPasswordVerification: () -> Unit
 ) {
     val viewModel = accountRecoveryViewModel(appContainer)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FindAccountScreen(
+        requestErrorMessage = uiState.errorMessage.takeUnless { uiState.errorCode?.startsWith("EMAIL429_") == true },
+        onInputChange = viewModel::clearRequestError,
         initialTab = initialTab,
         onBackClick = onBackClick,
         onFindIdNextClick = { name, email, onComplete ->
@@ -72,8 +75,11 @@ fun FindPasswordVerifyRoute(
     onTabSelected: (FindAccountTab) -> Unit
 ) {
     val viewModel = accountRecoveryViewModel(appContainer)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FindPasswordVerifyScreen(
+        requestLoginId = uiState.requestLoginId,
+        requestErrorMessage = uiState.errorMessage.takeUnless { uiState.errorCode?.startsWith("EMAIL429_") == true },
         maskedEmail = "계정에 등록된 이메일",
         onBackClick = onBackClick,
         onVerifySuccess = onVerifySuccess,

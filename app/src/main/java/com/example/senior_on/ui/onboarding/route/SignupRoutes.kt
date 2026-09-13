@@ -124,7 +124,8 @@ fun SignupEmailVerificationRoute(
         onVerifyCode =
             viewModel::verifySignupEmailVerificationCode,
         emailRequestErrorMessage =
-            uiState.signupEmailRequestErrorMessage,
+            uiState.signupEmailRequestErrorMessage.takeUnless { uiState.errorCode?.startsWith("EMAIL429_") == true },
+        verificationErrorMessage = uiState.signupVerificationErrorMessage,
         onEmailChange =
             viewModel::clearSignupEmailRequestError,
     )
