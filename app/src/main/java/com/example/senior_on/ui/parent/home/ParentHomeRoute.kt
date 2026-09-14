@@ -1,6 +1,8 @@
 package com.example.senior_on.ui.parent.home
 
 import android.widget.Toast
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +38,7 @@ fun ParentHomeRoute(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val exitHome = rememberExitParentHomeAction()
     val viewModel: ParentHomeViewModel = viewModel(
         factory = ParentHomeViewModel.factory(repository, updatesRepository)
     )
@@ -63,6 +66,13 @@ fun ParentHomeRoute(
         weatherUiState = uiState.weather,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refresh,
+        onExitHomeClick = exitHome,
+        onSettingsClick = {
+            runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+                .onFailure {
+                    Toast.makeText(context, R.string.parent_home_settings_unavailable, Toast.LENGTH_SHORT).show()
+                }
+        },
         onMusicClick = { openParentHomeButton(context, it) },
         onScheduleClick = onScheduleClick,
         onButtonClick = { button ->

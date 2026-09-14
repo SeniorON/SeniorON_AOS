@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,6 +79,8 @@ internal fun ParentHomeScreen(
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
+    onExitHomeClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val now = rememberKoreaDateTime()
@@ -109,6 +113,8 @@ internal fun ParentHomeScreen(
                 onMusicClick = onMusicClick,
                 onScheduleClick = onScheduleClick,
                 onButtonClick = onButtonClick,
+                onExitHomeClick = onExitHomeClick,
+                onSettingsClick = onSettingsClick,
             )
         }
     }
@@ -126,14 +132,17 @@ internal fun ColumnScope.SeniorHomeContent(
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     interactionEnabled: Boolean = true,
+    onExitHomeClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
 ) {
     val gridButtons = buttons
         .filterNot { it.type == SeniorHomeButtonType.Schedule }
         .withEmergencyAtFixedGridSlot()
 
-    ParentDateWeatherHeader(
+    ParentDateSettingsHeader(
         now = now,
-        weatherUiState = weatherUiState,
+        interactionEnabled = interactionEnabled,
+        onSettingsClick = onSettingsClick,
     )
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -175,64 +184,83 @@ internal fun ColumnScope.SeniorHomeContent(
                 }
             }
         }
-
     }
+
+    Spacer(modifier = Modifier.height(18.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 85.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .border(2.dp, SeniorOnColors.Primary600, RoundedCornerShape(20.dp))
+            .clickable(enabled = interactionEnabled, role = Role.Button, onClick = onExitHomeClick)
+            .padding(start = 96.dp, end = 86.dp, top = 20.dp, bottom = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.parent_exit_home),
+            style = SeniorOnTextStyles.HeadingXL,
+            color = SeniorOnColors.Primary700,
+            textAlign = TextAlign.Center,
+        )
+    }
+    Spacer(modifier = Modifier.height(33.dp))
 }
 
 @Composable
-private fun ParentDateWeatherHeader(
+private fun ParentDateSettingsHeader(
     now: LocalDateTime,
-    weatherUiState: ParentHomeWeatherUiState,
+    interactionEnabled: Boolean,
+    onSettingsClick: () -> Unit,
 ) {
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 78.dp),
     ) {
-        Column(modifier = Modifier.align(Alignment.CenterStart)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text(
                 text = now.format(
                     DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
                 ),
                 style = SeniorOnTextStyles.HeadingS,
                 color = SeniorOnColors.Gray700,
+                modifier = Modifier.weight(1f),
                 maxLines = 1,
             )
-            Text(
-                text = now.format(
-                    DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
-                ),
-                style = SeniorOnTextStyles.Display,
-                color = SeniorOnColors.Gray800,
-                maxLines = 1,
-            )
-        }
-        Row(
-            modifier = Modifier.align(Alignment.BottomEnd),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_weather_sun),
-                contentDescription = weatherUiState.text,
-                modifier = Modifier.size(34.dp).align(Alignment.Top),
-                tint = Color.Unspecified,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = weatherUiState.temperature
-                        ?.let { "$it°C" }
-                        ?: "--°C",
-                    style = SeniorOnTextStyles.HeadingM,
-                    color = SeniorOnColors.Gray800,
+            Row(
+                modifier = Modifier
+                    .heightIn(min = 46.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SeniorOnColors.Primary200)
+                    .clickable(enabled = interactionEnabled, role = Role.Button, onClick = onSettingsClick)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_nav_setting),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = SeniorOnColors.Primary600,
                 )
                 Text(
-                    text = weatherUiState.text,
+                    text = stringResource(R.string.parent_home_settings),
                     style = SeniorOnTextStyles.HeadingS,
-                    color = SeniorOnColors.Gray700,
+                    color = SeniorOnColors.Primary600,
                 )
             }
         }
+        Text(
+            text = now.format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
+            style = SeniorOnTextStyles.Display,
+            color = SeniorOnColors.Gray800,
+            maxLines = 1,
+        )
     }
 }
 
@@ -520,7 +548,7 @@ private fun List<ParentHomeButtonUiModel>.withEmergencyAtFixedGridSlot():
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 960)
+@Preview(showBackground = true, widthDp = 360, heightDp = 1080)
 @Composable
 private fun ParentHomeScreenPreview() {
     SENIOR_ONTheme {

@@ -10,6 +10,12 @@ import android.os.Build
 import android.provider.Settings
 
 object ParentHomeRoleManager {
+    // Explicit exit must survive process recreation and subsequent manual app launches.
+    fun setHomeExitRequested(context: Context, requested: Boolean) {
+        context.getSharedPreferences("parent_home_role", Context.MODE_PRIVATE)
+            .edit().putBoolean("exit_requested", requested).apply()
+    }
+
     fun enableHomeComponent(context: Context) {
         context.packageManager.setComponentEnabledSetting(
             homeComponent(context),
@@ -34,6 +40,8 @@ object ParentHomeRoleManager {
     }
 
     fun createHomeSelectionIntent(activity: Activity): Intent? {
+        if (activity.getSharedPreferences("parent_home_role", Context.MODE_PRIVATE)
+                .getBoolean("exit_requested", false)) return null
         enableHomeComponent(activity)
         if (isDefaultHome(activity)) return null
 
