@@ -32,6 +32,37 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class DisplayViewModelRefreshTest {
     @Test
+    fun `최초 조회는 빈 서버 버튼을 안드로이드 기본값으로 저장하지 않는다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = RecordingDisplayRepository().apply {
+                overview = overview.copy(
+                    screenConfiguration = SeniorScreenConfiguration(),
+                    configuredButtonItems = emptyList(),
+                    hasSavedButtonConfiguration = false,
+                )
+            }
+
+            val viewModel = DisplayViewModel(
+                parentInfoRepository = ParentInfoRepositoryImpl(
+                    MockParentInfoDataSource(MockSeniorFixtures.mother)
+                ),
+                displayRepository = repository,
+            )
+            advanceUntilIdle()
+
+            assertEquals(1, repository.overviewRequestCount)
+            assertEquals(0, repository.buttonSaveRequestCount)
+            assertEquals(
+                emptyList<SeniorHomeButtonType>(),
+                viewModel.uiState.value.screenConfiguration.buttons,
+            )
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun `화면 탭 재진입은 홈과 편집 권한을 갱신하고 날씨는 10분 동안 재사용한다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -157,6 +188,7 @@ private class RecordingDisplayRepository : DisplayRepository {
     var editPermissionRequestCount = 0
     var weatherRequestCount = 0
     var deviceRequestCount = 0
+    var buttonSaveRequestCount = 0
     var canEditScreen = true
     var overviewGate: CompletableDeferred<Unit>? = null
     var overview: DisplayOverview = MockDisplayFixtures
@@ -201,9 +233,13 @@ private class RecordingDisplayRepository : DisplayRepository {
     override suspend fun saveButtons(
         buttons: List<SeniorHomeButtonType>,
         customButtonLabels: Map<SeniorHomeButtonType, String>,
-    ) = Unit
+    ) {
+        buttonSaveRequestCount += 1
+    }
 
-    override suspend fun saveButtons(buttons: List<DisplayHomeButton>) = Unit
+    override suspend fun saveButtons(buttons: List<DisplayHomeButton>) {
+        buttonSaveRequestCount += 1
+    }
 
     override suspend fun disconnectDevice() = Unit
 }

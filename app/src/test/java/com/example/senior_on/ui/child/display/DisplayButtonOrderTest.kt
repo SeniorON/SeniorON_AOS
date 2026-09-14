@@ -8,24 +8,8 @@ import org.junit.Test
 
 class DisplayButtonOrderTest {
     @Test
-    fun defaultButtonsMatchBackendInitialOrder() {
-        assertEquals(
-            listOf(
-                SeniorHomeButtonType.Call,
-                SeniorHomeButtonType.Message,
-                SeniorHomeButtonType.Camera,
-                SeniorHomeButtonType.Photo,
-                SeniorHomeButtonType.YouTube,
-                SeniorHomeButtonType.ChatBuddy,
-                SeniorHomeButtonType.Medication,
-                SeniorHomeButtonType.Emergency,
-                SeniorHomeButtonType.KakaoTalk,
-                SeniorHomeButtonType.Naver,
-            ),
-            SeniorScreenConfiguration().buttons.filterNot { button ->
-                button.isMusicButton() || button == SeniorHomeButtonType.Schedule
-            },
-        )
+    fun screenConfigurationDoesNotOwnBackendInitialButtons() {
+        assertEquals(emptyList<SeniorHomeButtonType>(), SeniorScreenConfiguration().buttons)
     }
 
     @Test

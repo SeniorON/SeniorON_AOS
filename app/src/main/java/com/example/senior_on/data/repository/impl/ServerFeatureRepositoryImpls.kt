@@ -15,10 +15,11 @@ import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.server.*
 import com.example.senior_on.domain.repository.server.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.LocalTime
@@ -159,8 +160,12 @@ class HomeServerRepositoryImpl(
 }
 
 class FamilyServerRepositoryImpl(
-    private val source: RemoteFamilySource
+    private val source: RemoteFamilySource,
+    private val elapsedTimeMillis: () -> Long = { System.nanoTime() / 1_000_000L },
 ) : FamilyServerRepository {
+    private val photoUploadMutex = Mutex()
+    private val pendingPhotoUploads = mutableMapOf<String, PendingFamilyPhotoUpload>()
+
     override suspend fun hasFamily(): Boolean = try {
         source.getMembers().isNotEmpty()
     } catch (exception: HttpException) {
@@ -234,23 +239,165 @@ class FamilyServerRepositoryImpl(
         photo: PreparedFamilyPhoto,
         description: String,
         idempotencyKey: String,
-    ): ServerFamilyPhoto {
-        val body = photo.file.asRequestBody(photo.mimeType.toMediaType())
-        val part = MultipartBody.Part.createFormData("image", photo.displayName, body)
-        val descriptionBody = description.trim()
-            .takeIf(String::isNotEmpty)
-            ?.toRequestBody("text/plain".toMediaType())
-        return source.uploadPhoto(
+    ): ServerFamilyPhoto = photoUploadMutex.withLock {
+        val fileSize = photo.file.length()
+        require(fileSize in 1..MAX_FAMILY_PHOTO_BYTES) {
+            "가족 사진은 10MB 이하의 파일이어야 합니다."
+        }
+        require(photo.mimeType in FAMILY_PHOTO_CONTENT_TYPES) {
+            "가족 사진은 JPG, PNG, WEBP 형식이어야 합니다."
+        }
+
+        val normalizedDescription = description.trim().takeIf(String::isNotEmpty)
+        require(normalizedDescription == null || normalizedDescription.length <= MAX_PHOTO_DESCRIPTION_LENGTH) {
+            "사진 설명은 30자 이하여야 합니다."
+        }
+
+        val pendingUpload = getOrCreatePendingPhotoUpload(
             idempotencyKey = idempotencyKey,
-            image = part,
-            description = descriptionBody,
-        ).toServerFamilyPhoto()
+            contentType = photo.mimeType,
+            fileSize = fileSize,
+            description = normalizedDescription,
+        )
+        val uploaded = if (pendingUpload.storageUploadCompleted) {
+            pendingUpload
+        } else {
+            try {
+                source.uploadPhotoToStorage(
+                    uploadUrl = pendingUpload.uploadUrl,
+                    image = photo.file.asRequestBody(pendingUpload.contentType.toMediaType()),
+                )
+            } catch (exception: HttpException) {
+                if (exception.code() in 400..499) {
+                    pendingPhotoUploads.remove(idempotencyKey)
+                }
+                throw exception
+            }
+
+            pendingUpload.copy(storageUploadCompleted = true).also {
+                pendingPhotoUploads[idempotencyKey] = it
+            }
+        }
+
+        try {
+            source.completePhotoUpload(
+                idempotencyKey = idempotencyKey,
+                request = FamilyPhotoUploadCompleteRequest(
+                    imageKey = uploaded.imageKey,
+                    description = uploaded.description,
+                ),
+            ).toServerFamilyPhoto().also {
+                pendingPhotoUploads.remove(idempotencyKey)
+            }
+        } catch (exception: HttpException) {
+            if (exception.code() in PHOTO_COMPLETION_RESTART_HTTP_CODES) {
+                pendingPhotoUploads.remove(idempotencyKey)
+            }
+            throw exception
+        }
+    }
+
+    private suspend fun getOrCreatePendingPhotoUpload(
+        idempotencyKey: String,
+        contentType: String,
+        fileSize: Long,
+        description: String?,
+    ): PendingFamilyPhotoUpload {
+        val now = elapsedTimeMillis()
+        discardStalePendingPhotoUploads(now)
+        pendingPhotoUploads[idempotencyKey]?.let { pending ->
+            require(pending.contentType == contentType && pending.fileSize == fileSize) {
+                "동일한 업로드 세션에는 같은 사진 파일을 사용해야 합니다."
+            }
+            return pending
+        }
+
+        val response = source.createPhotoUploadUrl(
+            FamilyPhotoUploadUrlRequest(
+                contentType = contentType,
+                fileSize = fileSize,
+            )
+        )
+        val imageKey = response.imageKey.requireNotBlankResponseField("imageKey")
+        val uploadUrl = response.uploadUrl.requireNotBlankResponseField("uploadUrl")
+        val expiresInSeconds = requireNotNull(response.expiresInSeconds) {
+            "사진 업로드 URL 응답에 expiresInSeconds가 없습니다."
+        }
+        require(expiresInSeconds > 0) {
+            "사진 업로드 URL 만료 시간이 올바르지 않습니다."
+        }
+
+        return PendingFamilyPhotoUpload(
+            imageKey = imageKey,
+            uploadUrl = uploadUrl,
+            contentType = contentType,
+            fileSize = fileSize,
+            description = description,
+            createdAtMillis = now,
+            expiresAtMillis = now + expiresInSeconds * MILLIS_PER_SECOND,
+        ).also { pending ->
+            pendingPhotoUploads[idempotencyKey] = pending
+            trimPendingPhotoUploads(idempotencyKey)
+        }
+    }
+
+    private fun discardStalePendingPhotoUploads(nowMillis: Long) {
+        pendingPhotoUploads.entries.removeAll { (_, pending) ->
+            pending.isStale(nowMillis) ||
+                (!pending.storageUploadCompleted && pending.isExpired(nowMillis))
+        }
+    }
+
+    private fun trimPendingPhotoUploads(currentIdempotencyKey: String) {
+        while (pendingPhotoUploads.size > MAX_PENDING_PHOTO_UPLOADS) {
+            val oldestKey = pendingPhotoUploads
+                .filterKeys { key -> key != currentIdempotencyKey }
+                .minByOrNull { (_, pending) -> pending.createdAtMillis }
+                ?.key
+                ?: return
+            pendingPhotoUploads.remove(oldestKey)
+        }
     }
     override suspend fun getPhoto(photoId: Long) =
         source.getPhoto(photoId).toServerFamilyPhoto()
     override suspend fun markPhotoViewed(photoId: Long) = source.markViewed(photoId)
     override suspend fun deletePhoto(photoId: Long) = source.deletePhoto(photoId)
 }
+
+private data class PendingFamilyPhotoUpload(
+    val imageKey: String,
+    val uploadUrl: String,
+    val contentType: String,
+    val fileSize: Long,
+    val description: String?,
+    val createdAtMillis: Long,
+    val expiresAtMillis: Long,
+    val storageUploadCompleted: Boolean = false,
+) {
+    fun isExpired(nowMillis: Long): Boolean =
+        nowMillis >= expiresAtMillis - UPLOAD_URL_EXPIRY_MARGIN_MILLIS
+
+    fun isStale(nowMillis: Long): Boolean =
+        nowMillis - createdAtMillis >= PENDING_UPLOAD_RETENTION_MILLIS
+}
+
+private fun String?.requireNotBlankResponseField(fieldName: String): String =
+    requireNotNull(this?.takeIf(String::isNotBlank)) {
+        "사진 업로드 URL 응답에 $fieldName 값이 없습니다."
+    }
+
+private const val MAX_FAMILY_PHOTO_BYTES = 10L * 1024L * 1024L
+private const val MAX_PHOTO_DESCRIPTION_LENGTH = 30
+private const val MILLIS_PER_SECOND = 1_000L
+private const val UPLOAD_URL_EXPIRY_MARGIN_MILLIS = 5_000L
+private const val PENDING_UPLOAD_RETENTION_MILLIS = 24L * 60L * 60L * 1_000L
+private const val MAX_PENDING_PHOTO_UPLOADS = 8
+private val FAMILY_PHOTO_CONTENT_TYPES = setOf(
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+)
+private val PHOTO_COMPLETION_RESTART_HTTP_CODES = setOf(400, 403, 404)
 
 private fun FamilyMemberResponse.toServerFamilyMember() = ServerFamilyMember(
     id = usersId.requirePositiveFamilyId("usersId"),

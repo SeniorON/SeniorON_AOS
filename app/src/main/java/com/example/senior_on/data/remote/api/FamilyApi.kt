@@ -1,8 +1,8 @@
 package com.example.senior_on.data.remote.api
 
 import com.example.senior_on.data.remote.dto.*
-import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import retrofit2.Response
 import retrofit2.http.*
 
 interface FamilyApi {
@@ -31,14 +31,21 @@ interface FamilyApi {
     suspend fun markViewed(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
     @DELETE("api/family/photos/{familyPhotoId}")
     suspend fun deletePhoto(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
+    @POST("api/family/photos/upload-url")
+    suspend fun createPhotoUploadUrl(
+        @Body request: FamilyPhotoUploadUrlRequest,
+    ): ApiResponse<FamilyPhotoUploadUrlResponse>
+    @POST("api/family/photos/complete")
+    suspend fun completePhotoUpload(
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Body request: FamilyPhotoUploadCompleteRequest,
+    ): ApiResponse<FamilyPhotoItemResponse>
 }
 
-interface FamilyPhotoUploadApi {
-    @Multipart
-    @POST("api/family/photos")
+interface FamilyPhotoStorageApi {
+    @PUT
     suspend fun uploadPhoto(
-        @Header("Idempotency-Key") idempotencyKey: String,
-        @Part image: MultipartBody.Part,
-        @Part("description") description: RequestBody?,
-    ): ApiResponse<FamilyPhotoItemResponse>
+        @Url uploadUrl: String,
+        @Body image: RequestBody,
+    ): Response<Unit>
 }

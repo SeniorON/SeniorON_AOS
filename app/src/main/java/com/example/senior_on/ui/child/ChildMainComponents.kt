@@ -48,7 +48,8 @@ enum class ChildMainTab(
 internal fun ChildBottomNavigation(
     selectedTab: ChildMainTab,
     onTabClick: (ChildMainTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = modifier
@@ -72,6 +73,7 @@ internal fun ChildBottomNavigation(
             ChildBottomNavigationItem(
                 tab = tab,
                 selected = tab == selectedTab,
+                enabled = enabled,
                 onClick = { onTabClick(tab) }
             )
         }
@@ -82,10 +84,15 @@ internal fun ChildBottomNavigation(
 private fun ChildBottomNavigationItem(
     tab: ChildMainTab,
     selected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val contentColor = if (selected) SeniorOnColors.Primary600 else SeniorOnColors.Gray300
+    val contentColor = when {
+        !enabled -> SeniorOnColors.Gray300
+        selected -> SeniorOnColors.Primary600
+        else -> SeniorOnColors.Gray300
+    }
     val textStyle = if (selected) {
         SeniorOnTextStyles.BodySSemiBold
     } else {
@@ -96,6 +103,7 @@ private fun ChildBottomNavigationItem(
         modifier = modifier
             .width(72.dp)
             .clickable(
+                enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick

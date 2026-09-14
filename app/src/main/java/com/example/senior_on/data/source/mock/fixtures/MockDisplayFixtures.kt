@@ -4,7 +4,6 @@ import com.example.senior_on.data.source.display.MockDisplayScenario
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.DisplayOverview
-import com.example.senior_on.domain.model.display.InitialSeniorHomeGridButtons
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -13,10 +12,28 @@ object MockDisplayFixtures {
     const val CONNECTED_DEVICE_ID = "parent-device-galaxy-s24"
     const val CONNECTED_DEVICE_NAME = "Galaxy S24"
 
-    val defaultScreenConfiguration = SeniorScreenConfiguration()
+    private val previewGridButtons = listOf(
+        SeniorHomeButtonType.Call,
+        SeniorHomeButtonType.Message,
+        SeniorHomeButtonType.Camera,
+        SeniorHomeButtonType.Photo,
+        SeniorHomeButtonType.YouTube,
+        SeniorHomeButtonType.ChatBuddy,
+        SeniorHomeButtonType.Medication,
+        SeniorHomeButtonType.Emergency,
+        SeniorHomeButtonType.KakaoTalk,
+        SeniorHomeButtonType.Naver,
+    )
+
+    val defaultScreenConfiguration = SeniorScreenConfiguration(
+        buttons = listOf(
+            SeniorHomeButtonType.Melon,
+            SeniorHomeButtonType.Schedule,
+        ) + previewGridButtons,
+    )
     val disconnectedScreenConfiguration = SeniorScreenConfiguration(
         fontSize = SeniorFontSize.Normal,
-        buttons = listOf(SeniorHomeButtonType.Schedule) + InitialSeniorHomeGridButtons,
+        buttons = listOf(SeniorHomeButtonType.Schedule) + previewGridButtons,
     )
 
     fun overview(scenario: MockDisplayScenario): DisplayOverview = DisplayOverview(

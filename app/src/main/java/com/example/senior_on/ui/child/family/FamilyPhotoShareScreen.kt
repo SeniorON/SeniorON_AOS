@@ -102,6 +102,7 @@ fun FamilyPhotoShareScreen(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val interactionsEnabled = familyPhotoShareInteractionsEnabled(isUploading)
 
     Column(
         modifier = modifier
@@ -122,6 +123,7 @@ fun FamilyPhotoShareScreen(
             title = "사진 공유",
             onBackClick = onBackClick,
             centerTitle = false,
+            backEnabled = interactionsEnabled,
         )
 
         Column(
@@ -161,6 +163,7 @@ fun FamilyPhotoShareScreen(
                     message = message,
                     onMessageChange = onMessageChange,
                     errorMessage = uploadErrorMessage,
+                    enabled = interactionsEnabled,
                 )
 
                 FamilyPhotoMessageTooltipVisibility(
@@ -320,6 +323,7 @@ private fun FamilyPhotoMessageInput(
     message: String,
     onMessageChange: (String) -> Unit,
     errorMessage: String?,
+    enabled: Boolean,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -358,6 +362,7 @@ private fun FamilyPhotoMessageInput(
         BasicTextField(
             value = message,
             onValueChange = onMessageChange,
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -417,6 +422,8 @@ private fun FamilyPhotoMessageInput(
         }
     }
 }
+
+internal fun familyPhotoShareInteractionsEnabled(isUploading: Boolean): Boolean = !isUploading
 
 @Composable
 private fun FamilyPhotoShareActions(

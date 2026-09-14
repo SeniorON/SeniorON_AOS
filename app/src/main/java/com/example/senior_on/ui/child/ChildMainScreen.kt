@@ -166,6 +166,14 @@ fun ChildMainScreen(
             uploadPreparer = familyPhotoUploadPreparer,
         ),
     )
+    val familyPhotoUploadUiState by
+        familyPhotoUploadViewModel.uiState.collectAsStateWithLifecycle()
+    val isFamilyPhotoUploading =
+        familyDestination == ChildFamilyDestination.PhotoShare &&
+            familyPhotoUploadUiState.sessionId == selectedPhotoSessionId &&
+            familyPhotoUploadUiState.isUploading
+    val childMainNavigationEnabled =
+        isChildMainNavigationEnabled(isFamilyPhotoUploading)
     val displayViewModel: DisplayViewModel = viewModel(
         key = "display:$childSessionViewModelKey",
         factory = DisplayViewModel.factory(
@@ -233,12 +241,14 @@ fun ChildMainScreen(
         Unit
     }
     val navigateBackInFamily = {
-        familyDestination = resolveChildFamilyBackDestination(
-            currentDestination = familyDestination,
-            invitationReturnDestination = invitationReturnDestination,
-            photoShareReturnDestination = photoShareReturnDestination,
-            photoDetailReturnDestination = photoDetailReturnDestination,
-        )
+        if (childMainNavigationEnabled) {
+            familyDestination = resolveChildFamilyBackDestination(
+                currentDestination = familyDestination,
+                invitationReturnDestination = invitationReturnDestination,
+                photoShareReturnDestination = photoShareReturnDestination,
+                photoDetailReturnDestination = photoDetailReturnDestination,
+            )
+        }
     }
 
     BackHandler(
@@ -278,7 +288,9 @@ fun ChildMainScreen(
                 selectedPhotoUri = null
                 selectedPhotoSessionId = null
                 familyViewModel.refreshAfterPhotoUpload()
-                familyDestination = ChildFamilyDestination.PhotoGallery
+                familyDestination = resolveChildFamilyPhotoUploadSuccessDestination(
+                    photoShareReturnDestination = photoShareReturnDestination,
+                )
             },
             onPhotoClick = navigateToPhotoDetail,
             onFamilyBackClick = navigateBackInFamily,
@@ -326,17 +338,20 @@ fun ChildMainScreen(
         ) {
             ChildBottomNavigation(
                 selectedTab = selectedTab,
+                enabled = childMainNavigationEnabled,
                 onTabClick = { tab ->
-                    val isScreenTabReentry =
-                        tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
-                    selectedTab = tab
-                    if (isScreenTabReentry) {
-                        displayViewModel.refreshOnScreenTabReentry()
+                    if (childMainNavigationEnabled) {
+                        val isScreenTabReentry =
+                            tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
+                        selectedTab = tab
+                        if (isScreenTabReentry) {
+                            displayViewModel.refreshOnScreenTabReentry()
+                        }
+                        selectedPhotoId = null
+                        selectedPhotoUri = null
+                        selectedPhotoSessionId = null
+                        familyDestination = ChildFamilyDestination.Overview
                     }
-                    selectedPhotoId = null
-                    selectedPhotoUri = null
-                    selectedPhotoSessionId = null
-                    familyDestination = ChildFamilyDestination.Overview
                 }
             )
         }
@@ -356,6 +371,16 @@ internal fun resolveChildFamilyBackDestination(
     ChildFamilyDestination.PhotoDetail -> photoDetailReturnDestination
     ChildFamilyDestination.Overview -> ChildFamilyDestination.Overview
 }
+
+internal fun resolveChildFamilyPhotoUploadSuccessDestination(
+    photoShareReturnDestination: ChildFamilyDestination,
+): ChildFamilyDestination = when (photoShareReturnDestination) {
+    ChildFamilyDestination.PhotoGallery -> ChildFamilyDestination.PhotoGallery
+    else -> ChildFamilyDestination.Overview
+}
+
+internal fun isChildMainNavigationEnabled(isFamilyPhotoUploading: Boolean): Boolean =
+    !isFamilyPhotoUploading
 
 @Composable
 private fun ChildMainTabContent(
