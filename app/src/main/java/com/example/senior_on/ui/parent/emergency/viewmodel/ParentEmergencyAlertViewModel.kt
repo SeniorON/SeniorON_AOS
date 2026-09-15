@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.server.EventRepository
+import com.example.senior_on.domain.repository.server.DeviceRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,7 +36,7 @@ data class ParentEmergencyAlertUiState(
 class ParentEmergencyAlertViewModel(
     private val repository: EventRepository,
     private val locationRepository: LocationRepository,
-    private val deviceBattery: Int?,
+    private val deviceRepository: DeviceRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentEmergencyAlertUiState())
     val uiState = _uiState.asStateFlow()
@@ -85,7 +86,8 @@ class ParentEmergencyAlertViewModel(
                 repository.createSos(
                     latitude = currentLocation.latitude,
                     longitude = currentLocation.longitude,
-                    battery = deviceBattery,
+                    // ViewModel이 재사용되어도 각 SOS 전송 시점의 배터리를 기록합니다.
+                    battery = deviceRepository.getBatteryLevel(),
                 )
             }
                 .onSuccess {
@@ -141,13 +143,13 @@ class ParentEmergencyAlertViewModel(
         fun factory(
             repository: EventRepository,
             locationRepository: LocationRepository,
-            deviceBattery: Int?,
+            deviceRepository: DeviceRepository,
         ) = viewModelFactory {
             initializer {
                 ParentEmergencyAlertViewModel(
                     repository = repository,
                     locationRepository = locationRepository,
-                    deviceBattery = deviceBattery,
+                    deviceRepository = deviceRepository,
                 )
             }
         }

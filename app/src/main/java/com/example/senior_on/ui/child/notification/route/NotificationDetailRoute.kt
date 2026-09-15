@@ -30,6 +30,7 @@ internal fun NotificationDetailRoute(
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit = {},
     isRefreshing: Boolean = false,
+    showLocationUpdate: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -93,6 +94,7 @@ internal fun NotificationDetailRoute(
     NotificationDetailScreen(
         category = category,
         message = message,
+        showLocationUpdate = showLocationUpdate,
         modifier = modifier,
         onBackClick = onBackClick,
         onRefreshClick = onRefreshClick,

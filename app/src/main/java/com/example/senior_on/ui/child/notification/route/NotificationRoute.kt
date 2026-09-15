@@ -57,6 +57,7 @@ fun NotificationRoute(
     var detailReturnDestination by rememberSaveable {
         mutableStateOf(NotificationDestination.Home)
     }
+    var isHistoryDetail by rememberSaveable { mutableStateOf(false) }
 
     fun openHistory(category: NotificationCategory) {
         selectedCategory = category
@@ -68,8 +69,10 @@ fun NotificationRoute(
         category: NotificationCategory,
         message: NotificationMessageUiState,
         loadDetail: Boolean = true,
+        fromHistory: Boolean = false,
     ) {
         detailReturnDestination = destination
+        isHistoryDetail = fromHistory
         selectedCategory = category
         selectedMessage = message
         if (loadDetail) {
@@ -154,7 +157,7 @@ fun NotificationRoute(
                         destination = NotificationDestination.Home
                     },
                     onMessageClick = { message ->
-                        openDetail(category, message)
+                        openDetail(category, message, fromHistory = true)
                     },
                     modifier = modifier,
                 )
@@ -173,6 +176,7 @@ fun NotificationRoute(
                 NotificationDetailRoute(
                     category = category,
                     message = message,
+                    showLocationUpdate = !isHistoryDetail,
                     parentPhoneNumber = uiState.parentPhoneNumber,
                     locationRepository = locationRepository,
                     onBackClick = {

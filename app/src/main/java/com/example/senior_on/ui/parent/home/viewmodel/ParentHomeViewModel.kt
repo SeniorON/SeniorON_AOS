@@ -13,12 +13,18 @@ import com.example.senior_on.domain.model.server.ServerMusicCard
 import com.example.senior_on.domain.model.server.ServerTodaySchedule
 import com.example.senior_on.domain.model.server.TodayHospitalSchedule
 import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdateEvent
 import java.time.LocalTime
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 data class ParentHomeScheduleUiState(
@@ -57,107 +63,171 @@ data class ParentHomeUiState(
 
 class ParentHomeViewModel(
     private val repository: HomeServerRepository,
+    private val updatesRepository: ParentHomeUpdatesRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentHomeUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val refreshSignals = Channel<Unit>(Channel.CONFLATED)
+    private var pendingFullRefresh = false
+    private var pendingVisibleRefresh = false
+    private var hasStartedObserving = false
+
     init {
-        loadHome(isRefresh = false)
+        viewModelScope.launch {
+            for (signal in refreshSignals) {
+                // Coalesce a burst without dropping an update received during an HTTP request.
+                delay(150)
+                val fullRefresh = pendingFullRefresh
+                val visibleRefresh = pendingVisibleRefresh
+                pendingFullRefresh = false
+                pendingVisibleRefresh = false
+                refreshSignals.tryReceive()
+                loadHome(homeOnly = !fullRefresh, showRefresh = visibleRefresh)
+            }
+        }
+        requestRefresh(full = true)
     }
 
     fun refresh() {
         if (_uiState.value.isLoading || _uiState.value.isRefreshing) return
-        loadHome(isRefresh = true)
+        requestRefresh(full = true, visible = true)
     }
 
-    private fun loadHome(isRefresh: Boolean) {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isLoading = !isRefresh,
-                    isRefreshing = isRefresh,
-                    schedule = it.schedule.copy(isLoading = true),
-                    errorMessage = null,
-                )
+    /** Called inside the route's repeatOnLifecycle; cancellation closes the socket. */
+    suspend fun observeHomeUpdates() {
+        if (hasStartedObserving) requestRefresh(full = true)
+        hasStartedObserving = true
+        updatesRepository.observeUpdates().collect { event ->
+            when (event) {
+                ParentHomeUpdateEvent.Subscribed,
+                ParentHomeUpdateEvent.HomeUpdated -> requestRefresh(full = false)
+                else -> Unit
             }
-
-            val (homeResult, schedulesResult, weatherResult) = coroutineScope {
-                val home = async { runCatching { repository.getSeniorHome() } }
-                val schedules = async {
-                    runCatching { repository.getTodayHospitalSchedules() }
-                }
-                val weather = async {
-                    runCatching {
-                        repository.getWeather(
-                            latitude = DefaultWeatherCoordinates.LATITUDE,
-                            longitude = DefaultWeatherCoordinates.LONGITUDE,
-                        )
-                    }
-                }
-                Triple(home.await(), schedules.await(), weather.await())
-            }
-
-            homeResult
-                .onSuccess { home ->
-                    _uiState.value = ParentHomeUiState(
-                        screenConfiguration = SeniorScreenConfiguration(
-                            fontSize = home.fontSize.toFontSize(),
-                            buttons = emptyList(),
-                        ),
-                        musicButton = home.musicCard
-                            ?.takeIf { musicCard -> musicCard.enabled }
-                            ?.toUiModel(),
-                        buttons = home.buttons
-                            .map(ServerButton::toUiModel)
-                            .ifEmpty(::defaultOfflineHomeButtons),
-                        schedule = schedulesResult
-                            .getOrNull()
-                            ?.toHomeScheduleUiState()
-                            ?: home.todaySchedule.toUiState(),
-                        weather = weatherResult.fold(
-                            onSuccess = { weather ->
-                                ParentHomeWeatherUiState(
-                                    temperature = weather.temperature,
-                                    status = weather.status,
-                                    text = weather.text.ifBlank { "날씨 정보 없음" },
-                                )
-                            },
-                            onFailure = {
-                                ParentHomeWeatherUiState(text = "날씨 정보 없음")
-                            },
-                        ),
-                        isLoading = false,
-                        isRefreshing = false,
-                    )
-                }
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            buttons = it.buttons.ifEmpty(::defaultOfflineHomeButtons),
-                            isLoading = false,
-                            isRefreshing = false,
-                            schedule = schedulesResult
-                                .getOrNull()
-                                ?.toHomeScheduleUiState()
-                                ?: it.schedule.copy(isLoading = false),
-                            weather = weatherResult.getOrNull()?.let { weather ->
-                                ParentHomeWeatherUiState(
-                                    temperature = weather.temperature,
-                                    status = weather.status,
-                                    text = weather.text.ifBlank { "날씨 정보 없음" },
-                                )
-                            } ?: it.weather,
-                            errorMessage = throwable.message
-                                ?: "부모님 홈 정보를 불러오지 못했어요.",
-                        )
-                    }
-                }
         }
     }
 
+    private fun requestRefresh(full: Boolean, visible: Boolean = false) {
+        pendingFullRefresh = pendingFullRefresh || full
+        pendingVisibleRefresh = pendingVisibleRefresh || visible
+        refreshSignals.trySend(Unit)
+    }
+
+    private suspend fun loadHome(homeOnly: Boolean, showRefresh: Boolean) {
+        if (homeOnly) {
+            refreshHomeConfiguration()
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isRefreshing = showRefresh,
+                schedule = it.schedule.copy(isLoading = it.isLoading || showRefresh),
+                errorMessage = null,
+            )
+        }
+
+        val (homeResult, schedulesResult, weatherResult) = coroutineScope {
+            val home = async { cancellableResult { repository.getSeniorHome() } }
+            val schedules = async {
+                cancellableResult { repository.getTodayHospitalSchedules() }
+            }
+            val weather = async {
+                cancellableResult {
+                    repository.getWeather(
+                        latitude = DefaultWeatherCoordinates.LATITUDE,
+                        longitude = DefaultWeatherCoordinates.LONGITUDE,
+                    )
+                }
+            }
+            Triple(home.await(), schedules.await(), weather.await())
+        }
+
+        homeResult
+            .onSuccess { home ->
+                _uiState.value = ParentHomeUiState(
+                    screenConfiguration = SeniorScreenConfiguration(
+                        fontSize = home.fontSize.toFontSize(),
+                        buttons = emptyList(),
+                    ),
+                    musicButton = home.musicCard
+                        ?.takeIf { musicCard -> musicCard.enabled }
+                        ?.toUiModel(),
+                    buttons = home.buttons
+                        .map(ServerButton::toUiModel)
+                        .ifEmpty(::defaultOfflineHomeButtons),
+                    schedule = schedulesResult
+                        .getOrNull()
+                        ?.toHomeScheduleUiState()
+                        ?: home.todaySchedule.toUiState(),
+                    weather = weatherResult.fold(
+                        onSuccess = { weather ->
+                            ParentHomeWeatherUiState(
+                                temperature = weather.temperature,
+                                status = weather.status,
+                                text = weather.text.ifBlank { "날씨 정보 없음" },
+                            )
+                        },
+                        onFailure = {
+                            ParentHomeWeatherUiState(text = "날씨 정보 없음")
+                        },
+                    ),
+                    isLoading = false,
+                    isRefreshing = false,
+                )
+            }
+            .onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        buttons = it.buttons.ifEmpty(::defaultOfflineHomeButtons),
+                        isLoading = false,
+                        isRefreshing = false,
+                        schedule = schedulesResult
+                            .getOrNull()
+                            ?.toHomeScheduleUiState()
+                            ?: it.schedule.copy(isLoading = false),
+                        weather = weatherResult.getOrNull()?.let { weather ->
+                            ParentHomeWeatherUiState(
+                                temperature = weather.temperature,
+                                status = weather.status,
+                                text = weather.text.ifBlank { "날씨 정보 없음" },
+                            )
+                        } ?: it.weather,
+                        errorMessage = throwable.message
+                            ?: "부모님 홈 정보를 불러오지 못했어요.",
+                    )
+                }
+            }
+    }
+
+    private suspend fun refreshHomeConfiguration() {
+        cancellableResult { repository.getSeniorHome() }
+            .onSuccess { home ->
+                _uiState.update {
+                    it.copy(
+                        screenConfiguration = it.screenConfiguration.copy(fontSize = home.fontSize.toFontSize()),
+                        musicButton = home.musicCard?.takeIf { card -> card.enabled }?.toUiModel(),
+                        buttons = home.buttons.map(ServerButton::toUiModel).ifEmpty(::defaultOfflineHomeButtons),
+                        isLoading = false,
+                        errorMessage = null,
+                    )
+                }
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(errorMessage = error.message ?: "홈 변경사항을 불러오지 못했어요.") }
+            }
+    }
+
+    private suspend fun <T> cancellableResult(block: suspend () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(error)
+    }
+
     companion object {
-        fun factory(repository: HomeServerRepository) = viewModelFactory {
-            initializer { ParentHomeViewModel(repository) }
+        fun factory(repository: HomeServerRepository, updatesRepository: ParentHomeUpdatesRepository) = viewModelFactory {
+            initializer { ParentHomeViewModel(repository, updatesRepository) }
         }
     }
 }

@@ -3,6 +3,7 @@ package com.example.senior_on.ui.onboarding.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.domain.model.auth.RemoteRequestException
 import com.example.senior_on.domain.model.auth.FoundLoginId
 import com.example.senior_on.domain.repository.auth.AccountRecoveryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,9 @@ data class AccountRecoveryUiState(
     val foundJoinDate: String = "",
     val recoveryName: String = "",
     val passwordResetVerified: Boolean = false,
-    val passwordResetComplete: Boolean = false
+    val passwordResetComplete: Boolean = false,
+    val requestLoginId: String = "",
+    val errorCode: String? = null,
 )
 
 class AccountRecoveryViewModel(
@@ -31,6 +34,10 @@ class AccountRecoveryViewModel(
 
     private var passwordResetName: String = ""
     private var passwordResetLoginId: String = ""
+
+    fun clearRequestError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null, errorCode = null)
+    }
 
     fun findLoginId(
         name: String,
@@ -53,6 +60,7 @@ class AccountRecoveryViewModel(
         loginId: String,
         onResult: (Boolean) -> Unit
     ) {
+        _uiState.value = _uiState.value.copy(requestLoginId = loginId.trim())
         launchRequest(onFailure = { onResult(false) }) {
             val result = repository.sendPasswordResetVerificationCode(
                 name = name,
@@ -134,7 +142,8 @@ class AccountRecoveryViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
-                errorMessage = null
+                errorMessage = null,
+                errorCode = null,
             )
             runCatching { request() }
                 .onSuccess {
@@ -144,7 +153,8 @@ class AccountRecoveryViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = throwable.message
-                            ?: DEFAULT_ERROR_MESSAGE
+                            ?: DEFAULT_ERROR_MESSAGE,
+                        errorCode = (throwable as? RemoteRequestException)?.code,
                     )
                     onFailure()
                 }

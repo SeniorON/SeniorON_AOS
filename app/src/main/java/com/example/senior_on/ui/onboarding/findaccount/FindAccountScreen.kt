@@ -18,6 +18,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
+import androidx.compose.material3.Text
+import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.domain.model.auth.VerificationRequestGate
+import com.example.senior_on.ui.onboarding.rememberVerificationRequestUi
 
 @Composable
 fun FindAccountScreen(
@@ -36,7 +40,9 @@ fun FindAccountScreen(
     modifier: Modifier = Modifier,
     initialName: String = "",
     initialEmail: String = "",
-    initialUserId: String = ""
+    initialUserId: String = "",
+    requestErrorMessage: String? = null,
+    onInputChange: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
     var name by rememberSaveable { mutableStateOf(initialName) }
@@ -44,6 +50,7 @@ fun FindAccountScreen(
     var userId by rememberSaveable { mutableStateOf(initialUserId) }
     var isUserIdError by rememberSaveable { mutableStateOf(false) }
     var isSubmitting by rememberSaveable { mutableStateOf(false) }
+    val requestUi = rememberVerificationRequestUi(VerificationRequestGate.recoveryKey(userId))
 
     LaunchedEffect(initialTab) {
         selectedTab = initialTab
@@ -74,6 +81,8 @@ fun FindAccountScreen(
                 }
                 FindAccountTab.Password -> {
                     Column {
+                        val notice = requestUi.notice ?: requestErrorMessage
+                        if (notice != null) Text(notice, color = SeniorOnColors.Red300)
                         FindAccountInfoBanner(
                             text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
                         )
@@ -82,7 +91,7 @@ fun FindAccountScreen(
 
                         FindAccountPrimaryButton(
                             text = "다음",
-                            enabled = isFindPasswordNextEnabled && !isSubmitting,
+                            enabled = isFindPasswordNextEnabled && !isSubmitting && !requestUi.locked,
                             isLoading = isSubmitting,
                             onClick = {
                                 isSubmitting = true
@@ -91,7 +100,8 @@ fun FindAccountScreen(
                                     userId.trim()
                                 ) { found ->
                                     isSubmitting = false
-                                    isUserIdError = !found
+                                    // Server failures (including throttling) are shown separately.
+                                    isUserIdError = false
                                 }
                             }
                         )
@@ -111,11 +121,13 @@ fun FindAccountScreen(
                 name = name,
                 onNameChange = {
                     name = it
+                    onInputChange()
                     isUserIdError = false
                 },
                 userId = userId,
                 onUserIdChange = {
                     userId = it
+                    onInputChange()
                     isUserIdError = false
                 },
                 isUserIdError = isUserIdError

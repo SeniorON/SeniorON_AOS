@@ -3,6 +3,7 @@ package com.example.senior_on.ui.onboarding.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.domain.model.auth.RemoteRequestException
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.domain.model.auth.AuthSession
 import com.example.senior_on.domain.model.auth.SocialLoginResult
@@ -26,6 +27,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val signupEmailRequestErrorMessage: String? = null,
+    val signupVerificationErrorMessage: String? = null,
+    val errorCode: String? = null,
 )
 
 data class SignupDraft(
@@ -108,6 +111,7 @@ class AuthViewModel(
                         refreshToken = result.refreshToken,
                         deviceIdentifier = deviceRegistration.deviceIdentifier,
                         userId = result.loginId,
+                        usersId = result.usersId,
                         mode = result.mode,
                         keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                     )
@@ -161,7 +165,9 @@ class AuthViewModel(
         verificationCode: String,
         onResult: (Boolean) -> Unit
     ) {
-        launchBooleanRequest(onResult) {
+        launchBooleanRequest(onResult, onError = { message ->
+            _uiState.update { it.copy(signupVerificationErrorMessage = message) }
+        }) {
             authRepository.verifySignupEmailVerificationCode(
                 email = email,
                 verificationCode = verificationCode
@@ -363,6 +369,7 @@ class AuthViewModel(
                     refreshToken = result.refreshToken,
                     deviceIdentifier = deviceRegistration.deviceIdentifier,
                     userId = resultUsersId.toString(),
+                    usersId = resultUsersId,
                     mode = resultMode,
                     keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )
@@ -385,7 +392,7 @@ class AuthViewModel(
 
     fun clearSignupEmailRequestError() {
         _uiState.update {
-            it.copy(signupEmailRequestErrorMessage = null)
+            it.copy(signupEmailRequestErrorMessage = null, signupVerificationErrorMessage = null)
         }
     }
 
@@ -418,7 +425,8 @@ class AuthViewModel(
                     val errorMessage = throwable.message
                         ?: DEFAULT_ERROR_MESSAGE
                     _uiState.value = AuthUiState(
-                        errorMessage = errorMessage
+                        errorMessage = errorMessage,
+                        errorCode = (throwable as? RemoteRequestException)?.code,
                     )
                     onFailure(errorMessage)
                 }

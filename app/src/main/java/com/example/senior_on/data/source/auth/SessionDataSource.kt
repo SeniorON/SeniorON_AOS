@@ -1,6 +1,10 @@
 package com.example.senior_on.data.source.auth
 
 import android.content.Context
+import android.content.SharedPreferences
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.dto.UserRole
 import retrofit2.HttpException
@@ -8,6 +12,7 @@ import retrofit2.HttpException
 data class SavedSession(
     val role: UserRole,
     val userId: String,
+    val usersId: Long? = null,
 )
 
 interface SessionDataSource {
@@ -16,26 +21,43 @@ interface SessionDataSource {
     fun clearSession()
 }
 
-class PersistedSessionStore(context: Context) {
+interface SessionSnapshotStore {
+    fun getSession(): SavedSession?
+    fun observeSession(): kotlinx.coroutines.flow.Flow<SavedSession?>
+    fun saveSession(session: SavedSession)
+}
+
+class PersistedSessionStore(context: Context) : SessionSnapshotStore {
     private val preferences = context.applicationContext.getSharedPreferences(
         SESSION_PREFERENCES,
         Context.MODE_PRIVATE,
     )
 
-    fun getSession(): SavedSession? {
+    override fun getSession(): SavedSession? {
         val role = preferences.getString(USER_ROLE_KEY, null)
             ?.let { savedRole -> runCatching { UserRole.valueOf(savedRole) }.getOrNull() }
             ?: return null
         val userId = preferences.getString(USER_ID_KEY, null)
             ?.takeIf(String::isNotBlank)
             ?: return null
-        return SavedSession(role = role, userId = userId)
+        return SavedSession(role = role, userId = userId,
+            usersId = preferences.getLong(SERVER_USER_ID_KEY, 0).takeIf { it > 0 })
     }
 
-    fun saveSession(session: SavedSession) {
+    override fun observeSession() = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            trySend(getSession())
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        trySend(getSession())
+        awaitClose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
+
+    override fun saveSession(session: SavedSession) {
         preferences.edit()
             .putString(USER_ROLE_KEY, session.role.name)
             .putString(USER_ID_KEY, session.userId)
+            .putLong(SERVER_USER_ID_KEY, session.usersId ?: 0)
             .apply()
     }
 
@@ -47,6 +69,7 @@ class PersistedSessionStore(context: Context) {
         const val SESSION_PREFERENCES = "auth_session"
         const val USER_ROLE_KEY = "user_role"
         const val USER_ID_KEY = "user_id"
+        const val SERVER_USER_ID_KEY = "server_users_id"
     }
 }
 

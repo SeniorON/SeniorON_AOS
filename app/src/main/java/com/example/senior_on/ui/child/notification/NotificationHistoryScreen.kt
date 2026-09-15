@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -120,12 +120,12 @@ fun NotificationHistoryScreen(
                         )
                     }
 
-                    items(
+                    itemsIndexed(
                         items = group.messages,
-                        key = { message ->
-                            "${group.date}-${message.occurredAtMillis}-${message.title}"
+                        key = { messageIndex, message ->
+                            message.historyItemKey(group.date.toString(), messageIndex)
                         }
-                    ) { message ->
+                    ) { _, message ->
                         NotificationHistoryCard(
                             category = category,
                             message = message,
@@ -323,7 +323,7 @@ private fun List<NotificationMessageUiState>.toRecentHistoryGroups(
     val oldestDate = today.minusDays(29)
     val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
-    return asSequence()
+    return distinctHistoryNotifications().asSequence()
         .mapNotNull { message ->
             val occurredAt = message.occurredAtMillis ?: return@mapNotNull null
             val date = Instant.ofEpochMilli(occurredAt).atZone(zoneId).toLocalDate()

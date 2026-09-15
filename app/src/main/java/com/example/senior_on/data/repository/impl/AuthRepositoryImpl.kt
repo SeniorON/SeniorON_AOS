@@ -19,6 +19,7 @@ import com.example.senior_on.domain.model.auth.RoleUpdateResult
 import com.example.senior_on.domain.model.auth.SignupCredentials
 import com.example.senior_on.domain.model.auth.SignupResult
 import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.model.auth.VerificationRequestGate
 
 class AuthRepositoryImpl(
     private val dataSource: AuthDataSource
@@ -28,9 +29,11 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun sendSignupEmailVerificationCode(email: String): Boolean {
-        return dataSource.sendSignupEmailVerificationCode(
-            SendSignupEmailVerificationCodeRequest(email.trim())
-        ).sent
+        return VerificationRequestGate.send(VerificationRequestGate.emailKey(email), { it }) {
+            dataSource.sendSignupEmailVerificationCode(
+                SendSignupEmailVerificationCodeRequest(email.trim())
+            ).sent
+        }
     }
 
     override suspend fun verifySignupEmailVerificationCode(

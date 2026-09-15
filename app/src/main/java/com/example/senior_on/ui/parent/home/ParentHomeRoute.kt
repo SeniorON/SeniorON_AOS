@@ -1,6 +1,8 @@
 package com.example.senior_on.ui.parent.home
 
 import android.widget.Toast
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -10,10 +12,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.R
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
 import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeViewModel
@@ -22,6 +28,7 @@ import com.example.senior_on.ui.parent.photo.ParentPhotoSourceBottomSheet
 @Composable
 fun ParentHomeRoute(
     repository: HomeServerRepository,
+    updatesRepository: ParentHomeUpdatesRepository,
     refreshRequest: Int = 0,
     onScheduleClick: () -> Unit,
     onChatBuddyClick: () -> Unit,
@@ -31,11 +38,19 @@ fun ParentHomeRoute(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val exitHome = rememberExitParentHomeAction()
     val viewModel: ParentHomeViewModel = viewModel(
-        factory = ParentHomeViewModel.factory(repository)
+        factory = ParentHomeViewModel.factory(repository, updatesRepository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhotoSource by rememberSaveable { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.observeHomeUpdates()
+        }
+    }
 
     LaunchedEffect(refreshRequest) {
         if (refreshRequest > 0) {
@@ -51,6 +66,13 @@ fun ParentHomeRoute(
         weatherUiState = uiState.weather,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refresh,
+        onExitHomeClick = exitHome,
+        onSettingsClick = {
+            runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+                .onFailure {
+                    Toast.makeText(context, R.string.parent_home_settings_unavailable, Toast.LENGTH_SHORT).show()
+                }
+        },
         onMusicClick = { openParentHomeButton(context, it) },
         onScheduleClick = onScheduleClick,
         onButtonClick = { button ->

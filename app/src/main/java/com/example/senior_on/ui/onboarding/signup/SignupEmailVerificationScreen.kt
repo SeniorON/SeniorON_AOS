@@ -17,11 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +34,8 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
-import kotlinx.coroutines.delay
-
-private const val VerificationTimeoutSeconds = 5 * 60
+import com.example.senior_on.domain.model.auth.VerificationRequestGate
+import com.example.senior_on.ui.onboarding.rememberVerificationRequestUi
 
 private enum class EmailVerificationResult {
     None,
@@ -59,35 +57,28 @@ fun SignupEmailVerificationScreen(
         onResult: (Boolean) -> Unit
     ) -> Unit,
     emailRequestErrorMessage: String? = null,
+    verificationErrorMessage: String? = null,
     onEmailChange: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var email by remember { mutableStateOf("") }
-    var verificationCode by remember { mutableStateOf("") }
-    var hasRequestedCode by remember { mutableStateOf(false) }
-    var verificationResult by remember { mutableStateOf(EmailVerificationResult.None) }
-    var remainingSeconds by remember { mutableIntStateOf(VerificationTimeoutSeconds) }
-    var requestCount by remember { mutableIntStateOf(0) }
+    var email by rememberSaveable { mutableStateOf("") }
+    var verificationCode by rememberSaveable { mutableStateOf("") }
+    var hasRequestedCode by rememberSaveable { mutableStateOf(false) }
+    var verificationResult by rememberSaveable { mutableStateOf(EmailVerificationResult.None) }
+    val requestUi = rememberVerificationRequestUi(VerificationRequestGate.emailKey(email))
+    val remainingSeconds = requestUi.remainingCodeSeconds
     var isRequestingCode by remember { mutableStateOf(false) }
     var isVerifyingCode by remember { mutableStateOf(false) }
 
-    val canRequestVerification = email.isValidEmail() && !isRequestingCode
+    val canRequestVerification = email.isValidEmail() && !isRequestingCode && !isVerifyingCode && !requestUi.locked
     val isVerified = verificationResult == EmailVerificationResult.Verified
-    val shouldShowVerificationCodeInput = hasRequestedCode && !isRequestingCode
-    val canVerifyCode = hasRequestedCode &&
+    val hasCode = hasRequestedCode || remainingSeconds > 0
+    val shouldShowVerificationCodeInput = hasCode
+    val canVerifyCode = hasCode &&
         verificationCode.length == 6 &&
         !isVerified &&
+        remainingSeconds > 0 && !isRequestingCode &&
         !isVerifyingCode
-
-    LaunchedEffect(hasRequestedCode, requestCount, isVerified) {
-        if (!hasRequestedCode || isVerified) return@LaunchedEffect
-
-        remainingSeconds = VerificationTimeoutSeconds
-        while (remainingSeconds > 0) {
-            delay(1000)
-            remainingSeconds -= 1
-        }
-    }
 
     SignupStepScaffold(
         progress = 2 / 4f,
@@ -134,26 +125,25 @@ fun SignupEmailVerificationScreen(
                     onClick = {
                         onEmailChange()
                         isRequestingCode = true
-                        hasRequestedCode = false
-                        verificationCode = ""
-                        verificationResult = EmailVerificationResult.None
-                        onSendVerificationCode(email) { isSent ->
+                        val requestedEmail = email
+                        onSendVerificationCode(requestedEmail) { isSent ->
                             isRequestingCode = false
 
-                            if (isSent) {
+                            if (isSent && email == requestedEmail) {
+                                verificationCode = ""
+                                verificationResult = EmailVerificationResult.None
                                 hasRequestedCode = true
-                                requestCount += 1
                             }
                         }
                     }
                 )
             }
 
-            if (emailRequestErrorMessage != null) {
+            if (requestUi.notice != null || emailRequestErrorMessage != null) {
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = emailRequestErrorMessage,
+                    text = requestUi.notice ?: emailRequestErrorMessage.orEmpty(),
                     style = SeniorOnTextStyles.CaptionRegular,
                     color = SeniorOnColors.Red300
                 )
@@ -169,6 +159,9 @@ fun SignupEmailVerificationScreen(
         }
 
         if (shouldShowVerificationCodeInput) {
+            if (remainingSeconds == 0 && !isVerified) {
+                Text("인증 시간이 만료됐어요. 새 코드를 요청해 주세요.", color = SeniorOnColors.Red300)
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
             Column {
@@ -178,11 +171,12 @@ fun SignupEmailVerificationScreen(
                         onValueChange = {
                             verificationCode = it.filter(Char::isDigit).take(6)
                             verificationResult = EmailVerificationResult.None
+                            onEmailChange()
                         },
                         placeholder = "인증번호 6자리 입력",
                         timerText = if (isVerified) null else remainingSeconds.toTimerText(),
                         errorMessage = if (verificationResult == EmailVerificationResult.Invalid) {
-                            "인증번호가 일치하지 않아요."
+                            verificationErrorMessage ?: "인증번호가 일치하지 않아요."
                         } else {
                             null
                         },
@@ -197,9 +191,12 @@ fun SignupEmailVerificationScreen(
                         isLoading = isVerifyingCode,
                         onClick = {
                             isVerifyingCode = true
-                            onVerifyCode(email, verificationCode) { verified ->
+                            val requestedEmail = email
+                            onVerifyCode(requestedEmail, verificationCode) { verified ->
                                 isVerifyingCode = false
-                                verificationResult = if (verified) {
+                                verificationResult = if (email != requestedEmail) {
+                                    EmailVerificationResult.None
+                                } else if (verified) {
                                     EmailVerificationResult.Verified
                                 } else {
                                     EmailVerificationResult.Invalid
@@ -221,7 +218,7 @@ fun SignupEmailVerificationScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "인증번호가 일치하지 않아요.",
+                        text = verificationErrorMessage ?: "인증번호가 일치하지 않아요.",
                         style = SeniorOnTextStyles.CaptionRegular,
                         color = SeniorOnColors.Red300
                     )

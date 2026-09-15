@@ -66,6 +66,9 @@ import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ChatBuddyRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
+import com.example.senior_on.data.repository.impl.ParentHomeUpdatesRepositoryImpl
+import com.example.senior_on.data.source.auth.PersistedSessionStore
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
@@ -80,6 +83,7 @@ interface AppContainer {
     val sessionRepository: SessionRepository
     val deviceRegistrationRepository: DeviceRegistrationRepository
     val homeServerRepository: HomeServerRepository
+    val parentHomeUpdatesRepository: ParentHomeUpdatesRepository
     val familyServerRepository: FamilyServerRepository
     val hospitalRepository: HospitalRepository
     val medicationRepository: MedicationRepository
@@ -140,6 +144,16 @@ class DefaultAppContainer(
             deviceIdentifierDataSource = deviceIdentifierDataSource
         )
     override val homeServerRepository = HomeServerRepositoryImpl(homeDataSource)
+    override val parentHomeUpdatesRepository: ParentHomeUpdatesRepository by lazy {
+        ParentHomeUpdatesRepositoryImpl(
+            sessionStore = PersistedSessionStore(context),
+            source = SeniorOnNetwork.parentHomeStompSource,
+            currentUsersId = {
+                SeniorOnNetwork.notificationApi.getMyInactivitySetting().data?.usersId
+            },
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
+        )
+    }
     override val familyServerRepository = FamilyServerRepositoryImpl(remoteFamilySource)
     override val hospitalRepository = HospitalRepositoryImpl(hospitalDataSource)
     override val medicationRepository = MedicationRepositoryImpl(medicationDataSource)
@@ -205,15 +219,19 @@ class DefaultAppContainer(
     override val parentInfoRepository: ParentInfoRepository = ParentInfoRepositoryImpl(
         InMemoryParentInfoDataSource()
     )
-    override val chatBuddyRepository: ChatBuddyRepository =
+    // 말벗은 비활성화 상태이며, 재활성화 전까지 전용 네트워크 객체도 생성하지 않습니다.
+    override val chatBuddyRepository: ChatBuddyRepository by lazy {
         ChatBuddyRepositoryImpl(
             RemoteChatBuddyDataSource(SeniorOnNetwork.companionApi)
         )
-    override val parentLinkSafetyRepository: ParentLinkSafetyRepository =
+    }
+    // 유해링크 감지 재활성화 전까지 검사 전용 객체를 생성하지 않습니다.
+    override val parentLinkSafetyRepository: ParentLinkSafetyRepository by lazy {
         ParentLinkSafetyRepositoryImpl(
             RemoteParentLinkSafetyDataSource(
                 eventDataSource = eventDataSource,
                 deviceStatusDataSource = localDeviceStatusDataSource,
             )
         )
+    }
 }

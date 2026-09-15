@@ -4,4 +4,9 @@
     <string name="senior_on_alert_channel_name">SeniorON 주요 알림</string>
     <string name="senior_on_alert_channel_description">긴급 상황과 보호자 확인이 필요한 알림을 받습니다.</string>
     <string name="default_app_unavailable_message">이 기기에서는 해당 앱을 사용할 수 없어요.</string>
+    <string name="parent_exit_home">홈 화면으로</string>
+    <string name="parent_exit_home_select">홈 앱에서 기존 휴대폰 홈 앱을 선택해 주세요.</string>
+    <string name="parent_exit_home_failed">홈 화면 설정을 열지 못했어요. 설정의 기본 앱에서 홈 앱을 변경해 주세요.</string>
+    <string name="parent_home_settings">설정</string>
+    <string name="parent_home_settings_unavailable">휴대폰 설정을 열지 못했어요.</string>
 </resources>
