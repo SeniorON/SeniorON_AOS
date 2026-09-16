@@ -1,8 +1,8 @@
 package com.example.senior_on.data.remote.dto
 
-data class FamilyJoinRequest(val familyCode: String)
-data class FamilyJoinResponse(val familyId: Long?, val familyCode: String?)
-data class FamilyCodeCreateResponse(val familyId: Long?, val familyCode: String?)
+data class FamilyJoinRequest(val seniorCode: String)
+data class FamilyJoinResponse(val familyId: Long?, val seniorCode: String?)
+data class FamilyCodeCreateResponse(val familyId: Long?, val seniorCode: String?)
 data class FamilyPrimaryManagerUpdateRequest(val targetUserId: Long)
 data class FamilyPrimaryManagerUpdateResponse(
     val usersId: Long?, val name: String?, val managerType: String?
@@ -44,4 +44,4 @@ data class FamilyHomeResponse(
     val recentUploaderProfileImageUrls: List<String>?,
     val recentPhotos: List<FamilyPhotoItemResponse>?
 )
-data class FamilyCodeResponse(val familyCode: String?, val familyMemberCount: Long?)
+data class FamilyCodeResponse(val seniorCode: String?, val familyMemberCount: Long?)

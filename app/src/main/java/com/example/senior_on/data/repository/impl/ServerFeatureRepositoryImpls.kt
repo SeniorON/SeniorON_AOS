@@ -175,13 +175,13 @@ class FamilyServerRepositoryImpl(
     override suspend fun join(code: String) = source.join(
         FamilyJoinRequest(normalizeFamilyCodeForRequest(code))
     ).let {
-        FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
+        FamilyCodeInfo(it.familyId, it.seniorCode.orEmpty())
     }
     override suspend fun createCode() = source.createCode().let {
-        FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
+        FamilyCodeInfo(it.familyId, it.seniorCode.orEmpty())
     }
     override suspend fun getCode() = source.getCode().let {
-        FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
+        FamilyCodeInfo(null, it.seniorCode.orEmpty(), it.familyMemberCount)
     }
     override suspend fun getHome() = source.getHome().let { response ->
         ServerFamilyHome(

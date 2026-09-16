@@ -331,13 +331,13 @@ private class FakeRemoteFamilySource(
     private var remainingStorageFailures = storageFailures
 
     override suspend fun join(request: FamilyJoinRequest) =
-        FamilyJoinResponse(familyId = 1, familyCode = request.familyCode)
+        FamilyJoinResponse(familyId = 1, seniorCode = request.seniorCode)
 
     override suspend fun createCode() =
-        FamilyCodeCreateResponse(familyId = 1, familyCode = "ABCD-1234")
+        FamilyCodeCreateResponse(familyId = 1, seniorCode = "ABCD-1234")
 
     override suspend fun getCode() =
-        FamilyCodeResponse(familyCode = "ABCD-1234", familyMemberCount = 2)
+        FamilyCodeResponse(seniorCode = "ABCD-1234", familyMemberCount = 2)
 
     override suspend fun getHome() = home
 
