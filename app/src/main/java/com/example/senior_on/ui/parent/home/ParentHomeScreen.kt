@@ -188,13 +188,23 @@ internal fun ColumnScope.SeniorHomeContent(
     }
 
     Spacer(modifier = Modifier.height(18.dp))
+    ParentExitHomeButton(onClick = onExitHomeClick, enabled = interactionEnabled)
+    Spacer(modifier = Modifier.height(33.dp))
+}
+
+@Composable
+internal fun ParentExitHomeButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 85.dp)
             .clip(RoundedCornerShape(20.dp))
             .border(2.dp, SeniorOnColors.Primary600, RoundedCornerShape(20.dp))
-            .clickable(enabled = interactionEnabled, role = Role.Button, onClick = onExitHomeClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(start = 96.dp, end = 86.dp, top = 20.dp, bottom = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -205,7 +215,6 @@ internal fun ColumnScope.SeniorHomeContent(
             textAlign = TextAlign.Center,
         )
     }
-    Spacer(modifier = Modifier.height(33.dp))
 }
 
 @Composable
@@ -453,7 +462,7 @@ private fun ParentTodayScheduleCard(
 }
 
 @Composable
-private fun ParentHomeGridButton(
+internal fun ParentHomeGridButton(
     button: ParentHomeButtonUiModel,
     textStyle: TextStyle,
     interactionEnabled: Boolean,

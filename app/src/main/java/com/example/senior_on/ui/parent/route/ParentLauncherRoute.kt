@@ -20,6 +20,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.data.local.SessionExpirationEventStore
+import com.example.senior_on.data.local.AccessTokenStore
+import com.example.senior_on.ui.parent.home.ParentSessionExpiredRoute
 import com.example.senior_on.device.ParentDeviceStatusScheduler
 import com.example.senior_on.device.ParentInactivityMonitor
 import com.example.senior_on.ui.parent.emergency.ParentEmergencyRoute
@@ -64,13 +66,30 @@ fun ParentLauncherRoute(
 
     val sessionExpirationEvent by
         SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
-    var sessionExpirationRequest by rememberSaveable { mutableStateOf(0) }
+    var needsLogin by remember { mutableStateOf(AccessTokenStore.getBearerToken() == null) }
+    val sessionLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(sessionLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                needsLogin = AccessTokenStore.getBearerToken() == null
+            }
+        }
+        sessionLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { sessionLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(sessionExpirationEvent) {
         sessionExpirationEvent ?: return@LaunchedEffect
         appContainer.sessionRepository.clearSession()
-        sessionExpirationRequest += 1
+        needsLogin = true
         SessionExpirationEventStore.consume()
+    }
+
+    // Also covers process recreation after credentials have already been cleared.
+    // Access-token expiry alone stays on the normal refresh path in the authenticator.
+    if (needsLogin || sessionExpirationEvent != null) {
+        ParentSessionExpiredRoute(modifier)
+        return
     }
 
     val familyMembershipViewModel: ParentFamilyMembershipViewModel = viewModel(
@@ -80,15 +99,6 @@ fun ParentLauncherRoute(
     )
     val familyMembershipUiState by familyMembershipViewModel.uiState
         .collectAsStateWithLifecycle()
-
-    if (sessionExpirationRequest > 0) {
-        ParentLauncherContent(
-            appContainer = appContainer,
-            sessionExpirationRequest = sessionExpirationRequest,
-            modifier = modifier,
-        )
-        return
-    }
 
     when (familyMembershipUiState.status) {
         ParentFamilyMembershipStatus.Checking ->
@@ -105,14 +115,12 @@ fun ParentLauncherRoute(
         ParentFamilyMembershipStatus.Error ->
             ParentLauncherContent(
                 appContainer = appContainer,
-                sessionExpirationRequest = sessionExpirationRequest,
                 modifier = modifier,
             )
 
         ParentFamilyMembershipStatus.Connected ->
             ParentLauncherContent(
                 appContainer = appContainer,
-                sessionExpirationRequest = sessionExpirationRequest,
                 modifier = modifier,
             )
     }
@@ -121,7 +129,6 @@ fun ParentLauncherRoute(
 @Composable
 private fun ParentLauncherContent(
     appContainer: AppContainer,
-    sessionExpirationRequest: Int,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -167,12 +174,6 @@ private fun ParentLauncherContent(
         .collectAsStateWithLifecycle()
     val notificationNavigationEvent by
         NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
-
-    LaunchedEffect(sessionExpirationRequest) {
-        if (sessionExpirationRequest == 0) return@LaunchedEffect
-        destination = ParentDestination.Home
-        highlightedMedicationLogId = null
-    }
 
     LaunchedEffect(notificationNavigationEvent) {
         val event = notificationNavigationEvent ?: return@LaunchedEffect
