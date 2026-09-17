@@ -330,7 +330,7 @@ private fun DeviceInformationCard(device: DisplayDevice?) {
             valueAvailable = networkConnected != null,
         )
         DeviceInformationRow(
-            iconResId = R.drawable.ic_home,
+            iconResId = R.drawable.ic_device_status_home,
             label = "기본 홈 설정",
             value = defaultHomeEnabled.toDisplayText(
                 enabledText = "시니어On",
@@ -363,7 +363,7 @@ private fun DeviceSettingsCard(device: DisplayDevice?) {
         height = if (valuesHidden) 198.dp else 202.dp,
     ) {
         DeviceSettingRow(
-            iconResId = R.drawable.ic_location,
+            iconResId = R.drawable.ic_device_status_location,
             label = "위치 권한",
             enabled = device?.locationPermissionGranted.takeUnless { valuesHidden },
             unavailableText = unavailableText,
@@ -377,14 +377,14 @@ private fun DeviceSettingsCard(device: DisplayDevice?) {
             rowHeight = rowHeight,
         )
         DeviceSettingRow(
-            iconResId = R.drawable.ic_notification,
+            iconResId = R.drawable.ic_device_status_notification,
             label = "알림 권한",
             enabled = device?.notificationPermissionGranted.takeUnless { valuesHidden },
             unavailableText = unavailableText,
             rowHeight = rowHeight,
         )
         DeviceSettingRow(
-            iconResId = R.drawable.ic_phone_setting,
+            iconResId = R.drawable.ic_device_status_app_setting,
             label = "앱 실행 유지 설정",
             enabled = device?.appExecutionMaintained.takeUnless { valuesHidden },
             unavailableText = unavailableText,

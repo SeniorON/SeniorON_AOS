@@ -225,7 +225,15 @@ private fun AddSeniorAccountOption(onClick: () -> Unit) {
                 .size(52.dp)
                 .clip(CircleShape)
                 .background(SeniorOnColors.Gray200),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_plus),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = SeniorOnColors.White,
+            )
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
