@@ -74,7 +74,11 @@ fun NotificationScreen(
     onRefresh: () -> Unit = {},
 ) {
     val accessWarning = uiState.accessWarningPanel()
-    val sections = uiState.sections.map { section ->
+    // Temporarily hide risk-link detection without deleting its data or feature logic.
+    // Filter before layout/summary calculation so it occupies no space (View.GONE).
+    val sections = uiState.sections.filterNot {
+        it.category == NotificationCategory.RiskLink
+    }.map { section ->
         when {
             accessWarning != null -> section.copy(enabled = false)
             section.category == NotificationCategory.Sos -> section.copy(enabled = true)
