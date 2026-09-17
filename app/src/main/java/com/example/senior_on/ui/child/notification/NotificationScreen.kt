@@ -73,9 +73,10 @@ fun NotificationScreen(
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
+    val accessWarning = uiState.accessWarningPanel()
     val sections = uiState.sections.map { section ->
         when {
-            !uiState.isParentPhoneRegistered -> section.copy(enabled = false)
+            accessWarning != null -> section.copy(enabled = false)
             section.category == NotificationCategory.Sos -> section.copy(enabled = true)
             else -> section
         }
@@ -96,8 +97,7 @@ fun NotificationScreen(
     }
     val notificationCount = enabledSections.size
     val footerPanel = when {
-        !uiState.isParentPhoneRegistered -> uiState.footerPanel
-            ?: NotificationFooterPanelUiState(tone = NotificationFooterTone.Warning)
+        accessWarning != null -> accessWarning
         uiState.footerPanel?.tone == NotificationFooterTone.Warning -> uiState.footerPanel
         sections.none { section ->
             section.category != NotificationCategory.Sos && section.enabled
@@ -140,17 +140,19 @@ fun NotificationScreen(
                 sections.forEachIndexed { index, section ->
                     NotificationSectionCard(
                         section = section,
-                        showDetailArrow = uiState.isParentPhoneRegistered && section.enabled,
+                        showDetailArrow = accessWarning == null && section.enabled,
                         showToggle = section.category != NotificationCategory.Sos,
                         modifier = Modifier.padding(horizontal = 16.dp),
                         textMuted = footerPanel?.tone == NotificationFooterTone.Warning,
-                        onClick = { onSectionClick(section.category) },
+                        onClick = { if (!uiState.isSeniorSharingRevoked) onSectionClick(section.category) },
                         onMessageClick = { message ->
-                            onNotificationClick(section.category, message)
+                            if (!uiState.isSeniorSharingRevoked) onNotificationClick(section.category, message)
                         },
                         onToggleClick = {
                             val isEnabling = !section.enabled
                             when {
+                                // Only the senior can restore sharing; never enable it from this UI.
+                                uiState.isSeniorSharingRevoked -> Unit
                                 section.category == NotificationCategory.Outing &&
                                     isEnabling &&
                                     !uiState.hasHomeAddress -> {
@@ -167,7 +169,7 @@ fun NotificationScreen(
                                 }
                             }
                         },
-                        onDetectionTimeClick = onDetectionTimeClick
+                        onDetectionTimeClick = { if (!uiState.isSeniorSharingRevoked) onDetectionTimeClick() }
                     )
 
                     val nextSection = sections.getOrNull(index + 1)
@@ -353,6 +355,30 @@ private fun NotificationDisconnectedPreview() {
                 ),
                 isParentPhoneRegistered = false
             )
+        )
+    }
+}
+
+@Preview(name = "Notification · 시니어 공유 권한 해제", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun NotificationSharingRevokedPreview() {
+    SENIOR_ONTheme {
+        NotificationScreen(NotificationScreenUiState(
+            sections = emptyNotificationSections(),
+            isSeniorSharingRevoked = true,
+            seniorDisplayName = "어머니",
+        ))
+    }
+}
+
+@Preview(name = "Notification · 권한 해제 안내 카드", showBackground = true, widthDp = 360)
+@Composable
+private fun NotificationSharingRevokedPanelPreview() {
+    SENIOR_ONTheme {
+        NotificationFooterPanel(
+            uiState = NotificationScreenUiState(emptyList(), isSeniorSharingRevoked = true,
+                seniorDisplayName = "어머니").accessWarningPanel()!!,
+            modifier = Modifier.padding(16.dp).height(200.dp),
         )
     }
 }

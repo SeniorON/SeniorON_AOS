@@ -131,7 +131,10 @@ data class NotificationScreenUiState(
     val footerPanel: NotificationFooterPanelUiState? = null,
     val isParentPhoneRegistered: Boolean = true,
     val hasHomeAddress: Boolean = true,
-    val isParentPhoneInternetConnected: Boolean = true
+    val isParentPhoneInternetConnected: Boolean = true,
+    // UI-only until the server exposes senior-controlled information-sharing access.
+    val isSeniorSharingRevoked: Boolean = false,
+    val seniorDisplayName: String = "시니어",
 )
 
 enum class NotificationFooterTone {
