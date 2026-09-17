@@ -40,7 +40,6 @@ object SeniorOnTextStyles {
     val HeadingXXS = pretendardStyle(FontWeight.SemiBold, 20, 28f)
 
     val OnboardingHeading = pretendardStyle(FontWeight.Bold, 22, 30.8f)
-    val WeatherTemperature = pretendardStyle(FontWeight.Bold, 22, 30.8f)
 
     val BodyLBold = pretendardStyle(FontWeight.Bold, 18, 25.2f)
     val BodyLSemiBold = pretendardStyle(FontWeight.SemiBold, 18, 25.2f)

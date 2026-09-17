@@ -9,7 +9,6 @@ import com.example.senior_on.domain.model.display.DisplayOverview
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
-import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
@@ -25,32 +24,90 @@ import kotlinx.coroutines.launch
 class DisplayViewModel(
     private val parentInfoRepository: ParentInfoRepository,
     private val displayRepository: DisplayRepository,
-    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val initialParentInfo = parentInfoRepository.parentInfo.value
     private val initialRelationshipLabel = initialParentInfo?.relationshipLabel
+    private var selectedSeniorId = initialParentInfo
+        ?.seniorId
+        ?.takeIf { it > 0L }
+    private var selectedRelationshipLabel = initialRelationshipLabel
+    private var selectedParentInfoSeed = initialParentInfo
     private var initialLoadJob: Job? = null
     private var overviewPullRefreshJob: Job? = null
     private var editPermissionRefreshJob: Job? = null
     private var homeRefreshJob: Job? = null
     private var deviceRefreshJob: Job? = null
-    private var weatherRefreshJob: Job? = null
-    private var lastWeatherUpdatedAtMillis: Long? = null
+    private var mutationJob: Job? = null
 
     private val _uiState = MutableStateFlow(
         DisplayTabUiState(
             parentInfo = initialParentInfo,
             relationshipLabel = initialRelationshipLabel,
-            isLoading = true,
+            selectedSeniorId = selectedSeniorId,
+            isLoading = selectedSeniorId != null,
+            isEditPermissionLoading = selectedSeniorId != null,
         )
     )
     val uiState: StateFlow<DisplayTabUiState> = _uiState.asStateFlow()
 
     init {
+        if (selectedSeniorId != null) {
+            loadOverview()
+        }
+    }
+
+    fun selectSenior(
+        seniorId: Long,
+        relationshipLabel: String? = null,
+        parentInfoSeed: ParentInfo? = null,
+    ) {
+        if (seniorId <= 0L) {
+            _uiState.update {
+                it.copy(errorMessage = MISSING_SELECTED_SENIOR_ERROR_MESSAGE)
+            }
+            return
+        }
+
+        val normalizedRelationshipLabel = relationshipLabel
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+        val validatedParentInfoSeed = parentInfoSeed?.takeIf {
+            it.seniorId == seniorId
+        }
+        if (selectedSeniorId == seniorId) {
+            if (validatedParentInfoSeed != null) {
+                selectedParentInfoSeed = validatedParentInfoSeed
+            }
+            if (
+                _uiState.value.relationshipLabel.isNullOrBlank() &&
+                normalizedRelationshipLabel != null
+            ) {
+                selectedRelationshipLabel = normalizedRelationshipLabel
+                _uiState.update {
+                    it.copy(relationshipLabel = normalizedRelationshipLabel)
+                }
+            }
+            if (!_uiState.value.hasLoadedOverview) {
+                loadOverview()
+            }
+            return
+        }
+
+        cancelSeniorScopedRequests()
+        selectedSeniorId = seniorId
+        selectedRelationshipLabel = normalizedRelationshipLabel
+        selectedParentInfoSeed = validatedParentInfoSeed
+        _uiState.value = DisplayTabUiState(
+            selectedSeniorId = seniorId,
+            relationshipLabel = normalizedRelationshipLabel,
+            isLoading = true,
+            isEditPermissionLoading = true,
+        )
         loadOverview()
     }
 
     fun loadOverview() {
+        val requestSeniorId = selectedSeniorId ?: return
         if (
             initialLoadJob?.isActive == true ||
             overviewPullRefreshJob?.isActive == true ||
@@ -68,37 +125,45 @@ class DisplayViewModel(
             }
 
             val editPermissionRequest = async {
-                runCatching { displayRepository.canCurrentUserEditScreen() }
+                runCatching {
+                    displayRepository.canCurrentUserEditScreen(requestSeniorId)
+                }
             }
             val overviewRequest = async {
                 runCatching {
                     displayRepository.getOverview(
-                        parentInfoRepository.parentInfo.value
+                        seniorId = requestSeniorId,
+                        currentParentInfo = cachedParentInfoFor(requestSeniorId),
                     )
                 }
             }
-            refreshWeatherIfStale()
 
             val canEditScreen = editPermissionRequest.await().getOrDefault(false)
-            _uiState.update {
-                it.copy(
-                    canEditScreen = canEditScreen,
-                    isEditPermissionLoading = false,
-                )
+            if (isCurrentSenior(requestSeniorId)) {
+                _uiState.update {
+                    it.copy(
+                        canEditScreen = canEditScreen,
+                        isEditPermissionLoading = false,
+                    )
+                }
             }
             overviewRequest.await()
-                .onSuccess(::applyOverview)
-                .onFailure(::handleLoadFailure)
+                .onSuccess { overview ->
+                    applyOverview(requestSeniorId, overview)
+                }
+                .onFailure { throwable ->
+                    handleLoadFailure(requestSeniorId, throwable)
+                }
         }
     }
 
     fun refreshOnScreenTabReentry() {
         refreshEditPermission()
         refreshHomeSilently()
-        refreshWeatherIfStale()
     }
 
     fun refreshOverview() {
+        val requestSeniorId = selectedSeniorId ?: return
         if (
             initialLoadJob?.isActive == true ||
             overviewPullRefreshJob?.isActive == true ||
@@ -107,71 +172,66 @@ class DisplayViewModel(
 
         homeRefreshJob?.cancel()
         editPermissionRefreshJob?.cancel()
-        weatherRefreshJob?.cancel()
         overviewPullRefreshJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isRefreshing = true,
                     isEditPermissionLoading = true,
-                    isWeatherLoading = true,
                     errorMessage = null,
                 )
             }
 
             try {
                 val editPermissionRequest = async {
-                    runCatching { displayRepository.canCurrentUserEditScreen() }
+                    runCatching {
+                        displayRepository.canCurrentUserEditScreen(requestSeniorId)
+                    }
                 }
                 val overviewRequest = async {
                     runCatching {
                         displayRepository.getOverview(
-                            parentInfoRepository.parentInfo.value
-                        )
-                    }
-                }
-                val weatherRequest = async {
-                    runCatching {
-                        displayRepository.getWeather(
-                            latitude = DefaultWeatherCoordinates.LATITUDE,
-                            longitude = DefaultWeatherCoordinates.LONGITUDE,
+                            seniorId = requestSeniorId,
+                            currentParentInfo = cachedParentInfoFor(requestSeniorId),
                         )
                     }
                 }
 
                 val canEditScreen = editPermissionRequest.await().getOrDefault(false)
-                _uiState.update {
-                    it.copy(
-                        canEditScreen = canEditScreen,
-                        isEditPermissionLoading = false,
-                    )
+                if (isCurrentSenior(requestSeniorId)) {
+                    _uiState.update {
+                        it.copy(
+                            canEditScreen = canEditScreen,
+                            isEditPermissionLoading = false,
+                        )
+                    }
                 }
 
                 overviewRequest.await()
-                    .onSuccess(::applyOverview)
+                    .onSuccess { overview ->
+                        applyOverview(requestSeniorId, overview)
+                    }
                     .onFailure { throwable ->
-                        _uiState.update {
-                            it.copy(errorMessage = throwable.toDisplayErrorMessage())
+                        if (isCurrentSenior(requestSeniorId)) {
+                            _uiState.update {
+                                it.copy(errorMessage = throwable.toDisplayErrorMessage())
+                            }
                         }
                     }
-
-                weatherRequest.await()
-                    .onSuccess { weather ->
-                        lastWeatherUpdatedAtMillis = currentTimeMillis()
-                        _uiState.update { it.copy(weather = weather) }
-                    }
             } finally {
-                _uiState.update {
-                    it.copy(
-                        isRefreshing = false,
-                        isEditPermissionLoading = false,
-                        isWeatherLoading = false,
-                    )
+                if (isCurrentSenior(requestSeniorId)) {
+                    _uiState.update {
+                        it.copy(
+                            isRefreshing = false,
+                            isEditPermissionLoading = false,
+                        )
+                    }
                 }
             }
         }
     }
 
     private fun refreshEditPermission() {
+        val requestSeniorId = selectedSeniorId ?: return
         if (
             initialLoadJob?.isActive == true ||
             overviewPullRefreshJob?.isActive == true ||
@@ -181,18 +241,21 @@ class DisplayViewModel(
         editPermissionRefreshJob = viewModelScope.launch {
             _uiState.update { it.copy(isEditPermissionLoading = true) }
             val canEditScreen = runCatching {
-                displayRepository.canCurrentUserEditScreen()
+                displayRepository.canCurrentUserEditScreen(requestSeniorId)
             }.getOrDefault(false)
-            _uiState.update {
-                it.copy(
-                    canEditScreen = canEditScreen,
-                    isEditPermissionLoading = false,
-                )
+            if (isCurrentSenior(requestSeniorId)) {
+                _uiState.update {
+                    it.copy(
+                        canEditScreen = canEditScreen,
+                        isEditPermissionLoading = false,
+                    )
+                }
             }
         }
     }
 
     private fun refreshHomeSilently(force: Boolean = false) {
+        val requestSeniorId = selectedSeniorId ?: return
         if (
             initialLoadJob?.isActive == true ||
             overviewPullRefreshJob?.isActive == true
@@ -205,14 +268,40 @@ class DisplayViewModel(
         homeRefreshJob = viewModelScope.launch {
             runCatching {
                 displayRepository.getOverview(
-                    parentInfoRepository.parentInfo.value
+                    seniorId = requestSeniorId,
+                    currentParentInfo = cachedParentInfoFor(requestSeniorId),
                 )
-            }.onSuccess(::applyOverview)
+            }.onSuccess { overview ->
+                applyOverview(requestSeniorId, overview)
+            }
         }
     }
 
-    private fun applyOverview(overview: DisplayOverview) {
-        val parentInfo = overview.parentInfo
+    private fun applyOverview(
+        requestSeniorId: Long,
+        overview: DisplayOverview,
+    ) {
+        if (!isCurrentSenior(requestSeniorId)) return
+
+        val receivedParentInfo = overview.parentInfo
+        if (
+            receivedParentInfo != null &&
+            receivedParentInfo.seniorId > 0L &&
+            receivedParentInfo.seniorId != requestSeniorId
+        ) {
+            handleLoadFailure(
+                requestSeniorId,
+                IllegalStateException("선택한 시니어와 다른 홈 정보가 응답되었습니다."),
+            )
+            return
+        }
+        val parentInfo = receivedParentInfo?.let {
+            receivedParentInfo.copy(
+                seniorId = requestSeniorId,
+                relationshipLabel = selectedRelationshipLabel
+                    ?: receivedParentInfo.relationshipLabel,
+            )
+        }
         if (parentInfo == null) {
             parentInfoRepository.clearParentInfo()
         } else {
@@ -220,8 +309,10 @@ class DisplayViewModel(
         }
         _uiState.update {
             it.copy(
+                selectedSeniorId = requestSeniorId,
                 parentInfo = parentInfo,
-                relationshipLabel = parentInfo?.relationshipLabel,
+                relationshipLabel = parentInfo?.relationshipLabel
+                    ?: selectedRelationshipLabel,
                 device = overview.device,
                 todaySchedule = overview.todaySchedule,
                 screenConfiguration = overview.screenConfiguration,
@@ -235,6 +326,7 @@ class DisplayViewModel(
     }
 
     fun refreshDevice() {
+        val requestSeniorId = selectedSeniorId ?: return
         if (deviceRefreshJob?.isActive == true) return
 
         deviceRefreshJob = viewModelScope.launch {
@@ -244,21 +336,25 @@ class DisplayViewModel(
                     errorMessage = null,
                 )
             }
-            runCatching { displayRepository.getDevice() }
+            runCatching { displayRepository.getDevice(requestSeniorId) }
                 .onSuccess { device ->
-                    _uiState.update {
-                        it.copy(
-                            device = device,
-                            isRefreshingDevice = false,
-                        )
+                    if (isCurrentSenior(requestSeniorId)) {
+                        _uiState.update {
+                            it.copy(
+                                device = device,
+                                isRefreshingDevice = false,
+                            )
+                        }
                     }
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            isRefreshingDevice = false,
-                            errorMessage = throwable.toDisplayErrorMessage(),
-                        )
+                    if (isCurrentSenior(requestSeniorId)) {
+                        _uiState.update {
+                            it.copy(
+                                isRefreshingDevice = false,
+                                errorMessage = throwable.toDisplayErrorMessage(),
+                            )
+                        }
                     }
                 }
         }
@@ -268,7 +364,10 @@ class DisplayViewModel(
         parentInfo: ParentInfo,
         onSuccess: () -> Unit = {},
     ) {
-        launchMutation(onSuccess) {
+        launchMutation(onSuccess) { selectedSeniorId ->
+            require(parentInfo.seniorId == selectedSeniorId) {
+                "선택한 시니어의 프로필만 수정할 수 있습니다."
+            }
             val savedParentInfo = displayRepository.updateSeniorProfile(parentInfo)
             shareParentInfo(savedParentInfo)
             _uiState.update {
@@ -277,13 +376,12 @@ class DisplayViewModel(
                     relationshipLabel = savedParentInfo.relationshipLabel,
                 )
             }
-            refreshWeather()
         }
     }
 
     fun disconnectDevice(onSuccess: () -> Unit = {}) {
-        launchMutation(onSuccess) {
-            displayRepository.disconnectDevice()
+        launchMutation(onSuccess) { selectedSeniorId ->
+            displayRepository.disconnectDevice(selectedSeniorId)
             _uiState.update {
                 it.copy(
                     device = null,
@@ -298,8 +396,8 @@ class DisplayViewModel(
         fontSize: SeniorFontSize,
         onSuccess: () -> Unit = {},
     ) {
-        launchMutation(onSuccess) {
-            displayRepository.updateFontSize(fontSize)
+        launchMutation(onSuccess) { selectedSeniorId ->
+            displayRepository.updateFontSize(selectedSeniorId, fontSize)
             _uiState.update {
                 it.copy(
                     screenConfiguration = it.screenConfiguration.copy(
@@ -321,8 +419,9 @@ class DisplayViewModel(
             .mapValues { (_, label) -> label.trim() }
             .filterValues(String::isNotEmpty)
 
-        launchMutation(onSuccess) {
+        launchMutation(onSuccess) { selectedSeniorId ->
             displayRepository.saveButtons(
+                seniorId = selectedSeniorId,
                 buttons = distinctButtons,
                 customButtonLabels = normalizedLabels,
             )
@@ -347,8 +446,8 @@ class DisplayViewModel(
             button.type?.let { type -> type to button.name.trim() }
         }.toMap()
 
-        launchMutation(onSuccess) {
-            displayRepository.saveButtons(distinctButtons)
+        launchMutation(onSuccess) { selectedSeniorId ->
+            displayRepository.saveButtons(selectedSeniorId, distinctButtons)
             _uiState.update {
                 it.copy(
                     configuredButtonItems = distinctButtons,
@@ -363,92 +462,84 @@ class DisplayViewModel(
 
     private fun launchMutation(
         onSuccess: () -> Unit,
-        request: suspend () -> Unit,
+        request: suspend (seniorId: Long) -> Unit,
     ) {
+        val requestSeniorId = selectedSeniorId
+        if (requestSeniorId == null) {
+            _uiState.update {
+                it.copy(errorMessage = MISSING_SELECTED_SENIOR_ERROR_MESSAGE)
+            }
+            return
+        }
         if (_uiState.value.isSaving) return
 
-        viewModelScope.launch {
+        mutationJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isSaving = true,
                     errorMessage = null,
                 )
             }
-            runCatching { request() }
+            runCatching { request(requestSeniorId) }
                 .onSuccess {
-                    _uiState.update { it.copy(isSaving = false) }
-                    onSuccess()
+                    if (isCurrentSenior(requestSeniorId)) {
+                        _uiState.update { it.copy(isSaving = false) }
+                        onSuccess()
+                    }
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            errorMessage = throwable.toDisplayErrorMessage(),
-                        )
+                    if (isCurrentSenior(requestSeniorId)) {
+                        _uiState.update {
+                            it.copy(
+                                isSaving = false,
+                                errorMessage = throwable.toDisplayErrorMessage(),
+                            )
+                        }
                     }
                 }
         }
     }
 
     private fun shareParentInfo(parentInfo: ParentInfo) {
+        selectedParentInfoSeed = parentInfo
         parentInfoRepository.saveParentInfo(parentInfo)
     }
 
-    private fun refreshWeatherIfStale() {
-        val now = currentTimeMillis()
-        val lastUpdatedAt = lastWeatherUpdatedAtMillis
-        if (
-            lastUpdatedAt != null &&
-            now >= lastUpdatedAt &&
-            now - lastUpdatedAt < WeatherRefreshIntervalMillis
-        ) return
-
-        refreshWeather()
-    }
-
-    private fun refreshWeather() {
-        if (
-            overviewPullRefreshJob?.isActive == true ||
-            weatherRefreshJob?.isActive == true
-        ) return
-
-        weatherRefreshJob = viewModelScope.launch {
-            _uiState.update { it.copy(isWeatherLoading = true) }
-            runCatching {
-                displayRepository.getWeather(
-                    latitude = DefaultWeatherCoordinates.LATITUDE,
-                    longitude = DefaultWeatherCoordinates.LONGITUDE,
+    private fun handleLoadFailure(requestSeniorId: Long, throwable: Throwable) {
+        if (isCurrentSenior(requestSeniorId)) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    errorMessage = throwable.toDisplayErrorMessage(),
                 )
-            }.onSuccess { weather ->
-                lastWeatherUpdatedAtMillis = currentTimeMillis()
-                _uiState.update {
-                    it.copy(
-                        weather = weather,
-                        isWeatherLoading = false,
-                    )
-                }
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        isWeatherLoading = false,
-                    )
-                }
             }
         }
     }
 
-    private fun handleLoadFailure(throwable: Throwable) {
-        _uiState.update {
-            it.copy(
-                isLoading = false,
-                errorMessage = throwable.toDisplayErrorMessage(),
-            )
-        }
+    private fun cachedParentInfoFor(seniorId: Long): ParentInfo? =
+        selectedParentInfoSeed?.takeIf { it.seniorId == seniorId }
+            ?: parentInfoRepository.parentInfo.value
+                ?.takeIf { it.seniorId == seniorId }
+
+    private fun isCurrentSenior(seniorId: Long): Boolean =
+        selectedSeniorId == seniorId
+
+    private fun cancelSeniorScopedRequests() {
+        initialLoadJob?.cancel()
+        overviewPullRefreshJob?.cancel()
+        editPermissionRefreshJob?.cancel()
+        homeRefreshJob?.cancel()
+        deviceRefreshJob?.cancel()
+        mutationJob?.cancel()
+        initialLoadJob = null
+        overviewPullRefreshJob = null
+        editPermissionRefreshJob = null
+        homeRefreshJob = null
+        deviceRefreshJob = null
+        mutationJob = null
     }
 
     companion object {
-        private const val WeatherRefreshIntervalMillis = 10 * 60 * 1_000L
-
         fun factory(
             parentInfoRepository: ParentInfoRepository,
             displayRepository: DisplayRepository,
@@ -468,3 +559,6 @@ private fun Throwable.toDisplayErrorMessage(): String =
 
 private const val DEFAULT_ERROR_MESSAGE =
     "화면 정보를 처리하는 중 문제가 발생했습니다. 다시 시도해 주세요."
+
+private const val MISSING_SELECTED_SENIOR_ERROR_MESSAGE =
+    "관리할 시니어를 먼저 선택해 주세요."

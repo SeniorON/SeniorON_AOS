@@ -13,6 +13,15 @@ data class CreateSeniorResponse(
     val detailAddress: String
 )
 
+data class ManagedSeniorResponse(
+    val familyId: Long,
+    val seniorId: Long,
+    val parentUserId: Long?,
+    val name: String,
+    val relation: SeniorRelation?,
+    val customRelation: String?
+)
+
 data class UpdateSeniorRelationResponse(
     val seniorId: Long,
     val relation: SeniorRelation,

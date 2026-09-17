@@ -1,6 +1,5 @@
 package com.example.senior_on.ui.child.display
 
-import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -33,10 +32,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.data.source.display.MockDisplayScenario
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
@@ -76,20 +76,19 @@ fun DeviceConnectionScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             DeviceStatusCard(
                 device = device,
                 relationshipLabel = relationshipLabel,
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            DeviceInformationCard(
-                device = device,
-                isDisconnecting = isDisconnecting,
-                onDisconnectClick = onDisconnectClick,
-                onInstallGuideClick = onInstallGuideClick,
+            DeviceInformationCard(device = device)
+            DeviceSettingsCard(device = device)
+            DeviceConnectionActionButton(
+                isConnected = device != null,
+                isLoading = device != null && isDisconnecting,
+                onClick = if (device == null) onInstallGuideClick else onDisconnectClick,
             )
         }
     }
@@ -106,7 +105,7 @@ private fun ConnectionStatusTopBar(
             .fillMaxWidth()
             .background(SeniorOnColors.White)
             .statusBarsPadding()
-            .height(SeniorOnDimensions.TopBarHeight)
+            .height(54.dp)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -173,33 +172,48 @@ private fun DeviceStatusCard(
     device: DisplayDevice?,
     relationshipLabel: String,
 ) {
-    val isOnline = device?.connectionStatus == DisplayDeviceConnectionStatus.Online
-    val backgroundBrush = when {
-        device == null -> SeniorOnBrushes.DisplayDeviceNotConnected
-        isOnline -> SolidColor(SeniorOnColors.Primary600)
-        else -> SolidColor(SeniorOnColors.Gray300)
+    val status = device?.connectionStatus
+    val isLoginExpired = status == DisplayDeviceConnectionStatus.LoginExpired
+    val backgroundBrush = when (status) {
+        DisplayDeviceConnectionStatus.Online -> SolidColor(SeniorOnColors.Primary600)
+        DisplayDeviceConnectionStatus.Offline -> SolidColor(SeniorOnColors.Gray300)
+        DisplayDeviceConnectionStatus.LoginExpired -> SolidColor(SeniorOnColors.Beige100)
+        null -> SeniorOnBrushes.DisplayDeviceNotConnected
     }
-    val contentColor = when {
-        device == null -> SeniorOnColors.Red400
+    val titleColor = when (status) {
+        DisplayDeviceConnectionStatus.LoginExpired -> SeniorOnColors.Gray800
+        null -> SeniorOnColors.Red400
         else -> SeniorOnColors.White
     }
-    val statusDescription = when {
-        device == null -> "가족 코드를 연결해주세요"
-        isOnline -> "연결됨"
-        else -> listOfNotNull(
+    val statusColor = when (status) {
+        DisplayDeviceConnectionStatus.LoginExpired,
+        null -> SeniorOnColors.Red400
+        else -> SeniorOnColors.White
+    }
+    val statusDescription = when (status) {
+        DisplayDeviceConnectionStatus.Online -> "연결됨"
+        DisplayDeviceConnectionStatus.Offline -> listOfNotNull(
             "오프라인",
             device.lastConnectedAtLabel.toRelativeTimeLabel(),
-        )
-            .joinToString(" · ")
+        ).joinToString(" · ")
+        DisplayDeviceConnectionStatus.LoginExpired -> "로그인 만료"
+        null -> "가족 코드를 연결해주세요"
     }
-
-    val shape = RoundedCornerShape(SeniorOnRadius.Large)
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(89.dp)
-            .border(1.dp, SeniorOnColors.Background4, shape)
+            .border(
+                width = 1.dp,
+                color = if (isLoginExpired) {
+                    SeniorOnColors.Beige200
+                } else {
+                    SeniorOnColors.Background4
+                },
+                shape = shape,
+            )
             .clip(shape)
             .background(backgroundBrush)
             .padding(horizontal = 16.dp),
@@ -208,123 +222,216 @@ private fun DeviceStatusCard(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = device?.name ?: "연결된 기기 없음",
-                style = SeniorOnTextStyles.HeadingS,
-                color = contentColor,
+                style = SeniorOnTextStyles.HeadingXS,
+                color = titleColor,
             )
-
             Spacer(modifier = Modifier.height(2.dp))
 
-            Text(
-                text = statusDescription,
-                style = SeniorOnTextStyles.CaptionMedium,
-                color = contentColor,
-            )
+            if (isLoginExpired) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_sm_alertfilled),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.Unspecified,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = statusDescription,
+                        style = SeniorOnTextStyles.CaptionMedium,
+                        color = statusColor,
+                    )
+                }
+            } else {
+                Text(
+                    text = statusDescription,
+                    style = SeniorOnTextStyles.CaptionMedium,
+                    color = statusColor,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
-
-        Box(
-            modifier = Modifier
-                .height(25.dp)
-                .clip(RoundedCornerShape(17.dp))
-                .background(
-                    if (device == null) {
-                        SeniorOnColors.White
-                    } else {
-                        SeniorOnColors.White.copy(alpha = 0.2f)
-                    }
-                )
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = relationshipLabel,
-                style = SeniorOnTextStyles.CaptionMedium,
-                color = if (device == null) {
-                    SeniorOnColors.Gray600
-                } else {
-                    SeniorOnColors.White
-                },
-            )
-        }
+        RelationshipTag(
+            text = relationshipLabel,
+            status = status,
+        )
     }
 }
 
 @Composable
-private fun DeviceInformationCard(
-    device: DisplayDevice?,
-    isDisconnecting: Boolean,
-    onDisconnectClick: () -> Unit,
-    onInstallGuideClick: () -> Unit,
+private fun RelationshipTag(
+    text: String,
+    status: DisplayDeviceConnectionStatus?,
 ) {
-    val isOnline = device?.connectionStatus == DisplayDeviceConnectionStatus.Online
-    val unavailableText = if (device == null) {
-        "연결 후 확인 가능"
-    } else {
-        "확인 불가"
+    val isLoginExpiredOrMissing =
+        status == DisplayDeviceConnectionStatus.LoginExpired || status == null
+    Box(
+        modifier = Modifier
+            .height(25.dp)
+            .clip(RoundedCornerShape(17.dp))
+            .background(
+                if (isLoginExpiredOrMissing) {
+                    SeniorOnColors.White
+                } else {
+                    SeniorOnColors.SupportWhite20
+                }
+            )
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = SeniorOnTextStyles.CaptionMedium,
+            color = if (isLoginExpiredOrMissing) {
+                SeniorOnColors.Gray800
+            } else {
+                SeniorOnColors.White
+            },
+        )
     }
-    val valueColor = if (device == null) SeniorOnColors.Gray300 else SeniorOnColors.Gray800
-    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
+}
 
+@Composable
+private fun DeviceInformationCard(device: DisplayDevice?) {
+    val unavailableText = device.unavailableStatusText()
+    val valuesHidden = device?.connectionStatus == DisplayDeviceConnectionStatus.LoginExpired
+    val lastConnected = if (valuesHidden) null else device?.lastConnectedAtLabel.toRelativeTimeLabel()
+    val batteryLevel = if (valuesHidden) null else device?.batteryLevelPercent
+    val networkConnected = if (valuesHidden) null else device?.networkConnected
+    val defaultHomeEnabled = if (valuesHidden) null else device?.defaultHomeEnabled
+    val sharingEnabled = if (valuesHidden) null else device?.deviceStatusSharingEnabled
+
+    DeviceSectionCard(
+        title = "기기 정보",
+        height = 230.dp,
+    ) {
+        DeviceInformationRow(
+            iconResId = R.drawable.ic_clock_2,
+            label = "마지막 접속",
+            value = lastConnected ?: unavailableText,
+            valueAvailable = lastConnected != null,
+        )
+        DeviceInformationRow(
+            iconResId = R.drawable.ic_battery,
+            label = "배터리",
+            value = batteryLevel?.let { "$it%" } ?: unavailableText,
+            valueAvailable = batteryLevel != null,
+            showChargingIcon = batteryLevel != null && device?.charging == true,
+        )
+        DeviceInformationRow(
+            iconResId = R.drawable.ic_wifi,
+            label = "인터넷 연결",
+            value = networkConnected.toDisplayText(
+                enabledText = "연결됨",
+                disabledText = "미연결",
+                unavailableText = unavailableText,
+            ),
+            valueAvailable = networkConnected != null,
+        )
+        DeviceInformationRow(
+            iconResId = R.drawable.ic_home,
+            label = "기본 홈 설정",
+            value = defaultHomeEnabled.toDisplayText(
+                enabledText = "시니어On",
+                disabledText = "설정 안 됨",
+                unavailableText = unavailableText,
+            ),
+            valueAvailable = defaultHomeEnabled != null,
+        )
+        DeviceInformationRow(
+            iconResId = R.drawable.ic_device_status_share,
+            label = "보호자에게 기기 상태 공유",
+            value = sharingEnabled.toDisplayText(
+                enabledText = "켜짐",
+                disabledText = "꺼짐",
+                unavailableText = unavailableText,
+            ),
+            valueAvailable = sharingEnabled != null,
+        )
+    }
+}
+
+@Composable
+private fun DeviceSettingsCard(device: DisplayDevice?) {
+    val valuesHidden = device?.connectionStatus == DisplayDeviceConnectionStatus.LoginExpired
+    val unavailableText = device.unavailableStatusText()
+    val rowHeight = if (valuesHidden) 24.dp else 25.dp
+
+    DeviceSectionCard(
+        title = "설정 상태",
+        height = if (valuesHidden) 198.dp else 202.dp,
+    ) {
+        DeviceSettingRow(
+            iconResId = R.drawable.ic_location,
+            label = "위치 권한",
+            enabled = device?.locationPermissionGranted.takeUnless { valuesHidden },
+            unavailableText = unavailableText,
+            rowHeight = rowHeight,
+        )
+        DeviceSettingRow(
+            iconResId = R.drawable.ic_device_status_gps,
+            label = "GPS",
+            enabled = device?.gpsEnabled.takeUnless { valuesHidden },
+            unavailableText = unavailableText,
+            rowHeight = rowHeight,
+        )
+        DeviceSettingRow(
+            iconResId = R.drawable.ic_notification,
+            label = "알림 권한",
+            enabled = device?.notificationPermissionGranted.takeUnless { valuesHidden },
+            unavailableText = unavailableText,
+            rowHeight = rowHeight,
+        )
+        DeviceSettingRow(
+            iconResId = R.drawable.ic_phone_setting,
+            label = "앱 실행 유지 설정",
+            enabled = device?.appExecutionMaintained.takeUnless { valuesHidden },
+            unavailableText = unavailableText,
+            rowHeight = rowHeight,
+        )
+    }
+}
+
+@Composable
+private fun DeviceSectionCard(
+    title: String,
+    height: Dp,
+    content: @Composable () -> Unit,
+) {
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(238.dp)
+            .height(height)
             .border(1.dp, SeniorOnColors.Background4, shape)
             .clip(shape)
             .background(SeniorOnColors.White)
-            .padding(14.dp)
+            .padding(horizontal = 14.dp, vertical = 16.dp),
     ) {
-        Text(
-            text = "기기 정보",
-            style = SeniorOnTextStyles.BodyMBold,
-            color = SeniorOnColors.Gray800,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(SeniorOnColors.Background4)
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DeviceInformationRow(
-                iconResId = R.drawable.ic_battery,
-                label = "배터리",
-                value = device?.batteryLevelPercent?.let { "$it%" } ?: unavailableText,
-                valueColor = valueColor,
+                .height(34.dp),
+        ) {
+            Text(
+                text = title,
+                style = SeniorOnTextStyles.BodyMBold,
+                color = SeniorOnColors.Gray800,
             )
-            DeviceInformationRow(
-                iconResId = R.drawable.ic_wifi,
-                label = "네트워크",
-                value = when {
-                    device == null -> unavailableText
-                    isOnline -> "연결됨"
-                    else -> "미연결"
-                },
-                valueColor = valueColor,
-            )
-            DeviceInformationRow(
-                iconResId = R.drawable.ic_share_location,
-                label = "마지막 인터넷 연결",
-                value = device?.lastConnectedAtLabel.toRelativeTimeLabel()
-                    ?: unavailableText,
-                valueColor = valueColor,
+            Spacer(modifier = Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(SeniorOnColors.Background4)
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        DeviceConnectionActionButton(
-            isConnected = device != null,
-            isLoading = device != null && isDisconnecting,
-            onClick = if (device == null) onInstallGuideClick else onDisconnectClick,
-        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            content()
+        }
     }
 }
 
@@ -333,12 +440,66 @@ private fun DeviceInformationRow(
     @DrawableRes iconResId: Int,
     label: String,
     value: String,
-    valueColor: Color,
+    valueAvailable: Boolean,
+    showChargingIcon: Boolean = false,
+) {
+    DeviceStatusRow(
+        iconResId = iconResId,
+        label = label,
+        rowHeight = 24.dp,
+    ) {
+        Text(
+            text = value,
+            style = SeniorOnTextStyles.BodySMedium,
+            color = if (valueAvailable) SeniorOnColors.Gray600 else SeniorOnColors.Gray300,
+        )
+        if (showChargingIcon) {
+            Icon(
+                painter = painterResource(R.drawable.ic_device_charging_bolt),
+                contentDescription = "충전 중",
+                modifier = Modifier.size(16.dp),
+                tint = Color.Unspecified,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeviceSettingRow(
+    @DrawableRes iconResId: Int,
+    label: String,
+    enabled: Boolean?,
+    unavailableText: String,
+    rowHeight: Dp,
+) {
+    DeviceStatusRow(
+        iconResId = iconResId,
+        label = label,
+        rowHeight = rowHeight,
+    ) {
+        if (enabled == null) {
+            Text(
+                text = unavailableText,
+                style = SeniorOnTextStyles.BodySMedium,
+                color = SeniorOnColors.Gray300,
+            )
+        } else {
+            DeviceSettingStatusTag(enabled = enabled)
+        }
+    }
+}
+
+@Composable
+private fun DeviceStatusRow(
+    @DrawableRes iconResId: Int,
+    label: String,
+    rowHeight: Dp,
+    valueContent: @Composable () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(24.dp),
+            .height(rowHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -347,20 +508,33 @@ private fun DeviceInformationRow(
             modifier = Modifier.size(24.dp),
             tint = SeniorOnColors.Gray500,
         )
-
         Spacer(modifier = Modifier.width(4.dp))
-
         Text(
             text = label,
             modifier = Modifier.weight(1f),
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray600,
         )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            valueContent()
+        }
+    }
+}
 
+@Composable
+private fun DeviceSettingStatusTag(enabled: Boolean) {
+    Box(
+        modifier = Modifier
+            .height(25.dp)
+            .clip(RoundedCornerShape(17.dp))
+            .background(if (enabled) SeniorOnColors.Primary200 else SeniorOnColors.Gray100)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
-            text = value,
-            style = SeniorOnTextStyles.BodySMedium,
-            color = valueColor,
+            text = if (enabled) "허용됨" else "꺼짐",
+            style = SeniorOnTextStyles.CaptionMedium,
+            color = if (enabled) SeniorOnColors.Primary700 else SeniorOnColors.Gray500,
         )
     }
 }
@@ -372,7 +546,6 @@ private fun DeviceConnectionActionButton(
     onClick: () -> Unit,
 ) {
     val contentColor = if (isConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray700
-    val shape = RoundedCornerShape(SeniorOnRadius.Small)
 
     SeniorOnActionButton(
         text = if (isConnected) "연결 해제" else "부모님 앱 설치 방법",
@@ -387,7 +560,7 @@ private fun DeviceConnectionActionButton(
             width = 1.dp,
             color = if (isConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray200,
         ),
-        shape = shape,
+        shape = RoundedCornerShape(SeniorOnRadius.Small),
         minHeight = 48.dp,
         leadingContent = if (isConnected) {
             null
@@ -405,7 +578,23 @@ private fun DeviceConnectionActionButton(
     )
 }
 
-@Preview(name = "Not connected", showBackground = true, widthDp = 360, heightDp = 720)
+private fun DisplayDevice?.unavailableStatusText(): String = when {
+    this?.connectionStatus == DisplayDeviceConnectionStatus.LoginExpired -> "로그인 후 확인 가능"
+    this == null -> "연결 후 확인 가능"
+    else -> "확인 불가"
+}
+
+private fun Boolean?.toDisplayText(
+    enabledText: String,
+    disabledText: String,
+    unavailableText: String,
+): String = when (this) {
+    true -> enabledText
+    false -> disabledText
+    null -> unavailableText
+}
+
+@Preview(name = "Not connected", showBackground = true, widthDp = 360, heightDp = 862)
 @Composable
 private fun DeviceConnectionNotConnectedPreview() {
     SENIOR_ONTheme {
@@ -416,7 +605,18 @@ private fun DeviceConnectionNotConnectedPreview() {
     }
 }
 
-@Preview(name = "Offline", showBackground = true, widthDp = 360, heightDp = 720)
+@Preview(name = "Login expired", showBackground = true, widthDp = 360, heightDp = 862)
+@Composable
+private fun DeviceConnectionLoginExpiredPreview() {
+    SENIOR_ONTheme {
+        DeviceConnectionScreen(
+            device = MockDisplayFixtures.overview(MockDisplayScenario.LoginExpired).device,
+            relationshipLabel = "어머니",
+        )
+    }
+}
+
+@Preview(name = "Offline", showBackground = true, widthDp = 360, heightDp = 862)
 @Composable
 private fun DeviceConnectionOfflinePreview() {
     SENIOR_ONTheme {
@@ -427,7 +627,7 @@ private fun DeviceConnectionOfflinePreview() {
     }
 }
 
-@Preview(name = "Connected", showBackground = true, widthDp = 360, heightDp = 720)
+@Preview(name = "Connected", showBackground = true, widthDp = 360, heightDp = 862)
 @Composable
 private fun DeviceConnectionConnectedPreview() {
     SENIOR_ONTheme {

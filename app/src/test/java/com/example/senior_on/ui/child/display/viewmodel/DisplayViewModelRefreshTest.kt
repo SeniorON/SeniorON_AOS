@@ -8,7 +8,6 @@ import com.example.senior_on.data.source.parent.MockParentInfoDataSource
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayOverview
-import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -63,24 +62,53 @@ class DisplayViewModelRefreshTest {
     }
 
     @Test
-    fun `화면 탭 재진입은 홈과 편집 권한을 갱신하고 날씨는 10분 동안 재사용한다`() = runTest {
+    fun `시니어 관계 저장 성공 시 홈 상단 관계 상태를 즉시 갱신한다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
-            var currentTimeMillis = 0L
+            val parentInfoRepository = ParentInfoRepositoryImpl(
+                MockParentInfoDataSource(MockSeniorFixtures.mother)
+            )
+            val viewModel = DisplayViewModel(
+                parentInfoRepository = parentInfoRepository,
+                displayRepository = RecordingDisplayRepository(),
+            )
+            advanceUntilIdle()
+            val updatedParentInfo = MockSeniorFixtures.mother.copy(
+                relationshipLabel = "이모",
+            )
+
+            viewModel.saveParentInfo(updatedParentInfo)
+            advanceUntilIdle()
+
+            assertEquals("이모", viewModel.uiState.value.relationshipLabel)
+            assertEquals(updatedParentInfo, viewModel.uiState.value.parentInfo)
+            assertEquals(updatedParentInfo, parentInfoRepository.parentInfo.value)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `화면 탭 재진입은 홈과 편집 권한을 갱신한다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
             val repository = RecordingDisplayRepository()
             val viewModel = DisplayViewModel(
                 parentInfoRepository = ParentInfoRepositoryImpl(
                     MockParentInfoDataSource(MockSeniorFixtures.mother)
                 ),
                 displayRepository = repository,
-                currentTimeMillis = { currentTimeMillis },
             )
             advanceUntilIdle()
 
             assertEquals(1, repository.overviewRequestCount)
             assertEquals(1, repository.editPermissionRequestCount)
-            assertEquals(1, repository.weatherRequestCount)
             assertEquals(0, repository.deviceRequestCount)
+            assertEquals(listOf(MockSeniorFixtures.SENIOR_ID), repository.overviewSeniorIds)
+            assertEquals(
+                listOf(MockSeniorFixtures.SENIOR_ID),
+                repository.editPermissionSeniorIds,
+            )
 
             repository.overview = MockDisplayFixtures
                 .overview(MockDisplayScenario.NotConnected)
@@ -94,7 +122,6 @@ class DisplayViewModelRefreshTest {
 
             assertEquals(2, repository.overviewRequestCount)
             assertEquals(2, repository.editPermissionRequestCount)
-            assertEquals(1, repository.weatherRequestCount)
             assertFalse(viewModel.uiState.value.canEditScreen)
             assertNull(viewModel.uiState.value.device)
             assertEquals(
@@ -106,14 +133,12 @@ class DisplayViewModelRefreshTest {
                 viewModel.uiState.value.screenConfiguration,
             )
 
-            currentTimeMillis = 10 * 60 * 1_000L + 1L
             repository.canEditScreen = true
             viewModel.refreshOnScreenTabReentry()
             advanceUntilIdle()
 
             assertEquals(3, repository.overviewRequestCount)
             assertEquals(3, repository.editPermissionRequestCount)
-            assertEquals(2, repository.weatherRequestCount)
             assertEquals(true, viewModel.uiState.value.canEditScreen)
         } finally {
             Dispatchers.resetMain()
@@ -138,13 +163,17 @@ class DisplayViewModelRefreshTest {
             advanceUntilIdle()
 
             assertEquals(1, repository.deviceRequestCount)
+            assertEquals(
+                listOf(MockSeniorFixtures.SENIOR_ID),
+                repository.deviceSeniorIds,
+            )
         } finally {
             Dispatchers.resetMain()
         }
     }
 
     @Test
-    fun `당겨서 새로고침은 화면 개요와 권한과 날씨를 한 번씩 갱신한다`() = runTest {
+    fun `당겨서 새로고침은 화면 개요와 권한을 한 번씩 갱신한다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             val repository = RecordingDisplayRepository()
@@ -174,9 +203,54 @@ class DisplayViewModelRefreshTest {
             assertFalse(viewModel.uiState.value.isRefreshing)
             assertEquals(2, repository.overviewRequestCount)
             assertEquals(2, repository.editPermissionRequestCount)
-            assertEquals(2, repository.weatherRequestCount)
             assertFalse(viewModel.uiState.value.canEditScreen)
             assertNull(viewModel.uiState.value.device)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `시니어 전환은 새 ID로 다시 조회하고 이전 응답이 화면을 덮지 못한다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val firstRequestGate = CompletableDeferred<Unit>()
+            val repository = RecordingDisplayRepository().apply {
+                overviewGate = firstRequestGate
+            }
+            val viewModel = DisplayViewModel(
+                parentInfoRepository = ParentInfoRepositoryImpl(
+                    MockParentInfoDataSource(MockSeniorFixtures.mother)
+                ),
+                displayRepository = repository,
+            )
+            runCurrent()
+
+            val switchedParent = MockSeniorFixtures.mother.copy(
+                seniorId = 2L,
+                name = "두 번째 시니어",
+                relationshipLabel = "아버지",
+            )
+            repository.overview = repository.overview.copy(parentInfo = switchedParent)
+            repository.overviewGate = null
+
+            viewModel.selectSenior(
+                seniorId = 2L,
+                relationshipLabel = "아버지",
+                parentInfoSeed = switchedParent,
+            )
+            advanceUntilIdle()
+
+            assertEquals(listOf(1L, 2L), repository.overviewSeniorIds)
+            assertEquals(listOf(1L, 2L), repository.editPermissionSeniorIds)
+            assertEquals(2L, viewModel.uiState.value.selectedSeniorId)
+            assertEquals(switchedParent, viewModel.uiState.value.parentInfo)
+
+            firstRequestGate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(2L, viewModel.uiState.value.selectedSeniorId)
+            assertEquals("두 번째 시니어", viewModel.uiState.value.parentInfo?.name)
         } finally {
             Dispatchers.resetMain()
         }
@@ -186,22 +260,29 @@ class DisplayViewModelRefreshTest {
 private class RecordingDisplayRepository : DisplayRepository {
     var overviewRequestCount = 0
     var editPermissionRequestCount = 0
-    var weatherRequestCount = 0
     var deviceRequestCount = 0
     var buttonSaveRequestCount = 0
+    val overviewSeniorIds = mutableListOf<Long>()
+    val editPermissionSeniorIds = mutableListOf<Long>()
+    val deviceSeniorIds = mutableListOf<Long>()
     var canEditScreen = true
     var overviewGate: CompletableDeferred<Unit>? = null
     var overview: DisplayOverview = MockDisplayFixtures
         .overview(MockDisplayScenario.Connected)
         .copy(parentInfo = MockSeniorFixtures.mother)
 
-    override suspend fun canCurrentUserEditScreen(): Boolean {
+    override suspend fun canCurrentUserEditScreen(seniorId: Long): Boolean {
         editPermissionRequestCount += 1
+        editPermissionSeniorIds += seniorId
         return canEditScreen
     }
 
-    override suspend fun getOverview(currentParentInfo: ParentInfo?): DisplayOverview {
+    override suspend fun getOverview(
+        seniorId: Long,
+        currentParentInfo: ParentInfo?,
+    ): DisplayOverview {
         overviewRequestCount += 1
+        overviewSeniorIds += seniorId
         overviewGate?.await()
         return overview
     }
@@ -209,37 +290,26 @@ private class RecordingDisplayRepository : DisplayRepository {
     override suspend fun getSeniorScreenConfiguration(): SeniorScreenConfiguration =
         overview.screenConfiguration
 
-    override suspend fun getWeather(
-        latitude: Double,
-        longitude: Double,
-    ): DisplayWeather {
-        weatherRequestCount += 1
-        return DisplayWeather(
-            temperatureCelsius = 20,
-            status = "CLEAR",
-            description = "맑음",
-            observedAt = null,
-        )
-    }
-
-    override suspend fun getDevice(): DisplayDevice? {
+    override suspend fun getDevice(seniorId: Long): DisplayDevice? {
         deviceRequestCount += 1
+        deviceSeniorIds += seniorId
         return overview.device
     }
 
     override suspend fun updateSeniorProfile(parentInfo: ParentInfo): ParentInfo = parentInfo
-    override suspend fun updateFontSize(fontSize: SeniorFontSize) = Unit
+    override suspend fun updateFontSize(seniorId: Long, fontSize: SeniorFontSize) = Unit
 
     override suspend fun saveButtons(
+        seniorId: Long,
         buttons: List<SeniorHomeButtonType>,
         customButtonLabels: Map<SeniorHomeButtonType, String>,
     ) {
         buttonSaveRequestCount += 1
     }
 
-    override suspend fun saveButtons(buttons: List<DisplayHomeButton>) {
+    override suspend fun saveButtons(seniorId: Long, buttons: List<DisplayHomeButton>) {
         buttonSaveRequestCount += 1
     }
 
-    override suspend fun disconnectDevice() = Unit
+    override suspend fun disconnectDevice(seniorId: Long) = Unit
 }

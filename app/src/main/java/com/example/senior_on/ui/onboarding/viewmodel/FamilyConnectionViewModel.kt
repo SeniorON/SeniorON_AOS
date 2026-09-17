@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 data class FamilyConnectionUiState(
     val isLoading: Boolean = false,
+    val familyId: Long? = null,
     val familyCode: String? = null,
     val errorMessage: String? = null,
 )
@@ -57,6 +58,7 @@ class FamilyConnectionViewModel(
             runCatching { repository.createCode() }
                 .onSuccess { result ->
                     _uiState.value = FamilyConnectionUiState(
+                        familyId = result.familyId,
                         familyCode = result.code
                     )
                 }

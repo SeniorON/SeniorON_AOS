@@ -45,15 +45,18 @@ class ParentScheduleViewModel(
             }
 
             runCatching {
-                repository.getTodayHospitalSchedules().map { schedule ->
+                val schedule = repository.getSeniorHome().todaySchedule
+                val scheduledTime = schedule?.scheduledTime.toLocalTimeOrNull()
+                listOfNotNull(schedule?.title?.takeIf(String::isNotBlank)?.let { title ->
+                    val time = scheduledTime ?: return@let null
                     ParentSchedule(
-                        id = schedule.id.toString(),
-                        date = schedule.date,
-                        time = schedule.time,
-                        title = schedule.hospitalName,
-                        description = schedule.department.takeIf(String::isNotBlank),
+                        id = schedule.scheduleId?.toString() ?: "today-schedule",
+                        date = today,
+                        time = time,
+                        title = title,
+                        description = schedule.description?.takeIf(String::isNotBlank),
                     )
-                }
+                })
             }
                 .onSuccess { schedules ->
                     _uiState.update {
@@ -95,4 +98,10 @@ internal fun LocalTime.toParentDisplayTime(): String {
         else -> value
     }
     return "$period $displayHour:${minute.toString().padStart(2, '0')}"
+}
+
+private fun String?.toLocalTimeOrNull(): LocalTime? {
+    val value = this?.trim().orEmpty()
+    if (value.isEmpty()) return null
+    return runCatching { LocalTime.parse(value) }.getOrNull()
 }

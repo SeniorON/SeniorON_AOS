@@ -4,23 +4,22 @@ import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.server.*
 
 interface HomeServerRepository {
-    suspend fun getHome(): HomeSnapshot
+    suspend fun getHome(seniorId: Long): HomeSnapshot
     suspend fun getSeniorHome(): SeniorHomeSnapshot
-    suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule>
-    suspend fun getWeather(latitude: Double, longitude: Double): WeatherInfo
-    suspend fun getDevice(): DeviceInfo
-    suspend fun getButtonOptions(): List<ServerButton>
+    suspend fun getTodayHospitalSchedules(seniorId: Long): List<TodayHospitalSchedule>
+    suspend fun getDevice(seniorId: Long): DeviceInfo
+    suspend fun getButtonOptions(seniorId: Long): List<ServerButton>
     suspend fun saveButtons(
+        seniorId: Long,
         musicApp: String?,
         buttons: List<ServerButton>,
     )
-    suspend fun addButton(optionId: Long): ServerButton
-    suspend fun updateButtons(buttons: List<Pair<Long, Int>>)
-    suspend fun deleteButton(buttonId: Long)
-    suspend fun updateFontSize(fontSize: String)
+    suspend fun updateFontSize(seniorId: Long, fontSize: String)
     suspend fun updateSeniorProfile(
+        seniorId: Long,
         name: String, relation: String, customRelation: String?, birth: String,
-        phoneNumber: String, address: String?, detailAddress: String?
+        phoneNumber: String, address: String?, detailAddress: String?,
+        latitude: Double?, longitude: Double?,
     ): SeniorProfileUpdate
 }
 
@@ -111,8 +110,8 @@ interface DeviceRepository {
      */
     suspend fun updateStatus(): Boolean
     suspend fun updateFcmToken(token: String)
-    suspend fun disconnect()
-    suspend fun getLatestLocation(): DeviceLocation
+    suspend fun disconnect(seniorId: Long)
+    suspend fun getLatestLocation(seniorId: Long): DeviceLocation
     suspend fun updateLocation(latitude: Double, longitude: Double)
     suspend fun getHomeLocation(): SeniorHomeLocation
     fun getBatteryLevel(): Int

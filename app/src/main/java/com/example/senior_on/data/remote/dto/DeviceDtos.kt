@@ -1,7 +1,17 @@
 package com.example.senior_on.data.remote.dto
 
 data class DeviceStatusUpdateRequest(
-    val deviceIdentifier: String, val deviceName: String, val batteryLevel: Int
+    val deviceIdentifier: String,
+    val deviceName: String,
+    val batteryLevel: Int,
+    val charging: Boolean,
+    val deviceStatusSharingEnabled: Boolean,
+    val networkConnected: Boolean,
+    val defaultHomeEnabled: Boolean,
+    val locationPermissionGranted: Boolean,
+    val gpsEnabled: Boolean,
+    val notificationPermissionGranted: Boolean,
+    val appExecutionMaintained: Boolean,
 )
 
 data class FcmTokenUpdateRequest(

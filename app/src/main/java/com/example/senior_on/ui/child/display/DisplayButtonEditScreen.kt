@@ -74,7 +74,7 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 private val ProvidedButtons = listOf(
-    SeniorHomeButtonType.ChatBuddy,
+    SeniorHomeButtonType.Settings,
     SeniorHomeButtonType.Medication,
     SeniorHomeButtonType.Photo,
 )
