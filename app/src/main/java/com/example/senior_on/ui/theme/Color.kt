@@ -31,6 +31,8 @@ object SeniorOnColors {
     val Red100 = Color(0xFFF7D4D4)
     val Red50 = Color(0xFFF9E6E6)
 
+    val Beige100 = Color(0xFFFEF2DD)
+
     val Communication = Primary600
     val Health = Color(0xFF6548B8)
     val Schedule = Color(0xFF484FBC)
