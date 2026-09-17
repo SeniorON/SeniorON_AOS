@@ -1,5 +1,6 @@
 package com.example.senior_on.domain.model.senior
 
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 
 data class SeniorRegistration(
@@ -29,4 +30,12 @@ data class SeniorRelationUpdate(
     val seniorId: Long,
     val relation: SeniorRelationType,
     val customRelation: String?
+)
+
+data class ManagedSenior(
+    val familyId: Long,
+    val seniorId: Long,
+    val parentUserId: Long?,
+    val name: String,
+    val relationship: CaregiverRelationship
 )

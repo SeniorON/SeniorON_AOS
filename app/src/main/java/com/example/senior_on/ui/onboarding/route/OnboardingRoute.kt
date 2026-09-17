@@ -122,6 +122,9 @@ fun OnboardingRoute(
     var connectedSeniorId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
+    var createdFamilyId by rememberSaveable {
+        mutableStateOf<Long?>(null)
+    }
     var keepPostLoginSession by rememberSaveable { mutableStateOf(false) }
     var showSessionExitDialog by rememberSaveable { mutableStateOf(false) }
     var onboardingStatusErrorMessage by rememberSaveable {
@@ -150,6 +153,7 @@ fun OnboardingRoute(
         clearSavedRouteStates(OnboardingDraftRoutes)
         authenticatedUserId = ""
         connectedSeniorId = null
+        createdFamilyId = null
         selectedHomeAddress = ""
         selectedHomeLatitude = null
         selectedHomeLongitude = null
@@ -162,6 +166,7 @@ fun OnboardingRoute(
         clearSavedRouteStates(PostLoginStateRoutes)
         authenticatedUserId = ""
         connectedSeniorId = null
+        createdFamilyId = null
         selectedHomeAddress = ""
         selectedHomeLatitude = null
         selectedHomeLongitude = null
@@ -484,13 +489,15 @@ fun OnboardingRoute(
                 appContainer = appContainer,
                 userId = authenticatedUserId,
                 onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
-                onNextClick = {
+                onNextClick = { familyId ->
+                    createdFamilyId = familyId
                     parentInfoBackRoute = SeniorOnRoute.FamilyShareCodeCreated
                     currentRoute = SeniorOnRoute.ParentInfoInput
                 }
             )
             SeniorOnRoute.ParentInfoInput -> ParentInfoInputRoute(
                 appContainer = appContainer,
+                familyId = createdFamilyId,
                 selectedAddress = selectedHomeAddress,
                 selectedAddressLatitude = selectedHomeLatitude,
                 selectedAddressLongitude = selectedHomeLongitude,

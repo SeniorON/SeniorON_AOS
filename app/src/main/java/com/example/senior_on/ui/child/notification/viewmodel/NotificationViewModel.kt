@@ -44,6 +44,7 @@ data class NotificationUiState(
 
 class NotificationViewModel(
     private val repository: NotificationRepository,
+    private val seniorId: Long?,
     private val familyRepository: FamilyServerRepository?,
     private val homeRepository: HomeServerRepository?,
     private val eventRepository: EventRepository?,
@@ -91,6 +92,9 @@ class NotificationViewModel(
                 )
             }
             runCatching {
+                val targetSeniorId = requireNotNull(seniorId?.takeIf { it > 0L }) {
+                    "관리할 시니어를 먼저 선택해 주세요."
+                }
                 val familyMembers = familyRepository?.getMembers()
                 val parentUserId = familyMembers
                     ?.firstOrNull { member ->
@@ -109,7 +113,7 @@ class NotificationViewModel(
                 val parentOnline = async { repository.isParentDeviceOnline() }
                 val parentDevice = homeRepository?.let { repository ->
                     async {
-                        runCatching { repository.getDevice() }
+                        runCatching { repository.getDevice(targetSeniorId) }
                     }
                 }
                 val inactivitySetting = parentUserId?.let { targetUserId ->
@@ -123,7 +127,7 @@ class NotificationViewModel(
                 // 홈 조회 실패가 알림 설정과 연결 상태 조회까지 실패시키지 않도록 분리한다.
                 val parentHome = async {
                     homeRepository?.let { repository ->
-                        runCatching { repository.getHome() }.getOrNull()
+                        runCatching { repository.getHome(targetSeniorId) }.getOrNull()
                     }
                 }
                 val parentHomeSnapshot = parentHome.await()
@@ -527,6 +531,7 @@ class NotificationViewModel(
 
     class Factory(
         private val repository: NotificationRepository,
+        private val seniorId: Long?,
         private val familyRepository: FamilyServerRepository?,
         private val homeRepository: HomeServerRepository?,
         private val eventRepository: EventRepository?,
@@ -536,6 +541,7 @@ class NotificationViewModel(
             require(modelClass.isAssignableFrom(NotificationViewModel::class.java))
             return NotificationViewModel(
                 repository = repository,
+                seniorId = seniorId,
                 familyRepository = familyRepository,
                 homeRepository = homeRepository,
                 eventRepository = eventRepository,

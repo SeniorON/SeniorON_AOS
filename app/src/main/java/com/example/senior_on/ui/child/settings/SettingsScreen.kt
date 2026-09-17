@@ -1,8 +1,5 @@
 package com.example.senior_on.ui.child.settings
 
-import com.example.senior_on.ui.common.component.SettingsLogoutDialog
-import com.example.senior_on.ui.common.component.SettingsWithdrawDialog
-import com.example.senior_on.ui.common.component.SettingsConfirmBottomDialog
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -35,6 +32,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import com.example.senior_on.ui.common.component.SettingsLogoutDialog
+import com.example.senior_on.ui.common.component.SettingsWithdrawDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -606,7 +605,6 @@ fun SettingsScreen(
     isWithdrawing: Boolean = false,
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
-    var showMembershipDialog by rememberSaveable { mutableStateOf(false) }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var showWithdrawDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -643,10 +641,6 @@ fun SettingsScreen(
                     SettingsMenuItem(
                         label = "연결된 기기",
                         onClick = onConnectedDevicesClick
-                    ),
-                    SettingsMenuItem(
-                        label = "멤버십",
-                        onClick = { showMembershipDialog = true }
                     )
                 )
             )
@@ -713,12 +707,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showMembershipDialog) {
-        SettingsMembershipComingSoonDialog(
-            onDismiss = { showMembershipDialog = false },
-        )
-    }
-
     if (showWithdrawDialog) {
         SettingsWithdrawDialog(
             onDismiss = {
@@ -731,30 +719,6 @@ fun SettingsScreen(
             isConfirmLoading = isWithdrawing,
         )
     }
-}
-
-@Composable
-private fun SettingsMembershipComingSoonDialog(
-    onDismiss: () -> Unit,
-) {
-    SettingsConfirmBottomDialog(
-        onDismiss = onDismiss,
-        title = buildAnnotatedString {
-            withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                append("멤버십")
-            }
-            append(" 준비 중입니다")
-        },
-        description = "더 좋은 서비스로 찾아올게요",
-        descriptionAnnotated = null,
-        dialogHeight = 207.dp,
-        titleToDescriptionSpacing = 18.dp,
-        cancelText = "",
-        confirmText = "확인",
-        confirmBackgroundColor = SeniorOnColors.Primary600,
-        showCancelButton = false,
-        onConfirm = onDismiss,
-    )
 }
 
 @Composable
@@ -896,12 +860,12 @@ private fun SettingsMenuSectionCard(
     title: String,
     items: List<SettingsMenuItem>,
     modifier: Modifier = Modifier,
-    cardHeight: Dp = 170.dp
+    cardHeight: Dp? = null
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(cardHeight)
+            .then(if (cardHeight != null) Modifier.height(cardHeight) else Modifier)
             .clip(RoundedCornerShape(12.dp))
             .background(SeniorOnColors.Background1)
             .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 6.dp)

@@ -31,15 +31,20 @@ object SeniorOnColors {
     val Red100 = Color(0xFFF7D4D4)
     val Red50 = Color(0xFFF9E6E6)
 
-    val Beige100 = Color(0xFFFEF2DD)
-
     val Communication = Primary600
     val Health = Color(0xFF6548B8)
     val Schedule = Color(0xFF484FBC)
     val Media = Color(0xFFD85A1F)
-    val SupportBlue = Color(0xFF439BFF)
-    val ActionAdd = SupportBlue
+    val Blue = Color(0xFF439BFF)
     val Yellow = Color(0xFFF3E700)
+    val Beige100 = Color(0xFFFEF2DD)
+    val Beige200 = Color(0xFFEDDBBC)
+    val Green = Color(0xFFC4D4AC)
+    val AccountAvatarBackground = Color(0xFFECF3DD)
+    val AccountAvatarForeground = Color(0xFFBCC99F)
+
+    val SupportBlue = Blue
+    val ActionAdd = Blue
 
     val Background1 = Color(0xFFF8F8F5)
     val Background2 = Color(0xFFF6F9F2)

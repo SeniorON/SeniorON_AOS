@@ -210,7 +210,13 @@ class ParentDetailRealtimeTest {
         var calls = 0
         var data = listOf(TodayHospitalSchedule(1, "병원", "내과", koreaToday(), koreaNow().toLocalTime(), null, null))
         var fetch: suspend () -> List<TodayHospitalSchedule> = { data }
-        override suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule> { calls++; return fetch() }
+        override suspend fun getSeniorHome(): SeniorHomeSnapshot {
+            calls++
+            val schedules = fetch()
+            return SeniorHomeSnapshot(emptyList(), "MEDIUM", null, schedules.firstOrNull()?.let {
+                ServerTodaySchedule(it.hospitalName, it.department, schedules.size, null, it.id, it.time.toString())
+            })
+        }
     }
     private class FakeMedication : MedicationRepository by unused(MedicationRepository::class.java) {
         var calls = 0

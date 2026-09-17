@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
@@ -47,7 +48,9 @@ import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.model.parent.ParentInfo
+import com.example.senior_on.domain.model.senior.ManagedSenior
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
+import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.server.EventRepository
@@ -65,23 +68,43 @@ import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.notification.isHospitalNotification
 import com.example.senior_on.notification.isMedicationNotification
+import com.example.senior_on.data.source.display.MockDisplayScenario
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.ui.child.display.DisplayTabRoute
+import com.example.senior_on.ui.child.display.DisplayTabScreen
+import com.example.senior_on.ui.child.display.DisplayTabUiState
+import com.example.senior_on.ui.child.display.SeniorManagementRoute
+import com.example.senior_on.ui.child.display.viewmodel.SeniorManagementViewModel
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
+import com.example.senior_on.ui.child.family.FamilyTabScreen
+import com.example.senior_on.ui.child.family.viewmodel.toFamilyTabUiState
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.child.family.FamilyTabRoute
 import com.example.senior_on.ui.child.health.HealthMainScreen
+import com.example.senior_on.ui.child.health.HealthSection
+import com.example.senior_on.ui.child.health.previewRegisteredMedications
+import com.example.senior_on.ui.child.health.previewTodayMedications
 import com.example.senior_on.ui.child.health.route.HealthMainRoute
+import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
+import com.example.senior_on.ui.child.notification.NotificationScreen
+import com.example.senior_on.ui.child.notification.emptyNotificationSections
 import com.example.senior_on.ui.child.notification.route.NotificationRoute
+import com.example.senior_on.ui.child.settings.SettingsProfileUiState
+import com.example.senior_on.ui.child.settings.SettingsScreen
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
+import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
+import java.time.LocalDate
 import java.util.UUID
 
 internal enum class ChildFamilyDestination {
@@ -101,6 +124,7 @@ fun ChildMainScreen(
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     displayRepository: DisplayRepository,
     parentInfoRepository: ParentInfoRepository,
+    seniorRepository: SeniorRepository,
     notificationRepository: NotificationRepository,
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
@@ -182,6 +206,35 @@ fun ChildMainScreen(
         )
     )
     val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
+    val seniorManagementViewModel: SeniorManagementViewModel = viewModel(
+        key = "senior-management:$childSessionViewModelKey",
+        factory = SeniorManagementViewModel.Factory(
+            seniorRepository = seniorRepository,
+            familyRepository = familyServerRepository,
+        ),
+    )
+    val seniorManagementUiState by
+        seniorManagementViewModel.uiState.collectAsStateWithLifecycle()
+    var showSeniorManagement by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(
+        seniorManagementUiState.isLoading,
+        seniorManagementUiState.managedSeniors,
+        displayUiState.selectedSeniorId,
+    ) {
+        if (seniorManagementUiState.isLoading) return@LaunchedEffect
+        val managedSeniors = seniorManagementUiState.managedSeniors
+        if (managedSeniors.isEmpty()) return@LaunchedEffect
+
+        val selectedAccount = managedSeniors.firstOrNull { senior ->
+            senior.seniorId == displayUiState.selectedSeniorId
+        } ?: managedSeniors.first()
+        displayViewModel.selectSenior(
+            seniorId = selectedAccount.seniorId,
+            relationshipLabel = selectedAccount.relationship.displayLabel,
+        )
+    }
+
     val connectedDevice = displayUiState.parentInfo?.let { parentInfo ->
         displayUiState.device?.let { device ->
             parentInfo.toConnectedSeniorDeviceUiState(
@@ -262,71 +315,101 @@ fun ChildMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
-        ChildMainTabContent(
-            selectedTab = selectedTab,
-            familyDestination = familyDestination,
-            selectedPhotoId = selectedPhotoId,
-            selectedPhotoUri = selectedPhotoUri,
-            selectedPhotoSessionId = selectedPhotoSessionId,
-            familyViewModel = familyViewModel,
-            familyPhotoUploadViewModel = familyPhotoUploadViewModel,
-            familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
-            settingsSessionKey = childSessionViewModelKey,
-            displayViewModel = displayViewModel,
-            parentInfo = displayUiState.parentInfo,
-            connectedDevice = connectedDevice,
-            onMemberSettingsClick = {
-                familyDestination = ChildFamilyDestination.MemberSettings
-            },
-            onAddFamilyClick = navigateToFamilyInvitation,
-            onMorePhotosClick = {
-                familyDestination = ChildFamilyDestination.PhotoGallery
-            },
-            onGalleryClick = launchGallery,
-            onCameraClick = launchCamera,
-            onPhotoShared = {
-                selectedPhotoUri = null
-                selectedPhotoSessionId = null
-                familyViewModel.refreshAfterPhotoUpload()
-                familyDestination = resolveChildFamilyPhotoUploadSuccessDestination(
-                    photoShareReturnDestination = photoShareReturnDestination,
-                )
-            },
-            onPhotoClick = navigateToPhotoDetail,
-            onFamilyBackClick = navigateBackInFamily,
-            notificationRepository = notificationRepository,
-            medicationRepository = medicationRepository,
-            hospitalRepository = hospitalRepository,
-            hospitalSpecialtyRepository = hospitalSpecialtyRepository,
-            familyServerRepository = familyServerRepository,
-            homeServerRepository = homeServerRepository,
-            eventRepository = eventRepository,
-            authRepository = authRepository,
-            sessionRepository = sessionRepository,
-            deviceRegistrationRepository = deviceRegistrationRepository,
-            inquiryRepository = inquiryRepository,
-            userSettingsRepository = userSettingsRepository,
-            familyPhotoUploadPreparer = familyPhotoUploadPreparer,
-            deviceRepository = deviceRepository,
-            locationRepository = locationRepository,
-            addressSearchRepository = addressSearchRepository,
-            addressSearchViewModel = addressSearchViewModel,
-            notificationNavigationEvent = notificationNavigationEvent,
-            onNotificationNavigationConsumed = onNotificationNavigationConsumed,
-            onParentInfoSave = { updatedParentInfo, onSuccess ->
-                displayViewModel.saveParentInfo(
-                    parentInfo = updatedParentInfo,
-                    onSuccess = onSuccess,
-                )
-            },
-            onLogoutClick = onLogoutClick,
-            onWithdrawClick = onWithdrawClick,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxSize()
-        )
+        if (showSeniorManagement) {
+            SeniorManagementRoute(
+                uiState = seniorManagementUiState,
+                viewModel = seniorManagementViewModel,
+                addressSearchViewModel = addressSearchViewModel,
+                onClose = { showSeniorManagement = false },
+                onSeniorCreated = { senior ->
+                    displayViewModel.selectSenior(
+                        seniorId = senior.seniorId,
+                        relationshipLabel = senior.relationship.displayLabel,
+                    )
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+            )
+        } else {
+            ChildMainTabContent(
+                selectedTab = selectedTab,
+                familyDestination = familyDestination,
+                selectedPhotoId = selectedPhotoId,
+                selectedPhotoUri = selectedPhotoUri,
+                selectedPhotoSessionId = selectedPhotoSessionId,
+                familyViewModel = familyViewModel,
+                familyPhotoUploadViewModel = familyPhotoUploadViewModel,
+                familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
+                settingsSessionKey = childSessionViewModelKey,
+                displayViewModel = displayViewModel,
+                seniorAccounts = seniorManagementUiState.managedSeniors,
+                onSeniorAccountClick = { senior ->
+                    displayViewModel.selectSenior(
+                        seniorId = senior.seniorId,
+                        relationshipLabel = senior.relationship.displayLabel,
+                    )
+                },
+                onAddSeniorAccountClick = {
+                    seniorManagementViewModel.clearError()
+                    showSeniorManagement = true
+                },
+                parentInfo = displayUiState.parentInfo,
+                connectedDevice = connectedDevice,
+                onMemberSettingsClick = {
+                    familyDestination = ChildFamilyDestination.MemberSettings
+                },
+                onAddFamilyClick = navigateToFamilyInvitation,
+                onMorePhotosClick = {
+                    familyDestination = ChildFamilyDestination.PhotoGallery
+                },
+                onGalleryClick = launchGallery,
+                onCameraClick = launchCamera,
+                onPhotoShared = {
+                    selectedPhotoUri = null
+                    selectedPhotoSessionId = null
+                    familyViewModel.refreshAfterPhotoUpload()
+                    familyDestination = resolveChildFamilyPhotoUploadSuccessDestination(
+                        photoShareReturnDestination = photoShareReturnDestination,
+                    )
+                },
+                onPhotoClick = navigateToPhotoDetail,
+                onFamilyBackClick = navigateBackInFamily,
+                notificationRepository = notificationRepository,
+                medicationRepository = medicationRepository,
+                hospitalRepository = hospitalRepository,
+                hospitalSpecialtyRepository = hospitalSpecialtyRepository,
+                familyServerRepository = familyServerRepository,
+                homeServerRepository = homeServerRepository,
+                eventRepository = eventRepository,
+                authRepository = authRepository,
+                sessionRepository = sessionRepository,
+                deviceRegistrationRepository = deviceRegistrationRepository,
+                inquiryRepository = inquiryRepository,
+                userSettingsRepository = userSettingsRepository,
+                familyPhotoUploadPreparer = familyPhotoUploadPreparer,
+                deviceRepository = deviceRepository,
+                locationRepository = locationRepository,
+                addressSearchRepository = addressSearchRepository,
+                addressSearchViewModel = addressSearchViewModel,
+                notificationNavigationEvent = notificationNavigationEvent,
+                onNotificationNavigationConsumed = onNotificationNavigationConsumed,
+                onParentInfoSave = { updatedParentInfo, onSuccess ->
+                    displayViewModel.saveParentInfo(
+                        parentInfo = updatedParentInfo,
+                        onSuccess = onSuccess,
+                    )
+                },
+                onLogoutClick = onLogoutClick,
+                onWithdrawClick = onWithdrawClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+            )
+        }
 
         if (
+            !showSeniorManagement &&
             (
                 selectedTab != ChildMainTab.Family ||
                     familyDestination != ChildFamilyDestination.PhotoDetail
@@ -394,6 +477,9 @@ private fun ChildMainTabContent(
     familyInvitationViewModelKey: String,
     settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
+    seniorAccounts: List<ManagedSenior>,
+    onSeniorAccountClick: (ManagedSenior) -> Unit,
+    onAddSeniorAccountClick: () -> Unit,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
     onMemberSettingsClick: () -> Unit,
@@ -432,6 +518,9 @@ private fun ChildMainTabContent(
         DisplayTabRoute(
             viewModel = displayViewModel,
             addressSearchViewModel = addressSearchViewModel,
+            seniorAccounts = seniorAccounts,
+            onSeniorAccountClick = onSeniorAccountClick,
+            onAddSeniorAccountClick = onAddSeniorAccountClick,
             modifier = modifier,
         )
         return
@@ -531,6 +620,7 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Notification) {
         NotificationRoute(
             repository = notificationRepository,
+            seniorId = parentInfo?.seniorId,
             familyRepository = familyServerRepository,
             homeRepository = homeServerRepository,
             eventRepository = eventRepository,
@@ -638,4 +728,105 @@ private fun createFamilyPhotoCaptureUri(context: Context): Uri {
         "${context.packageName}.fileprovider",
         photoFile
     )
+}
+
+@Composable
+private fun ChildMainPreviewFrame(
+    selectedTab: ChildMainTab,
+    content: @Composable (Modifier) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.Background2)
+    ) {
+        content(
+            Modifier
+                .weight(1f)
+                .fillMaxSize()
+        )
+        ChildBottomNavigation(
+            selectedTab = selectedTab,
+            onTabClick = {}
+        )
+    }
+}
+
+@Preview(name = "Child Main - 화면", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenDisplayPreview() {
+    val overview = MockDisplayFixtures.overview(MockDisplayScenario.Connected)
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Screen) { modifier ->
+            DisplayTabScreen(
+                uiState = DisplayTabUiState(
+                    parentInfo = MockSeniorFixtures.mother,
+                    device = overview.device,
+                    screenConfiguration = overview.screenConfiguration,
+                ),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 건강", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenHealthPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Health) { modifier ->
+            HealthMainScreen(
+                selectedSection = HealthSection.Health,
+                medicationUiState = MedicationUiState(
+                    selectedDate = LocalDate.of(2026, 6, 12),
+                    registeredMedications = previewRegisteredMedications(),
+                    todayMedications = previewTodayMedications(),
+                ),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 알림", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenNotificationPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Notification) { modifier ->
+            NotificationScreen(
+                sections = emptyNotificationSections(),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 가족", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenFamilyPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Family) { modifier ->
+            FamilyTabScreen(
+                uiState = MockFamilyFixtures.primaryCaregiverOverview.toFamilyTabUiState(),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 설정", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenSettingsPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Setting) { modifier ->
+            SettingsScreen(
+                profile = SettingsProfileUiState(
+                    name = "김민지",
+                    accountTypeLabel = "자녀 계정",
+                    email = "caregiver@example.com",
+                ),
+                modifier = modifier,
+            )
+        }
+    }
 }

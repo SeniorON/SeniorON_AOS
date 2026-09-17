@@ -25,7 +25,6 @@ class ParentHomeRealtimeTest {
             backgroundScope.launch { vm.observeHomeUpdates() }
             advanceUntilIdle()
             assertEquals(1, repo.homeCalls)
-            assertEquals(1, repo.weatherCalls)
             val initialButtons = vm.uiState.value.buttons
             val waiting = CompletableDeferred<SeniorHomeSnapshot>()
             repo.next = { waiting.await() }
@@ -46,8 +45,6 @@ class ParentHomeRealtimeTest {
             advanceUntilIdle()
             assertEquals(3, repo.homeCalls)
             assertEquals("latest", vm.uiState.value.buttons.single().label)
-            assertEquals(1, repo.weatherCalls)
-            assertEquals(1, repo.scheduleCalls)
         } finally {
             store.clear()
             Dispatchers.resetMain()
@@ -77,7 +74,42 @@ class ParentHomeRealtimeTest {
             runCurrent()
             advanceUntilIdle()
             assertEquals("after resume", vm.uiState.value.buttons.single().label)
-            assertEquals(2, repo.weatherCalls)
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun seniorHomeResponseProvidesTodayScheduleWithoutExtraApiCalls() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            val repo = FakeHome().apply {
+                next = {
+                    snapshot(
+                        label = "initial",
+                        todaySchedule = ServerTodaySchedule(
+                            count = 2,
+                            title = "연세세브란스병원",
+                            description = "정형외과",
+                            displayType = null,
+                            scheduleId = null,
+                            scheduledTime = "15:00:00",
+                        ),
+                    )
+                }
+            }
+            val vm = ParentHomeViewModel(repo, FakeUpdates())
+            store.put("home", vm)
+
+            advanceUntilIdle()
+
+            assertEquals(1, repo.homeCalls)
+            assertEquals(2, vm.uiState.value.schedule.count)
+            assertEquals("연세세브란스병원", vm.uiState.value.schedule.title)
+            assertEquals("정형외과", vm.uiState.value.schedule.description)
+            assertEquals(java.time.LocalTime.of(15, 0), vm.uiState.value.schedule.scheduledTime)
+            assertFalse(vm.uiState.value.schedule.isLoading)
         } finally {
             store.clear()
             Dispatchers.resetMain()
@@ -98,14 +130,16 @@ class ParentHomeRealtimeTest {
             val vm = ParentHomeViewModel(repo, events).also { store.put("home", it) }
             backgroundScope.launch { vm.observeHomeUpdates() }
             runCurrent(); advanceUntilIdle()
+            val initialButtons = vm.uiState.value.buttons
+            repo.next = { snapshot("changed", ServerTodaySchedule("병원", "내과", 1, null, 42, "15:00")) }
             repeat(5) { events.events.emit(ParentHomeUpdateEvent.ScheduleUpdated) }
             runCurrent(); advanceUntilIdle()
-            assertEquals(2, repo.scheduleCalls)
-            assertEquals(1, repo.homeCalls)
-            assertEquals(1, repo.weatherCalls)
+            assertEquals(2, repo.homeCalls)
+            assertEquals(initialButtons, vm.uiState.value.buttons)
+            assertEquals("병원", vm.uiState.value.schedule.title)
             events.events.emit(ParentHomeUpdateEvent.MedicationUpdated)
             runCurrent(); advanceUntilIdle()
-            assertEquals(2, repo.scheduleCalls)
+            assertEquals(2, repo.homeCalls)
         } finally {
             store.clear()
             Dispatchers.resetMain()
@@ -114,21 +148,17 @@ class ParentHomeRealtimeTest {
 
     private class FakeHome : HomeServerRepository by unusedRepository() {
         var homeCalls = 0
-        var weatherCalls = 0
-        var scheduleCalls = 0
         var next: suspend () -> SeniorHomeSnapshot = { snapshot("initial") }
         override suspend fun getSeniorHome(): SeniorHomeSnapshot { homeCalls++; return next() }
-        override suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule> { scheduleCalls++; return emptyList() }
-        override suspend fun getWeather(latitude: Double, longitude: Double): WeatherInfo {
-            weatherCalls++
-            return WeatherInfo(20, "CLEAR", "맑음", null)
-        }
     }
 
     companion object {
-        private fun snapshot(label: String) = SeniorHomeSnapshot(
+        private fun snapshot(
+            label: String,
+            todaySchedule: ServerTodaySchedule? = null,
+        ) = SeniorHomeSnapshot(
             buttons = listOf(ServerButton(1, order = 0, name = label, icon = null, actionType = "DEFAULT", actionValue = "PHONE")),
-            fontSize = "MEDIUM", musicCard = null, todaySchedule = null,
+            fontSize = "MEDIUM", musicCard = null, todaySchedule = todaySchedule,
         )
         private fun unusedRepository() = Proxy.newProxyInstance(
             HomeServerRepository::class.java.classLoader, arrayOf(HomeServerRepository::class.java),

@@ -43,6 +43,14 @@ object MockDisplayFixtures {
                 name = CONNECTED_DEVICE_NAME,
                 connectionStatus = DisplayDeviceConnectionStatus.Online,
                 batteryLevelPercent = 72,
+                charging = true,
+                deviceStatusSharingEnabled = true,
+                networkConnected = true,
+                defaultHomeEnabled = true,
+                locationPermissionGranted = true,
+                gpsEnabled = false,
+                notificationPermissionGranted = true,
+                appExecutionMaintained = true,
                 lastConnectedAtLabel = "1분 전",
                 lastLocationUpdatedAtLabel = "1분 전",
             )
@@ -52,8 +60,24 @@ object MockDisplayFixtures {
                 name = CONNECTED_DEVICE_NAME,
                 connectionStatus = DisplayDeviceConnectionStatus.Offline,
                 batteryLevelPercent = 72,
+                charging = false,
+                deviceStatusSharingEnabled = true,
+                networkConnected = true,
+                defaultHomeEnabled = true,
+                locationPermissionGranted = true,
+                gpsEnabled = false,
+                notificationPermissionGranted = true,
+                appExecutionMaintained = true,
                 lastConnectedAtLabel = "5월 9일 15:12",
                 lastLocationUpdatedAtLabel = "오후 3:12",
+            )
+
+            MockDisplayScenario.LoginExpired -> DisplayDevice(
+                id = CONNECTED_DEVICE_ID,
+                name = CONNECTED_DEVICE_NAME,
+                connectionStatus = DisplayDeviceConnectionStatus.LoginExpired,
+                lastConnectedAtLabel = "5월 9일 15:12",
+                lastLocationUpdatedAtLabel = "5월 9일 15:12",
             )
 
             MockDisplayScenario.NotConnected -> null

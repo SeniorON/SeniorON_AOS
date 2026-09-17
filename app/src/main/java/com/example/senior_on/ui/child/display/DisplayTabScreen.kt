@@ -29,7 +29,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +43,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,9 +58,10 @@ import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
-import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.parent.ParentInfo
+import com.example.senior_on.domain.model.parent.CaregiverRelationship
+import com.example.senior_on.domain.model.senior.ManagedSenior
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
@@ -79,7 +86,15 @@ fun DisplayTabScreen(
     onButtonEditClick: () -> Unit = {},
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
+    seniorAccounts: List<ManagedSenior> = emptyList(),
+    onSeniorAccountClick: (ManagedSenior) -> Unit = {},
+    onAddSeniorAccountClick: () -> Unit = {},
 ) {
+    var showSeniorAccountSwitcher by rememberSaveable { mutableStateOf(false) }
+    val accountItems = seniorAccounts.ifEmpty {
+        listOfNotNull(uiState.parentInfo?.toManagedSenior())
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
@@ -90,7 +105,13 @@ fun DisplayTabScreen(
                 .fillMaxSize()
                 .background(SeniorOnColors.White)
         ) {
-            DisplayTopBar()
+            DisplayTopBar(
+                title = uiState.resolveDisplayTopBarTitle()
+                    ?: stringResource(R.string.display_default_senior_relationship),
+                onAccountSelectorClick = {
+                    showSeniorAccountSwitcher = true
+                },
+            )
 
             LazyColumn(
                 modifier = Modifier
@@ -123,8 +144,6 @@ fun DisplayTabScreen(
                         relationshipLabel = uiState.relationshipLabel,
                         configuration = uiState.screenConfiguration,
                         buttonItems = uiState.configuredButtonItems,
-                        weather = uiState.weather,
-                        isWeatherLoading = uiState.isWeatherLoading,
                         todaySchedule = uiState.todaySchedule,
                         canEditScreen = canEditScreen,
                         showScreenEditActions = showScreenEditActions,
@@ -136,10 +155,43 @@ fun DisplayTabScreen(
             }
         }
     }
+
+    if (showSeniorAccountSwitcher) {
+        SeniorAccountSwitcherBottomSheet(
+            accounts = accountItems,
+            onDismiss = { showSeniorAccountSwitcher = false },
+            onAccountClick = { account ->
+                showSeniorAccountSwitcher = false
+                onSeniorAccountClick(account)
+            },
+            onAddAccountClick = {
+                showSeniorAccountSwitcher = false
+                onAddSeniorAccountClick()
+            },
+        )
+    }
 }
+
+private fun ParentInfo.toManagedSenior(): ManagedSenior = ManagedSenior(
+    familyId = 0L,
+    seniorId = seniorId,
+    parentUserId = null,
+    name = name,
+    relationship = CaregiverRelationship.fromDisplayLabel(relationshipLabel),
+)
+
+internal fun DisplayTabUiState.resolveDisplayTopBarTitle(): String? =
+    relationshipLabel
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?: parentInfo
+            ?.relationshipLabel
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
 
 @Composable
 internal fun DisplayTabLoadingScreen(
+    topBarTitle: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -147,7 +199,7 @@ internal fun DisplayTabLoadingScreen(
             .fillMaxSize()
             .background(SeniorOnColors.White),
     ) {
-        DisplayTopBar()
+        DisplayTopBar(title = topBarTitle)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -163,6 +215,7 @@ internal fun DisplayTabLoadingScreen(
 internal fun DisplayTabErrorScreen(
     message: String,
     onRetryClick: () -> Unit,
+    topBarTitle: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -170,7 +223,7 @@ internal fun DisplayTabErrorScreen(
             .fillMaxSize()
             .background(SeniorOnColors.White),
     ) {
-        DisplayTopBar()
+        DisplayTopBar(title = topBarTitle)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -196,7 +249,12 @@ internal fun DisplayTabErrorScreen(
 }
 
 @Composable
-private fun DisplayTopBar() {
+private fun DisplayTopBar(
+    title: String?,
+    onAccountSelectorClick: (() -> Unit)? = null,
+) {
+    val normalizedTitle = title?.trim()?.takeIf(String::isNotEmpty)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -218,13 +276,49 @@ private fun DisplayTopBar() {
                 .fillMaxWidth()
                 .height(SeniorOnDimensions.TopBarHeight)
                 .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.CenterStart,
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "화면 지원",
-                style = SeniorOnTextStyles.HeadingM,
-                color = SeniorOnColors.Gray800,
-            )
+            if (normalizedTitle != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = normalizedTitle,
+                        style = SeniorOnTextStyles.HeadingXS,
+                        color = SeniorOnColors.Gray800,
+                    )
+
+                    if (onAccountSelectorClick != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                                .clickable(
+                                    interactionSource = remember {
+                                        MutableInteractionSource()
+                                    },
+                                    indication = null,
+                                    role = Role.Button,
+                                    onClick = onAccountSelectorClick,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    id = R.drawable.ic_sm_chevron_down_2
+                                ),
+                                contentDescription = stringResource(
+                                    R.string.display_senior_account_selector_description
+                                ),
+                                modifier = Modifier.size(24.dp),
+                                tint = SeniorOnColors.Gray800,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -271,22 +365,34 @@ private fun DeviceConnectionBanner(
 ) {
     val isNotConnected = device == null
     val isOnline = device?.connectionStatus == DisplayDeviceConnectionStatus.Online
+    val isLoginExpired =
+        device?.connectionStatus == DisplayDeviceConnectionStatus.LoginExpired
     val leadingContentColor = when {
         isNotConnected -> SeniorOnColors.Red300
+        isLoginExpired -> SeniorOnColors.Red400
         isOnline -> SeniorOnColors.Primary600
         else -> SeniorOnColors.Gray700
     }
     val backgroundBrush = when {
         isNotConnected -> SeniorOnBrushes.DisplayDeviceNotConnected
+        isLoginExpired -> SolidColor(SeniorOnColors.Beige100)
         isOnline -> SeniorOnBrushes.DisplayDeviceConnected
         else -> SolidColor(SeniorOnColors.Gray100)
     }
+    val shape = RoundedCornerShape(50.dp)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .clip(RoundedCornerShape(50.dp))
+            .then(
+                if (isLoginExpired) {
+                    Modifier.border(1.dp, SeniorOnColors.Beige200, shape)
+                } else {
+                    Modifier
+                }
+            )
+            .clip(shape)
             .background(backgroundBrush)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -313,7 +419,10 @@ private fun DeviceConnectionBanner(
             } ?: "연결된 기기가 없습니다",
             modifier = Modifier.weight(1f),
             style = SeniorOnTextStyles.BodySSemiBold,
-            color = if (isNotConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray700,
+            color = when {
+                isNotConnected -> SeniorOnColors.Red300
+                else -> SeniorOnColors.Black
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -337,9 +446,13 @@ private fun DeviceConnectionBanner(
             Spacer(modifier = Modifier.width(4.dp))
         } else if (device != null) {
             Text(
-                text = "오프라인",
+                text = if (isLoginExpired) {
+                    "로그인이 만료되었습니다"
+                } else {
+                    "오프라인"
+                },
                 style = SeniorOnTextStyles.BodySSemiBold,
-                color = SeniorOnColors.Gray500,
+                color = if (isLoginExpired) SeniorOnColors.Red400 else SeniorOnColors.Gray500,
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -349,7 +462,11 @@ private fun DeviceConnectionBanner(
             painter = painterResource(id = R.drawable.ic_sm_arrow_right),
             contentDescription = null,
             modifier = Modifier.size(24.dp),
-            tint = if (isNotConnected) SeniorOnColors.Red300 else SeniorOnColors.Gray700,
+            tint = when {
+                isNotConnected -> SeniorOnColors.Red300
+                isLoginExpired -> SeniorOnColors.Red400
+                else -> SeniorOnColors.Gray700
+            },
         )
     }
 }
@@ -492,8 +609,6 @@ private fun ScreenEditSection(
     relationshipLabel: String?,
     configuration: SeniorScreenConfiguration,
     buttonItems: List<DisplayHomeButton>,
-    weather: DisplayWeather?,
-    isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
     canEditScreen: Boolean,
     showScreenEditActions: Boolean,
@@ -541,8 +656,6 @@ private fun ScreenEditSection(
             },
             configuration = configuration,
             buttonItems = buttonItems,
-            weather = weather,
-            isWeatherLoading = isWeatherLoading,
             todaySchedule = todaySchedule,
             onLargePreviewClick = onLargePreviewClick,
         )
@@ -621,8 +734,6 @@ private fun SeniorScreenPreviewCard(
     phoneLabel: String?,
     configuration: SeniorScreenConfiguration,
     buttonItems: List<DisplayHomeButton>,
-    weather: DisplayWeather?,
-    isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
     onLargePreviewClick: () -> Unit,
 ) {
@@ -666,8 +777,6 @@ private fun SeniorScreenPreviewCard(
                 buttonItems = buttonItems,
                 previewWidth = phonePreviewWidth,
                 previewHeight = phonePreviewHeight,
-                weather = weather,
-                isWeatherLoading = isWeatherLoading,
                 todaySchedule = todaySchedule,
             )
         }
@@ -819,6 +928,28 @@ private fun DisplayTabOfflinePreview() {
         DisplayTabPreviewFrame(
             uiState = DisplayTabUiState(
                 parentInfo = MockSeniorFixtures.mother,
+                device = overview.device,
+                screenConfiguration = overview.screenConfiguration,
+            )
+        )
+    }
+}
+
+@Preview(
+    name = "Display Login Expired",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 888,
+)
+@Composable
+private fun DisplayTabLoginExpiredPreview() {
+    val overview = MockDisplayFixtures.overview(MockDisplayScenario.LoginExpired)
+
+    SENIOR_ONTheme {
+        DisplayTabPreviewFrame(
+            uiState = DisplayTabUiState(
+                parentInfo = MockSeniorFixtures.mother,
+                relationshipLabel = MockSeniorFixtures.mother.relationshipLabel,
                 device = overview.device,
                 screenConfiguration = overview.screenConfiguration,
             )

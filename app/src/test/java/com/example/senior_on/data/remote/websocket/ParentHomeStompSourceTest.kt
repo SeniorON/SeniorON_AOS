@@ -31,8 +31,12 @@ class ParentHomeStompSourceTest {
 
         first.message("/topic/senior/99/home")
         first.message("/topic/senior/42/home")
+        first.message("/topic/senior/42/home", "SCHEDULE_UPDATED")
+        first.message("/topic/senior/42/home", "MEDICATION_UPDATED")
         runCurrent()
         assertEquals(1, events.count { it == ParentHomeUpdateEvent.HomeUpdated })
+        assertEquals(1, events.count { it == ParentHomeUpdateEvent.ScheduleUpdated })
+        assertEquals(1, events.count { it == ParentHomeUpdateEvent.MedicationUpdated })
 
         token = "Bearer refreshed"
         first.listener.onFailure(first, IOException(), null)
@@ -123,8 +127,12 @@ class ParentHomeStompSourceTest {
             listener.onOpen(this, Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(101).message("Switching Protocols").build())
             listener.onMessage(this, "CONNECTED\nversion:1.2\n\n\u0000")
         }
-        fun message(destination: String) {
-            listener.onMessage(this, "MESSAGE\nsubscription:senior-home\ndestination:$destination\ncontent-length:12\n\nHOME_UPDATED\u0000")
+        fun message(destination: String, body: String = "HOME_UPDATED") {
+            listener.onMessage(
+                this,
+                "MESSAGE\nsubscription:senior-home\ndestination:$destination\n" +
+                    "content-length:${body.toByteArray().size}\n\n$body\u0000",
+            )
         }
     }
 }

@@ -48,7 +48,6 @@ data class TodayHospitalSchedule(
     val reminderType: String?,
     val registeredBy: String?,
 )
-data class WeatherInfo(val temperature: Int, val status: String, val text: String, val observedAt: String?)
 data class DeviceInfo(
     val name: String, val connected: Boolean, val status: String,
     val batteryLevel: Int?, val networkConnected: Boolean,
@@ -192,5 +191,6 @@ data class UserProfileImage(
 data class SeniorProfileUpdate(
     val seniorId: Long, val name: String, val relation: String,
     val customRelation: String?, val birth: String, val phoneNumber: String,
-    val address: String?, val detailAddress: String?
+    val address: String?, val detailAddress: String?, val latitude: Double?,
+    val longitude: Double?,
 )

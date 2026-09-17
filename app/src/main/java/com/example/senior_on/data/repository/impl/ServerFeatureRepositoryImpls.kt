@@ -28,7 +28,7 @@ import java.time.YearMonth
 class HomeServerRepositoryImpl(
     private val source: HomeDataSource
 ) : HomeServerRepository {
-    override suspend fun getHome(): HomeSnapshot = source.getHome().let {
+    override suspend fun getHome(seniorId: Long): HomeSnapshot = source.getHome(seniorId).let {
         HomeSnapshot(
             userName = it.user_name.orEmpty(),
             fontSize = it.font_size.orEmpty(),
@@ -70,8 +70,10 @@ class HomeServerRepositoryImpl(
             },
         )
     }
-    override suspend fun getTodayHospitalSchedules(): List<TodayHospitalSchedule> =
-        source.getTodayHospitals().map { schedule ->
+    override suspend fun getTodayHospitalSchedules(
+        seniorId: Long,
+    ): List<TodayHospitalSchedule> =
+        source.getTodayHospitals(seniorId).map { schedule ->
             TodayHospitalSchedule(
                 id = schedule.hospitalId ?: 0,
                 hospitalName = schedule.hospitalName.orEmpty(),
@@ -86,26 +88,24 @@ class HomeServerRepositoryImpl(
                 registeredBy = schedule.registeredBy,
             )
         }.sortedBy(TodayHospitalSchedule::time)
-    override suspend fun getWeather(latitude: Double, longitude: Double) =
-        source.getWeather(latitude, longitude).let {
-            WeatherInfo(it.temperature ?: 0, it.weatherStatus.orEmpty(), it.weatherText.orEmpty(), it.observedAt)
-        }
-    override suspend fun getDevice() = source.getDevice().let {
+    override suspend fun getDevice(seniorId: Long) = source.getDevice(seniorId).let {
         DeviceInfo(
             it.deviceName.orEmpty(), it.connected == true, it.connectionStatus.orEmpty(),
             it.batteryLevel, it.networkConnected == true, it.lastConnectedAt,
             it.lastLocationUpdatedAt
         )
     }
-    override suspend fun getButtonOptions() = source.getButtonOptions().map {
+    override suspend fun getButtonOptions(seniorId: Long) = source.getButtonOptions(seniorId).map {
         ServerButton(0, it.option_id, 0, it.button_name.orEmpty(), it.icon, it.action_type, it.action_value)
     }
     override suspend fun saveButtons(
+        seniorId: Long,
         musicApp: String?,
         buttons: List<ServerButton>,
     ) =
         source.saveButtons(
-            HomeButtonSaveRequest(
+            request = HomeButtonSaveRequest(
+                seniorId = seniorId,
                 musicApp = musicApp,
                 buttons = buttons.map { button ->
                     ButtonRequest(
@@ -122,39 +122,36 @@ class HomeServerRepositoryImpl(
                 },
             )
         )
-    override suspend fun addButton(optionId: Long) =
-        source.addButton(HomeButtonCreateRequest(optionId)).let {
-            ServerButton(it.buttonId ?: 0, optionId, it.buttonOrder ?: 0, it.buttonName.orEmpty(), it.icon, null, null)
-        }
-    override suspend fun updateButtons(buttons: List<Pair<Long, Int>>) =
-        source.updateButtons(
-            HomeButtonUpdateRequest(
-                buttons.map { (buttonId, buttonOrder) ->
-                    HomeButtonUpdateItemRequest(
-                        button_id = buttonId,
-                        button_order = buttonOrder,
-                        button_name = null,
-                        icon = null,
-                    )
-                }
-            )
+    override suspend fun updateFontSize(seniorId: Long, fontSize: String) =
+        source.updateFontSize(
+            request = HomeFontSizeUpdateRequest(
+                seniorId = seniorId,
+                font_size = fontSize.trim().uppercase(),
+            ),
         )
-    override suspend fun deleteButton(buttonId: Long) = source.deleteButton(buttonId)
-    override suspend fun updateFontSize(fontSize: String) =
-        source.updateFontSize(HomeFontSizeUpdateRequest(fontSize.trim().uppercase()))
     override suspend fun updateSeniorProfile(
+        seniorId: Long,
         name: String, relation: String, customRelation: String?, birth: String,
-        phoneNumber: String, address: String?, detailAddress: String?
+        phoneNumber: String, address: String?, detailAddress: String?,
+        latitude: Double?, longitude: Double?,
     ) = source.updateSeniorProfile(
-        SeniorProfileUpdateRequest(
-            name.trim(), relation.trim().uppercase(), customRelation?.trim(), birth,
-            phoneNumber.trim(), address?.trim(), detailAddress?.trim()
-        )
+        request = SeniorProfileUpdateRequest(
+            seniorId = seniorId,
+            name = name.trim(),
+            relation = relation.trim().uppercase(),
+            customRelation = customRelation?.trim(),
+            birth = birth,
+            phoneNumber = phoneNumber.trim(),
+            address = address?.trim(),
+            detailAddress = detailAddress?.trim(),
+            latitude = latitude,
+            longitude = longitude,
+        ),
     ).let {
         SeniorProfileUpdate(
             it.seniorId ?: 0, it.name.orEmpty(), it.relation.orEmpty(),
             it.customRelation, it.birth.orEmpty(), it.phoneNumber.orEmpty(),
-            it.address, it.detailAddress
+            it.address, it.detailAddress, it.latitude, it.longitude,
         )
     }
 }
@@ -175,13 +172,13 @@ class FamilyServerRepositoryImpl(
     override suspend fun join(code: String) = source.join(
         FamilyJoinRequest(normalizeFamilyCodeForRequest(code))
     ).let {
-        FamilyCodeInfo(it.familyId, it.seniorCode.orEmpty())
+        FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }
     override suspend fun createCode() = source.createCode().let {
-        FamilyCodeInfo(it.familyId, it.seniorCode.orEmpty())
+        FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }
     override suspend fun getCode() = source.getCode().let {
-        FamilyCodeInfo(null, it.seniorCode.orEmpty(), it.familyMemberCount)
+        FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
     }
     override suspend fun getHome() = source.getHome().let { response ->
         ServerFamilyHome(
@@ -750,13 +747,24 @@ class DeviceRepositoryImpl(
     private val identifierSource: DeviceIdentifierDataSource,
     private val localStatusSource: LocalDeviceStatusDataSource,
 ) : DeviceRepository {
-    override suspend fun updateStatus(): Boolean = source.updateStatus(
-        DeviceStatusUpdateRequest(
-            deviceIdentifier = identifierSource.getOrCreateIdentifier(),
-            deviceName = localStatusSource.getDeviceName(),
-            batteryLevel = localStatusSource.getBatteryLevel(),
+    override suspend fun updateStatus(): Boolean {
+        val status = localStatusSource.getStatusSnapshot()
+        return source.updateStatus(
+            DeviceStatusUpdateRequest(
+                deviceIdentifier = identifierSource.getOrCreateIdentifier(),
+                deviceName = status.deviceName,
+                batteryLevel = status.batteryLevel,
+                charging = status.charging,
+                deviceStatusSharingEnabled = status.deviceStatusSharingEnabled,
+                networkConnected = status.networkConnected,
+                defaultHomeEnabled = status.defaultHomeEnabled,
+                locationPermissionGranted = status.locationPermissionGranted,
+                gpsEnabled = status.gpsEnabled,
+                notificationPermissionGranted = status.notificationPermissionGranted,
+                appExecutionMaintained = status.appExecutionMaintained,
+            )
         )
-    )
+    }
 
     override suspend fun updateFcmToken(token: String) = source.updateFcmToken(
         FcmTokenUpdateRequest(
@@ -765,10 +773,10 @@ class DeviceRepositoryImpl(
         )
     )
 
-    override suspend fun disconnect() = source.disconnect()
+    override suspend fun disconnect(seniorId: Long) = source.disconnect(seniorId)
 
-    override suspend fun getLatestLocation(): DeviceLocation =
-        source.getLatestLocation().let { response ->
+    override suspend fun getLatestLocation(seniorId: Long): DeviceLocation =
+        source.getLatestLocation(seniorId).let { response ->
             DeviceLocation(
                 latitude = requireNotNull(response.latitude) {
                     "최근 위치의 위도가 없습니다."

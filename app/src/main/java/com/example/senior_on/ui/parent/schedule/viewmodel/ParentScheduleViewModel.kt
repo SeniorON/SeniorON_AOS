@@ -72,15 +72,21 @@ class ParentScheduleViewModel(
                 }
 
                 runCatching {
-                    repository.getTodayHospitalSchedules().map { schedule ->
-                        ParentSchedule(
-                            id = schedule.id.toString(),
-                            date = schedule.date,
-                            time = schedule.time,
-                            title = schedule.hospitalName,
-                            description = schedule.department.takeIf(String::isNotBlank),
-                        )
+                    val schedule = repository.getSeniorHome().todaySchedule
+                    val time = schedule?.scheduledTime?.let {
+                        runCatching { LocalTime.parse(it.trim()) }.getOrNull()
                     }
+                    listOfNotNull(
+                        schedule?.takeIf { !it.title.isNullOrBlank() && time != null }?.let {
+                            ParentSchedule(
+                                id = it.scheduleId?.toString() ?: "today-schedule",
+                                date = today,
+                                time = requireNotNull(time),
+                                title = requireNotNull(it.title),
+                                description = it.description?.takeIf(String::isNotBlank),
+                            )
+                        }
+                    )
                 }
                     .onSuccess { schedules ->
                         _uiState.update {

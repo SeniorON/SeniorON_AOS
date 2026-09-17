@@ -7,11 +7,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
-import com.example.senior_on.domain.model.location.DefaultWeatherCoordinates
 import com.example.senior_on.domain.model.server.ServerButton
 import com.example.senior_on.domain.model.server.ServerMusicCard
 import com.example.senior_on.domain.model.server.ServerTodaySchedule
-import com.example.senior_on.domain.model.server.TodayHospitalSchedule
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdateEvent
@@ -19,8 +17,6 @@ import java.time.LocalTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -33,12 +29,6 @@ data class ParentHomeScheduleUiState(
     val description: String? = null,
     val scheduledTime: LocalTime? = null,
     val isLoading: Boolean = true,
-)
-
-data class ParentHomeWeatherUiState(
-    val temperature: Int? = null,
-    val status: String? = null,
-    val text: String = "날씨 확인 중",
 )
 
 data class ParentHomeButtonUiModel(
@@ -55,7 +45,6 @@ data class ParentHomeUiState(
     val musicButton: ParentHomeButtonUiModel? = null,
     val buttons: List<ParentHomeButtonUiModel> = defaultOfflineHomeButtons(),
     val schedule: ParentHomeScheduleUiState = ParentHomeScheduleUiState(),
-    val weather: ParentHomeWeatherUiState = ParentHomeWeatherUiState(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
@@ -92,7 +81,7 @@ class ParentHomeViewModel(
                 if (fullRefresh) loadHome(homeOnly = false, showRefresh = visibleRefresh)
                 else {
                     if (configurationRefresh) refreshHomeConfiguration()
-                    if (scheduleRefresh) refreshSchedule()
+                    if (scheduleRefresh && !configurationRefresh) refreshSchedule()
                 }
             }
         }
@@ -112,7 +101,6 @@ class ParentHomeViewModel(
             when (event) {
                 ParentHomeUpdateEvent.Subscribed -> {
                     requestRefresh(full = false)
-                    requestScheduleRefresh()
                 }
                 ParentHomeUpdateEvent.HomeUpdated -> requestRefresh(full = false)
                 ParentHomeUpdateEvent.ScheduleUpdated -> requestScheduleRefresh()
@@ -134,9 +122,9 @@ class ParentHomeViewModel(
     }
 
     private suspend fun refreshSchedule() {
-        cancellableResult { repository.getTodayHospitalSchedules() }
-            .onSuccess { schedules ->
-                _uiState.update { it.copy(schedule = schedules.toHomeScheduleUiState(), errorMessage = null) }
+        cancellableResult { repository.getSeniorHome().todaySchedule }
+            .onSuccess { schedule ->
+                _uiState.update { it.copy(schedule = schedule.toUiState(), errorMessage = null) }
             }
             .onFailure { error ->
                 _uiState.update { it.copy(errorMessage = error.message ?: "일정을 불러오지 못했어요.") }
@@ -156,21 +144,7 @@ class ParentHomeViewModel(
             )
         }
 
-        val (homeResult, schedulesResult, weatherResult) = coroutineScope {
-            val home = async { cancellableResult { repository.getSeniorHome() } }
-            val schedules = async {
-                cancellableResult { repository.getTodayHospitalSchedules() }
-            }
-            val weather = async {
-                cancellableResult {
-                    repository.getWeather(
-                        latitude = DefaultWeatherCoordinates.LATITUDE,
-                        longitude = DefaultWeatherCoordinates.LONGITUDE,
-                    )
-                }
-            }
-            Triple(home.await(), schedules.await(), weather.await())
-        }
+        val homeResult = cancellableResult { repository.getSeniorHome() }
 
         homeResult
             .onSuccess { home ->
@@ -185,22 +159,7 @@ class ParentHomeViewModel(
                     buttons = home.buttons
                         .map(ServerButton::toUiModel)
                         .ifEmpty(::defaultOfflineHomeButtons),
-                    schedule = schedulesResult
-                        .getOrNull()
-                        ?.toHomeScheduleUiState()
-                        ?: home.todaySchedule.toUiState(),
-                    weather = weatherResult.fold(
-                        onSuccess = { weather ->
-                            ParentHomeWeatherUiState(
-                                temperature = weather.temperature,
-                                status = weather.status,
-                                text = weather.text.ifBlank { "날씨 정보 없음" },
-                            )
-                        },
-                        onFailure = {
-                            ParentHomeWeatherUiState(text = "날씨 정보 없음")
-                        },
-                    ),
+                    schedule = home.todaySchedule.toUiState(),
                     isLoading = false,
                     isRefreshing = false,
                 )
@@ -211,17 +170,7 @@ class ParentHomeViewModel(
                         buttons = it.buttons.ifEmpty(::defaultOfflineHomeButtons),
                         isLoading = false,
                         isRefreshing = false,
-                        schedule = schedulesResult
-                            .getOrNull()
-                            ?.toHomeScheduleUiState()
-                            ?: it.schedule.copy(isLoading = false),
-                        weather = weatherResult.getOrNull()?.let { weather ->
-                            ParentHomeWeatherUiState(
-                                temperature = weather.temperature,
-                                status = weather.status,
-                                text = weather.text.ifBlank { "날씨 정보 없음" },
-                            )
-                        } ?: it.weather,
+                        schedule = it.schedule.copy(isLoading = false),
                         errorMessage = throwable.message
                             ?: "부모님 홈 정보를 불러오지 못했어요.",
                     )
@@ -237,6 +186,7 @@ class ParentHomeViewModel(
                         screenConfiguration = it.screenConfiguration.copy(fontSize = home.fontSize.toFontSize()),
                         musicButton = home.musicCard?.takeIf { card -> card.enabled }?.toUiModel(),
                         buttons = home.buttons.map(ServerButton::toUiModel).ifEmpty(::defaultOfflineHomeButtons),
+                        schedule = home.todaySchedule.toUiState(),
                         isLoading = false,
                         errorMessage = null,
                     )
@@ -267,10 +217,11 @@ private fun defaultOfflineHomeButtons(): List<ParentHomeButtonUiModel> = listOf(
     offlineButton(-2, SeniorHomeButtonType.Message, "메시지", "MESSAGE"),
     offlineButton(-3, SeniorHomeButtonType.Camera, "카메라", "CAMERA"),
     offlineButton(-4, SeniorHomeButtonType.Photo, "사진", "PHOTO"),
-    offlineButton(-5, SeniorHomeButtonType.ChatBuddy, "말벗", "COMPANION"),
-    offlineButton(-6, SeniorHomeButtonType.Medication, "복약", "MEDICATION"),
-    offlineButton(-7, SeniorHomeButtonType.Calendar, "캘린더", "CALENDAR"),
-    offlineButton(-8, SeniorHomeButtonType.Emergency, "긴급알림", "EMERGENCY"),
+    offlineButton(-5, SeniorHomeButtonType.YouTube, "유튜브", "YOUTUBE"),
+    offlineButton(-6, SeniorHomeButtonType.Settings, "설정", "SETTINGS"),
+    offlineButton(-7, SeniorHomeButtonType.Medication, "복약", "MEDICATION"),
+    offlineButton(-8, SeniorHomeButtonType.Calendar, "캘린더", "CALENDAR"),
+    offlineButton(-9, SeniorHomeButtonType.Emergency, "긴급알림", "EMERGENCY"),
 )
 
 private fun offlineButton(
@@ -286,17 +237,6 @@ private fun offlineButton(
     actionValue = actionValue,
     packageName = null,
 )
-
-private fun List<TodayHospitalSchedule>.toHomeScheduleUiState(): ParentHomeScheduleUiState {
-    val firstSchedule = firstOrNull()
-    return ParentHomeScheduleUiState(
-        count = size,
-        title = firstSchedule?.hospitalName,
-        description = firstSchedule?.department,
-        scheduledTime = firstSchedule?.time,
-        isLoading = false,
-    )
-}
 
 private fun ServerTodaySchedule?.toUiState() = ParentHomeScheduleUiState(
     count = this?.count ?: 0,

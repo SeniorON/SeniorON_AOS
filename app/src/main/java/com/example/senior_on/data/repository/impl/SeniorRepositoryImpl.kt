@@ -1,11 +1,13 @@
 package com.example.senior_on.data.repository.impl
 
 import com.example.senior_on.data.remote.dto.CreateSeniorRequest
+import com.example.senior_on.data.remote.dto.ManagedSeniorResponse
 import com.example.senior_on.data.remote.dto.SeniorRelation
 import com.example.senior_on.data.remote.dto.UpdateSeniorRelationRequest
 import com.example.senior_on.data.source.senior.SeniorDataSource
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
+import com.example.senior_on.domain.model.senior.ManagedSenior
 import com.example.senior_on.domain.model.senior.SeniorInfo
 import com.example.senior_on.domain.model.senior.SeniorRegistration
 import com.example.senior_on.domain.model.senior.SeniorRelationUpdate
@@ -15,12 +17,14 @@ class SeniorRepositoryImpl(
     private val dataSource: SeniorDataSource
 ) : SeniorRepository {
     override suspend fun createSenior(
-        accessToken: String,
+        familyId: Long,
+        accessToken: String?,
         registration: SeniorRegistration
     ): SeniorInfo {
         val response = dataSource.createSenior(
-            authorization = accessToken.toBearerToken(),
+            authorization = accessToken?.toBearerToken(),
             request = CreateSeniorRequest(
+                familyId = familyId,
                 name = registration.name.trim(),
                 relation = registration.relation.toDto(),
                 customRelation = registration.customRelation
@@ -44,6 +48,12 @@ class SeniorRepositoryImpl(
             address = response.address,
             detailAddress = response.detailAddress
         )
+    }
+
+    override suspend fun getManagedSeniors(): List<ManagedSenior> {
+        return dataSource.getManagedSeniors()
+            .map { response -> response.toDomain() }
+            .distinctBy(ManagedSenior::seniorId)
     }
 
     override suspend fun updateRelation(
@@ -76,6 +86,29 @@ class SeniorRepositoryImpl(
         return SeniorRelationType.valueOf(name)
     }
 
+    private fun ManagedSeniorResponse.toDomain(): ManagedSenior {
+        val relationship = relation?.let { relation ->
+            CaregiverRelationship(
+                relation = relation.toDomain(),
+                customRelation = customRelation
+            )
+        } ?: CaregiverRelationship(
+            relation = SeniorRelationType.OTHER,
+            customRelation = customRelation
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?: DEFAULT_MANAGED_SENIOR_RELATIONSHIP_LABEL
+        )
+
+        return ManagedSenior(
+            familyId = familyId,
+            seniorId = seniorId,
+            parentUserId = parentUserId,
+            name = name,
+            relationship = relationship
+        )
+    }
+
     private fun String?.normalizedCustomRelation(
         relation: SeniorRelationType
     ): String? {
@@ -94,5 +127,6 @@ class SeniorRepositoryImpl(
 
     private companion object {
         const val BEARER_PREFIX = "Bearer "
+        const val DEFAULT_MANAGED_SENIOR_RELATIONSHIP_LABEL = "부모님"
     }
 }

@@ -36,7 +36,6 @@ import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
-import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.parent.home.SeniorHomeContent
@@ -44,7 +43,6 @@ import com.example.senior_on.ui.parent.home.rememberKoreaDateTime
 import com.example.senior_on.ui.parent.home.seniorHomeBackground
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeScheduleUiState
-import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeWeatherUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -60,8 +58,6 @@ internal fun SeniorPhonePreview(
     buttonItems: List<DisplayHomeButton> = emptyList(),
     previewWidth: Dp = 116.dp,
     previewHeight: Dp = 263.dp,
-    weather: DisplayWeather? = null,
-    isWeatherLoading: Boolean = false,
     todaySchedule: DisplayTodaySchedule? = null,
     scrollEnabled: Boolean = false,
 ) {
@@ -87,8 +83,6 @@ internal fun SeniorPhonePreview(
                 SeniorPhoneDesign(
                     configuration = configuration,
                     buttonItems = buttonItems,
-                    weather = weather,
-                    isWeatherLoading = isWeatherLoading,
                     todaySchedule = todaySchedule,
                     scrollEnabled = scrollEnabled,
                 )
@@ -122,8 +116,6 @@ internal fun SeniorPhonePreview(
 private fun SeniorPhoneDesign(
     configuration: SeniorScreenConfiguration,
     buttonItems: List<DisplayHomeButton>,
-    weather: DisplayWeather?,
-    isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
     scrollEnabled: Boolean,
 ) {
@@ -159,8 +151,8 @@ private fun SeniorPhoneDesign(
                 musicButton = musicButton,
                 buttons = buttons,
                 scheduleUiState = todaySchedule.toPreviewScheduleUiState(),
-                weatherUiState = weather.toPreviewWeatherUiState(isWeatherLoading),
                 interactionEnabled = false,
+                showSettingsInGrid = true,
                 onMusicClick = {},
                 onScheduleClick = {},
                 onButtonClick = {},
@@ -282,21 +274,6 @@ private fun DisplayTodaySchedule?.toPreviewScheduleUiState() =
         isLoading = false,
     )
 
-private fun DisplayWeather?.toPreviewWeatherUiState(
-    isLoading: Boolean,
-): ParentHomeWeatherUiState = when {
-    isLoading -> ParentHomeWeatherUiState(text = "날씨 확인 중")
-    this == null -> ParentHomeWeatherUiState(text = "날씨 정보 없음")
-    else -> ParentHomeWeatherUiState(
-        temperature = temperatureCelsius,
-        status = status,
-        text = description
-            ?.takeIf(String::isNotBlank)
-            ?: status.toKoreanWeatherLabel()
-            ?: "날씨 정보 없음",
-    )
-}
-
 private fun String?.toLocalTimeOrNull(): LocalTime? {
     val value = this?.trim().orEmpty()
     if (value.isEmpty()) return null
@@ -308,19 +285,6 @@ private fun String?.toLocalTimeOrNull(): LocalTime? {
                 val minute = result.groupValues[2].toIntOrNull() ?: return@let null
                 runCatching { LocalTime.of(hour, minute) }.getOrNull()
             }
-}
-
-private fun String?.toKoreanWeatherLabel(): String? {
-    val value = this?.trim()?.takeIf(String::isNotEmpty) ?: return null
-    val normalized = value.uppercase()
-    return when {
-        "CLEAR" in normalized || "SUNNY" in normalized -> "맑음"
-        "CLOUD" in normalized -> "흐림"
-        "RAIN" in normalized -> "비"
-        "SNOW" in normalized -> "눈"
-        "FOG" in normalized || "MIST" in normalized -> "안개"
-        else -> value
-    }
 }
 
 private val SeniorPhoneDesignWidth = 360.dp
@@ -342,12 +306,6 @@ private fun SeniorPhonePreviewPreview() {
             configuration = MockDisplayFixtures.defaultScreenConfiguration,
             previewWidth = 180.dp,
             previewHeight = 408.dp,
-            weather = DisplayWeather(
-                temperatureCelsius = 20,
-                status = "CLEAR",
-                description = "맑음",
-                observedAt = null,
-            ),
             todaySchedule = DisplayTodaySchedule(
                 title = "연세세브란스병원",
                 description = null,

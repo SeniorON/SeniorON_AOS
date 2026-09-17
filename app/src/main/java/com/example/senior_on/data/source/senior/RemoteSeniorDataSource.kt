@@ -4,6 +4,7 @@ import com.example.senior_on.data.remote.api.SeniorApi
 import com.example.senior_on.data.remote.dto.ApiResponse
 import com.example.senior_on.data.remote.dto.CreateSeniorRequest
 import com.example.senior_on.data.remote.dto.CreateSeniorResponse
+import com.example.senior_on.data.remote.dto.ManagedSeniorResponse
 import com.example.senior_on.data.remote.dto.UpdateSeniorRelationRequest
 import com.example.senior_on.data.remote.dto.UpdateSeniorRelationResponse
 import com.example.senior_on.data.source.remoteRequest
@@ -12,7 +13,7 @@ class RemoteSeniorDataSource(
     private val seniorApi: SeniorApi
 ) : SeniorDataSource {
     override suspend fun createSenior(
-        authorization: String,
+        authorization: String?,
         request: CreateSeniorRequest
     ): CreateSeniorResponse {
         return remoteRequest {
@@ -20,6 +21,12 @@ class RemoteSeniorDataSource(
                 authorization = authorization,
                 request = request
             ).requireData()
+        }
+    }
+
+    override suspend fun getManagedSeniors(): List<ManagedSeniorResponse> {
+        return remoteRequest {
+            seniorApi.getManagedSeniors().requireData()
         }
     }
 
