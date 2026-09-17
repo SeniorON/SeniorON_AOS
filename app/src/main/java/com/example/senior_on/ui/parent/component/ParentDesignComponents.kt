@@ -48,50 +48,40 @@ fun ParentDetailTopBar(
     modifier: Modifier = Modifier,
     backgroundColor: Color = SeniorOnColors.SupportWhite100,
     contentColor: Color = SeniorOnColors.Gray800,
-    showShadow: Boolean = true
+    showShadow: Boolean = true,
+    centeredTitle: Boolean = false,
+    titleStyle: androidx.compose.ui.text.TextStyle = SeniorOnTextStyles.HeadingM,
 ) {
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(SeniorOnDimensions.TopBarHeight)
-            .then(
-                if (showShadow) {
-                    Modifier.dropShadow(
-                        shape = RectangleShape,
-                        shadow = ParentHeaderShadow
-                    )
-                } else {
-                    Modifier
-                }
-            )
+            .then(if (showShadow) Modifier.dropShadow(RectangleShape, ParentHeaderShadow) else Modifier)
             .background(backgroundColor)
             .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier
-                .size(26.dp)
+            modifier = Modifier.align(Alignment.CenterStart).size(26.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onBackClick
+                    onClick = onBackClick,
                 ),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_arrow_back),
                 contentDescription = "뒤로가기",
                 modifier = Modifier.size(24.dp),
-                tint = contentColor
+                tint = contentColor,
             )
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
         Text(
             text = title,
-            style = SeniorOnTextStyles.HeadingM,
-            color = contentColor
+            modifier = if (centeredTitle) Modifier.align(Alignment.Center).padding(horizontal = 32.dp)
+                else Modifier.align(Alignment.CenterStart).padding(start = 42.dp),
+            style = titleStyle,
+            color = contentColor,
         )
     }
 }

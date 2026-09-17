@@ -42,6 +42,7 @@ import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembership
 import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembershipViewModel
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
 import com.example.senior_on.ui.parent.permission.ParentPermissionGuideRoute
+import com.example.senior_on.ui.parent.settings.ParentSettingsRoute
 
 private enum class ParentDestination {
     Home,
@@ -51,6 +52,7 @@ private enum class ParentDestination {
     Emergency,
     LinkDetection, // 이전에 저장된 검사 화면 목적지는 홈으로 표시합니다.
     FamilyPhotos,
+    Settings,
 }
 
 @Composable
@@ -233,8 +235,11 @@ private fun ParentLauncherContent(
             },
             onEmergencyClick = { destination = ParentDestination.Emergency },
             onFamilyPhotosClick = { destination = ParentDestination.FamilyPhotos },
+            onSettingsClick = { destination = ParentDestination.Settings },
             modifier = modifier,
         )
+
+        ParentDestination.Settings -> ParentSettingsRoute(onBackClick = ::openHome, modifier = modifier)
 
         ParentDestination.Schedule -> ParentScheduleRoute(
             repository = appContainer.homeServerRepository,
