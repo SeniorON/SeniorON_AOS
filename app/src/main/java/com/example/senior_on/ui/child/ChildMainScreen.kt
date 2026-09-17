@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
@@ -67,25 +68,43 @@ import com.example.senior_on.domain.repository.location.LocationRepository
 import com.example.senior_on.notification.NotificationNavigationEvent
 import com.example.senior_on.notification.isHospitalNotification
 import com.example.senior_on.notification.isMedicationNotification
+import com.example.senior_on.data.source.display.MockDisplayScenario
+import com.example.senior_on.data.source.mock.fixtures.MockDisplayFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
+import com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures
 import com.example.senior_on.ui.child.display.DisplayTabRoute
+import com.example.senior_on.ui.child.display.DisplayTabScreen
+import com.example.senior_on.ui.child.display.DisplayTabUiState
 import com.example.senior_on.ui.child.display.SeniorManagementRoute
 import com.example.senior_on.ui.child.display.viewmodel.SeniorManagementViewModel
 import com.example.senior_on.ui.child.family.FamilyInvitationRoute
+import com.example.senior_on.ui.child.family.FamilyTabScreen
+import com.example.senior_on.ui.child.family.viewmodel.toFamilyTabUiState
 import com.example.senior_on.ui.child.family.FamilyMemberSettingsRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.child.family.FamilyTabRoute
 import com.example.senior_on.ui.child.health.HealthMainScreen
+import com.example.senior_on.ui.child.health.HealthSection
+import com.example.senior_on.ui.child.health.previewRegisteredMedications
+import com.example.senior_on.ui.child.health.previewTodayMedications
 import com.example.senior_on.ui.child.health.route.HealthMainRoute
+import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
+import com.example.senior_on.ui.child.notification.NotificationScreen
+import com.example.senior_on.ui.child.notification.emptyNotificationSections
 import com.example.senior_on.ui.child.notification.route.NotificationRoute
+import com.example.senior_on.ui.child.settings.SettingsProfileUiState
+import com.example.senior_on.ui.child.settings.SettingsScreen
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
+import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.io.File
+import java.time.LocalDate
 import java.util.UUID
 
 internal enum class ChildFamilyDestination {
@@ -709,4 +728,105 @@ private fun createFamilyPhotoCaptureUri(context: Context): Uri {
         "${context.packageName}.fileprovider",
         photoFile
     )
+}
+
+@Composable
+private fun ChildMainPreviewFrame(
+    selectedTab: ChildMainTab,
+    content: @Composable (Modifier) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SeniorOnColors.Background2)
+    ) {
+        content(
+            Modifier
+                .weight(1f)
+                .fillMaxSize()
+        )
+        ChildBottomNavigation(
+            selectedTab = selectedTab,
+            onTabClick = {}
+        )
+    }
+}
+
+@Preview(name = "Child Main - 화면", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenDisplayPreview() {
+    val overview = MockDisplayFixtures.overview(MockDisplayScenario.Connected)
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Screen) { modifier ->
+            DisplayTabScreen(
+                uiState = DisplayTabUiState(
+                    parentInfo = MockSeniorFixtures.mother,
+                    device = overview.device,
+                    screenConfiguration = overview.screenConfiguration,
+                ),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 건강", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenHealthPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Health) { modifier ->
+            HealthMainScreen(
+                selectedSection = HealthSection.Health,
+                medicationUiState = MedicationUiState(
+                    selectedDate = LocalDate.of(2026, 6, 12),
+                    registeredMedications = previewRegisteredMedications(),
+                    todayMedications = previewTodayMedications(),
+                ),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 알림", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenNotificationPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Notification) { modifier ->
+            NotificationScreen(
+                sections = emptyNotificationSections(),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 가족", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenFamilyPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Family) { modifier ->
+            FamilyTabScreen(
+                uiState = MockFamilyFixtures.primaryCaregiverOverview.toFamilyTabUiState(),
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Preview(name = "Child Main - 설정", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun ChildMainScreenSettingsPreview() {
+    SENIOR_ONTheme {
+        ChildMainPreviewFrame(selectedTab = ChildMainTab.Setting) { modifier ->
+            SettingsScreen(
+                profile = SettingsProfileUiState(
+                    name = "김민지",
+                    accountTypeLabel = "자녀 계정",
+                    email = "caregiver@example.com",
+                ),
+                modifier = modifier,
+            )
+        }
+    }
 }
