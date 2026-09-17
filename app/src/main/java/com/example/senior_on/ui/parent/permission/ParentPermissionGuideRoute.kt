@@ -96,10 +96,8 @@ fun ParentPermissionGuideRoute(
         confirmButton = { TextButton(onClick = { manualConfirmation = false; advance() }) { Text("직접 설정했어요") } },
         dismissButton = { TextButton(onClick = { manualConfirmation = false }) { Text("아직 안 했어요") } },
     )
-    if (reachedEnd) AlertDialog(
-        onDismissRequest = { reachedEnd = false },
-        title = { Text("현재 안내가 끝났어요") },
-        text = { Text("현재 제공되는 1~6단계 안내를 마쳤어요. 7번째 단계는 준비 중이에요.") },
-        confirmButton = { TextButton(onClick = onExit) { Text("닫기") } },
+    if (reachedEnd) ParentPermissionCompleteDialog(
+        onStartClick = onExit,
+        onDismiss = { reachedEnd = false },
     )
 }

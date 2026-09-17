@@ -5,7 +5,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ParentPermissionPolicyTest {
-    @Test fun orderMatchesUpdatedGuideWithoutUnspecifiedSeventhPermission() {
+    @Test fun guideContainsExactlySixStepsInOrder() {
         assertEquals(listOf("BatteryOptimization", "Notification", "ForegroundLocation", "BackgroundLocation", "DefaultHome", "SleepingApps"),
             ParentPermissionStep.entries.map { it.name })
     }

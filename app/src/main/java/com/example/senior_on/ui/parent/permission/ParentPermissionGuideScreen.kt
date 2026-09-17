@@ -79,8 +79,7 @@ fun ParentPermissionGuideScreen(
                     Box(Modifier.size(30.dp).background(SeniorOnColors.Primary600, CircleShape), contentAlignment = Alignment.Center) {
                         Text("${step.ordinal + 1}", color = SeniorOnColors.White, style = SeniorOnTextStyles.BodySMedium)
                     }
-                    // Step 7 is awaiting product copy and has no permission action yet.
-                    Text(" / 7", color = SeniorOnColors.Gray500, style = SeniorOnTextStyles.BodyMMedium)
+                    Text(" / ${ParentPermissionStep.entries.size}", color = SeniorOnColors.Gray500, style = SeniorOnTextStyles.BodyMMedium)
                 }
                 Spacer(Modifier.height(12.dp))
                 val emphasisStart = content.title.indexOf(content.emphasis)
