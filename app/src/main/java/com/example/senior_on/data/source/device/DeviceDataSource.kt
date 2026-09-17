@@ -13,8 +13,8 @@ import retrofit2.Response
 interface DeviceDataSource {
     suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean
     suspend fun updateFcmToken(request: FcmTokenUpdateRequest)
-    suspend fun disconnect()
-    suspend fun getLatestLocation(): DeviceLocationResponse
+    suspend fun disconnect(seniorId: Long)
+    suspend fun getLatestLocation(seniorId: Long): DeviceLocationResponse
     suspend fun updateLocation(request: DeviceLocationUpdateRequest)
     suspend fun getHomeLocation(): HomeLocationResponse
 }
@@ -31,9 +31,9 @@ class RemoteDeviceDataSource(private val api: DeviceApi) : DeviceDataSource {
             }
         }
 
-    override suspend fun disconnect() {
+    override suspend fun disconnect(seniorId: Long) {
         remoteRequest {
-            api.disconnect().requireSuccessful()
+            api.disconnect(seniorId).requireSuccessful()
         }
     }
 
@@ -43,8 +43,8 @@ class RemoteDeviceDataSource(private val api: DeviceApi) : DeviceDataSource {
         }
     }
 
-    override suspend fun getLatestLocation(): DeviceLocationResponse =
-        remoteRequest { api.getLatestLocation() }
+    override suspend fun getLatestLocation(seniorId: Long): DeviceLocationResponse =
+        remoteRequest { api.getLatestLocation(seniorId) }
 
     override suspend fun updateLocation(request: DeviceLocationUpdateRequest) {
         remoteRequest {

@@ -53,8 +53,8 @@ class ParentDeviceStatusViewModelTest {
         }
 
         override suspend fun updateFcmToken(token: String) = Unit
-        override suspend fun disconnect() = Unit
-        override suspend fun getLatestLocation(): DeviceLocation =
+        override suspend fun disconnect(seniorId: Long) = Unit
+        override suspend fun getLatestLocation(seniorId: Long): DeviceLocation =
             error("Not used in this test")
         override suspend fun updateLocation(latitude: Double, longitude: Double) = Unit
         override suspend fun getHomeLocation(): SeniorHomeLocation =

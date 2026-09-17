@@ -54,7 +54,6 @@ import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.child.display.displayLabel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeScheduleUiState
-import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeWeatherUiState
 import com.example.senior_on.ui.parent.schedule.viewmodel.toParentDisplayTime
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -73,7 +72,6 @@ internal fun ParentHomeScreen(
     musicButton: ParentHomeButtonUiModel?,
     buttons: List<ParentHomeButtonUiModel>,
     scheduleUiState: ParentHomeScheduleUiState,
-    weatherUiState: ParentHomeWeatherUiState,
     onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
@@ -109,7 +107,6 @@ internal fun ParentHomeScreen(
                 musicButton = musicButton,
                 buttons = buttons,
                 scheduleUiState = scheduleUiState,
-                weatherUiState = weatherUiState,
                 onMusicClick = onMusicClick,
                 onScheduleClick = onScheduleClick,
                 onButtonClick = onButtonClick,
@@ -127,16 +124,19 @@ internal fun ColumnScope.SeniorHomeContent(
     musicButton: ParentHomeButtonUiModel?,
     buttons: List<ParentHomeButtonUiModel>,
     scheduleUiState: ParentHomeScheduleUiState,
-    weatherUiState: ParentHomeWeatherUiState,
     onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     interactionEnabled: Boolean = true,
+    showSettingsInGrid: Boolean = false,
     onExitHomeClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
 ) {
     val gridButtons = buttons
-        .filterNot { it.type == SeniorHomeButtonType.Schedule }
+        .filterNot {
+            it.type == SeniorHomeButtonType.Schedule ||
+                (!showSettingsInGrid && it.type == SeniorHomeButtonType.Settings)
+        }
         .withEmergencyAtFixedGridSlot()
 
     ParentDateSettingsHeader(
@@ -575,11 +575,6 @@ private fun ParentHomeScreenPreview() {
                     )
                 },
             scheduleUiState = ParentHomeScheduleUiState(isLoading = false),
-            weatherUiState = ParentHomeWeatherUiState(
-                temperature = 20,
-                status = "CLEAR",
-                text = "맑음",
-            ),
             onMusicClick = {},
             onScheduleClick = {},
             onButtonClick = {},

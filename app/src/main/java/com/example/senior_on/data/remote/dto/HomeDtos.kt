@@ -2,6 +2,7 @@ package com.example.senior_on.data.remote.dto
 
 import com.google.gson.TypeAdapter
 import com.google.gson.annotations.JsonAdapter
+import com.google.gson.annotations.SerializedName
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 
@@ -40,26 +41,25 @@ class ButtonRequestJsonAdapter : TypeAdapter<ButtonRequest>() {
 }
 
 data class HomeButtonSaveRequest(
+    @SerializedName("senior_id") val seniorId: Long,
     val musicApp: String?,
     val buttons: List<ButtonRequest>,
 )
-data class HomeButtonCreateRequest(val optionId: Long)
-data class HomeButtonUpdateItemRequest(
-    val button_id: Long,
-    val button_order: Int,
-    val button_name: String?,
-    val icon: String?,
+data class HomeFontSizeUpdateRequest(
+    @SerializedName("senior_id") val seniorId: Long,
+    val font_size: String,
 )
-data class HomeButtonUpdateRequest(val buttons: List<HomeButtonUpdateItemRequest>)
-data class HomeFontSizeUpdateRequest(val font_size: String)
 data class SeniorProfileUpdateRequest(
+    @SerializedName("senior_id") val seniorId: Long,
     val name: String,
     val relation: String,
     val customRelation: String?,
     val birth: String,
     val phoneNumber: String,
     val address: String?,
-    val detailAddress: String?
+    val detailAddress: String?,
+    val latitude: Double?,
+    val longitude: Double?,
 )
 data class ConnectionResponse(
     val connected: Boolean?,
@@ -96,13 +96,6 @@ data class SeniorHomeResponse(
     val buttons: List<HomeButtonResponse>?, val font_size: String?,
     val music_card: MusicCardResponse?, val today_schedule: TodayScheduleResponse?
 )
-data class WeatherResponse(
-    val temperature: Int?, val weatherStatus: String?,
-    val weatherText: String?, val observedAt: String?
-)
-data class HomeButtonCreateResponse(
-    val buttonId: Long?, val buttonOrder: Int?, val buttonName: String?, val icon: String?
-)
 data class ButtonOptionResponse(
     val icon: String?, val option_id: Long?, val button_name: String?,
     val action_type: String?, val action_value: String?
@@ -110,7 +103,8 @@ data class ButtonOptionResponse(
 data class SeniorProfileUpdateResponse(
     val seniorId: Long?, val name: String?, val relation: String?,
     val customRelation: String?, val birth: String?, val phoneNumber: String?,
-    val address: String?, val detailAddress: String?
+    val address: String?, val detailAddress: String?, val latitude: Double?,
+    val longitude: Double?,
 )
 data class TodayHospitalListResponse(
     val hospitalId: Long?, val hospitalName: String?, val department: String?,
@@ -119,6 +113,10 @@ data class TodayHospitalListResponse(
 )
 data class DeviceDetailResponse(
     val deviceName: String?, val connected: Boolean?, val connectionStatus: String?,
-    val batteryLevel: Int?, val networkConnected: Boolean?,
-    val lastConnectedAt: String?, val lastLocationUpdatedAt: String?
+    val batteryLevel: Int?, val charging: Boolean?,
+    val deviceStatusSharingEnabled: Boolean?, val networkConnected: Boolean?,
+    val defaultHomeEnabled: Boolean?, val locationPermissionGranted: Boolean?,
+    val gpsEnabled: Boolean?, val notificationPermissionGranted: Boolean?,
+    val appExecutionMaintained: Boolean?, val lastConnectedAt: String?,
+    val lastLocationUpdatedAt: String?,
 )

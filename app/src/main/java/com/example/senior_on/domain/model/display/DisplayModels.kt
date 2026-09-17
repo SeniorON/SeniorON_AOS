@@ -5,6 +5,7 @@ import com.example.senior_on.domain.model.parent.ParentInfo
 enum class DisplayDeviceConnectionStatus {
     Online,
     Offline,
+    LoginExpired,
 }
 
 data class DisplayDevice(
@@ -12,6 +13,14 @@ data class DisplayDevice(
     val name: String,
     val connectionStatus: DisplayDeviceConnectionStatus,
     val batteryLevelPercent: Int? = null,
+    val charging: Boolean? = null,
+    val deviceStatusSharingEnabled: Boolean? = null,
+    val networkConnected: Boolean? = null,
+    val defaultHomeEnabled: Boolean? = null,
+    val locationPermissionGranted: Boolean? = null,
+    val gpsEnabled: Boolean? = null,
+    val notificationPermissionGranted: Boolean? = null,
+    val appExecutionMaintained: Boolean? = null,
     val lastConnectedAtLabel: String? = null,
     val lastLocationUpdatedAtLabel: String? = null,
 )
@@ -107,13 +116,6 @@ data class SeniorScreenConfiguration(
     val fontSize: SeniorFontSize = SeniorFontSize.Large,
     val buttons: List<SeniorHomeButtonType> = emptyList(),
     val customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
-)
-
-data class DisplayWeather(
-    val temperatureCelsius: Int?,
-    val status: String?,
-    val description: String?,
-    val observedAt: String?,
 )
 
 data class DisplayTodaySchedule(

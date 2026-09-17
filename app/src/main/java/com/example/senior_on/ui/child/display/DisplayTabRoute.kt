@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
+import com.example.senior_on.domain.model.senior.ManagedSenior
 import com.example.senior_on.ui.child.notification.ParentPhoneInternetRequiredDialog
 import com.example.senior_on.ui.common.seniorinfo.AddressSearchScreen
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
@@ -53,6 +54,9 @@ fun DisplayTabRoute(
     onLargePreviewClick: () -> Unit = {},
     onFontEditClick: () -> Unit = {},
     onButtonEditClick: () -> Unit = {},
+    seniorAccounts: List<ManagedSenior> = emptyList(),
+    onSeniorAccountClick: (ManagedSenior) -> Unit = {},
+    onAddSeniorAccountClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -154,6 +158,8 @@ fun DisplayTabRoute(
         when (uiState.device?.connectionStatus) {
             DisplayDeviceConnectionStatus.Online -> action()
             DisplayDeviceConnectionStatus.Offline -> showInternetRequiredDialog = true
+            DisplayDeviceConnectionStatus.LoginExpired ->
+                destination = DisplayDestination.DeviceConnection
             null -> navigateToSeniorAppInstallGuide()
         }
     }
@@ -183,12 +189,16 @@ fun DisplayTabRoute(
         when (destination) {
             DisplayDestination.Overview -> when {
                 uiState.isLoading && !uiState.hasLoadedOverview ->
-                    DisplayTabLoadingScreen(modifier = modifier)
+                    DisplayTabLoadingScreen(
+                        topBarTitle = uiState.resolveDisplayTopBarTitle(),
+                        modifier = modifier,
+                    )
 
                 uiState.errorMessage != null && !uiState.hasLoadedOverview ->
                     DisplayTabErrorScreen(
                         message = uiState.errorMessage.orEmpty(),
                         onRetryClick = viewModel::loadOverview,
+                        topBarTitle = uiState.resolveDisplayTopBarTitle(),
                         modifier = modifier,
                     )
 
@@ -201,6 +211,9 @@ fun DisplayTabRoute(
                         !uiState.isSaving,
                     isRefreshing = uiState.isRefreshing,
                     onRefresh = viewModel::refreshOverview,
+                    seniorAccounts = seniorAccounts,
+                    onSeniorAccountClick = onSeniorAccountClick,
+                    onAddSeniorAccountClick = onAddSeniorAccountClick,
                     modifier = modifier,
                     onDeviceClick = {
                         if (uiState.device == null) {
@@ -358,8 +371,6 @@ fun DisplayTabRoute(
                 buttonItems = uiState.configuredButtonItems,
                 customButtonLabels =
                     uiState.screenConfiguration.customButtonLabels,
-                weather = uiState.weather,
-                isWeatherLoading = uiState.isWeatherLoading,
                 todaySchedule = uiState.todaySchedule,
                 modifier = modifier,
                 isSaving = uiState.isSaving,
@@ -516,8 +527,6 @@ fun DisplayTabRoute(
             configuration = uiState.screenConfiguration,
             buttonItems = uiState.configuredButtonItems,
             onDismiss = { showLargePreview = false },
-            weather = uiState.weather,
-            isWeatherLoading = uiState.isWeatherLoading,
             todaySchedule = uiState.todaySchedule,
         )
     }
@@ -539,7 +548,7 @@ internal fun createInitialButtonOrder(
         add(schedule)
     }
     val requiredButtons = listOf(
-        SeniorHomeButtonType.ChatBuddy,
+        SeniorHomeButtonType.Settings,
         SeniorHomeButtonType.Medication,
         SeniorHomeButtonType.Photo,
     ).map { type ->
@@ -578,7 +587,7 @@ internal fun List<DisplayHomeButton>.withRequiredSeniorHomeButtons():
         .toMutableList()
 
     listOf(
-        SeniorHomeButtonType.ChatBuddy,
+        SeniorHomeButtonType.Settings,
         SeniorHomeButtonType.Medication,
         SeniorHomeButtonType.Photo,
     ).forEach { requiredType ->
@@ -602,6 +611,7 @@ private fun DisplayHomeButton.isSelectableDefaultOption(): Boolean =
         actionValue.uppercase() !in setOf(
             "SCHEDULE",
             "COMPANION",
+            "SETTINGS",
             "MEDICATION",
             "PHOTO",
             "EMERGENCY",
@@ -612,6 +622,7 @@ private fun DisplayHomeButton.isSelectableAppButton(): Boolean =
         actionValue.uppercase() !in setOf(
             "SCHEDULE",
             "COMPANION",
+            "SETTINGS",
             "MEDICATION",
             "PHOTO",
             "EMERGENCY",
@@ -620,7 +631,7 @@ private fun DisplayHomeButton.isSelectableAppButton(): Boolean =
 private fun requiredDisplayButton(type: SeniorHomeButtonType): DisplayHomeButton {
     val (name, actionValue) = when (type) {
         SeniorHomeButtonType.Schedule -> "일정" to "SCHEDULE"
-        SeniorHomeButtonType.ChatBuddy -> "말벗" to "COMPANION"
+        SeniorHomeButtonType.Settings -> "설정" to "SETTINGS"
         SeniorHomeButtonType.Medication -> "복약" to "MEDICATION"
         SeniorHomeButtonType.Photo -> "사진" to "PHOTO"
         SeniorHomeButtonType.Emergency -> "긴급알림" to "EMERGENCY"

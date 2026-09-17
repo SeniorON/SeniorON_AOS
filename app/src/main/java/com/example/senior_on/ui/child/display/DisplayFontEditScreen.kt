@@ -44,7 +44,6 @@ import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
-import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -56,8 +55,6 @@ fun DisplayFontEditScreen(
     buttons: List<SeniorHomeButtonType>,
     buttonItems: List<DisplayHomeButton> = emptyList(),
     customButtonLabels: Map<SeniorHomeButtonType, String> = emptyMap(),
-    weather: DisplayWeather? = null,
-    isWeatherLoading: Boolean = false,
     todaySchedule: DisplayTodaySchedule? = null,
     modifier: Modifier = Modifier,
     isSaving: Boolean = false,
@@ -102,8 +99,6 @@ fun DisplayFontEditScreen(
             FontPreviewCard(
                 configuration = previewConfiguration,
                 buttonItems = buttonItems,
-                weather = weather,
-                isWeatherLoading = isWeatherLoading,
                 todaySchedule = todaySchedule,
             )
 
@@ -187,8 +182,6 @@ private fun FontEditTopBar(
 private fun FontPreviewCard(
     configuration: SeniorScreenConfiguration,
     buttonItems: List<DisplayHomeButton>,
-    weather: DisplayWeather?,
-    isWeatherLoading: Boolean,
     todaySchedule: DisplayTodaySchedule?,
     modifier: Modifier = Modifier,
 ) {
@@ -232,8 +225,6 @@ private fun FontPreviewCard(
             SeniorPhonePreview(
                 configuration = configuration,
                 buttonItems = buttonItems,
-                weather = weather,
-                isWeatherLoading = isWeatherLoading,
                 todaySchedule = todaySchedule,
             )
         }

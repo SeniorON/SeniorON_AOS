@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 enum class MockDisplayScenario {
     Connected,
     Offline,
+    LoginExpired,
     NotConnected,
 }
 

@@ -62,7 +62,7 @@ fun FamilyShareCodeCreatedRoute(
     appContainer: AppContainer,
     userId: String,
     onBackClick: () -> Unit,
-    onNextClick: () -> Unit
+    onNextClick: (familyId: Long) -> Unit
 ) {
     val viewModel: FamilyConnectionViewModel = viewModel(
         key = "family-code-create-$userId",
@@ -78,7 +78,9 @@ fun FamilyShareCodeCreatedRoute(
 
     FamilyShareCodeCreatedScreen(
         onBackClick = onBackClick,
-        onNextClick = onNextClick,
+        onNextClick = {
+            uiState.familyId?.let(onNextClick)
+        },
         familyShareCode = uiState.familyCode.orEmpty(),
         isLoading = uiState.isLoading,
         errorMessage = uiState.errorMessage,

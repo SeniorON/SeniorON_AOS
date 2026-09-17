@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,6 +78,8 @@ fun CaregiverRelationshipInputScreen(
     initialRelationship: SeniorRelationship? = null,
     initialCustomRelationship: String = "",
     isSubmitting: Boolean = false,
+    errorMessage: String? = null,
+    onInputChange: () -> Unit = {},
 ) {
     var selectedRelationship by rememberSaveable {
         mutableStateOf(initialRelationship)
@@ -135,6 +136,7 @@ fun CaregiverRelationshipInputScreen(
                         .take(CustomRelationshipMaxLength)
                     selectedRelationship = SeniorRelationship.Custom
                     showCustomRelationshipSheet = false
+                    onInputChange()
                 }
             },
             confirmText = "저장",
@@ -195,6 +197,7 @@ fun CaregiverRelationshipInputScreen(
                                 customRelationship = ""
                                 customRelationshipDraft = ""
                                 selectedRelationship = option.relationship
+                                onInputChange()
                             }
                         },
                     )
@@ -203,7 +206,7 @@ fun CaregiverRelationshipInputScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(SeniorOnColors.White)
@@ -211,6 +214,18 @@ fun CaregiverRelationshipInputScreen(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 22.dp)
         ) {
+            errorMessage
+                ?.takeIf(String::isNotBlank)
+                ?.let { message ->
+                    Text(
+                        text = message,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        style = SeniorOnTextStyles.CaptionMedium,
+                        color = SeniorOnColors.Red400,
+                    )
+                }
             SeniorInfoActionButton(
                 text = "다음",
                 onClick = {

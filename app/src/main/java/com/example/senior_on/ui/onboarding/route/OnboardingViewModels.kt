@@ -41,7 +41,6 @@ internal fun seniorOnboardingViewModel(
         factory = SeniorOnboardingViewModel.Factory(
             seniorRepository = appContainer.seniorRepository,
             parentInfoRepository = appContainer.parentInfoRepository,
-            homeRepository = appContainer.homeServerRepository,
             caregiverRelationshipRepositoryFor =
                 appContainer::caregiverRelationshipRepositoryFor
         )

@@ -1,6 +1,7 @@
 package com.example.senior_on.data.remote.dto
 
 data class CreateSeniorRequest(
+    val familyId: Long,
     val name: String,
     val relation: SeniorRelation,
     val customRelation: String?,

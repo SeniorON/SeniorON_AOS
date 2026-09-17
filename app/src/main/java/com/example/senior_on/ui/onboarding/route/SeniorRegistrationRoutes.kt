@@ -54,13 +54,16 @@ fun CaregiverRelationshipRoute(
                 }
             }
         },
-        isSubmitting = uiState.isLoading
+        isSubmitting = uiState.isLoading,
+        errorMessage = uiState.errorMessage,
+        onInputChange = seniorViewModel::clearError,
     )
 }
 
 @Composable
 fun ParentInfoInputRoute(
     appContainer: AppContainer,
+    familyId: Long?,
     selectedAddress: String,
     selectedAddressLatitude: Double?,
     selectedAddressLongitude: Double?,
@@ -85,8 +88,9 @@ fun ParentInfoInputRoute(
         onInputChange = seniorViewModel::clearError,
         onSaveClick = { inputState ->
             val accessToken = authViewModel.accessToken
-            if (accessToken != null) {
+            if (accessToken != null && familyId != null) {
                 seniorViewModel.createSenior(
+                    familyId = familyId,
                     accessToken = accessToken,
                     registration = inputState.toSeniorRegistration(),
                 ) { senior ->
@@ -94,8 +98,10 @@ fun ParentInfoInputRoute(
                         onComplete()
                     }
                 }
-            } else {
+            } else if (accessToken == null) {
                 seniorViewModel.showMissingSessionError()
+            } else {
+                seniorViewModel.showMissingFamilyError()
             }
         }
     )
