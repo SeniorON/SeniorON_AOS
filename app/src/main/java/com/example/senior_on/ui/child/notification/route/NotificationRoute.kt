@@ -30,6 +30,7 @@ private enum class NotificationDestination {
 @Composable
 fun NotificationRoute(
     repository: NotificationRepository,
+    seniorId: Long? = null,
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -40,6 +41,7 @@ fun NotificationRoute(
 ) {
     val viewModel = notificationViewModel(
         repository = repository,
+        seniorId = seniorId,
         familyRepository = familyRepository,
         homeRepository = homeRepository,
         eventRepository = eventRepository,

@@ -12,7 +12,6 @@ import com.example.senior_on.domain.model.senior.SeniorRelationUpdate
 import com.example.senior_on.domain.repository.parent.CaregiverRelationshipRepository
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
-import com.example.senior_on.domain.repository.server.HomeServerRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +33,6 @@ data class SeniorOnboardingUiState(
 class SeniorOnboardingViewModel(
     private val seniorRepository: SeniorRepository,
     private val parentInfoRepository: ParentInfoRepository,
-    private val homeRepository: HomeServerRepository,
     private val caregiverRelationshipRepositoryFor:
         (userId: String) -> CaregiverRelationshipRepository
 ) : ViewModel() {
@@ -53,13 +51,13 @@ class SeniorOnboardingViewModel(
         if (_uiState.value.isLoading || _uiState.value.connectedSeniorId != null) return
 
         launchRequest(onFailure = {}) {
-            val home = homeRepository.getHome()
-            val seniorId = requireNotNull(home.seniorId) {
+            val senior = seniorRepository.getManagedSeniors().firstOrNull()
+            val seniorId = requireNotNull(senior?.seniorId) {
                 "연결된 시니어 정보를 찾을 수 없습니다."
             }
             _uiState.value = _uiState.value.copy(
                 connectedSeniorId = seniorId,
-                connectedSeniorName = home.seniorName.orEmpty(),
+                connectedSeniorName = senior.name,
             )
         }
     }
@@ -69,6 +67,7 @@ class SeniorOnboardingViewModel(
     }
 
     fun createSenior(
+        familyId: Long,
         accessToken: String,
         registration: SeniorRegistration,
         onResult: (SeniorInfo?) -> Unit
@@ -78,12 +77,19 @@ class SeniorOnboardingViewModel(
                 registration = registration,
                 create = {
                     seniorRepository.createSenior(
+                        familyId = familyId,
                         accessToken = accessToken,
                         registration = registration,
                     )
                 },
                 findRegisteredSeniorId = {
-                    homeRepository.getHome().seniorId
+                    seniorRepository.getManagedSeniors()
+                        .filter { senior ->
+                            senior.familyId == familyId &&
+                                senior.name.trim() == registration.name.trim()
+                        }
+                        .maxByOrNull { senior -> senior.seniorId }
+                        ?.seniorId
                 },
             )
             // The server-issued ID is the only valid identity for a registered senior.
@@ -102,6 +108,12 @@ class SeniorOnboardingViewModel(
     fun showMissingSessionError() {
         _uiState.value = _uiState.value.copy(
             errorMessage = MISSING_SESSION_ERROR_MESSAGE
+        )
+    }
+
+    fun showMissingFamilyError() {
+        _uiState.value = _uiState.value.copy(
+            errorMessage = MISSING_FAMILY_ERROR_MESSAGE
         )
     }
 
@@ -162,7 +174,6 @@ class SeniorOnboardingViewModel(
     class Factory(
         private val seniorRepository: SeniorRepository,
         private val parentInfoRepository: ParentInfoRepository,
-        private val homeRepository: HomeServerRepository,
         private val caregiverRelationshipRepositoryFor:
             (userId: String) -> CaregiverRelationshipRepository
     ) : ViewModelProvider.Factory {
@@ -170,10 +181,9 @@ class SeniorOnboardingViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SeniorOnboardingViewModel::class.java))
             return SeniorOnboardingViewModel(
-                seniorRepository = seniorRepository,
-                parentInfoRepository = parentInfoRepository,
-                homeRepository = homeRepository,
-                caregiverRelationshipRepositoryFor =
+                    seniorRepository = seniorRepository,
+                    parentInfoRepository = parentInfoRepository,
+                    caregiverRelationshipRepositoryFor =
                     caregiverRelationshipRepositoryFor
             ) as T
         }
@@ -183,6 +193,8 @@ class SeniorOnboardingViewModel(
         const val DEFAULT_ERROR_MESSAGE = "시니어 정보를 저장하지 못했습니다."
         const val MISSING_SESSION_ERROR_MESSAGE =
             "로그인 정보가 만료되었습니다. 다시 로그인해 주세요."
+        const val MISSING_FAMILY_ERROR_MESSAGE =
+            "가족 공유 코드 정보를 찾을 수 없습니다. 이전 화면에서 코드를 다시 생성해 주세요."
     }
 }
 

@@ -13,7 +13,7 @@ interface RemoteFamilySource {
     suspend fun createCode(): FamilyCodeCreateResponse
     suspend fun getCode(): FamilyCodeResponse
     suspend fun getHome(): FamilyHomeResponse
-    suspend fun getMembers(): List<FamilyMemberResponse>
+    suspend fun getMembers(seniorId: Long? = null): List<FamilyMemberResponse>
     suspend fun changePrimaryManager(request: FamilyPrimaryManagerUpdateRequest): FamilyPrimaryManagerUpdateResponse
     suspend fun deleteMember(userId: Long)
     suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?): FamilyPhotoListResponse
@@ -48,7 +48,8 @@ class RemoteFamilyDataSource(
         api.getCode().requireData()
     }
     override suspend fun getHome() = api.getHome().requireData()
-    override suspend fun getMembers() = api.getMembers().requireData()
+    override suspend fun getMembers(seniorId: Long?) =
+        api.getMembers(seniorId).requireData()
     override suspend fun changePrimaryManager(request: FamilyPrimaryManagerUpdateRequest) =
         api.changePrimaryManager(request).requireData()
     override suspend fun deleteMember(userId: Long) { api.deleteMember(userId) }

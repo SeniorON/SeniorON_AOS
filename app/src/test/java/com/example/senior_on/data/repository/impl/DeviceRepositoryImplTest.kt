@@ -8,6 +8,7 @@ import com.example.senior_on.data.remote.dto.HomeLocationResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.device.DeviceIdentifierDataSource
 import com.example.senior_on.data.source.device.LocalDeviceStatusDataSource
+import com.example.senior_on.data.source.device.LocalDeviceStatusSnapshot
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -15,7 +16,7 @@ import org.junit.Test
 
 class DeviceRepositoryImplTest {
     @Test
-    fun updateStatusSendsIdentifierNameAndBatteryFromLocalSources() = runBlocking {
+    fun updateStatusSendsCompleteLocalDeviceStatus() = runBlocking {
         val remoteSource = RecordingDeviceDataSource()
         val repository = DeviceRepositoryImpl(
             source = remoteSource,
@@ -23,6 +24,14 @@ class DeviceRepositoryImplTest {
             localStatusSource = FixedLocalDeviceStatusDataSource(
                 deviceName = "Senior Phone",
                 batteryLevel = 72,
+                charging = true,
+                deviceStatusSharingEnabled = true,
+                networkConnected = true,
+                defaultHomeEnabled = true,
+                locationPermissionGranted = true,
+                gpsEnabled = false,
+                notificationPermissionGranted = true,
+                appExecutionMaintained = false,
             ),
         )
 
@@ -33,6 +42,14 @@ class DeviceRepositoryImplTest {
                 deviceIdentifier = "device-123",
                 deviceName = "Senior Phone",
                 batteryLevel = 72,
+                charging = true,
+                deviceStatusSharingEnabled = true,
+                networkConnected = true,
+                defaultHomeEnabled = true,
+                locationPermissionGranted = true,
+                gpsEnabled = false,
+                notificationPermissionGranted = true,
+                appExecutionMaintained = false,
             ),
             remoteSource.requests.single(),
         )
@@ -47,9 +64,10 @@ private class RecordingDeviceDataSource : DeviceDataSource {
         return true
     }
 
-    override suspend fun disconnect() = Unit
+    override suspend fun disconnect(seniorId: Long) = Unit
     override suspend fun updateFcmToken(request: FcmTokenUpdateRequest) = Unit
-    override suspend fun getLatestLocation(): DeviceLocationResponse = error("Not used")
+    override suspend fun getLatestLocation(seniorId: Long): DeviceLocationResponse =
+        error("Not used")
     override suspend fun updateLocation(request: DeviceLocationUpdateRequest) = Unit
     override suspend fun getHomeLocation(): HomeLocationResponse = error("Not used")
 }
@@ -63,7 +81,27 @@ private class FixedDeviceIdentifierDataSource(
 private class FixedLocalDeviceStatusDataSource(
     private val deviceName: String,
     private val batteryLevel: Int,
+    private val charging: Boolean,
+    private val deviceStatusSharingEnabled: Boolean,
+    private val networkConnected: Boolean,
+    private val defaultHomeEnabled: Boolean,
+    private val locationPermissionGranted: Boolean,
+    private val gpsEnabled: Boolean,
+    private val notificationPermissionGranted: Boolean,
+    private val appExecutionMaintained: Boolean,
 ) : LocalDeviceStatusDataSource {
     override fun getDeviceName(): String = deviceName
     override fun getBatteryLevel(): Int = batteryLevel
+    override fun getStatusSnapshot() = LocalDeviceStatusSnapshot(
+        deviceName = deviceName,
+        batteryLevel = batteryLevel,
+        charging = charging,
+        deviceStatusSharingEnabled = deviceStatusSharingEnabled,
+        networkConnected = networkConnected,
+        defaultHomeEnabled = defaultHomeEnabled,
+        locationPermissionGranted = locationPermissionGranted,
+        gpsEnabled = gpsEnabled,
+        notificationPermissionGranted = notificationPermissionGranted,
+        appExecutionMaintained = appExecutionMaintained,
+    )
 }

@@ -11,14 +11,16 @@ import com.example.senior_on.ui.child.notification.viewmodel.NotificationViewMod
 @Composable
 internal fun notificationViewModel(
     repository: NotificationRepository,
+    seniorId: Long?,
     familyRepository: FamilyServerRepository?,
     homeRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
 ): NotificationViewModel {
     return viewModel(
-        key = "notification",
+        key = "notification:${seniorId ?: "unselected"}",
         factory = NotificationViewModel.Factory(
             repository = repository,
+            seniorId = seniorId,
             familyRepository = familyRepository,
             homeRepository = homeRepository,
             eventRepository = eventRepository,

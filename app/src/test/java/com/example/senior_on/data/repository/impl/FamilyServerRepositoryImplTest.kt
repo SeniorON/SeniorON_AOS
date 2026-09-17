@@ -341,7 +341,7 @@ private class FakeRemoteFamilySource(
 
     override suspend fun getHome() = home
 
-    override suspend fun getMembers() = home.members.orEmpty()
+    override suspend fun getMembers(seniorId: Long?) = home.members.orEmpty()
 
     override suspend fun changePrimaryManager(
         request: FamilyPrimaryManagerUpdateRequest,

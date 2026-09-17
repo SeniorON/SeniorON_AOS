@@ -65,13 +65,13 @@ class DisplayButtonOrderTest {
         assertEquals("EMERGENCY", grid[7].actionValue)
         assertEquals(
             setOf(
-                SeniorHomeButtonType.ChatBuddy,
+                SeniorHomeButtonType.Settings,
                 SeniorHomeButtonType.Medication,
                 SeniorHomeButtonType.Photo,
             ),
             grid.mapNotNull(DisplayHomeButton::type)
                 .filter {
-                    it == SeniorHomeButtonType.ChatBuddy ||
+                    it == SeniorHomeButtonType.Settings ||
                         it == SeniorHomeButtonType.Medication ||
                         it == SeniorHomeButtonType.Photo
                 }.toSet(),
@@ -155,7 +155,7 @@ class DisplayButtonOrderTest {
             defaultButton(SeniorHomeButtonType.Schedule),
             call,
             message,
-            defaultButton(SeniorHomeButtonType.ChatBuddy),
+            defaultButton(SeniorHomeButtonType.Settings),
             defaultButton(SeniorHomeButtonType.Medication),
             defaultButton(SeniorHomeButtonType.Emergency),
         )
@@ -166,7 +166,7 @@ class DisplayButtonOrderTest {
         )
 
         assertEquals(
-            listOf("SCHEDULE", "MESSAGE", "COMPANION", "MEDICATION", "EMERGENCY"),
+            listOf("SCHEDULE", "MESSAGE", "SETTINGS", "MEDICATION", "EMERGENCY"),
             result.map(DisplayHomeButton::actionValue),
         )
     }
@@ -179,6 +179,7 @@ private fun defaultButton(type: SeniorHomeButtonType): DisplayHomeButton {
         SeniorHomeButtonType.Camera -> "카메라" to "CAMERA"
         SeniorHomeButtonType.Schedule -> "일정" to "SCHEDULE"
         SeniorHomeButtonType.ChatBuddy -> "말벗" to "COMPANION"
+        SeniorHomeButtonType.Settings -> "설정" to "SETTINGS"
         SeniorHomeButtonType.Medication -> "복약" to "MEDICATION"
         SeniorHomeButtonType.Photo -> "사진" to "PHOTO"
         SeniorHomeButtonType.Emergency -> "긴급알림" to "EMERGENCY"

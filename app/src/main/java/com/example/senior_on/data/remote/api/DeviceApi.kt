@@ -11,6 +11,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.PUT
+import retrofit2.http.Query
 
 interface DeviceApi {
     @PUT("api/devices/status")
@@ -20,10 +21,12 @@ interface DeviceApi {
     suspend fun updateFcmToken(@Body request: FcmTokenUpdateRequest): Response<Unit>
 
     @DELETE("api/devices/connection")
-    suspend fun disconnect(): Response<Unit>
+    suspend fun disconnect(@Query("seniorId") seniorId: Long): Response<Unit>
 
     @GET("api/devices/location")
-    suspend fun getLatestLocation(): DeviceLocationResponse
+    suspend fun getLatestLocation(
+        @Query("seniorId") seniorId: Long,
+    ): DeviceLocationResponse
 
     @PATCH("api/devices/location")
     suspend fun updateLocation(

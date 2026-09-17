@@ -22,6 +22,7 @@ fun ChildMainRoute(
         familyPhotoUploadPreparer = appContainer.familyPhotoUploadPreparer,
         displayRepository = appContainer.displayRepository,
         parentInfoRepository = appContainer.parentInfoRepository,
+        seniorRepository = appContainer.seniorRepository,
         notificationRepository = appContainer.notificationRepository,
         medicationRepository = appContainer.medicationRepository,
         hospitalRepository = appContainer.hospitalRepository,

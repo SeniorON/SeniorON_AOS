@@ -274,6 +274,7 @@ fun ParentInfoInputScreen(
                 isSaveEnabled = isSaveEnabled,
                 errorMessage = errorMessage,
                 isSubmitting = isSubmitting,
+                isSkipEnabled = !isSubmitting,
             )
 
             ParentInfoScreenMode.Edit -> SeniorInfoEditBottomAction(

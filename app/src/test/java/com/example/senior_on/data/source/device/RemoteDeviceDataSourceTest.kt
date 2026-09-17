@@ -62,13 +62,14 @@ class RemoteDeviceDataSourceTest {
             request: DeviceStatusUpdateRequest,
         ): Response<Unit> = statusResponse
 
-        override suspend fun disconnect(): Response<Unit> = Response.success(Unit)
+        override suspend fun disconnect(seniorId: Long): Response<Unit> =
+            Response.success(Unit)
 
         override suspend fun updateFcmToken(
             request: FcmTokenUpdateRequest,
         ): Response<Unit> = Response.success(Unit)
 
-        override suspend fun getLatestLocation(): DeviceLocationResponse =
+        override suspend fun getLatestLocation(seniorId: Long): DeviceLocationResponse =
             error("Not used in this test")
 
         override suspend fun updateLocation(
@@ -84,6 +85,14 @@ class RemoteDeviceDataSourceTest {
             deviceIdentifier = "device-123",
             deviceName = "Senior Phone",
             batteryLevel = 72,
+            charging = true,
+            deviceStatusSharingEnabled = true,
+            networkConnected = true,
+            defaultHomeEnabled = true,
+            locationPermissionGranted = true,
+            gpsEnabled = false,
+            notificationPermissionGranted = true,
+            appExecutionMaintained = false,
         )
     }
 }

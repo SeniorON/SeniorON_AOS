@@ -10,7 +10,10 @@ interface FamilyApi {
     @POST("api/family/code-create") suspend fun createCode(): ApiResponse<FamilyCodeCreateResponse>
     @GET("api/family/code") suspend fun getCode(): ApiResponse<FamilyCodeResponse>
     @GET("api/family/home") suspend fun getHome(): ApiResponse<FamilyHomeResponse>
-    @GET("api/family/members") suspend fun getMembers(): ApiResponse<List<FamilyMemberResponse>>
+    @GET("api/family/members")
+    suspend fun getMembers(
+        @Query("seniorId") seniorId: Long? = null,
+    ): ApiResponse<List<FamilyMemberResponse>>
     @PATCH("api/family/primary-manager")
     suspend fun changePrimaryManager(@Body request: FamilyPrimaryManagerUpdateRequest): ApiResponse<FamilyPrimaryManagerUpdateResponse>
     @DELETE("api/family/members/{targetUserId}")

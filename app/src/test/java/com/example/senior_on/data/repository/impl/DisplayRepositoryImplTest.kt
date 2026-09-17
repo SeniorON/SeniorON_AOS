@@ -9,11 +9,8 @@ import com.example.senior_on.data.remote.dto.DeviceLocationUpdateRequest
 import com.example.senior_on.data.remote.dto.FcmTokenUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeLocationResponse
 import com.example.senior_on.data.remote.dto.FamilyMemberResponse
-import com.example.senior_on.data.remote.dto.HomeButtonCreateRequest
-import com.example.senior_on.data.remote.dto.HomeButtonCreateResponse
 import com.example.senior_on.data.remote.dto.HomeButtonResponse
 import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
-import com.example.senior_on.data.remote.dto.HomeButtonUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
 import com.example.senior_on.data.remote.dto.MusicCardResponse
@@ -23,7 +20,6 @@ import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateResponse
 import com.example.senior_on.data.remote.dto.TodayHospitalListResponse
 import com.example.senior_on.data.remote.dto.TodayScheduleResponse
-import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.home.HomeDataSource
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
@@ -39,7 +35,29 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+private const val TEST_SENIOR_ID = 77L
+
 class DisplayRepositoryImplTest {
+    @Test
+    fun getOverviewForwardsSelectedSeniorIdToHomeRequests() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            buttonOptionsResponse = emptyList(),
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        )
+
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.homeSeniorIds)
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.deviceSeniorIds)
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.buttonOptionsSeniorIds)
+    }
+
     @Test
     fun getOverviewMapsOnlineConnectionStatusFromHomeResponse() = runBlocking {
         val repository = DisplayRepositoryImpl(
@@ -51,12 +69,16 @@ class DisplayRepositoryImplTest {
                         device_name = "Galaxy S24",
                         connection_status = "ONLINE",
                     )
-                )
+                ),
+                deviceFailure = IllegalStateException("device detail unavailable"),
             ),
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val device = repository.getOverview(currentParentInfo = null).device
+        val device = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        ).device
 
         assertEquals("Galaxy S24", device?.name)
         assertEquals(DisplayDeviceConnectionStatus.Online, device?.connectionStatus)
@@ -73,12 +95,16 @@ class DisplayRepositoryImplTest {
                         device_name = "Galaxy S24",
                         connection_status = "OFFLINE",
                     )
-                )
+                ),
+                deviceFailure = IllegalStateException("device detail unavailable"),
             ),
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val device = repository.getOverview(currentParentInfo = null).device
+        val device = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        ).device
 
         assertEquals("Galaxy S24", device?.name)
         assertEquals(DisplayDeviceConnectionStatus.Offline, device?.connectionStatus)
@@ -100,7 +126,12 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        assertNull(repository.getOverview(currentParentInfo = null).device)
+        assertNull(
+            repository.getOverview(
+                seniorId = TEST_SENIOR_ID,
+                currentParentInfo = null,
+            ).device
+        )
     }
 
     @Test
@@ -113,14 +144,78 @@ class DisplayRepositoryImplTest {
                         battery = 51,
                         device_name = "Galaxy S24",
                     )
-                )
+                ),
+                deviceFailure = IllegalStateException("device detail unavailable"),
             ),
             deviceDataSource = FakeDeviceDataSource(),
         )
 
         assertEquals(
             DisplayDeviceConnectionStatus.Offline,
-            repository.getOverview(currentParentInfo = null).device?.connectionStatus,
+            repository.getOverview(
+                seniorId = TEST_SENIOR_ID,
+                currentParentInfo = null,
+            ).device?.connectionStatus,
+        )
+    }
+
+    @Test
+    fun getOverviewUsesLoginExpiredStatusFromDeviceDetail() = runBlocking {
+        val homeDataSource = FakeHomeDataSource(
+            homeResponse = homeResponse(
+                connection = ConnectionResponse(
+                    connected = false,
+                    battery = 51,
+                    device_name = "Galaxy S24",
+                    connection_status = "OFFLINE",
+                )
+            ),
+            deviceResponse = deviceDetailResponse(
+                connectionStatus = "LOGIN_EXPIRED",
+                lastConnectedAt = "2026-09-15T21:54:00",
+            ),
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = homeDataSource,
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val device = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        ).device
+
+        assertEquals("Galaxy S24", device?.name)
+        assertEquals(DisplayDeviceConnectionStatus.LoginExpired, device?.connectionStatus)
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.deviceSeniorIds)
+    }
+
+    @Test
+    fun getOverviewKeepsSuccessfulDisconnectedDeviceDetailAuthoritative() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                homeResponse = homeResponse(
+                    connection = ConnectionResponse(
+                        connected = true,
+                        battery = 72,
+                        device_name = "stale-device",
+                        connection_status = "ONLINE",
+                    )
+                ),
+                deviceResponse = deviceDetailResponse(
+                    deviceName = "stale-device",
+                    connectionStatus = "DISCONNECTED",
+                    connected = false,
+                ),
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        assertNull(
+            repository.getOverview(
+                seniorId = TEST_SENIOR_ID,
+                currentParentInfo = null,
+            ).device
         )
     }
 
@@ -146,6 +241,7 @@ class DisplayRepositoryImplTest {
             )
 
             savingRepository.saveButtons(
+                seniorId = TEST_SENIOR_ID,
                 buttons = listOf(
                     button,
                     SeniorHomeButtonType.Call,
@@ -191,7 +287,10 @@ class DisplayRepositoryImplTest {
             assertEquals(
                 button,
                 loadingRepository
-                    .getOverview(currentParentInfo = null)
+                    .getOverview(
+                        seniorId = TEST_SENIOR_ID,
+                        currentParentInfo = null,
+                    )
                     .screenConfiguration
                     .buttons
                     .first(),
@@ -202,22 +301,30 @@ class DisplayRepositoryImplTest {
     @Test
     fun offlineDeviceWithConnectionHistoryIsKept() = runBlocking {
         val lastConnectedAt = "2026-08-07T18:05:57.484865"
+        val homeDataSource = FakeHomeDataSource(
+            deviceResponse = DeviceDetailResponse(
+                deviceName = null,
+                connected = false,
+                connectionStatus = "OFFLINE",
+                batteryLevel = null,
+                charging = null,
+                deviceStatusSharingEnabled = null,
+                networkConnected = false,
+                defaultHomeEnabled = null,
+                locationPermissionGranted = null,
+                gpsEnabled = null,
+                notificationPermissionGranted = null,
+                appExecutionMaintained = null,
+                lastConnectedAt = lastConnectedAt,
+                lastLocationUpdatedAt = null,
+            )
+        )
         val repository = DisplayRepositoryImpl(
-            homeDataSource = FakeHomeDataSource(
-                deviceResponse = DeviceDetailResponse(
-                    deviceName = null,
-                    connected = false,
-                    connectionStatus = "OFFLINE",
-                    batteryLevel = null,
-                    networkConnected = false,
-                    lastConnectedAt = lastConnectedAt,
-                    lastLocationUpdatedAt = null,
-                )
-            ),
+            homeDataSource = homeDataSource,
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val device = repository.getDevice()
+        val device = repository.getDevice(TEST_SENIOR_ID)
 
         assertEquals("시니어폰", device?.name)
         assertEquals(
@@ -225,6 +332,105 @@ class DisplayRepositoryImplTest {
             device?.connectionStatus,
         )
         assertEquals(lastConnectedAt, device?.lastConnectedAtLabel)
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.deviceSeniorIds)
+    }
+
+    @Test
+    fun deviceDetailMapsEveryBackendStatusField() = runBlocking {
+        val response = DeviceDetailResponse(
+            deviceName = "Galaxy S24",
+            connected = true,
+            connectionStatus = "ONLINE",
+            batteryLevel = 72,
+            charging = true,
+            deviceStatusSharingEnabled = true,
+            networkConnected = true,
+            defaultHomeEnabled = true,
+            locationPermissionGranted = true,
+            gpsEnabled = false,
+            notificationPermissionGranted = true,
+            appExecutionMaintained = false,
+            lastConnectedAt = "2026-09-15T21:54:00",
+            lastLocationUpdatedAt = "2026-09-15T21:53:00",
+        )
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(deviceResponse = response),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val device = repository.getDevice(TEST_SENIOR_ID)
+
+        assertEquals(DisplayDeviceConnectionStatus.Online, device?.connectionStatus)
+        assertEquals(72, device?.batteryLevelPercent)
+        assertEquals(true, device?.charging)
+        assertEquals(true, device?.deviceStatusSharingEnabled)
+        assertEquals(true, device?.networkConnected)
+        assertEquals(true, device?.defaultHomeEnabled)
+        assertEquals(true, device?.locationPermissionGranted)
+        assertEquals(false, device?.gpsEnabled)
+        assertEquals(true, device?.notificationPermissionGranted)
+        assertEquals(false, device?.appExecutionMaintained)
+        assertEquals(response.lastConnectedAt, device?.lastConnectedAtLabel)
+        assertEquals(response.lastLocationUpdatedAt, device?.lastLocationUpdatedAtLabel)
+    }
+
+    @Test
+    fun loginExpiredDeviceKeepsIdentityAndUsesDedicatedStatus() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                deviceResponse = DeviceDetailResponse(
+                    deviceName = "Galaxy S24",
+                    connected = false,
+                    connectionStatus = " login_expired ",
+                    batteryLevel = null,
+                    charging = null,
+                    deviceStatusSharingEnabled = null,
+                    networkConnected = null,
+                    defaultHomeEnabled = null,
+                    locationPermissionGranted = null,
+                    gpsEnabled = null,
+                    notificationPermissionGranted = null,
+                    appExecutionMaintained = null,
+                    lastConnectedAt = "2026-09-15T21:54:00",
+                    lastLocationUpdatedAt = "2026-09-15T21:53:00",
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        val device = repository.getDevice(TEST_SENIOR_ID)
+
+        assertEquals("Galaxy S24", device?.name)
+        assertEquals(DisplayDeviceConnectionStatus.LoginExpired, device?.connectionStatus)
+        assertNull(device?.batteryLevelPercent)
+        assertNull(device?.networkConnected)
+    }
+
+    @Test
+    fun disconnectedStatusWinsOverStaleDeviceFields() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(
+                deviceResponse = DeviceDetailResponse(
+                    deviceName = "stale-device",
+                    connected = true,
+                    connectionStatus = "DISCONNECTED",
+                    batteryLevel = 90,
+                    charging = true,
+                    deviceStatusSharingEnabled = true,
+                    networkConnected = true,
+                    defaultHomeEnabled = true,
+                    locationPermissionGranted = true,
+                    gpsEnabled = true,
+                    notificationPermissionGranted = true,
+                    appExecutionMaintained = true,
+                    lastConnectedAt = "2026-09-15T21:54:00",
+                    lastLocationUpdatedAt = "2026-09-15T21:53:00",
+                )
+            ),
+            deviceDataSource = FakeDeviceDataSource(),
+        )
+
+        assertNull(repository.getDevice(TEST_SENIOR_ID))
     }
 
     @Test
@@ -234,7 +440,20 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        assertNull(repository.getDevice())
+        assertNull(repository.getDevice(TEST_SENIOR_ID))
+    }
+
+    @Test
+    fun disconnectDeviceForwardsSelectedSeniorId() = runBlocking {
+        val deviceDataSource = FakeDeviceDataSource()
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(),
+            deviceDataSource = deviceDataSource,
+        )
+
+        repository.disconnectDevice(TEST_SENIOR_ID)
+
+        assertEquals(listOf(TEST_SENIOR_ID), deviceDataSource.disconnectedSeniorIds)
     }
 
     @Test
@@ -273,7 +492,10 @@ class DisplayRepositoryImplTest {
             addressDetail = "",
         )
 
-        val overview = repository.getOverview(staleLocalParentInfo)
+        val overview = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = staleLocalParentInfo,
+        )
         val parentInfo = overview.parentInfo
 
         assertNull(overview.device)
@@ -318,7 +540,10 @@ class DisplayRepositoryImplTest {
             addressDetail = "101동",
         )
 
-        val parentInfo = repository.getOverview(staleParentInfo).parentInfo
+        val parentInfo = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = staleParentInfo,
+        ).parentInfo
 
         assertNull(parentInfo)
     }
@@ -348,38 +573,15 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val schedule = repository.getOverview(null).todaySchedule
+        val schedule = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        ).todaySchedule
 
         assertEquals("병원 일정", schedule?.title)
         assertEquals("연세세브란스병원", schedule?.description)
         assertEquals(1, schedule?.count)
         assertEquals("15:00", schedule?.scheduledTime)
-    }
-
-    @Test
-    fun getWeatherUsesCoordinatesAndMapsWeatherResponse() = runBlocking {
-        val homeDataSource = FakeHomeDataSource(
-            weatherResponse = WeatherResponse(
-                temperature = 24,
-                weatherStatus = "CLEAR",
-                weatherText = "맑음",
-                observedAt = "2026-07-29T17:00:00",
-            )
-        )
-        val repository = DisplayRepositoryImpl(
-            homeDataSource = homeDataSource,
-            deviceDataSource = FakeDeviceDataSource(),
-        )
-
-        val weather = repository.getWeather(
-            latitude = 37.5665,
-            longitude = 126.9780,
-        )
-
-        assertEquals(listOf(37.5665 to 126.9780), homeDataSource.weatherRequests)
-        assertEquals(24, weather.temperatureCelsius)
-        assertEquals("CLEAR", weather.status)
-        assertEquals("맑음", weather.description)
     }
 
     @Test
@@ -421,6 +623,7 @@ class DisplayRepositoryImplTest {
             )
 
             repository.saveButtons(
+                seniorId = TEST_SENIOR_ID,
                 buttons = listOf(
                     SeniorHomeButtonType.Melon,
                     SeniorHomeButtonType.Schedule,
@@ -444,7 +647,7 @@ class DisplayRepositoryImplTest {
                     "메시지",
                     "카메라",
                     "유튜브",
-                    "말벗",
+                    "설정",
                     "복약",
                     "사진",
                     "긴급알림",
@@ -470,7 +673,7 @@ class DisplayRepositoryImplTest {
                     "MESSAGE",
                     "CAMERA",
                     "YOUTUBE",
-                    "COMPANION",
+                    "SETTINGS",
                     "MEDICATION",
                     "PHOTO",
                     "EMERGENCY",
@@ -491,7 +694,10 @@ class DisplayRepositoryImplTest {
                 request.buttons.map { it.packageName },
             )
             assertEquals(0, homeDataSource.buttonOptionsRequestCount)
-            assertEquals(0, homeDataSource.legacyButtonMutationCount)
+            assertEquals(
+                listOf(TEST_SENIOR_ID),
+                homeDataSource.savedButtonSeniorIds,
+            )
         }
 
     @Test
@@ -540,7 +746,10 @@ class DisplayRepositoryImplTest {
             )
 
             val buttonItems = repository
-                .getOverview(currentParentInfo = null)
+                .getOverview(
+                    seniorId = TEST_SENIOR_ID,
+                    currentParentInfo = null,
+                )
                 .configuredButtonItems
                 .filterNot { it.isDefaultAction("SCHEDULE") }
 
@@ -566,10 +775,11 @@ class DisplayRepositoryImplTest {
                 SeniorHomeButtonType.Memo,
                 SeniorHomeButtonType.Recorder,
                 SeniorHomeButtonType.Calculator,
-                SeniorHomeButtonType.Settings,
+                SeniorHomeButtonType.Flashlight,
             )
 
             repository.saveButtons(
+                seniorId = TEST_SENIOR_ID,
                 buttons = listOf(
                     SeniorHomeButtonType.Melon,
                     SeniorHomeButtonType.Schedule,
@@ -602,7 +812,6 @@ class DisplayRepositoryImplTest {
             SeniorHomeButtonType.Memo,
             SeniorHomeButtonType.Recorder,
             SeniorHomeButtonType.Calculator,
-            SeniorHomeButtonType.Settings,
             SeniorHomeButtonType.Flashlight,
             SeniorHomeButtonType.KakaoTalk,
             SeniorHomeButtonType.NaverBand,
@@ -610,10 +819,13 @@ class DisplayRepositoryImplTest {
             SeniorHomeButtonType.Line,
             SeniorHomeButtonType.YouTube,
             SeniorHomeButtonType.Naver,
+            SeniorHomeButtonType.KakaoMap,
+            SeniorHomeButtonType.Daum,
         )
 
         val result = runCatching {
             repository.saveButtons(
+                seniorId = TEST_SENIOR_ID,
                 buttons = listOf(
                     SeniorHomeButtonType.Spotify,
                     SeniorHomeButtonType.Schedule,
@@ -652,7 +864,10 @@ class DisplayRepositoryImplTest {
             )
         }
 
-        repository.saveButtons(defaultButtons + importedApp)
+        repository.saveButtons(
+            seniorId = TEST_SENIOR_ID,
+            buttons = defaultButtons + importedApp,
+        )
 
         val request = homeDataSource.savedButtonRequests.single()
         assertEquals(
@@ -713,7 +928,10 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val overview = repository.getOverview(currentParentInfo = null)
+        val overview = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        )
 
         assertEquals(
             listOf(
@@ -721,6 +939,7 @@ class DisplayRepositoryImplTest {
                 SeniorHomeButtonType.ChatBuddy,
                 SeniorHomeButtonType.KakaoTalk,
                 SeniorHomeButtonType.Medication,
+                SeniorHomeButtonType.Settings,
                 SeniorHomeButtonType.Photo,
                 SeniorHomeButtonType.Emergency,
             ),
@@ -753,7 +972,10 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val overview = repository.getOverview(currentParentInfo = null)
+        val overview = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        )
 
         assertEquals(1, homeDataSource.buttonOptionsRequestCount)
         val phoneOption = overview.availableButtonOptions.first {
@@ -772,7 +994,10 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val overview = repository.getOverview(currentParentInfo = null)
+        val overview = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        )
 
         assertEquals(
             listOf(
@@ -801,7 +1026,10 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        val overview = repository.getOverview(currentParentInfo = null)
+        val overview = repository.getOverview(
+            seniorId = TEST_SENIOR_ID,
+            currentParentInfo = null,
+        )
 
         assertFalse(overview.hasSavedButtonConfiguration)
     }
@@ -814,9 +1042,13 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        repository.updateFontSize(SeniorFontSize.Normal)
+        repository.updateFontSize(
+            seniorId = TEST_SENIOR_ID,
+            fontSize = SeniorFontSize.Normal,
+        )
 
         assertEquals("MEDIUM", homeDataSource.fontSizeRequests.single().font_size)
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.fontSizeSeniorIds)
     }
 
     @Test
@@ -827,7 +1059,7 @@ class DisplayRepositoryImplTest {
             deviceDataSource = FakeDeviceDataSource(),
         )
 
-        repository.updateSeniorProfile(
+        val savedParentInfo = repository.updateSeniorProfile(
             ParentInfo(
                 seniorId = 7L,
                 name = "김영희",
@@ -836,13 +1068,30 @@ class DisplayRepositoryImplTest {
                 phoneNumber = "010-1234-5678",
                 address = "서울시 강남구",
                 addressDetail = "101동",
+                addressLatitude = 37.5172,
+                addressLongitude = 127.0473,
             )
         )
 
         val request = homeDataSource.profileRequests.single()
+        assertEquals(listOf(7L), homeDataSource.profileSeniorIds)
         assertEquals("OTHER", request.relation)
         assertEquals("이모", request.customRelation)
         assertEquals("101동", request.detailAddress)
+        assertEquals(37.5172, request.latitude)
+        assertEquals(127.0473, request.longitude)
+        assertEquals(37.5172, savedParentInfo.addressLatitude)
+        assertEquals(127.0473, savedParentInfo.addressLongitude)
+    }
+
+    @Test
+    fun todayHospitalRequestForwardsSelectedSeniorId() = runBlocking {
+        val homeDataSource = FakeHomeDataSource()
+        val repository = HomeServerRepositoryImpl(homeDataSource)
+
+        repository.getTodayHospitalSchedules(TEST_SENIOR_ID)
+
+        assertEquals(listOf(TEST_SENIOR_ID), homeDataSource.todayHospitalSeniorIds)
     }
 }
 
@@ -870,6 +1119,28 @@ private fun homeResponse(connection: ConnectionResponse?) = HomeResponse(
     today_schedule = null,
 )
 
+private fun deviceDetailResponse(
+    deviceName: String? = "Galaxy S24",
+    connected: Boolean? = false,
+    connectionStatus: String?,
+    lastConnectedAt: String? = null,
+) = DeviceDetailResponse(
+    deviceName = deviceName,
+    connected = connected,
+    connectionStatus = connectionStatus,
+    batteryLevel = null,
+    charging = null,
+    deviceStatusSharingEnabled = null,
+    networkConnected = null,
+    defaultHomeEnabled = null,
+    locationPermissionGranted = null,
+    gpsEnabled = null,
+    notificationPermissionGranted = null,
+    appExecutionMaintained = null,
+    lastConnectedAt = lastConnectedAt,
+    lastLocationUpdatedAt = null,
+)
+
 private class FakeHomeDataSource(
     private val homeResponse: HomeResponse = HomeResponse(
         connection = null,
@@ -880,73 +1151,81 @@ private class FakeHomeDataSource(
         music_card = null,
         today_schedule = null,
     ),
-    private val weatherResponse: WeatherResponse =
-        WeatherResponse(null, null, null, null),
     private val deviceResponse: DeviceDetailResponse =
-        DeviceDetailResponse(null, false, null, null, false, null, null),
+        DeviceDetailResponse(
+            deviceName = null,
+            connected = false,
+            connectionStatus = "DISCONNECTED",
+            batteryLevel = null,
+            charging = null,
+            deviceStatusSharingEnabled = null,
+            networkConnected = null,
+            defaultHomeEnabled = null,
+            locationPermissionGranted = null,
+            gpsEnabled = null,
+            notificationPermissionGranted = null,
+            appExecutionMaintained = null,
+            lastConnectedAt = null,
+            lastLocationUpdatedAt = null,
+        ),
+    private val deviceFailure: RuntimeException? = null,
     private val buttonOptionsResponse: List<ButtonOptionResponse>? = null,
 ) : HomeDataSource {
     val savedButtonRequests = mutableListOf<HomeButtonSaveRequest>()
+    val savedButtonSeniorIds = mutableListOf<Long>()
     val fontSizeRequests = mutableListOf<HomeFontSizeUpdateRequest>()
+    val fontSizeSeniorIds = mutableListOf<Long>()
     val profileRequests = mutableListOf<SeniorProfileUpdateRequest>()
-    val weatherRequests = mutableListOf<Pair<Double, Double>>()
+    val profileSeniorIds = mutableListOf<Long>()
+    val homeSeniorIds = mutableListOf<Long>()
+    val todayHospitalSeniorIds = mutableListOf<Long>()
+    val deviceSeniorIds = mutableListOf<Long>()
+    val buttonOptionsSeniorIds = mutableListOf<Long>()
     var buttonOptionsRequestCount = 0
         private set
-    var legacyButtonMutationCount = 0
-        private set
 
-    override suspend fun getHome() = homeResponse
-
-    override suspend fun getWeather(
-        latitude: Double,
-        longitude: Double,
-    ): WeatherResponse {
-        weatherRequests += latitude to longitude
-        return weatherResponse
+    override suspend fun getHome(seniorId: Long): HomeResponse {
+        homeSeniorIds += seniorId
+        return homeResponse
     }
 
     override suspend fun getSeniorHome() =
         SeniorHomeResponse(emptyList(), "LARGE", null, null)
 
-    override suspend fun getTodayHospitals(): List<TodayHospitalListResponse> =
-        emptyList()
+    override suspend fun getTodayHospitals(
+        seniorId: Long,
+    ): List<TodayHospitalListResponse> {
+        todayHospitalSeniorIds += seniorId
+        return emptyList()
+    }
 
-    override suspend fun getDevice() = deviceResponse
+    override suspend fun getDevice(seniorId: Long): DeviceDetailResponse {
+        deviceSeniorIds += seniorId
+        deviceFailure?.let { throw it }
+        return deviceResponse
+    }
 
-    override suspend fun getButtonOptions(): List<ButtonOptionResponse> {
+    override suspend fun getButtonOptions(seniorId: Long): List<ButtonOptionResponse> {
+        buttonOptionsSeniorIds += seniorId
         buttonOptionsRequestCount += 1
         return buttonOptionsResponse
             ?: error("버튼 옵션 응답이 설정되지 않았습니다.")
     }
 
     override suspend fun saveButtons(request: HomeButtonSaveRequest) {
+        savedButtonSeniorIds += request.seniorId
         savedButtonRequests += request
     }
 
-    override suspend fun addButton(
-        request: HomeButtonCreateRequest,
-    ): HomeButtonCreateResponse {
-        legacyButtonMutationCount += 1
-        error("Legacy button API must not be called")
-    }
-
-    override suspend fun updateButtons(request: HomeButtonUpdateRequest) {
-        legacyButtonMutationCount += 1
-        error("Legacy button API must not be called")
-    }
-
-    override suspend fun deleteButton(buttonId: Long) {
-        legacyButtonMutationCount += 1
-        error("Legacy button API must not be called")
-    }
-
     override suspend fun updateFontSize(request: HomeFontSizeUpdateRequest) {
+        fontSizeSeniorIds += request.seniorId
         fontSizeRequests += request
     }
 
     override suspend fun updateSeniorProfile(
         request: SeniorProfileUpdateRequest,
     ): SeniorProfileUpdateResponse {
+        profileSeniorIds += request.seniorId
         profileRequests += request
         return SeniorProfileUpdateResponse(
             seniorId = 7L,
@@ -957,15 +1236,23 @@ private class FakeHomeDataSource(
             phoneNumber = request.phoneNumber,
             address = request.address,
             detailAddress = request.detailAddress,
+            latitude = request.latitude,
+            longitude = request.longitude,
         )
     }
 }
 
 private class FakeDeviceDataSource : DeviceDataSource {
+    val disconnectedSeniorIds = mutableListOf<Long>()
+
     override suspend fun updateStatus(request: DeviceStatusUpdateRequest) = true
-    override suspend fun disconnect() = Unit
+    override suspend fun disconnect(seniorId: Long) {
+        disconnectedSeniorIds += seniorId
+    }
     override suspend fun updateFcmToken(request: FcmTokenUpdateRequest) = Unit
-    override suspend fun getLatestLocation(): DeviceLocationResponse = error("Not used")
+    override suspend fun getLatestLocation(
+        seniorId: Long,
+    ): DeviceLocationResponse = error("Not used")
     override suspend fun updateLocation(request: DeviceLocationUpdateRequest) = Unit
     override suspend fun getHomeLocation(): HomeLocationResponse = error("Not used")
 }

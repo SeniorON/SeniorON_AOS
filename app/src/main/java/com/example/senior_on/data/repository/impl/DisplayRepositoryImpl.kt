@@ -15,7 +15,6 @@ import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateResponse
 import com.example.senior_on.data.remote.dto.TodayScheduleResponse
-import com.example.senior_on.data.remote.dto.WeatherResponse
 import com.example.senior_on.data.source.device.DeviceDataSource
 import com.example.senior_on.data.source.display.DisplayDataSource
 import com.example.senior_on.data.source.family.RemoteFamilySource
@@ -25,7 +24,6 @@ import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.DisplayOverview
 import com.example.senior_on.domain.model.display.DisplayTodaySchedule
-import com.example.senior_on.domain.model.display.DisplayWeather
 import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
@@ -58,16 +56,19 @@ class DisplayRepositoryImpl private constructor(
         mockDataSource = dataSource,
     )
 
-    override suspend fun canCurrentUserEditScreen(): Boolean {
+    override suspend fun canCurrentUserEditScreen(seniorId: Long): Boolean {
         if (mockDataSource != null) return true
 
         return familyDataSource
-            ?.getMembers()
+            ?.getMembers(seniorId)
             .orEmpty()
             .canCurrentUserEditScreen()
     }
 
-    override suspend fun getOverview(currentParentInfo: ParentInfo?): DisplayOverview {
+    override suspend fun getOverview(
+        seniorId: Long,
+        currentParentInfo: ParentInfo?,
+    ): DisplayOverview {
         mockDataSource?.let { source ->
             val overview = source.overview.value.copy(parentInfo = currentParentInfo)
             return if (overview.configuredButtonItems.isNotEmpty()) {
@@ -86,11 +87,19 @@ class DisplayRepositoryImpl private constructor(
         }
 
         val source = requireNotNull(homeDataSource)
-        val buttonOptions = runCatching { source.getButtonOptions() }
+        val buttonOptions = runCatching { source.getButtonOptions(seniorId) }
             .getOrDefault(emptyList())
-        return source.getHome().toDisplayOverview(
+        val overview = source.getHome(seniorId).toDisplayOverview(
             currentParentInfo = currentParentInfo,
             buttonOptions = buttonOptions,
+        )
+        val detailedDevice = runCatching {
+            source.getDevice(seniorId).toDisplayDevice()
+        }
+
+        return detailedDevice.fold(
+            onSuccess = { device -> overview.copy(device = device) },
+            onFailure = { overview },
         )
     }
 
@@ -104,27 +113,9 @@ class DisplayRepositoryImpl private constructor(
             .toSeniorScreenConfiguration()
     }
 
-    override suspend fun getWeather(
-        latitude: Double,
-        longitude: Double,
-    ): DisplayWeather {
-        if (mockDataSource != null) {
-            return DisplayWeather(
-                temperatureCelsius = 20,
-                status = "CLEAR",
-                description = "맑음",
-                observedAt = null,
-            )
-        }
-
-        return requireNotNull(homeDataSource)
-            .getWeather(latitude = latitude, longitude = longitude)
-            .toDisplayWeather()
-    }
-
-    override suspend fun getDevice(): DisplayDevice? {
+    override suspend fun getDevice(seniorId: Long): DisplayDevice? {
         mockDataSource?.let { return it.overview.value.device }
-        return requireNotNull(homeDataSource).getDevice().toDisplayDevice()
+        return requireNotNull(homeDataSource).getDevice(seniorId).toDisplayDevice()
     }
 
     override suspend fun updateSeniorProfile(parentInfo: ParentInfo): ParentInfo {
@@ -136,7 +127,8 @@ class DisplayRepositoryImpl private constructor(
             parentInfo.relationshipLabel,
         )
         val response = requireNotNull(homeDataSource).updateSeniorProfile(
-            SeniorProfileUpdateRequest(
+            request = SeniorProfileUpdateRequest(
+                seniorId = parentInfo.seniorId,
                 name = parentInfo.name.trim(),
                 relation = relationship.relation.name,
                 customRelation = relationship.customRelation
@@ -148,24 +140,30 @@ class DisplayRepositoryImpl private constructor(
                 detailAddress = parentInfo.addressDetail
                     .trim()
                     .takeIf(String::isNotEmpty),
+                latitude = parentInfo.addressLatitude,
+                longitude = parentInfo.addressLongitude,
             )
         )
 
         return response.toParentInfo(parentInfo)
     }
 
-    override suspend fun updateFontSize(fontSize: SeniorFontSize) {
+    override suspend fun updateFontSize(seniorId: Long, fontSize: SeniorFontSize) {
         mockDataSource?.let {
             it.updateFontSize(fontSize)
             return
         }
 
         requireNotNull(homeDataSource).updateFontSize(
-            HomeFontSizeUpdateRequest(font_size = fontSize.toApiValue())
+            request = HomeFontSizeUpdateRequest(
+                seniorId = seniorId,
+                font_size = fontSize.toApiValue(),
+            ),
         )
     }
 
     override suspend fun saveButtons(
+        seniorId: Long,
         buttons: List<SeniorHomeButtonType>,
         customButtonLabels: Map<SeniorHomeButtonType, String>,
     ) {
@@ -223,14 +221,18 @@ class DisplayRepositoryImpl private constructor(
         }
 
         requireNotNull(homeDataSource).saveButtons(
-            HomeButtonSaveRequest(
+            request = HomeButtonSaveRequest(
+                seniorId = seniorId,
                 musicApp = musicButton?.toMusicAppValue(),
                 buttons = requests,
             )
         )
     }
 
-    override suspend fun saveButtons(buttons: List<DisplayHomeButton>) {
+    override suspend fun saveButtons(
+        seniorId: Long,
+        buttons: List<DisplayHomeButton>,
+    ) {
         mockDataSource?.let { source ->
             val knownButtons = buttons.mapNotNull(DisplayHomeButton::type)
             source.updateButtons(
@@ -292,19 +294,20 @@ class DisplayRepositoryImpl private constructor(
         }
 
         requireNotNull(homeDataSource).saveButtons(
-            HomeButtonSaveRequest(
+            request = HomeButtonSaveRequest(
+                seniorId = seniorId,
                 musicApp = musicButtons.singleOrNull()?.type?.toMusicAppValue(),
                 buttons = requests,
             )
         )
     }
 
-    override suspend fun disconnectDevice() {
+    override suspend fun disconnectDevice(seniorId: Long) {
         mockDataSource?.let {
             it.disconnectDevice()
             return
         }
-        requireNotNull(deviceDataSource).disconnect()
+        requireNotNull(deviceDataSource).disconnect(seniorId)
     }
 }
 
@@ -434,13 +437,6 @@ private fun SeniorHomeResponse.toSeniorScreenConfiguration():
     )
 }
 
-private fun WeatherResponse.toDisplayWeather(): DisplayWeather = DisplayWeather(
-    temperatureCelsius = temperature,
-    status = weatherStatus?.trim()?.takeIf(String::isNotEmpty),
-    description = weatherText?.trim()?.takeIf(String::isNotEmpty),
-    observedAt = observedAt,
-)
-
 private fun TodayScheduleResponse?.toDisplayTodaySchedule(): DisplayTodaySchedule? {
     if (this == null) return null
 
@@ -515,8 +511,8 @@ private fun SeniorProfileUpdateResponse.toParentInfo(current: ParentInfo): Paren
             ?: current.phoneNumber,
         address = address?.trim() ?: current.address,
         addressDetail = detailAddress?.trim() ?: current.addressDetail,
-        addressLatitude = current.addressLatitude,
-        addressLongitude = current.addressLongitude,
+        addressLatitude = latitude,
+        addressLongitude = longitude,
     )
 
 private fun ConnectionResponse?.toDisplayDevice(): DisplayDevice? {
@@ -530,29 +526,34 @@ private fun ConnectionResponse?.toDisplayDevice(): DisplayDevice? {
             connected == true ||
             battery != null ||
             normalizedStatus == DEVICE_STATUS_ONLINE ||
-            normalizedStatus == DEVICE_STATUS_OFFLINE
+            normalizedStatus == DEVICE_STATUS_OFFLINE ||
+            normalizedStatus == DEVICE_STATUS_LOGIN_EXPIRED
     if (!hasKnownDevice) return null
 
-    val isOnline = when (normalizedStatus) {
+    val displayStatus = when (normalizedStatus) {
         DEVICE_STATUS_ONLINE,
-        DEVICE_STATUS_CONNECTED -> true
-        DEVICE_STATUS_OFFLINE -> false
-        else -> connected == true
+        DEVICE_STATUS_CONNECTED -> DisplayDeviceConnectionStatus.Online
+        DEVICE_STATUS_LOGIN_EXPIRED -> DisplayDeviceConnectionStatus.LoginExpired
+        DEVICE_STATUS_OFFLINE -> DisplayDeviceConnectionStatus.Offline
+        else -> if (connected == true) {
+            DisplayDeviceConnectionStatus.Online
+        } else {
+            DisplayDeviceConnectionStatus.Offline
+        }
     }
 
     return DisplayDevice(
         id = deviceName.ifEmpty { DEFAULT_DEVICE_ID },
         name = deviceName.ifEmpty { DEFAULT_DEVICE_NAME },
-        connectionStatus = if (isOnline) {
-            DisplayDeviceConnectionStatus.Online
-        } else {
-            DisplayDeviceConnectionStatus.Offline
-        },
+        connectionStatus = displayStatus,
         batteryLevelPercent = battery,
     )
 }
 
 private fun DeviceDetailResponse.toDisplayDevice(): DisplayDevice? {
+    val normalizedStatus = connectionStatus.normalizedConnectionStatus()
+    if (normalizedStatus == DEVICE_STATUS_DISCONNECTED) return null
+
     val resolvedName = deviceName?.trim().orEmpty()
     val hasConnectionHistory =
         !lastConnectedAt.isNullOrBlank() ||
@@ -561,23 +562,38 @@ private fun DeviceDetailResponse.toDisplayDevice(): DisplayDevice? {
         resolvedName.isNotEmpty() ||
             connected == true ||
             batteryLevel != null ||
-            hasConnectionHistory
+            hasConnectionHistory ||
+            normalizedStatus == DEVICE_STATUS_ONLINE ||
+            normalizedStatus == DEVICE_STATUS_CONNECTED ||
+            normalizedStatus == DEVICE_STATUS_OFFLINE ||
+            normalizedStatus == DEVICE_STATUS_LOGIN_EXPIRED
     if (!hasKnownDevice) return null
-    val normalizedStatus = connectionStatus?.trim()?.uppercase()
-    val isOnline = connected == true ||
-        networkConnected == true ||
-        normalizedStatus == DEVICE_STATUS_ONLINE ||
-        normalizedStatus == DEVICE_STATUS_CONNECTED
+
+    val displayStatus = when (normalizedStatus) {
+        DEVICE_STATUS_ONLINE,
+        DEVICE_STATUS_CONNECTED -> DisplayDeviceConnectionStatus.Online
+        DEVICE_STATUS_LOGIN_EXPIRED -> DisplayDeviceConnectionStatus.LoginExpired
+        DEVICE_STATUS_OFFLINE -> DisplayDeviceConnectionStatus.Offline
+        else -> if (connected == true || networkConnected == true) {
+            DisplayDeviceConnectionStatus.Online
+        } else {
+            DisplayDeviceConnectionStatus.Offline
+        }
+    }
 
     return DisplayDevice(
         id = resolvedName.ifEmpty { DEFAULT_DEVICE_ID },
         name = resolvedName.ifEmpty { DEFAULT_DEVICE_NAME },
-        connectionStatus = if (isOnline) {
-            DisplayDeviceConnectionStatus.Online
-        } else {
-            DisplayDeviceConnectionStatus.Offline
-        },
+        connectionStatus = displayStatus,
         batteryLevelPercent = batteryLevel,
+        charging = charging,
+        deviceStatusSharingEnabled = deviceStatusSharingEnabled,
+        networkConnected = networkConnected,
+        defaultHomeEnabled = defaultHomeEnabled,
+        locationPermissionGranted = locationPermissionGranted,
+        gpsEnabled = gpsEnabled,
+        notificationPermissionGranted = notificationPermissionGranted,
+        appExecutionMaintained = appExecutionMaintained,
         lastConnectedAtLabel = lastConnectedAt,
         lastLocationUpdatedAtLabel = lastLocationUpdatedAt,
     )
@@ -911,7 +927,7 @@ private fun defaultIntentButton(
 )
 
 private val REQUIRED_GRID_BUTTON_TYPES = listOf(
-    SeniorHomeButtonType.ChatBuddy,
+    SeniorHomeButtonType.Settings,
     SeniorHomeButtonType.Medication,
     SeniorHomeButtonType.Photo,
 )
@@ -1243,6 +1259,7 @@ private const val DEVICE_STATUS_ONLINE = "ONLINE"
 private const val DEVICE_STATUS_OFFLINE = "OFFLINE"
 private const val DEVICE_STATUS_DISCONNECTED = "DISCONNECTED"
 private const val DEVICE_STATUS_CONNECTED = "CONNECTED"
+private const val DEVICE_STATUS_LOGIN_EXPIRED = "LOGIN_EXPIRED"
 private const val DEFAULT_DEVICE_NAME = "시니어폰"
 private const val PRIMARY_MANAGER_TYPE = "PRIMARY"
 private const val MINIMUM_BUTTON_COUNT = 8

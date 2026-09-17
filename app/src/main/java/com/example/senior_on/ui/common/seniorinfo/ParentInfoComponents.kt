@@ -66,6 +66,7 @@ internal fun SeniorInfoTopBar(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     title: String = "정보 입력",
+    titleStyle: TextStyle = SeniorOnTextStyles.HeadingS,
     backIconSize: Dp = 24.dp,
     showShadow: Boolean = true,
 ) {
@@ -115,7 +116,7 @@ internal fun SeniorInfoTopBar(
         Text(
             text = title,
             modifier = Modifier.padding(start = 16.dp),
-            style = SeniorOnTextStyles.HeadingS,
+            style = titleStyle,
             color = SeniorOnColors.Gray800
         )
     }
@@ -467,6 +468,7 @@ internal fun SeniorInfoBottomActions(
     isSaveEnabled: Boolean,
     errorMessage: String? = null,
     isSubmitting: Boolean = false,
+    isSkipEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -500,7 +502,8 @@ internal fun SeniorInfoBottomActions(
                 text = "다음에 하기",
                 onClick = onSkipClick,
                 modifier = Modifier.weight(1f),
-                style = SeniorInfoButtonStyle.Outlined
+                style = SeniorInfoButtonStyle.Outlined,
+                enabled = isSkipEnabled,
             )
             SeniorInfoActionButton(
                 text = "저장 후 시작",

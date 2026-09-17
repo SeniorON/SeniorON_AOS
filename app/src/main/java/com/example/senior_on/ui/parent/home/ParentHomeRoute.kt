@@ -63,7 +63,6 @@ fun ParentHomeRoute(
         musicButton = uiState.musicButton,
         buttons = uiState.buttons,
         scheduleUiState = uiState.schedule,
-        weatherUiState = uiState.weather,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refresh,
         onExitHomeClick = exitHome,

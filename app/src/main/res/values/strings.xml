@@ -9,4 +9,7 @@
     <string name="parent_exit_home_failed">홈 화면 설정을 열지 못했어요. 설정의 기본 앱에서 홈 앱을 변경해 주세요.</string>
     <string name="parent_home_settings">설정</string>
     <string name="parent_home_settings_unavailable">휴대폰 설정을 열지 못했어요.</string>
+    <string name="display_default_senior_relationship">부모님</string>
+    <string name="display_senior_account_selector_description">시니어 계정 선택</string>
+    <string name="display_add_senior_account">시니어 계정 추가</string>
 </resources>
