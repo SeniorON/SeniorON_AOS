@@ -238,12 +238,14 @@ private fun ParentLauncherContent(
 
         ParentDestination.Schedule -> ParentScheduleRoute(
             repository = appContainer.homeServerRepository,
+            updatesRepository = appContainer.parentHomeUpdatesRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )
 
         ParentDestination.Medication -> ParentMedicationRoute(
             repository = appContainer.medicationRepository,
+            updatesRepository = appContainer.parentHomeUpdatesRepository,
             onBackClick = ::openHome,
             highlightedMedicationLogId = highlightedMedicationLogId,
             modifier = modifier,

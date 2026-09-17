@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdateEvent
 
 enum class ParentMedicationContent {
     Loading,
@@ -45,58 +48,96 @@ data class ParentMedicationUiState(
 
 class ParentMedicationViewModel(
     private val repository: MedicationRepository,
+    private val updatesRepository: ParentHomeUpdatesRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentMedicationUiState())
     val uiState = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
     private var submitJob: Job? = null
+    private var pendingLoad = false
+    private var pendingVisible = false
+    private var submissionVersion = 0
+
+    suspend fun observeUpdates() {
+        refreshSilently()
+        updatesRepository.observeUpdates().collect { event ->
+            if (event == ParentHomeUpdateEvent.Subscribed || event == ParentHomeUpdateEvent.MedicationUpdated) {
+                refreshSilently()
+            }
+        }
+    }
+
+    private fun refreshSilently() = loadMedication(
+        highlightedMedicationLogId = _uiState.value.highlightedMedicationId?.toLongOrNull(),
+        isRefresh = true,
+        silent = true,
+    )
 
     fun loadMedication(
         highlightedMedicationLogId: Long? = null,
         isRefresh: Boolean = false,
+        silent: Boolean = false,
     ) {
-        if (_uiState.value.isRefreshing) return
-        loadJob?.cancel()
+        if (!isRefresh) {
+            _uiState.update { it.copy(highlightedMedicationId = highlightedMedicationLogId?.toString()) }
+        }
+        pendingLoad = true
+        pendingVisible = pendingVisible || (isRefresh && !silent)
+        if (loadJob?.isActive == true) return
         loadJob = viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    content = if (isRefresh) it.content else ParentMedicationContent.Loading,
-                    isRefreshing = isRefresh,
-                    highlightedMedicationId = highlightedMedicationLogId?.toString(),
-                    message = null,
-                    messageType = ParentMedicationMessageType.Default,
-                )
-            }
-
-            runCatching {
-                repository.getMySchedules(koreaToday().toString())
-            }.onSuccess { schedules ->
-                val medications = schedules
-                    .sortedBy { it.plannedTime.toLocalTimeOrNull() ?: LocalTime.MAX }
-                    .map(MedicationSchedule::toParentMedication)
+            while (pendingLoad) {
+                delay(150)
+                // A socket acknowledgement of our own write must not reset its pending UI.
+                submitJob?.join()
+                pendingLoad = false
+                val visible = pendingVisible
+                pendingVisible = false
+                val version = submissionVersion
                 _uiState.update {
                     it.copy(
-                        content = if (medications.isEmpty()) {
-                            ParentMedicationContent.Empty
-                        } else {
-                            ParentMedicationContent.List
-                        },
-                        medications = medications,
-                        submittingMedicationId = null,
-                        isRefreshing = false,
+                        isRefreshing = visible,
+                        message = null,
+                        messageType = ParentMedicationMessageType.Default,
                     )
                 }
-            }.onFailure { throwable ->
-                if (throwable is CancellationException) return@onFailure
-                _uiState.update {
-                    it.copy(
-                        content = ParentMedicationContent.Empty,
-                        medications = emptyList(),
-                        message = "복약 정보를 불러오지 못했어요.",
-                        messageType = ParentMedicationMessageType.Default,
-                        isRefreshing = false,
-                    )
+
+                val result = runCatching {
+                    repository.getMySchedules(koreaToday().toString())
+                }
+                result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+                // Discard a read started before the user submitted a dose; fetch again after the write.
+                if (version != submissionVersion) {
+                    pendingLoad = true
+                    continue
+                }
+                result.onSuccess { schedules ->
+                    val medications = schedules
+                        .sortedBy { it.plannedTime.toLocalTimeOrNull() ?: LocalTime.MAX }
+                        .map(MedicationSchedule::toParentMedication)
+                    _uiState.update {
+                        it.copy(
+                            content = if (it.content == ParentMedicationContent.Completed && !visible) {
+                                ParentMedicationContent.Completed
+                            } else if (medications.isEmpty()) {
+                                ParentMedicationContent.Empty
+                            } else {
+                                ParentMedicationContent.List
+                            },
+                            medications = medications,
+                            isRefreshing = false,
+                        )
+                    }
+                }.onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            content = if (it.content == ParentMedicationContent.Loading) ParentMedicationContent.Empty else it.content,
+                            message = "복약 정보를 불러오지 못했어요.",
+                            messageType = ParentMedicationMessageType.Default,
+                            isRefreshing = false,
+                        )
+                    }
                 }
             }
         }
@@ -124,6 +165,8 @@ class ParentMedicationViewModel(
         }
 
         submitJob?.cancel()
+        submissionVersion++
+        _uiState.update { it.copy(submittingMedicationId = medicationId) }
         submitJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -158,7 +201,7 @@ class ParentMedicationViewModel(
                     )
                 }
             }.onFailure { throwable ->
-                if (throwable is CancellationException) return@onFailure
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         submittingMedicationId = null,
@@ -167,6 +210,7 @@ class ParentMedicationViewModel(
                     )
                 }
             }
+            refreshSilently()
         }
     }
 
@@ -180,6 +224,9 @@ class ParentMedicationViewModel(
     }
 
     fun reset() {
+        pendingLoad = false
+        pendingVisible = false
+        submissionVersion++
         loadJob?.cancel()
         loadJob = null
         submitJob?.cancel()
@@ -194,9 +241,9 @@ class ParentMedicationViewModel(
     }
 
     companion object {
-        fun factory(repository: MedicationRepository) = viewModelFactory {
+        fun factory(repository: MedicationRepository, updatesRepository: ParentHomeUpdatesRepository) = viewModelFactory {
             initializer {
-                ParentMedicationViewModel(repository)
+                ParentMedicationViewModel(repository, updatesRepository)
             }
         }
     }

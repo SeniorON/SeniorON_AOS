@@ -66,6 +66,30 @@ class ParentHomeStompSourceTest {
         assertTrue(factory.sockets.isEmpty())
     }
 
+    @Test fun recognizesDetailEventsOnlyForOwnSubscription() = runTest {
+        val factory = FakeFactory()
+        val events = mutableListOf<ParentHomeUpdateEvent>()
+        backgroundScope.launch {
+            ParentHomeStompSource(factory, "https://example.test/ws") { "Bearer token" }
+                .observe(42).collect { events += it }
+        }
+        runCurrent()
+        val socket = factory.sockets.single()
+        socket.connect()
+        runCurrent()
+        fun send(body: String, topic: String = "/topic/senior/42/home", subscription: String = "senior-home") {
+            socket.listener.onMessage(socket, "MESSAGE\nsubscription:$subscription\ndestination:$topic\n\n$body\u0000")
+        }
+        send("SCHEDULE_UPDATED")
+        send("MEDICATION_UPDATED")
+        send("MEDICATION_UPDATED", topic = "/topic/senior/99/home")
+        send("SCHEDULE_UPDATED", subscription = "other")
+        send("UNKNOWN")
+        runCurrent()
+        assertEquals(1, events.count { it == ParentHomeUpdateEvent.ScheduleUpdated })
+        assertEquals(1, events.count { it == ParentHomeUpdateEvent.MedicationUpdated })
+    }
+
     @Test fun missingConnectedFrameTimesOutAndRetries() = runTest {
         val factory = FakeFactory()
         backgroundScope.launch {

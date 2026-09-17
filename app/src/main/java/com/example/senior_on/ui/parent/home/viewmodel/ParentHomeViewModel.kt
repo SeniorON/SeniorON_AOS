@@ -71,6 +71,8 @@ class ParentHomeViewModel(
     private val refreshSignals = Channel<Unit>(Channel.CONFLATED)
     private var pendingFullRefresh = false
     private var pendingVisibleRefresh = false
+    private var pendingScheduleRefresh = false
+    private var pendingConfigurationRefresh = false
     private var hasStartedObserving = false
 
     init {
@@ -80,10 +82,18 @@ class ParentHomeViewModel(
                 delay(150)
                 val fullRefresh = pendingFullRefresh
                 val visibleRefresh = pendingVisibleRefresh
+                val scheduleRefresh = pendingScheduleRefresh
+                val configurationRefresh = pendingConfigurationRefresh
                 pendingFullRefresh = false
                 pendingVisibleRefresh = false
+                pendingScheduleRefresh = false
+                pendingConfigurationRefresh = false
                 refreshSignals.tryReceive()
-                loadHome(homeOnly = !fullRefresh, showRefresh = visibleRefresh)
+                if (fullRefresh) loadHome(homeOnly = false, showRefresh = visibleRefresh)
+                else {
+                    if (configurationRefresh) refreshHomeConfiguration()
+                    if (scheduleRefresh) refreshSchedule()
+                }
             }
         }
         requestRefresh(full = true)
@@ -100,17 +110,37 @@ class ParentHomeViewModel(
         hasStartedObserving = true
         updatesRepository.observeUpdates().collect { event ->
             when (event) {
-                ParentHomeUpdateEvent.Subscribed,
+                ParentHomeUpdateEvent.Subscribed -> {
+                    requestRefresh(full = false)
+                    requestScheduleRefresh()
+                }
                 ParentHomeUpdateEvent.HomeUpdated -> requestRefresh(full = false)
+                ParentHomeUpdateEvent.ScheduleUpdated -> requestScheduleRefresh()
                 else -> Unit
             }
         }
     }
 
     private fun requestRefresh(full: Boolean, visible: Boolean = false) {
+        pendingConfigurationRefresh = true
         pendingFullRefresh = pendingFullRefresh || full
         pendingVisibleRefresh = pendingVisibleRefresh || visible
         refreshSignals.trySend(Unit)
+    }
+
+    private fun requestScheduleRefresh() {
+        pendingScheduleRefresh = true
+        refreshSignals.trySend(Unit)
+    }
+
+    private suspend fun refreshSchedule() {
+        cancellableResult { repository.getTodayHospitalSchedules() }
+            .onSuccess { schedules ->
+                _uiState.update { it.copy(schedule = schedules.toHomeScheduleUiState(), errorMessage = null) }
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(errorMessage = error.message ?: "일정을 불러오지 못했어요.") }
+            }
     }
 
     private suspend fun loadHome(homeOnly: Boolean, showRefresh: Boolean) {
