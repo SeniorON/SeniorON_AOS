@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -179,6 +180,7 @@ internal fun FindAccountTextField(
     trailingContent: (@Composable () -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = if (isError) errorBorderColor else SeniorOnColors.Primary600,
         unfocusedBorderColor = if (isError) errorBorderColor else SeniorOnColors.Gray200,
@@ -223,11 +225,11 @@ internal fun FindAccountTextField(
                             color = SeniorOnColors.Gray300
                         )
                     },
-                    trailingIcon = if (trailingContent != null || (showClearIcon && value.isNotEmpty())) {
+                    trailingIcon = if (trailingContent != null || (showClearIcon && value.isNotEmpty() && !isFocused)) {
                         {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 trailingContent?.invoke()
-                                if (showClearIcon && value.isNotEmpty()) {
+                                if (showClearIcon && value.isNotEmpty() && !isFocused) {
                                     Box(
                                         modifier = Modifier
                                             .size(24.dp)

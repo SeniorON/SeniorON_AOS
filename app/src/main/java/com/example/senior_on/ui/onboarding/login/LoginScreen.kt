@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -395,6 +396,7 @@ private fun LoginTextField(
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = SeniorOnColors.Primary600,
         unfocusedBorderColor = SeniorOnColors.Gray200,
@@ -435,7 +437,7 @@ private fun LoginTextField(
                     trailingIcon = {
                         when {
                             trailingIcon != null -> trailingIcon()
-                            showClearButton && value.isNotEmpty() -> {
+                            showClearButton && value.isNotEmpty() && !isFocused -> {
                                 IconButton(onClick = { onValueChange("") }) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_close),
