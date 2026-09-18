@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun FamilyPhotoGalleryRoute(
+    seniorId: Long,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onGalleryClick: () -> Unit = {},
@@ -19,8 +20,8 @@ fun FamilyPhotoGalleryRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(viewModel) {
-        viewModel.loadPhotoGallery()
+    LaunchedEffect(viewModel, seniorId) {
+        viewModel.loadPhotoGallery(seniorId)
     }
 
     FamilyPhotoGalleryScreen(
@@ -30,10 +31,10 @@ fun FamilyPhotoGalleryRoute(
         onCameraClick = onCameraClick,
         onPhotoClick = onPhotoClick,
         onRetryClick = {
-            viewModel.loadFamilyOverview()
-            viewModel.loadPhotoGallery(force = true)
+            viewModel.loadFamilyOverview(seniorId)
+            viewModel.loadPhotoGallery(seniorId = seniorId, force = true)
         },
-        onLoadMore = viewModel::loadMorePhotos,
+        onLoadMore = { viewModel.loadMorePhotos(seniorId) },
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(
                 photo = photo,

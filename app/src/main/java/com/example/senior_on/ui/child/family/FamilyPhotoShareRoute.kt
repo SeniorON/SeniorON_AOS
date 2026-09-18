@@ -1,6 +1,8 @@
 package com.example.senior_on.ui.child.family
 
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoUploadViewModel
+import com.example.senior_on.ui.child.family.viewmodel.SeniorConnectionViewModel
+import com.example.senior_on.domain.model.server.ServerConnectedSenior
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,8 +27,11 @@ fun FamilyPhotoShareRoute(
     onBackClick: () -> Unit,
     onReselectClick: () -> Unit,
     onShareSuccess: () -> Unit,
+    seniorId: Long,
+    currentSeniorRecipient: ServerConnectedSenior?,
     modifier: Modifier = Modifier,
     viewModel: FamilyPhotoUploadViewModel,
+    seniorConnectionViewModel: SeniorConnectionViewModel,
 ) {
     val context = LocalContext.current
     val preferences = remember(context) {
@@ -41,11 +46,33 @@ fun FamilyPhotoShareRoute(
     var isSuccessDialogVisible by rememberSaveable(uploadSessionId) {
         mutableStateOf(false)
     }
+    var isRecipientSheetVisible by rememberSaveable(uploadSessionId) {
+        mutableStateOf(false)
+    }
+    var selectedPhotoGroupIds by rememberSaveable(uploadSessionId) {
+        mutableStateOf(emptyList<Long>())
+    }
     val uploadUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val connectionUiState by seniorConnectionViewModel.uiState.collectAsStateWithLifecycle()
+    val recipients = familyPhotoRecipients(
+        currentSenior = currentSeniorRecipient,
+        connectedSeniors = connectionUiState.connectedSeniors,
+    )
     val isCurrentUploadSession = uploadUiState.sessionId == uploadSessionId
 
     LaunchedEffect(uploadSessionId, photoUri) {
         viewModel.startUploadSession(uploadSessionId, photoUri)
+    }
+
+    LaunchedEffect(seniorId) {
+        seniorConnectionViewModel.loadConnections(seniorId)
+    }
+
+    LaunchedEffect(recipients) {
+        val availablePhotoGroupIds = recipients
+            .map { it.photoGroupId }
+            .toSet()
+        selectedPhotoGroupIds = selectedPhotoGroupIds.filter(availablePhotoGroupIds::contains)
     }
 
     LaunchedEffect(
@@ -82,13 +109,40 @@ fun FamilyPhotoShareRoute(
         },
         onBackClick = onBackClick,
         onReselectClick = onReselectClick,
-        onShareClick = { viewModel.uploadPhoto(message) },
+        onShareClick = { isRecipientSheetVisible = true },
         isUploading = isCurrentUploadSession && uploadUiState.isUploading,
         uploadErrorMessage = uploadUiState.errorMessage.takeIf {
             isCurrentUploadSession
         },
         modifier = modifier
     )
+
+    if (isRecipientSheetVisible) {
+        FamilyPhotoRecipientBottomSheet(
+            seniors = recipients,
+            selectedPhotoGroupIds = selectedPhotoGroupIds,
+            onPhotoGroupClick = { photoGroupId ->
+                selectedPhotoGroupIds = togglePhotoRecipientSelection(
+                    selectedPhotoGroupIds = selectedPhotoGroupIds,
+                    photoGroupId = photoGroupId,
+                )
+            },
+            onDismiss = { isRecipientSheetVisible = false },
+            onShareClick = {
+                isRecipientSheetVisible = false
+                viewModel.uploadPhoto(
+                    message = message,
+                    seniorId = seniorId,
+                    photoGroupIds = selectedPhotoGroupIds,
+                )
+            },
+            isLoading = connectionUiState.isLoading && recipients.isEmpty(),
+            errorMessage = connectionUiState.loadErrorMessage.takeIf { recipients.isEmpty() },
+            onRetryClick = {
+                seniorConnectionViewModel.loadConnections(seniorId, force = true)
+            },
+        )
+    }
 
     if (isSuccessDialogVisible) {
         FamilyPhotoShareSuccessDialog(
@@ -100,5 +154,13 @@ fun FamilyPhotoShareRoute(
         )
     }
 }
+
+internal fun familyPhotoRecipients(
+    currentSenior: ServerConnectedSenior?,
+    connectedSeniors: List<ServerConnectedSenior>,
+): List<ServerConnectedSenior> = buildList {
+    currentSenior?.let(::add)
+    addAll(connectedSeniors)
+}.distinctBy(ServerConnectedSenior::photoGroupId)
 
 internal fun normalizeFamilyPhotoMessage(message: String): String = message.take(30)

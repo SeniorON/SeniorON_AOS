@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 class FamilyInvitationViewModel(
     private val repository: FamilyServerRepository,
+    private val seniorId: Long,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         FamilyInvitationUiState(isLoading = true),
@@ -46,8 +47,8 @@ class FamilyInvitationViewModel(
 
             try {
                 val (familyCodeInfo, familyMembers) = coroutineScope {
-                    val familyCode = async { repository.getCode() }
-                    val members = async { repository.getMembers() }
+                    val familyCode = async { repository.getCode(seniorId) }
+                    val members = async { repository.getMembers(seniorId) }
                     familyCode.await() to members.await()
                 }
                 if (familyCodeInfo.code.isBlank()) {
@@ -81,9 +82,12 @@ class FamilyInvitationViewModel(
         private const val FAMILY_CODE_LOAD_ERROR_MESSAGE =
             "가족 공유 코드를 불러오지 못했어요."
 
-        fun factory(repository: FamilyServerRepository) = viewModelFactory {
+        fun factory(
+            repository: FamilyServerRepository,
+            seniorId: Long,
+        ) = viewModelFactory {
             initializer {
-                FamilyInvitationViewModel(repository)
+                FamilyInvitationViewModel(repository, seniorId)
             }
         }
     }

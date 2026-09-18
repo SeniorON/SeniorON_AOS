@@ -35,35 +35,39 @@ class FamilyViewModel(
     private var photoLoadJob: Job? = null
     private var detailLoadJob: Job? = null
     private var isPhotoGalleryLoaded = false
+    private var loadedPhotoSeniorId: Long? = null
     private var nextPhotoCursorAt: String? = null
     private var nextPhotoCursorId: Long? = null
     private var hasNextPhotoPage = false
     private val photoUrlRefreshJobs = mutableMapOf<String, Job>()
     private val lastRetriedImageUrlByPhotoId = mutableMapOf<String, String>()
 
-    init {
-        loadFamilyOverview()
+    fun loadLatestFamilyOverview(seniorId: Long) {
+        if (homeLoadJob?.isActive == true && _uiState.value.seniorId == seniorId) return
+        loadFamilyOverview(seniorId)
     }
 
-    fun loadLatestFamilyOverview() {
-        if (homeLoadJob?.isActive == true) return
-        loadFamilyOverview()
+    fun loadFamilyOverview(seniorId: Long) {
+        loadFamilyOverview(seniorId = seniorId, isPullRefresh = false)
     }
 
-    fun loadFamilyOverview() {
-        loadFamilyOverview(isPullRefresh = false)
+    fun refreshFamilyOverview(seniorId: Long) {
+        if (homeLoadJob?.isActive == true && _uiState.value.seniorId == seniorId) return
+        loadFamilyOverview(seniorId = seniorId, isPullRefresh = true)
     }
 
-    fun refreshFamilyOverview() {
-        if (homeLoadJob?.isActive == true) return
-        loadFamilyOverview(isPullRefresh = true)
-    }
-
-    private fun loadFamilyOverview(isPullRefresh: Boolean) {
+    private fun loadFamilyOverview(seniorId: Long, isPullRefresh: Boolean) {
+        require(seniorId > 0L) { "선택된 시니어 정보가 올바르지 않습니다." }
+        val isSeniorChanged = _uiState.value.seniorId != seniorId
         homeLoadJob?.cancel()
         homeLoadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(
+                if (isSeniorChanged) {
+                    FamilyTabUiState(
+                        seniorId = seniorId,
+                        isLoading = true,
+                    )
+                } else it.copy(
                     isLoading = !isPullRefresh,
                     isRefreshing = isPullRefresh,
                     errorMessage = null
@@ -71,7 +75,7 @@ class FamilyViewModel(
             }
 
             try {
-                val home = repository.getHome()
+                val home = repository.getHome(seniorId)
                 val members = home.members.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -114,6 +118,8 @@ class FamilyViewModel(
                 }
                 _uiState.update { currentState ->
                     currentState.copy(
+                        seniorId = seniorId,
+                        photoGroupId = home.photoGroupId,
                         members = members,
                         sharedPhotos = if (isPhotoGalleryLoaded) {
                             (recentPhotos + currentState.sharedPhotos)
@@ -140,7 +146,7 @@ class FamilyViewModel(
         }
     }
 
-    fun loadFamilyMembers() {
+    fun loadFamilyMembers(seniorId: Long) {
         viewModelScope.launch {
             _uiState.update { state ->
                 state.copy(
@@ -148,7 +154,7 @@ class FamilyViewModel(
                     memberMutationErrorMessage = null,
                 )
             }
-            runCatching { repository.getMembers() }
+            runCatching { repository.getMembers(seniorId) }
                 .onSuccess { serverMembers ->
                     val members = serverMembers.mapNotNull { member ->
                         if (
@@ -197,7 +203,7 @@ class FamilyViewModel(
         }
     }
 
-    fun changePrimaryMember(memberId: String) {
+    fun changePrimaryMember(seniorId: Long, memberId: String) {
         if (_uiState.value.isMemberMutationInProgress) return
 
         viewModelScope.launch {
@@ -210,8 +216,8 @@ class FamilyViewModel(
             try {
                 val userId = memberId.toLongOrNull()
                     ?: error("잘못된 가족 구성원 정보입니다.")
-                repository.changePrimaryManager(userId)
-                val serverMembers = repository.getMembers()
+                repository.changePrimaryManager(userId, seniorId)
+                val serverMembers = repository.getMembers(seniorId)
                 val members = serverMembers.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -251,7 +257,7 @@ class FamilyViewModel(
         }
     }
 
-    fun deleteMember(memberId: String) {
+    fun deleteMember(seniorId: Long, memberId: String) {
         if (_uiState.value.isMemberMutationInProgress) return
 
         viewModelScope.launch {
@@ -264,8 +270,8 @@ class FamilyViewModel(
             try {
                 val userId = memberId.toLongOrNull()
                     ?: error("잘못된 가족 구성원 정보입니다.")
-                repository.deleteMember(userId)
-                val serverMembers = repository.getMembers()
+                repository.deleteMember(userId, seniorId)
+                val serverMembers = repository.getMembers(seniorId)
                 val members = serverMembers.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -305,19 +311,25 @@ class FamilyViewModel(
         }
     }
 
-    fun loadPhotoGallery(force: Boolean = false) {
+    fun loadPhotoGallery(seniorId: Long, force: Boolean = false) {
         if (photoLoadJob?.isActive == true) {
-            if (!force) return
+            if (!force && loadedPhotoSeniorId == seniorId) return
             photoLoadJob?.cancel()
         }
-        if (isPhotoGalleryLoaded && !force) return
+        if (isPhotoGalleryLoaded && loadedPhotoSeniorId == seniorId && !force) return
+        if (loadedPhotoSeniorId != seniorId) {
+            isPhotoGalleryLoaded = false
+            nextPhotoCursorAt = null
+            nextPhotoCursorId = null
+            hasNextPhotoPage = false
+        }
 
         photoLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(isPhotoLoading = true, photoErrorMessage = null)
             }
             runCatching {
-                repository.getPhotos(size = PHOTO_PAGE_SIZE)
+                repository.getPhotos(size = PHOTO_PAGE_SIZE, seniorId = seniorId)
             }.onSuccess { page ->
                 val photos = page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
@@ -334,6 +346,7 @@ class FamilyViewModel(
                     )
                 }
                 isPhotoGalleryLoaded = true
+                loadedPhotoSeniorId = seniorId
                 nextPhotoCursorAt = page.nextCursor?.createdAt
                 nextPhotoCursorId = page.nextCursor?.photoId
                 hasNextPhotoPage = page.hasNext && page.nextCursor != null
@@ -358,8 +371,8 @@ class FamilyViewModel(
         }
     }
 
-    fun loadMorePhotos() {
-        if (!isPhotoGalleryLoaded || !hasNextPhotoPage) return
+    fun loadMorePhotos(seniorId: Long) {
+        if (!isPhotoGalleryLoaded || loadedPhotoSeniorId != seniorId || !hasNextPhotoPage) return
         if (photoLoadJob?.isActive == true) return
         val cursorAt = nextPhotoCursorAt ?: return
         val cursorId = nextPhotoCursorId ?: return
@@ -371,6 +384,7 @@ class FamilyViewModel(
                     cursorAt = cursorAt,
                     cursorId = cursorId,
                     size = PHOTO_PAGE_SIZE,
+                    seniorId = seniorId,
                 )
             }.onSuccess { page ->
                 val photos = page.photos.mapNotNull { photo ->
@@ -580,14 +594,15 @@ class FamilyViewModel(
         }
     }
 
-    fun refreshAfterPhotoUpload() {
+    fun refreshAfterPhotoUpload(seniorId: Long) {
         isPhotoGalleryLoaded = false
+        loadedPhotoSeniorId = null
         nextPhotoCursorAt = null
         nextPhotoCursorId = null
         hasNextPhotoPage = false
         _uiState.update { it.copy(hasLoadedPhotoGallery = false) }
-        loadFamilyOverview()
-        loadPhotoGallery(force = true)
+        loadFamilyOverview(seniorId)
+        loadPhotoGallery(seniorId = seniorId, force = true)
     }
 
     companion object {

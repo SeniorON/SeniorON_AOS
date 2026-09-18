@@ -13,6 +13,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun FamilyTabRoute(
+    seniorId: Long,
     modifier: Modifier = Modifier,
     onMemberSettingsClick: () -> Unit = {},
     onAddFamilyClick: () -> Unit = {},
@@ -20,14 +21,15 @@ fun FamilyTabRoute(
     onMorePhotosClick: () -> Unit = {},
     onGalleryClick: () -> Unit = {},
     onCameraClick: () -> Unit = {},
+    onSeniorConnectionClick: () -> Unit = {},
     onPhotoClick: (String) -> Unit = {},
     viewModel: FamilyViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isPhotoSourceSheetVisible by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(viewModel) {
-        viewModel.loadLatestFamilyOverview()
+    LaunchedEffect(viewModel, seniorId) {
+        viewModel.loadLatestFamilyOverview(seniorId)
     }
 
     FamilyTabScreen(
@@ -38,10 +40,11 @@ fun FamilyTabRoute(
         onInviteFamilyClick = onInviteFamilyClick,
         onMorePhotosClick = onMorePhotosClick,
         onUploadPhotoClick = { isPhotoSourceSheetVisible = true },
+        onSeniorConnectionClick = onSeniorConnectionClick,
         onPhotoClick = onPhotoClick,
-        onRetryClick = viewModel::loadFamilyOverview,
+        onRetryClick = { viewModel.loadFamilyOverview(seniorId) },
         isRefreshing = uiState.isRefreshing,
-        onRefresh = viewModel::refreshFamilyOverview,
+        onRefresh = { viewModel.refreshFamilyOverview(seniorId) },
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(
                 photo = photo,
