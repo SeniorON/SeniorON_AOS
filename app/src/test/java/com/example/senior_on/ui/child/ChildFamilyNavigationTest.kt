@@ -57,4 +57,14 @@ class ChildFamilyNavigationTest {
     fun `사진 업로드 중이 아니면 내비게이션을 활성화한다`() {
         assertTrue(isChildMainNavigationEnabled(isFamilyPhotoUploading = false))
     }
+
+    @Test
+    fun `시니어 연결 화면에서 뒤로가면 가족 메인으로 돌아간다`() {
+        assertEquals(
+            ChildFamilyDestination.Overview,
+            resolveChildFamilyBackDestination(
+                currentDestination = ChildFamilyDestination.SeniorConnection,
+            ),
+        )
+    }
 }
