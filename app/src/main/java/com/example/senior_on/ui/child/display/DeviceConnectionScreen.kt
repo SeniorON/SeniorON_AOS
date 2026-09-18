@@ -334,7 +334,7 @@ private fun DeviceInformationCard(device: DisplayDevice?) {
             label = "기본 홈 설정",
             value = defaultHomeEnabled.toDisplayText(
                 enabledText = "시니어On",
-                disabledText = "설정 안 됨",
+                disabledText = "기본 홈",
                 unavailableText = unavailableText,
             ),
             valueAvailable = defaultHomeEnabled != null,
