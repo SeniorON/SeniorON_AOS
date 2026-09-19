@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,8 +78,11 @@ internal fun buttonAddSelectedCount(selectedAppCount: Int): Int =
 
 internal fun buttonAddMaximumCount(): Int = MaximumButtonSelectionCount
 
+internal fun buttonAddMinimumAppCount(): Int =
+    (MinimumButtonSelectionCount - RequiredGeneralButtonCount).coerceAtLeast(0)
+
 internal fun buttonAddCanContinue(selectedAppCount: Int): Boolean =
-    buttonAddSelectedCount(selectedAppCount) >= MinimumButtonSelectionCount
+    selectedAppCount >= buttonAddMinimumAppCount()
 
 internal enum class ButtonAddExit {
     Cancel,
@@ -248,7 +252,15 @@ fun DisplayButtonAddScreen(
         }
 
         if (showLimitMessage) {
-            ButtonsFullMessage(
+            ButtonSelectionMessage(
+                text = "버튼을 모두 담았어요.",
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+        } else if (!canSave) {
+            ButtonSelectionMessage(
+                text = "전체 버튼을 ${MinimumButtonSelectionCount}개 이상 담아 주세요.",
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 16.dp, vertical = 16.dp),
@@ -605,7 +617,8 @@ private fun SelectedButtonCounter(
                 ),
             )
             .clip(RoundedCornerShape(43.dp))
-            .background(SeniorOnColors.SupportWhite80),
+            .background(SeniorOnColors.SupportWhite80)
+            .blockPointerInput(),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -617,13 +630,17 @@ private fun SelectedButtonCounter(
 }
 
 @Composable
-private fun ButtonsFullMessage(modifier: Modifier = Modifier) {
+private fun ButtonSelectionMessage(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Medium))
             .background(SeniorOnColors.Gray700.copy(alpha = 0.9f))
+            .blockPointerInput()
             .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
@@ -636,10 +653,20 @@ private fun ButtonsFullMessage(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "버튼을 모두 담았어요.",
+            text = text,
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.White,
         )
+    }
+}
+
+private fun Modifier.blockPointerInput(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent().changes.forEach { change ->
+                change.consume()
+            }
+        }
     }
 }
 

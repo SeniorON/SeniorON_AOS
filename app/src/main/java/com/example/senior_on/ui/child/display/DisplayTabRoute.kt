@@ -55,6 +55,7 @@ fun DisplayTabRoute(
     onFontEditClick: () -> Unit = {},
     onButtonEditClick: () -> Unit = {},
     seniorAccounts: List<ManagedSenior> = emptyList(),
+    isSeniorAccountsLoading: Boolean = false,
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
 ) {
@@ -188,16 +189,20 @@ fun DisplayTabRoute(
     saveableStateHolder.SaveableStateProvider(destination.name) {
         when (destination) {
             DisplayDestination.Overview -> when {
-                uiState.isLoading && !uiState.hasLoadedOverview ->
-                    DisplayTabLoadingScreen(
-                        topBarTitle = uiState.resolveDisplayTopBarTitle(),
-                        modifier = modifier,
-                    )
-
                 uiState.errorMessage != null && !uiState.hasLoadedOverview ->
                     DisplayTabErrorScreen(
                         message = uiState.errorMessage.orEmpty(),
                         onRetryClick = viewModel::loadOverview,
+                        topBarTitle = uiState.resolveDisplayTopBarTitle(),
+                        modifier = modifier,
+                    )
+
+                shouldShowDisplayInitialLoading(
+                    uiState = uiState,
+                    isSeniorAccountsLoading = isSeniorAccountsLoading,
+                    hasSeniorAccounts = seniorAccounts.isNotEmpty(),
+                ) ->
+                    DisplayTabLoadingScreen(
                         topBarTitle = uiState.resolveDisplayTopBarTitle(),
                         modifier = modifier,
                     )
@@ -531,6 +536,18 @@ fun DisplayTabRoute(
         )
     }
 }
+
+internal fun shouldShowDisplayInitialLoading(
+    uiState: DisplayTabUiState,
+    isSeniorAccountsLoading: Boolean,
+    hasSeniorAccounts: Boolean,
+): Boolean =
+    !uiState.hasLoadedOverview &&
+        (
+            isSeniorAccountsLoading ||
+                uiState.isLoading ||
+                (uiState.selectedSeniorId == null && hasSeniorAccounts)
+            )
 
 internal fun createInitialButtonOrder(
     currentButtons: List<DisplayHomeButton>,

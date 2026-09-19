@@ -97,6 +97,7 @@ class DisplayButtonAddPolicyTest {
 
     @Test
     fun continueRequiresFourAppsInAdditionToFourRequiredGeneralButtons() {
+        assertEquals(4, buttonAddMinimumAppCount())
         assertFalse(buttonAddCanContinue(selectedAppCount = 3))
         assertTrue(buttonAddCanContinue(selectedAppCount = 4))
     }
