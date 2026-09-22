@@ -12,12 +12,14 @@ import com.example.senior_on.ui.child.notification.viewmodel.NotificationViewMod
 internal fun notificationViewModel(
     repository: NotificationRepository,
     seniorId: Long?,
+    sessionKey: String,
     familyRepository: FamilyServerRepository?,
     homeRepository: HomeServerRepository?,
     eventRepository: EventRepository?,
 ): NotificationViewModel {
     return viewModel(
-        key = "notification:${seniorId ?: "unselected"}",
+        viewModelStoreOwner = com.example.senior_on.ui.child.rememberSeniorScopedViewModelStoreOwner("notification:$sessionKey:$seniorId"),
+        key = "notification:$sessionKey:${seniorId ?: "unselected"}",
         factory = NotificationViewModel.Factory(
             repository = repository,
             seniorId = seniorId,

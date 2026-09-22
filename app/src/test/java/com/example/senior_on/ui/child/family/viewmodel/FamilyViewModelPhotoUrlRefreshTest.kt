@@ -224,15 +224,16 @@ private class FakeFamilyServerRepository(
         homeRequestCount++
         return home
     }
-    override suspend fun getMembers(): List<ServerFamilyMember> = emptyList()
+    override suspend fun getMembers(seniorId: Long?): List<ServerFamilyMember> = emptyList()
     override suspend fun changePrimaryManager(userId: Long) = Unit
     override suspend fun deleteMember(userId: Long) = Unit
-    override suspend fun getPhotoAlbums(): List<ServerFamilyPhotoAlbum> = emptyList()
+    override suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum> = emptyList()
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
+        seniorId: Long?,
     ): ServerFamilyPhotoPage {
         photoPageRequestCount++
         return photoPageProvider?.invoke(photoPageRequestCount)
@@ -259,6 +260,6 @@ private class FakeFamilyServerRepository(
         return refreshedPhoto
     }
 
-    override suspend fun markPhotoViewed(photoId: Long) = Unit
+    override suspend fun markPhotoViewed(photoId: Long, seniorId: Long) = Unit
     override suspend fun deletePhoto(photoId: Long) = Unit
 }

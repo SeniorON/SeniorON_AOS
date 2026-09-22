@@ -285,6 +285,7 @@ private fun ParentLauncherContent(
                 destination = ParentDestination.Medication
             },
         )
+            authRepository = appContainer.authRepository,
     }
 
 }

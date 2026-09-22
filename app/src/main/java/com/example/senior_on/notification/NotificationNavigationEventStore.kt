@@ -13,6 +13,8 @@ data class NotificationNavigationEvent(
     val scheduleDate: String?,
     val linkUrl: String?,
     val title: String?,
+    val seniorId: Long? = null,
+    val parentUserId: Long? = null,
 )
 
 val NotificationNavigationEvent.isMedicationNotification: Boolean
@@ -62,6 +64,8 @@ object NotificationNavigationEventStore {
             scheduleDate = data.valueOf(ScheduleDateKey, ScheduleDateSnakeKey),
             linkUrl = data.valueOf(LinkUrlKey, LinkUrlSnakeKey, UrlKey),
             title = data.valueOf(TitleKey),
+            seniorId = data.valueOf("seniorId")?.toLongOrNull()?.takeIf { it > 0 },
+            parentUserId = data.valueOf("parentUserId")?.toLongOrNull()?.takeIf { it > 0 },
         )
     }
 

@@ -395,7 +395,10 @@ internal fun NotificationSectionCard(
                 } else {
                     NotificationSeverity.Normal
                 },
-                onClick = onToggleClick,
+                onClick = {
+                    android.util.Log.d("NotificationToggle", "touch category=${section.category} checked=${section.enabled}")
+                    onToggleClick()
+                },
                 modifier = Modifier.align(Alignment.TopEnd)
             )
         }

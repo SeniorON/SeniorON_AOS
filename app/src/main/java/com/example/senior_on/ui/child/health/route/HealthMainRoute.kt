@@ -30,6 +30,8 @@ import java.time.LocalDate
 
 @Composable
 fun HealthMainRoute(
+    seniorId: Long? = null,
+    sessionKey: String = "",
     medicationRepository: MedicationRepository,
     hospitalRepository: HospitalRepository,
     familyRepository: FamilyServerRepository,
@@ -38,26 +40,33 @@ fun HealthMainRoute(
     onNavigationEventConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val scopedOwner = com.example.senior_on.ui.child.rememberSeniorScopedViewModelStoreOwner("health:$sessionKey:$seniorId")
     val medicationViewModel: MedicationViewModel = viewModel(
+        viewModelStoreOwner = scopedOwner,
+        key = "medication:$sessionKey:$seniorId",
         factory = MedicationViewModel.factory(
             medicationRepository = medicationRepository,
             familyRepository = familyRepository,
+            seniorId = seniorId,
         ),
     )
     val hospitalViewModel: HospitalViewModel = viewModel(
+        viewModelStoreOwner = scopedOwner,
+        key = "hospital:$sessionKey:$seniorId",
         factory = HospitalViewModel.factory(
             hospitalRepository = hospitalRepository,
             familyRepository = familyRepository,
+            seniorId = seniorId,
         ),
     )
     val medicationUiState by medicationViewModel.uiState.collectAsStateWithLifecycle()
     val hospitalUiState by hospitalViewModel.uiState.collectAsStateWithLifecycle()
     val medicationCheckedEvent by MedicationCheckedEventStore.pendingEvent
         .collectAsStateWithLifecycle()
-    var selectedSection by rememberSaveable { mutableStateOf(HealthSection.Health) }
+    var selectedSection by rememberSaveable(seniorId, sessionKey) { mutableStateOf(HealthSection.Health) }
     var appointmentToDelete by remember { mutableStateOf<HospitalAppointmentUiState?>(null) }
     var wasDeletingAppointment by remember { mutableStateOf(false) }
-    var pendingHospitalId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pendingHospitalId by rememberSaveable(seniorId, sessionKey) { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(medicationCheckedEvent) {

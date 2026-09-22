@@ -5,6 +5,7 @@ import retrofit2.http.*
 
 interface NotificationApi {
     @GET("api/notification") suspend fun getNotifications(
+        @Query("seniorId") seniorId: Long,
         @Query("type") type: String, @Query("cursor") cursor: Long? = null,
         @Query("size") size: Int? = null
     ): ApiResponse<NotificationListResponse>
@@ -13,12 +14,14 @@ interface NotificationApi {
     @DELETE("api/notification/{notificationId}")
     suspend fun delete(@Path("notificationId") notificationId: Long): ApiResponse<Unit>
     @GET("api/notification/setting")
-    suspend fun getSettings(): ApiResponse<NotificationHomeListResponse>
+    suspend fun getSettings(@Query("seniorId") seniorId: Long): ApiResponse<NotificationHomeListResponse>
     @PATCH("api/notification/setting/{type}") suspend fun updateSetting(
-        @Path("type") type: String, @Body request: NotificationSettingRequest
+        @Path("type") type: String,
+        @Query("seniorId") seniorId: Long,
+        @Body request: NotificationSettingRequest
     ): ApiResponse<NotificationSettingResponse>
     @GET("api/notification/parent-device-status")
-    suspend fun getParentDeviceStatus(): ApiResponse<ParentDeviceStatusResponse>
+    suspend fun getParentDeviceStatus(@Query("seniorId") seniorId: Long): ApiResponse<ParentDeviceStatusResponse>
     @GET("api/inactivity-settings/{targetUserId}")
     suspend fun getInactivitySetting(@Path("targetUserId") targetUserId: Long): ApiResponse<InactivitySettingResponse>
     @GET("api/inactivity-settings/me")

@@ -31,6 +31,7 @@ private enum class NotificationDestination {
 fun NotificationRoute(
     repository: NotificationRepository,
     seniorId: Long? = null,
+    sessionKey: String = "",
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -42,24 +43,25 @@ fun NotificationRoute(
     val viewModel = notificationViewModel(
         repository = repository,
         seniorId = seniorId,
+        sessionKey = sessionKey,
         familyRepository = familyRepository,
         homeRepository = homeRepository,
         eventRepository = eventRepository,
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var destination by rememberSaveable {
+    var destination by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf(NotificationDestination.Home)
     }
-    var selectedCategory by rememberSaveable {
+    var selectedCategory by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf<NotificationCategory?>(null)
     }
-    var selectedMessage by remember {
+    var selectedMessage by remember(seniorId, sessionKey) {
         mutableStateOf<NotificationMessageUiState?>(null)
     }
-    var detailReturnDestination by rememberSaveable {
+    var detailReturnDestination by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf(NotificationDestination.Home)
     }
-    var isHistoryDetail by rememberSaveable { mutableStateOf(false) }
+    var isHistoryDetail by rememberSaveable(seniorId, sessionKey) { mutableStateOf(false) }
 
     fun openHistory(category: NotificationCategory) {
         selectedCategory = category

@@ -29,15 +29,16 @@ interface FamilyServerRepository {
     suspend fun createCode(): FamilyCodeInfo
     suspend fun getCode(): FamilyCodeInfo
     suspend fun getHome(): ServerFamilyHome
-    suspend fun getMembers(): List<ServerFamilyMember>
+    suspend fun getMembers(seniorId: Long? = null): List<ServerFamilyMember>
     suspend fun changePrimaryManager(userId: Long)
     suspend fun deleteMember(userId: Long)
-    suspend fun getPhotoAlbums(): List<ServerFamilyPhotoAlbum>
+    suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum>
     suspend fun getPhotos(
         uploaderId: Long? = null,
         cursorAt: String? = null,
         cursorId: Long? = null,
         size: Int? = null,
+        seniorId: Long? = null,
     ): ServerFamilyPhotoPage
     suspend fun uploadPhoto(
         photo: PreparedFamilyPhoto,
@@ -45,7 +46,7 @@ interface FamilyServerRepository {
         idempotencyKey: String,
     ): ServerFamilyPhoto
     suspend fun getPhoto(photoId: Long): ServerFamilyPhoto
-    suspend fun markPhotoViewed(photoId: Long)
+    suspend fun markPhotoViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
 }
 
@@ -75,12 +76,12 @@ interface MedicationRepository {
 }
 
 interface NotificationRepository {
-    suspend fun getNotifications(type: String, cursor: Long? = null, size: Int? = null): NotificationPage
+    suspend fun getNotifications(seniorId: Long, type: String, cursor: Long? = null, size: Int? = null): NotificationPage
     suspend fun markRead(id: Long)
     suspend fun delete(id: Long)
-    suspend fun getHome(): NotificationHome
-    suspend fun updateSetting(type: String, enabled: Boolean): NotificationSetting
-    suspend fun isParentDeviceOnline(): Boolean
+    suspend fun getHome(seniorId: Long): NotificationHome
+    suspend fun updateSetting(seniorId: Long, type: String, enabled: Boolean): NotificationSetting
+    suspend fun isParentDeviceOnline(seniorId: Long): Boolean
     suspend fun getInactivitySetting(userId: Long): InactivitySetting
     suspend fun getMyInactivitySetting(): InactivitySetting
     suspend fun updateInactivitySetting(userId: Long, thresholdHours: Int): InactivitySetting

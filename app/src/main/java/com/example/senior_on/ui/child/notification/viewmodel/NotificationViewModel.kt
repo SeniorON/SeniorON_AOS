@@ -95,7 +95,7 @@ class NotificationViewModel(
                 val targetSeniorId = requireNotNull(seniorId?.takeIf { it > 0L }) {
                     "관리할 시니어를 먼저 선택해 주세요."
                 }
-                val familyMembers = familyRepository?.getMembers()
+                val familyMembers = familyRepository?.getMembers(requireSeniorId())
                 val parentUserId = familyMembers
                     ?.firstOrNull { member ->
                         member.role.equals(ParentRole, ignoreCase = true)
@@ -109,8 +109,8 @@ class NotificationViewModel(
                 }
                 inactivityTargetUserId = parentUserId
 
-                val home = async { repository.getHome() }
-                val parentOnline = async { repository.isParentDeviceOnline() }
+                val home = async { repository.getHome(requireSeniorId()) }
+                val parentOnline = async { repository.isParentDeviceOnline(requireSeniorId()) }
                 val parentDevice = homeRepository?.let { repository ->
                     async {
                         runCatching { repository.getDevice(targetSeniorId) }
@@ -225,7 +225,7 @@ class NotificationViewModel(
                 )
             }
             runCatching {
-                repository.getNotifications(category.apiType).items
+                repository.getNotifications(requireSeniorId(), category.apiType).items
                     .map { notification -> notification.toUiState(category) }
             }.onSuccess { messages ->
                 _uiState.update {
@@ -253,6 +253,7 @@ class NotificationViewModel(
     ) {
         if (category == NotificationCategory.Sos) return
         val currentEnabled = _uiState.value.home.sections
+        Log.d("NotificationToggle", "viewModel seniorId=$seniorId category=$category target=$enabled")
             .firstOrNull { it.category == category }
             ?.enabled
             ?: return
@@ -429,9 +430,11 @@ class NotificationViewModel(
 
     private suspend fun resolveInactivityTargetUserId(): Long {
         inactivityTargetUserId?.let { return it }
+    private fun requireSeniorId(): Long = requireNotNull(seniorId?.takeIf { it > 0 }) { "관리할 시니어를 먼저 선택해 주세요." }
+
         val targetUserId = requireNotNull(familyRepository) {
             "가족 구성원 Repository가 필요합니다."
-        }.getMembers()
+        }.getMembers(requireSeniorId())
             .firstOrNull { member ->
                 member.role.equals(ParentRole, ignoreCase = true)
             }
@@ -446,12 +449,14 @@ class NotificationViewModel(
         while (true) {
             val target = desiredSettings[category] ?: break
             val result = runCatching {
-                repository.updateSetting(category.apiType, target)
+                repository.updateSetting(requireSeniorId(), category.apiType, target)
+            Log.d("NotificationToggle", "request seniorId=$seniorId category=$category target=$target")
             }
 
             if (result.isSuccess) {
                 confirmedSettings[category] = target
                 if (desiredSettings[category] == target) {
+                Log.d("NotificationToggle", "success seniorId=$seniorId category=$category target=$target")
                     desiredSettings.remove(category)
                     break
                 }
@@ -460,6 +465,7 @@ class NotificationViewModel(
 
             if (desiredSettings[category] == target) {
                 desiredSettings.remove(category)
+            Log.d("NotificationToggle", "failure seniorId=$seniorId category=$category target=$target errorType=${result.exceptionOrNull()?.javaClass?.simpleName}")
                 confirmedSettings[category]?.let { confirmed ->
                     setLocalSetting(category, confirmed)
                 }

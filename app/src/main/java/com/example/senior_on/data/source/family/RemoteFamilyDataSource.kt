@@ -16,7 +16,7 @@ interface RemoteFamilySource {
     suspend fun getMembers(seniorId: Long? = null): List<FamilyMemberResponse>
     suspend fun changePrimaryManager(request: FamilyPrimaryManagerUpdateRequest): FamilyPrimaryManagerUpdateResponse
     suspend fun deleteMember(userId: Long)
-    suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?): FamilyPhotoListResponse
+    suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?, seniorId: Long? = null): FamilyPhotoListResponse
     suspend fun createPhotoUploadUrl(
         request: FamilyPhotoUploadUrlRequest,
     ): FamilyPhotoUploadUrlResponse
@@ -29,8 +29,8 @@ interface RemoteFamilySource {
         request: FamilyPhotoUploadCompleteRequest,
     ): FamilyPhotoItemResponse
     suspend fun getPhoto(photoId: Long): FamilyPhotoItemResponse
-    suspend fun getAlbums(): List<FamilyPhotoAlbumResponse>
-    suspend fun markViewed(photoId: Long)
+    suspend fun getAlbums(seniorId: Long): List<FamilyPhotoAlbumResponse>
+    suspend fun markViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
 }
 
@@ -53,8 +53,8 @@ class RemoteFamilyDataSource(
     override suspend fun changePrimaryManager(request: FamilyPrimaryManagerUpdateRequest) =
         api.changePrimaryManager(request).requireData()
     override suspend fun deleteMember(userId: Long) { api.deleteMember(userId) }
-    override suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?) =
-        api.getPhotos(uploaderId, cursorAt, cursorId, size).requireData()
+    override suspend fun getPhotos(uploaderId: Long?, cursorAt: String?, cursorId: Long?, size: Int?, seniorId: Long?) =
+        api.getPhotos(uploaderId, cursorAt, cursorId, size, seniorId).requireData()
     override suspend fun createPhotoUploadUrl(
         request: FamilyPhotoUploadUrlRequest,
     ) = api.createPhotoUploadUrl(request).requireData()
@@ -70,7 +70,7 @@ class RemoteFamilyDataSource(
         request: FamilyPhotoUploadCompleteRequest,
     ) = api.completePhotoUpload(idempotencyKey, request).requireData()
     override suspend fun getPhoto(photoId: Long) = api.getPhoto(photoId).requireData()
-    override suspend fun getAlbums() = api.getAlbums().requireData()
-    override suspend fun markViewed(photoId: Long) { api.markViewed(photoId) }
+    override suspend fun getAlbums(seniorId: Long) = api.getAlbums(seniorId).requireData()
+    override suspend fun markViewed(photoId: Long, seniorId: Long) { api.markViewed(photoId, seniorId) }
     override suspend fun deletePhoto(photoId: Long) { api.deletePhoto(photoId) }
 }
