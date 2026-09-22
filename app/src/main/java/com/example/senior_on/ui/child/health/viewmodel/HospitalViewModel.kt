@@ -36,6 +36,7 @@ data class HospitalUiState(
     val editingAppointment: HospitalAppointmentUiState? = null,
     val editorDate: LocalDate = koreaToday(),
     val isLoading: Boolean = false,
+    val hasLoadedContent: Boolean = false,
     val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
@@ -44,8 +45,8 @@ data class HospitalUiState(
 class HospitalViewModel(
     private val hospitalRepository: HospitalRepository,
     private val familyRepository: FamilyServerRepository,
-) : ViewModel() {
     private val seniorId: Long? = null,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(HospitalUiState())
     val uiState: StateFlow<HospitalUiState> = _uiState.asStateFlow()
 
@@ -199,7 +200,7 @@ class HospitalViewModel(
         fullLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
                     errorMessage = null,
                 )
@@ -299,6 +300,7 @@ class HospitalViewModel(
     ) {
         _uiState.update { state ->
             state.copy(
+                hasLoadedContent = true,
                 monthlyAppointments = result.monthly,
                 selectedDateAppointments = result.daily,
                 upcomingAppointments = result.upcoming,
@@ -319,9 +321,9 @@ class HospitalViewModel(
         fun factory(
             hospitalRepository: HospitalRepository,
             familyRepository: FamilyServerRepository,
+            seniorId: Long? = null,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            seniorId: Long? = null,
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
                 HospitalViewModel(hospitalRepository, familyRepository, seniorId) as T
         }

@@ -37,11 +37,13 @@ data class MedicationUiState(
     val selectedDate: LocalDate = koreaToday(),
     val registeredMedications: List<RegisteredMedicationUiState> = emptyList(),
     val todayMedications: List<TodayMedicationUiState> = emptyList(),
+    val hasLoadedSelectedDate: Boolean = false,
     val medicationMarkedDates: Set<LocalDate> = emptySet(),
     val editorMode: MedicationEditorMode? = null,
     val editingMedication: RegisteredMedicationUiState? = null,
     val addMedicationStartDate: LocalDate? = null,
     val isLoading: Boolean = false,
+    val hasLoadedContent: Boolean = false,
     val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
@@ -71,10 +73,11 @@ class MedicationViewModel(
         _uiState.update { state ->
             state.copy(
                 selectedDate = date,
-                todayMedications = buildTodayMedicationsFromRegistered(
-                    date = date,
-                    registered = state.registeredMedications,
-                ),
+                todayMedications = emptyList(),
+                hasLoadedSelectedDate = false,
+                isLoading = true,
+                isRefreshing = false,
+                errorMessage = null,
             )
         }
         loadSchedules(date, refreshMonthly = monthChanged)
@@ -250,7 +253,7 @@ class MedicationViewModel(
         fullLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
                     errorMessage = null,
                 )
@@ -308,6 +311,7 @@ class MedicationViewModel(
                     } else {
                         state.copy(
                             isLoading = false,
+                            hasLoadedSelectedDate = true,
                             todayMedications = buildTodayMedicationsFromRegistered(
                                 date = date,
                                 registered = state.registeredMedications,
@@ -367,6 +371,8 @@ class MedicationViewModel(
             }
             val selectedDate = state.selectedDate
             state.copy(
+                hasLoadedContent = true,
+                hasLoadedSelectedDate = true,
                 registeredMedications = result.medications,
                 todayMedications = buildTodayMedicationsFromRegistered(
                     date = selectedDate,

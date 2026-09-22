@@ -129,8 +129,13 @@ fun NotificationScreen(
             count = notificationCount
         )
 
+        if (isLoading) {
+            com.example.senior_on.ui.common.InitialContentLoading(Modifier.weight(1f))
+            return@Column
+        }
+
         PullToRefreshBox(
-            isRefreshing = isLoading || isRefreshing,
+            isRefreshing = isRefreshing,
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,21 +159,28 @@ fun NotificationScreen(
                         },
                         onToggleClick = {
                             val isEnabling = !section.enabled
+                            android.util.Log.d("NotificationToggle",
+                                "screen category=${section.category} target=$isEnabling registered=${uiState.isParentPhoneRegistered} online=${uiState.isParentPhoneInternetConnected} sharingRevoked=${uiState.isSeniorSharingRevoked} hasAddress=${uiState.hasHomeAddress}")
                             when {
                                 // Only the senior can restore sharing; never enable it from this UI.
-                                uiState.isSeniorSharingRevoked -> Unit
+                                uiState.isSeniorSharingRevoked -> {
+                                    android.util.Log.d("NotificationToggle", "blocked: sharing_revoked")
+                                }
                                 section.category == NotificationCategory.Outing &&
                                     isEnabling &&
                                     !uiState.hasHomeAddress -> {
+                                    android.util.Log.d("NotificationToggle", "blocked: home_address_missing")
                                     showHomeAddressMissingDialog = true
                                 }
 
                                 !uiState.isParentPhoneRegistered ||
                                     !uiState.isParentPhoneInternetConnected -> {
+                                    android.util.Log.d("NotificationToggle", "blocked: parent_unregistered_or_offline")
                                     showParentPhoneInternetRequiredDialog = true
                                 }
 
                                 else -> {
+                                    android.util.Log.d("NotificationToggle", "dispatch category=${section.category} target=$isEnabling")
                                     onNotificationToggle(section.category, isEnabling)
                                 }
                             }

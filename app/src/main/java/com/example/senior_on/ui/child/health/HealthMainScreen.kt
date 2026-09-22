@@ -13,6 +13,7 @@ import com.example.senior_on.ui.child.health.viewmodel.HospitalUiState
 import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
+import com.example.senior_on.ui.common.InitialContentLoading
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -56,9 +57,18 @@ fun HealthMainScreen(
             onSectionClick = onSectionClick,
         )
 
+        val isInitialLoading = when (selectedSection) {
+            HealthSection.Health -> medicationUiState.isLoading && !medicationUiState.hasLoadedContent
+            HealthSection.Hospital -> hospitalUiState.isLoading && !hospitalUiState.hasLoadedContent
+        }
+        if (isInitialLoading) {
+            InitialContentLoading(Modifier.weight(1f))
+            return@Column
+        }
+
         when (selectedSection) {
             HealthSection.Health -> PullToRefreshBox(
-                isRefreshing = medicationUiState.isLoading || medicationUiState.isRefreshing,
+                isRefreshing = medicationUiState.isRefreshing,
                 onRefresh = onMedicationRefresh,
                 modifier = Modifier
                     .weight(1f)
@@ -78,7 +88,7 @@ fun HealthMainScreen(
             }
 
             HealthSection.Hospital -> PullToRefreshBox(
-                isRefreshing = hospitalUiState.isLoading || hospitalUiState.isRefreshing,
+                isRefreshing = hospitalUiState.isRefreshing,
                 onRefresh = onHospitalRefresh,
                 modifier = Modifier
                     .weight(1f)
