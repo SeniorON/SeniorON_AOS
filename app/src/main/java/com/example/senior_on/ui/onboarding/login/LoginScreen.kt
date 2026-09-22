@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -97,6 +98,7 @@ fun LoginScreen(
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
     var isLoggingIn by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val userIdError = loginError == LoginFieldError.InvalidCredentials
     val passwordError = loginError != LoginFieldError.None
     val passwordErrorMessage = when (loginError) {
@@ -106,6 +108,8 @@ fun LoginScreen(
         LoginFieldError.None -> null
     }
     val performLogin: () -> Unit = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
         loginError = when {
             password.isBlank() -> LoginFieldError.EmptyPassword
             userId.isBlank() -> LoginFieldError.InvalidCredentials
