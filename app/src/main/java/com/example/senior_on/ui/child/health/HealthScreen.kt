@@ -35,7 +35,8 @@ fun HealthScreen(
     onSelectedDateChange: (LocalDate) -> Unit = {},
     onAddTodayMedicationClick: () -> Unit = {},
     onAddRegisteredMedicationClick: () -> Unit = {},
-    onRegisteredMedicationClick: (RegisteredMedicationUiState) -> Unit = {}
+    onRegisteredMedicationClick: (RegisteredMedicationUiState) -> Unit = {},
+    scheduleMessage: String? = null,
 ) {
     var showCalendar by rememberSaveable { mutableStateOf(false) }
     val displayedMonth = remember(selectedDate) { YearMonth.from(selectedDate) }
@@ -58,6 +59,7 @@ fun HealthScreen(
             TodayMedicationSection(
                 selectedDate = selectedDate,
                 todayMedications = todayMedications,
+                scheduleMessage = scheduleMessage,
                 showCalendar = showCalendar,
                 onYearClick = { showCalendar = !showCalendar },
                 onPreviousDayClick = {

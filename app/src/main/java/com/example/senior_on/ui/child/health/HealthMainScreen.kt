@@ -77,6 +77,10 @@ fun HealthMainScreen(
                 HealthScreen(
                     registeredMedications = medicationUiState.registeredMedications,
                     todayMedications = medicationUiState.todayMedications,
+                    scheduleMessage = if (medicationUiState.hasLoadedSelectedDate) null
+                        else if (medicationUiState.errorMessage != null)
+                            "복약 정보를 불러오지 못했어요. 당겨서 다시 시도해 주세요."
+                        else "복약 정보를 불러오는 중이에요",
                     medicationMarkedDates = medicationUiState.medicationMarkedDates,
                     selectedDate = medicationUiState.selectedDate,
                     modifier = Modifier.fillMaxSize(),

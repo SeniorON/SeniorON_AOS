@@ -52,9 +52,9 @@ data class MedicationUiState(
 class MedicationViewModel(
     private val medicationRepository: MedicationRepository,
     private val familyRepository: FamilyServerRepository,
+    private val seniorId: Long? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MedicationUiState())
-    private val seniorId: Long? = null,
     val uiState: StateFlow<MedicationUiState> = _uiState.asStateFlow()
 
     private var fullLoadJob: Job? = null
@@ -269,7 +269,7 @@ class MedicationViewModel(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                errorMessage = throwable.message,
+                                errorMessage = throwable.message ?: "복약 정보를 불러오지 못했어요",
                             )
                         } else {
                             it
@@ -326,7 +326,7 @@ class MedicationViewModel(
                 if (throwable is CancellationException) return@onFailure
                 _uiState.update {
                     if (it.selectedDate == date) {
-                        it.copy(isLoading = false, errorMessage = throwable.message)
+                        it.copy(isLoading = false, errorMessage = throwable.message ?: "복약 정보를 불러오지 못했어요")
                     } else {
                         it
                     }
@@ -397,13 +397,13 @@ class MedicationViewModel(
         fun factory(
             medicationRepository: MedicationRepository,
             familyRepository: FamilyServerRepository,
+            seniorId: Long? = null,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
                 MedicationViewModel(medicationRepository, familyRepository, seniorId) as T
         }
     }
-            seniorId: Long? = null,
 }
 
 private data class RemoteMedicationData(
