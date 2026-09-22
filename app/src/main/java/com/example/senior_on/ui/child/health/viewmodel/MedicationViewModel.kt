@@ -512,6 +512,7 @@ private fun MedicationDraft.toDomain(
         MedicationRepeatDuration.Period ->
             resolvedStartDate
                 .plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+                .minusDays(1)
         MedicationRepeatDuration.Continuous -> null
     }
     return MedicationInfo(

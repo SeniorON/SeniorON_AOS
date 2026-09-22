@@ -91,6 +91,7 @@ data class RegisteredMedicationUiState(
             MedicationRepeatDuration.Continuous -> null
             MedicationRepeatDuration.Period -> startDate
                 ?.plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+                ?.minusDays(1)
             MedicationRepeatDuration.Date -> null
         }
 
