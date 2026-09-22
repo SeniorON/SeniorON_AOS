@@ -94,7 +94,7 @@ fun ParentLauncherRoute(
 
     val familyMembershipViewModel: ParentFamilyMembershipViewModel = viewModel(
         factory = ParentFamilyMembershipViewModel.factory(
-            repository = appContainer.familyServerRepository,
+            repository = appContainer.authRepository,
         ),
     )
     val familyMembershipUiState by familyMembershipViewModel.uiState
