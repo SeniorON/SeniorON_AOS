@@ -67,6 +67,15 @@ fun ParentLauncherRoute(
     val sessionExpirationEvent by
         SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
     var needsLogin by remember { mutableStateOf(AccessTokenStore.getBearerToken() == null) }
+    val sessionContext = LocalContext.current
+    fun onSessionEnded() {
+        needsLogin = true
+        sessionContext.startActivity(
+            android.content.Intent(sessionContext, com.example.senior_on.MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        )
+        (sessionContext as? android.app.Activity)?.finish()
+    }
     val sessionLifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(sessionLifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -115,12 +124,14 @@ fun ParentLauncherRoute(
         ParentFamilyMembershipStatus.Error ->
             ParentLauncherContent(
                 appContainer = appContainer,
+                onSessionEnded = ::onSessionEnded,
                 modifier = modifier,
             )
 
         ParentFamilyMembershipStatus.Connected ->
             ParentLauncherContent(
                 appContainer = appContainer,
+                onSessionEnded = ::onSessionEnded,
                 modifier = modifier,
             )
     }
@@ -129,6 +140,7 @@ fun ParentLauncherRoute(
 @Composable
 private fun ParentLauncherContent(
     appContainer: AppContainer,
+    onSessionEnded: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -240,7 +252,12 @@ private fun ParentLauncherContent(
             modifier = modifier,
         )
 
-        ParentDestination.Settings -> ParentSettingsRoute(onBackClick = ::openHome, modifier = modifier)
+        ParentDestination.Settings -> ParentSettingsRoute(
+            appContainer = appContainer,
+            onSessionEnded = onSessionEnded,
+            onBackClick = ::openHome,
+            modifier = modifier,
+        )
 
         ParentDestination.Schedule -> ParentScheduleRoute(
             repository = appContainer.hospitalRepository,
@@ -268,6 +285,7 @@ private fun ParentLauncherContent(
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
             repository = appContainer.familyServerRepository,
+            authRepository = appContainer.authRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )
@@ -286,7 +304,6 @@ private fun ParentLauncherContent(
                 destination = ParentDestination.Medication
             },
         )
-            authRepository = appContainer.authRepository,
     }
 
 }

@@ -30,7 +30,7 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     fun logout() {
-        if (_uiState.value.isLoggingOut) return
+        if (_uiState.value.isLoggingOut || _uiState.value.isWithdrawing) return
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -65,7 +65,7 @@ class SettingsViewModel(
     }
 
     fun withdraw() {
-        if (_uiState.value.isWithdrawing) return
+        if (_uiState.value.isLoggingOut || _uiState.value.isWithdrawing) return
         viewModelScope.launch {
             _uiState.update {
                 it.copy(

@@ -7,11 +7,44 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.senior_on.ui.parent.settings.account.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.senior_on.di.AppContainer
+import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 
-/** UI-only entry point. No repository dependency until the parent APIs are ready. */
 @Composable
-fun ParentSettingsRoute(onBackClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ParentSettingsRoute(
+    appContainer: AppContainer,
+    onSessionEnded: () -> Unit,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
+    val settingsViewModel: SettingsViewModel = viewModel(
+        key = "parent-settings-session-actions",
+        factory = SettingsViewModel.factory(
+            appContainer.authRepository,
+            appContainer.sessionRepository,
+            appContainer.deviceRegistrationRepository,
+        ),
+    )
+    val actionState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val isBusy = actionState.isLoggingOut || actionState.isWithdrawing
+    LaunchedEffect(actionState.logoutErrorMessage, actionState.withdrawErrorMessage) {
+        val message = actionState.logoutErrorMessage ?: actionState.withdrawErrorMessage
+        if (message != null) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            settingsViewModel.consumeLogoutError()
+            settingsViewModel.consumeWithdrawError()
+        }
+    }
+    LaunchedEffect(actionState.logoutCompleted, actionState.withdrawCompleted) {
+        if (actionState.logoutCompleted || actionState.withdrawCompleted) {
+            settingsViewModel.consumeLogoutCompleted()
+            settingsViewModel.consumeWithdrawCompleted()
+            onSessionEnded()
+        }
+    }
     var destination by rememberSaveable { mutableStateOf(ParentSettingsDestination.Main) }
     var confirmation by rememberSaveable { mutableStateOf<ParentSettingsConfirmation?>(null) }
     // UI drafts for server-side child access settings; never change OS permissions.
@@ -21,12 +54,14 @@ fun ParentSettingsRoute(onBackClick: () -> Unit, modifier: Modifier = Modifier) 
     val profile = ParentSettingsProfile()
     fun unavailable() { Toast.makeText(context, "화면 확인용입니다. 실제 기능 연동은 준비 중이에요.", Toast.LENGTH_SHORT).show() }
     fun back() {
+        if (isBusy) return
         if (destination == ParentSettingsDestination.Main) onBackClick()
         else destination = destination.back()
     }
     BackHandler(onBack = ::back)
     when (destination) {
-        ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back, { destination = it }, { confirmation = it }, {}, modifier)
+        ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back,
+            { if (!isBusy) destination = it }, { if (!isBusy) confirmation = it }, {}, modifier)
         ParentSettingsDestination.Account -> ParentAccountScreen(profile, ::back,
             { destination = ParentSettingsDestination.ChangeName }, { destination = ParentSettingsDestination.ChangePassword }, modifier)
         ParentSettingsDestination.ChangeName -> ParentChangeNameScreen(profile.name, ::back, { unavailable() }, modifier)
@@ -39,10 +74,14 @@ fun ParentSettingsRoute(onBackClick: () -> Unit, modifier: Modifier = Modifier) 
     }
     confirmation?.let { action ->
         ParentSettingsConfirmDialog(action, { confirmation = null }, {
-            when (action) {
-                ParentSettingsConfirmation.Location -> childLocationAccessAllowed = false
-                ParentSettingsConfirmation.Inactivity -> childInactivityAccessAllowed = false
-                else -> unavailable()
+            if (!isBusy) {
+                when (action) {
+                    ParentSettingsConfirmation.Location -> childLocationAccessAllowed = false
+                    ParentSettingsConfirmation.Inactivity -> childInactivityAccessAllowed = false
+                    ParentSettingsConfirmation.Logout -> settingsViewModel.logout()
+                    ParentSettingsConfirmation.Withdraw -> settingsViewModel.withdraw()
+                    else -> unavailable()
+                }
             }
             confirmation = null
         })
