@@ -13,6 +13,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun FamilyMemberSettingsRoute(
+    seniorId: Long,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     onAddFamilyClick: () -> Unit = {},
@@ -21,8 +22,8 @@ fun FamilyMemberSettingsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var previouslyHadManagePermission by remember { mutableStateOf(false) }
 
-    LaunchedEffect(viewModel) {
-        viewModel.loadFamilyMembers()
+    LaunchedEffect(viewModel, seniorId) {
+        viewModel.loadFamilyMembers(seniorId)
     }
 
     LaunchedEffect(uiState.canManageMembers, uiState.isLoading) {
@@ -38,8 +39,12 @@ fun FamilyMemberSettingsRoute(
         uiState = uiState,
         onBackClick = onBackClick,
         onAddFamilyClick = onAddFamilyClick,
-        onChangePrimaryClick = viewModel::changePrimaryMember,
-        onDeleteMemberClick = viewModel::deleteMember,
+        onChangePrimaryClick = { memberId ->
+            viewModel.changePrimaryMember(seniorId, memberId)
+        },
+        onDeleteMemberClick = { memberId ->
+            viewModel.deleteMember(seniorId, memberId)
+        },
         modifier = modifier
     )
 }

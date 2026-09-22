@@ -313,7 +313,7 @@ internal fun FamilyPhotoShareSuccessDialog(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
-                    text = "부모님 앱에 사진이 전달됐어요 🌿",
+                    text = "시니어 앱에 사진이 전달됐어요",
                     style = SeniorOnTextStyles.BodySMedium,
                     color = SeniorOnColors.Gray500,
                     textAlign = TextAlign.Center,

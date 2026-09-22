@@ -164,7 +164,7 @@ class FamilyServerRepositoryImpl(
     private val pendingPhotoUploads = mutableMapOf<String, PendingFamilyPhotoUpload>()
 
     override suspend fun hasFamily(): Boolean = try {
-        source.getMembers().isNotEmpty()
+        source.getHome().members.orEmpty().isNotEmpty()
     } catch (exception: HttpException) {
         if (exception.code() == 404) false else throw exception
     }
@@ -180,7 +180,13 @@ class FamilyServerRepositoryImpl(
     override suspend fun getCode() = source.getCode().let {
         FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
     }
-    override suspend fun getHome() = source.getHome().let { response ->
+    override suspend fun getCode(seniorId: Long) = source.getCode(seniorId).let {
+        FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
+    }
+    override suspend fun getHome() = mapFamilyHome(source.getHome())
+    override suspend fun getHome(seniorId: Long) = mapFamilyHome(source.getHome(seniorId))
+
+    private fun mapFamilyHome(response: FamilyHomeResponse) = response.let {
         ServerFamilyHome(
             members = response.members.orEmpty().map(
                 FamilyMemberResponse::toServerFamilyMember,
@@ -188,6 +194,7 @@ class FamilyServerRepositoryImpl(
             recentPhotos = response.recentPhotos.orEmpty().map(
                 FamilyPhotoItemResponse::toServerFamilyPhoto,
             ),
+            photoGroupId = response.photoGroupId?.requirePositiveFamilyId("photoGroupId"),
         )
     }
     override suspend fun getMembers(seniorId: Long?) = source.getMembers(seniorId).map(
@@ -196,7 +203,40 @@ class FamilyServerRepositoryImpl(
     override suspend fun changePrimaryManager(userId: Long) {
         source.changePrimaryManager(FamilyPrimaryManagerUpdateRequest(userId))
     }
+    override suspend fun changePrimaryManager(userId: Long, seniorId: Long) {
+        source.changePrimaryManager(
+            seniorId = seniorId,
+            request = FamilyPrimaryManagerUpdateRequest(userId),
+        )
+    }
     override suspend fun deleteMember(userId: Long) = source.deleteMember(userId)
+    override suspend fun deleteMember(userId: Long, seniorId: Long) =
+        source.deleteMember(userId, seniorId)
+    override suspend fun getConnectedSeniors(seniorId: Long) =
+        source.getPhotoGroupConnections(seniorId).map { connection ->
+            ServerConnectedSenior(
+                photoGroupId = connection.photoGroupId
+                    .requirePositiveFamilyId("photoGroupId"),
+                seniorId = connection.seniorId.requirePositiveFamilyId("seniorId"),
+                name = connection.name.orEmpty(),
+                relationshipLabel = connection.toRelationshipLabel(),
+                connectedAt = connection.connectedAt.orEmpty(),
+            )
+        }
+    override suspend fun connectPhotoGroup(seniorId: Long, seniorCode: String) {
+        require(seniorId > 0L) { "연결할 기준 시니어 정보가 올바르지 않습니다." }
+        source.connectPhotoGroup(
+            FamilyPhotoGroupConnectionRequest(
+                seniorId = seniorId,
+                seniorCode = normalizeFamilyCodeForRequest(seniorCode),
+            )
+        )
+    }
+    override suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
+        require(seniorId > 0L) { "연결을 해제할 기준 시니어 정보가 올바르지 않습니다." }
+        require(photoGroupId > 0L) { "연결된 사진 그룹 정보가 올바르지 않습니다." }
+        source.disconnectPhotoGroup(seniorId = seniorId, photoGroupId = photoGroupId)
+    }
     override suspend fun getPhotoAlbums(seniorId: Long) = source.getAlbums(seniorId).map { album ->
         ServerFamilyPhotoAlbum(
             uploaderId = album.uploaderUserId.requirePositiveFamilyId("uploaderUserId"),
@@ -212,7 +252,9 @@ class FamilyServerRepositoryImpl(
         cursorId: Long?,
         size: Int?,
         seniorId: Long?,
-    ) = source.getPhotos(uploaderId, cursorAt, cursorId, size, seniorId).let { response ->
+    ) = mapFamilyPhotoPage(source.getPhotos(uploaderId, cursorAt, cursorId, size, seniorId))
+
+    private fun mapFamilyPhotoPage(response: FamilyPhotoListResponse) = response.let {
         ServerFamilyPhotoPage(
             photos = response.photos.orEmpty().map(
                 FamilyPhotoItemResponse::toServerFamilyPhoto,
@@ -237,7 +279,20 @@ class FamilyServerRepositoryImpl(
         photo: PreparedFamilyPhoto,
         description: String,
         idempotencyKey: String,
+    ): ServerFamilyPhoto = error("사진 공유 대상을 선택해 주세요.")
+
+    override suspend fun uploadPhoto(
+        photo: PreparedFamilyPhoto,
+        description: String,
+        idempotencyKey: String,
+        seniorId: Long,
+        photoGroupIds: List<Long>,
     ): ServerFamilyPhoto = photoUploadMutex.withLock {
+        require(seniorId > 0L) { "공유할 기준 시니어 정보가 올바르지 않습니다." }
+        val distinctPhotoGroupIds = photoGroupIds.distinct()
+        require(distinctPhotoGroupIds.isNotEmpty() && distinctPhotoGroupIds.all { it > 0L }) {
+            "사진을 공유할 시니어를 한 명 이상 선택해 주세요."
+        }
         val fileSize = photo.file.length()
         require(fileSize in 1..MAX_FAMILY_PHOTO_BYTES) {
             "가족 사진은 10MB 이하의 파일이어야 합니다."
@@ -256,6 +311,8 @@ class FamilyServerRepositoryImpl(
             contentType = photo.mimeType,
             fileSize = fileSize,
             description = normalizedDescription,
+            seniorId = seniorId,
+            photoGroupIds = distinctPhotoGroupIds,
         )
         val uploaded = if (pendingUpload.storageUploadCompleted) {
             pendingUpload
@@ -281,6 +338,8 @@ class FamilyServerRepositoryImpl(
             source.completePhotoUpload(
                 idempotencyKey = idempotencyKey,
                 request = FamilyPhotoUploadCompleteRequest(
+                    seniorId = uploaded.seniorId,
+                    photoGroupIds = uploaded.photoGroupIds,
                     imageKey = uploaded.imageKey,
                     description = uploaded.description,
                 ),
@@ -300,12 +359,19 @@ class FamilyServerRepositoryImpl(
         contentType: String,
         fileSize: Long,
         description: String?,
+        seniorId: Long,
+        photoGroupIds: List<Long>,
     ): PendingFamilyPhotoUpload {
         val now = elapsedTimeMillis()
         discardStalePendingPhotoUploads(now)
         pendingPhotoUploads[idempotencyKey]?.let { pending ->
-            require(pending.contentType == contentType && pending.fileSize == fileSize) {
-                "동일한 업로드 세션에는 같은 사진 파일을 사용해야 합니다."
+            require(
+                pending.contentType == contentType &&
+                    pending.fileSize == fileSize &&
+                    pending.seniorId == seniorId &&
+                    pending.photoGroupIds == photoGroupIds
+            ) {
+                "동일한 업로드 세션에는 같은 사진과 공유 대상을 사용해야 합니다."
             }
             return pending
         }
@@ -314,6 +380,7 @@ class FamilyServerRepositoryImpl(
             FamilyPhotoUploadUrlRequest(
                 contentType = contentType,
                 fileSize = fileSize,
+                seniorId = seniorId,
             )
         )
         val imageKey = response.imageKey.requireNotBlankResponseField("imageKey")
@@ -331,6 +398,8 @@ class FamilyServerRepositoryImpl(
             contentType = contentType,
             fileSize = fileSize,
             description = description,
+            seniorId = seniorId,
+            photoGroupIds = photoGroupIds,
             createdAtMillis = now,
             expiresAtMillis = now + expiresInSeconds * MILLIS_PER_SECOND,
         ).also { pending ->
@@ -368,6 +437,8 @@ private data class PendingFamilyPhotoUpload(
     val contentType: String,
     val fileSize: Long,
     val description: String?,
+    val seniorId: Long,
+    val photoGroupIds: List<Long>,
     val createdAtMillis: Long,
     val expiresAtMillis: Long,
     val storageUploadCompleted: Boolean = false,
@@ -406,6 +477,15 @@ private fun FamilyMemberResponse.toServerFamilyMember() = ServerFamilyMember(
     isMe = me == true,
     profileImageUrl = profileImageUrl,
 )
+
+private fun FamilyPhotoGroupConnectionResponse.toRelationshipLabel(): String =
+    when (relation?.uppercase()) {
+        "MOTHER" -> "어머니"
+        "FATHER" -> "아버지"
+        "GRANDPARENT" -> "조부모"
+        "OTHER" -> customRelation?.trim().orEmpty().ifBlank { "가족" }
+        else -> customRelation?.trim().orEmpty().ifBlank { "가족" }
+    }
 
 private fun FamilyPhotoItemResponse.toServerFamilyPhoto() = ServerFamilyPhoto(
     id = familyPhotoId.requirePositiveFamilyId("familyPhotoId"),

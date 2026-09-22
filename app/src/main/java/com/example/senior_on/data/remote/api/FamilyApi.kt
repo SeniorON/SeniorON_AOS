@@ -8,16 +8,41 @@ import retrofit2.http.*
 interface FamilyApi {
     @POST("api/family/join") suspend fun join(@Body request: FamilyJoinRequest): ApiResponse<FamilyJoinResponse>
     @POST("api/family/code-create") suspend fun createCode(): ApiResponse<FamilyCodeCreateResponse>
-    @GET("api/family/code") suspend fun getCode(): ApiResponse<FamilyCodeResponse>
-    @GET("api/family/home") suspend fun getHome(): ApiResponse<FamilyHomeResponse>
+    @GET("api/family/code")
+    suspend fun getCode(
+        @Query("seniorId") seniorId: Long? = null,
+    ): ApiResponse<FamilyCodeResponse>
+    @GET("api/family/home")
+    suspend fun getHome(
+        @Query("seniorId") seniorId: Long? = null,
+    ): ApiResponse<FamilyHomeResponse>
     @GET("api/family/members")
     suspend fun getMembers(
         @Query("seniorId") seniorId: Long? = null,
     ): ApiResponse<List<FamilyMemberResponse>>
     @PATCH("api/family/primary-manager")
-    suspend fun changePrimaryManager(@Body request: FamilyPrimaryManagerUpdateRequest): ApiResponse<FamilyPrimaryManagerUpdateResponse>
+    suspend fun changePrimaryManager(
+        @Query("seniorId") seniorId: Long? = null,
+        @Body request: FamilyPrimaryManagerUpdateRequest,
+    ): ApiResponse<FamilyPrimaryManagerUpdateResponse>
     @DELETE("api/family/members/{targetUserId}")
-    suspend fun deleteMember(@Path("targetUserId") targetUserId: Long): ApiResponse<Unit>
+    suspend fun deleteMember(
+        @Path("targetUserId") targetUserId: Long,
+        @Query("seniorId") seniorId: Long? = null,
+    ): ApiResponse<Unit>
+    @GET("api/family/photo-groups/connections")
+    suspend fun getPhotoGroupConnections(
+        @Query("seniorId") seniorId: Long,
+    ): ApiResponse<List<FamilyPhotoGroupConnectionResponse>>
+    @POST("api/family/photo-groups/connections")
+    suspend fun connectPhotoGroup(
+        @Body request: FamilyPhotoGroupConnectionRequest,
+    ): ApiResponse<Unit>
+    @DELETE("api/family/photo-groups/connections/{photoGroupId}")
+    suspend fun disconnectPhotoGroup(
+        @Path("photoGroupId") photoGroupId: Long,
+        @Query("seniorId") seniorId: Long,
+    ): ApiResponse<Unit>
     @GET("api/family/photos") suspend fun getPhotos(
         @Query("uploaderUserId") uploaderUserId: Long? = null,
         @Query("cursorCreatedAt") cursorCreatedAt: String? = null,

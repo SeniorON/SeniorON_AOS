@@ -20,9 +20,22 @@ data class FamilyPrimaryManagerUpdateRequest(val targetUserId: Long)
 data class FamilyPrimaryManagerUpdateResponse(
     val usersId: Long?, val name: String?, val managerType: String?
 )
+data class FamilyPhotoGroupConnectionRequest(
+    val seniorId: Long,
+    val seniorCode: String,
+)
+data class FamilyPhotoGroupConnectionResponse(
+    val photoGroupId: Long?,
+    val seniorId: Long?,
+    val name: String?,
+    val relation: String?,
+    val customRelation: String?,
+    val connectedAt: String?,
+)
 data class FamilyPhotoUploadUrlRequest(
     val contentType: String,
     val fileSize: Long,
+    val seniorId: Long,
 )
 data class FamilyPhotoUploadUrlResponse(
     val imageKey: String?,
@@ -30,6 +43,8 @@ data class FamilyPhotoUploadUrlResponse(
     val expiresInSeconds: Long?,
 )
 data class FamilyPhotoUploadCompleteRequest(
+    val seniorId: Long,
+    val photoGroupIds: List<Long>,
     val imageKey: String,
     val description: String?,
 )
@@ -55,7 +70,8 @@ data class FamilyMemberResponse(
 data class FamilyHomeResponse(
     val members: List<FamilyMemberResponse>?,
     val recentUploaderProfileImageUrls: List<String>?,
-    val recentPhotos: List<FamilyPhotoItemResponse>?
+    val recentPhotos: List<FamilyPhotoItemResponse>?,
+    val photoGroupId: Long? = null,
 )
 data class FamilyCodeResponse(
     @SerializedName("seniorCode")

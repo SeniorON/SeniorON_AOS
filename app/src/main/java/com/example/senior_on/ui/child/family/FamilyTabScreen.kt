@@ -92,6 +92,7 @@ fun FamilyTabScreen(
     onInviteFamilyClick: () -> Unit = {},
     onMorePhotosClick: () -> Unit = {},
     onUploadPhotoClick: () -> Unit = {},
+    onSeniorConnectionClick: () -> Unit = {},
     onPhotoClick: (String) -> Unit = {},
     onRetryClick: () -> Unit = {},
     isRefreshing: Boolean = false,
@@ -162,8 +163,7 @@ fun FamilyTabScreen(
 
                     item {
                         SharedPhotoHeader(
-                            members = uiState.visibleMembers,
-                            memberImage = memberImage
+                            onSeniorConnectionClick = onSeniorConnectionClick,
                         )
                     }
 
@@ -599,8 +599,7 @@ private fun FamilyManagementButtons(
 
 @Composable
 private fun SharedPhotoHeader(
-    members: List<FamilyMemberUiModel>,
-    memberImage: @Composable BoxScope.(FamilyMemberUiModel) -> Unit
+    onSeniorConnectionClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -627,16 +626,31 @@ private fun SharedPhotoHeader(
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
-                text = "공유한 사진이 부모님 화면에 표시돼요",
+                text = "공유한 사진이 부모님께 보여요",
                 style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray500
             )
         }
 
-        if (members.isNotEmpty()) {
-            FamilyMemberPreviewStack(
-                members = members,
-                memberImage = memberImage
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(22.dp))
+                .background(SeniorOnColors.Primary200)
+                .clickable(onClick = onSeniorConnectionClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_plus),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = SeniorOnColors.Primary700,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "시니어 연결",
+                style = SeniorOnTextStyles.BodyMMedium,
+                color = SeniorOnColors.Primary700,
             )
         }
     }

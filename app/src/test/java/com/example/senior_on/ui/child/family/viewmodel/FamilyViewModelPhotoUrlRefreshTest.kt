@@ -34,9 +34,10 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 refreshedPhoto = serverPhoto(url = FRESH_URL),
             )
             val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
-            viewModel.refreshFamilyOverview()
+            viewModel.refreshFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
             assertEquals(2, repository.homeRequestCount)
@@ -54,6 +55,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 refreshedPhoto = serverPhoto(url = FRESH_URL),
             )
             val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
             viewModel.refreshPhotoUrlAfterLoadFailure(PHOTO_ID.toString(), EXPIRED_URL)
@@ -77,6 +79,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 refreshedPhoto = serverPhoto(url = EXPIRED_URL),
             )
             val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
             viewModel.refreshPhotoUrlAfterLoadFailure(PHOTO_ID.toString(), EXPIRED_URL)
@@ -100,6 +103,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 photoDetailFailuresRemaining = 1,
             )
             val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
             viewModel.refreshPhotoUrlAfterLoadFailure(PHOTO_ID.toString(), EXPIRED_URL)
@@ -125,6 +129,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 refreshedPhoto = serverPhoto(url = FRESH_URL),
             )
             val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
             val firstDownloadUrl = viewModel.getLatestPhotoUrlForDownload(PHOTO_ID.toString())
@@ -163,12 +168,13 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 },
             )
             val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
 
-            viewModel.loadPhotoGallery()
+            viewModel.loadPhotoGallery(seniorId = 7L)
             runCurrent()
             firstRequestStarted.await()
-            viewModel.refreshAfterPhotoUpload()
+            viewModel.refreshAfterPhotoUpload(seniorId = 7L)
             advanceUntilIdle()
 
             val imageSource = viewModel.uiState.value.sharedPhotos.single().imageSource
@@ -182,6 +188,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
 
     private companion object {
         const val PHOTO_ID = 91L
+        const val SENIOR_ID = 7L
         const val EXPIRED_URL = "https://example.com/expired.jpg"
         const val FRESH_URL = "https://example.com/fresh.jpg"
     }
