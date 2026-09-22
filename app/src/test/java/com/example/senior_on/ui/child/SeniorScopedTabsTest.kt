@@ -82,7 +82,9 @@ class SeniorScopedTabsTest {
             observed += readFlags()
             if (fail) error("offline")
         }
-        val family = fake(FamilyServerRepository::class.java) { _, _ -> emptyList<ServerFamilyMember>() }
+        val family = fake(FamilyServerRepository::class.java) { _, _ ->
+            listOf(ServerFamilyMember(901, "시니어", "PARENT", "", false, false, null))
+        }
         val hospitals = fake(HospitalRepository::class.java) { _, _ -> record(); emptyList<HospitalAppointment>() }
         val medications = fake(MedicationRepository::class.java) { method, args ->
             record()
@@ -94,6 +96,7 @@ class SeniorScopedTabsTest {
             when (method) {
                 "getHome" -> NotificationHome(0, emptyList())
                 "isParentDeviceOnline" -> true
+                "getInactivitySetting" -> InactivitySetting(901, 4, true)
                 else -> error(method)
             }
         }

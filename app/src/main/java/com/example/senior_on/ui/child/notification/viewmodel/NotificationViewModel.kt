@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.CancellationException
 
 data class NotificationUiState(
     val isLoading: Boolean = false,
@@ -93,69 +95,71 @@ class NotificationViewModel(
                 )
             }
             runCatching {
-                val targetSeniorId = requireNotNull(seniorId?.takeIf { it > 0L }) {
-                    "관리할 시니어를 먼저 선택해 주세요."
-                }
-                val familyMembers = familyRepository?.getMembers(requireSeniorId())
-                val parentUserId = familyMembers
-                    ?.firstOrNull { member ->
-                        member.role.equals(ParentRole, ignoreCase = true)
+                coroutineScope {
+                    val targetSeniorId = requireNotNull(seniorId?.takeIf { it > 0L }) {
+                        "관리할 시니어를 먼저 선택해 주세요."
                     }
-                    ?.id
-                    ?.takeIf { it > 0L }
-                if (familyMembers != null && parentUserId == null) {
-                    return@runCatching NotificationHomeLoadResult(
-                        home = parentNotConnectedNotificationScreenUiState(),
+                    val familyMembers = familyRepository?.getMembers(requireSeniorId())
+                    val parentUserId = familyMembers
+                        ?.firstOrNull { member ->
+                            member.role.equals(ParentRole, ignoreCase = true)
+                        }
+                        ?.id
+                        ?.takeIf { it > 0L }
+                    if (familyMembers != null && parentUserId == null) {
+                        return@coroutineScope NotificationHomeLoadResult(
+                            home = parentNotConnectedNotificationScreenUiState(),
+                        )
+                    }
+                    inactivityTargetUserId = parentUserId
+
+                    val home = async { repository.getHome(requireSeniorId()) }
+                    val parentOnline = async { repository.isParentDeviceOnline(requireSeniorId()) }
+                    val parentDevice = homeRepository?.let { repository ->
+                        async {
+                            runCatching { repository.getDevice(targetSeniorId) }
+                        }
+                    }
+                    val inactivitySetting = parentUserId?.let { targetUserId ->
+                        async {
+                            runCatching {
+                                repository.getInactivitySetting(targetUserId)
+                            }.getOrNull()
+                        }
+                    }
+                    // 홈 주소는 외출·귀가 토글 안내에만 필요한 보조 정보다.
+                    // 홈 조회 실패가 알림 설정과 연결 상태 조회까지 실패시키지 않도록 분리한다.
+                    val parentHome = async {
+                        homeRepository?.let { repository ->
+                            runCatching { repository.getHome(targetSeniorId) }.getOrNull()
+                        }
+                    }
+                    val parentHomeSnapshot = parentHome.await()
+                    val parentDeviceResult = parentDevice?.await()
+                    val isParentPhoneRegistered = when {
+                        parentDeviceResult == null -> true
+                        parentDeviceResult.isFailure -> true
+                        else -> parentDeviceResult.getOrNull()
+                            ?.hasRegisteredDeviceInformation() == true
+                    }
+                    NotificationHomeLoadResult(
+                        home = if (isParentPhoneRegistered) {
+                            home.await().toUiState(
+                                isParentDeviceOnline = parentOnline.await(),
+                                hasHomeAddress = parentHomeSnapshot
+                                    ?.seniorAddress
+                                    ?.isNotBlank()
+                                    ?: true,
+                            )
+                        } else {
+                            parentNotConnectedNotificationScreenUiState()
+                        },
+                        inactivityThresholdHours = inactivitySetting
+                            ?.await()
+                            ?.thresholdHours,
+                        parentPhoneNumber = parentHomeSnapshot?.seniorPhoneNumber,
                     )
                 }
-                inactivityTargetUserId = parentUserId
-
-                val home = async { repository.getHome(requireSeniorId()) }
-                val parentOnline = async { repository.isParentDeviceOnline(requireSeniorId()) }
-                val parentDevice = homeRepository?.let { repository ->
-                    async {
-                        runCatching { repository.getDevice(targetSeniorId) }
-                    }
-                }
-                val inactivitySetting = parentUserId?.let { targetUserId ->
-                    async {
-                        runCatching {
-                            repository.getInactivitySetting(targetUserId)
-                        }.getOrNull()
-                    }
-                }
-                // 홈 주소는 외출·귀가 토글 안내에만 필요한 보조 정보다.
-                // 홈 조회 실패가 알림 설정과 연결 상태 조회까지 실패시키지 않도록 분리한다.
-                val parentHome = async {
-                    homeRepository?.let { repository ->
-                        runCatching { repository.getHome(targetSeniorId) }.getOrNull()
-                    }
-                }
-                val parentHomeSnapshot = parentHome.await()
-                val parentDeviceResult = parentDevice?.await()
-                val isParentPhoneRegistered = when {
-                    parentDeviceResult == null -> true
-                    parentDeviceResult.isFailure -> true
-                    else -> parentDeviceResult.getOrNull()
-                        ?.hasRegisteredDeviceInformation() == true
-                }
-                NotificationHomeLoadResult(
-                    home = if (isParentPhoneRegistered) {
-                        home.await().toUiState(
-                            isParentDeviceOnline = parentOnline.await(),
-                            hasHomeAddress = parentHomeSnapshot
-                                ?.seniorAddress
-                                ?.isNotBlank()
-                                ?: true,
-                        )
-                    } else {
-                        parentNotConnectedNotificationScreenUiState()
-                    },
-                    inactivityThresholdHours = inactivitySetting
-                        ?.await()
-                        ?.thresholdHours,
-                    parentPhoneNumber = parentHomeSnapshot?.seniorPhoneNumber,
-                )
             }.onSuccess { result ->
                 val mergedHome = result.home.copy(
                     sections = result.home.sections.map { section ->
@@ -194,6 +198,7 @@ class NotificationViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isLoading = false,
