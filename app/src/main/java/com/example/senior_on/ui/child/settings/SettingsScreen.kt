@@ -649,7 +649,6 @@ fun SettingsScreen(
 
             SettingsMenuSectionCard(
                 title = "지원",
-                cardHeight = 206.dp,
                 items = listOf(
                     SettingsMenuItem(
                         label = "도움말 · 문의",
@@ -859,16 +858,14 @@ private fun SettingsProfileSection(
 private fun SettingsMenuSectionCard(
     title: String,
     items: List<SettingsMenuItem>,
-    modifier: Modifier = Modifier,
-    cardHeight: Dp? = null
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (cardHeight != null) Modifier.height(cardHeight) else Modifier)
             .clip(RoundedCornerShape(12.dp))
             .background(SeniorOnColors.Background1)
-            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 6.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 12.dp)
     ) {
         Text(
             text = title,
