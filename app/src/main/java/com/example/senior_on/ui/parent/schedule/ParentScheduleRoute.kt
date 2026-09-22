@@ -10,18 +10,20 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
-import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.server.HospitalRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.ui.parent.schedule.viewmodel.ParentScheduleViewModel
 
 @Composable
 fun ParentScheduleRoute(
-    repository: HomeServerRepository,
+    repository: HospitalRepository,
     updatesRepository: ParentHomeUpdatesRepository,
+    authRepository: AuthRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ParentScheduleViewModel = viewModel(
-        factory = ParentScheduleViewModel.factory(repository, updatesRepository)
+        factory = ParentScheduleViewModel.factory(repository, updatesRepository, authRepository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

@@ -1,6 +1,9 @@
 package com.example.senior_on.ui.parent.realtime
 
 import androidx.lifecycle.ViewModelStore
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.model.auth.OnboardingStatus
+import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.core.time.koreaNow
 import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.server.*
@@ -26,7 +29,7 @@ class ParentDetailRealtimeTest {
     @Test fun scheduleUpdatesCoalesceAndOtherEventsAreIgnored() = runTest {
         val repo = FakeSchedule()
         val events = Updates()
-        val vm = ParentScheduleViewModel(repo, events).also { store.put("schedule", it) }
+        val vm = ParentScheduleViewModel(repo, events, FakeAuth()).also { store.put("schedule", it) }
         backgroundScope.launch { vm.observeUpdates() }
         runCurrent(); advanceUntilIdle()
         assertEquals(1, repo.calls)
@@ -44,7 +47,7 @@ class ParentDetailRealtimeTest {
     @Test fun scheduleChangeDuringFetchTriggersTrailingReadAndFailureKeepsData() = runTest {
         val repo = FakeSchedule()
         val events = Updates()
-        val vm = ParentScheduleViewModel(repo, events).also { store.put("schedule", it) }
+        val vm = ParentScheduleViewModel(repo, events, FakeAuth()).also { store.put("schedule", it) }
         backgroundScope.launch { vm.observeUpdates() }
         runCurrent(); advanceUntilIdle()
         val initial = vm.uiState.value.schedules
@@ -68,7 +71,7 @@ class ParentDetailRealtimeTest {
     @Test fun observationStopsAndResumeAndReconnectReconcile() = runTest {
         val repo = FakeSchedule()
         val events = Updates()
-        val vm = ParentScheduleViewModel(repo, events).also { store.put("schedule", it) }
+        val vm = ParentScheduleViewModel(repo, events, FakeAuth()).also { store.put("schedule", it) }
         val first = backgroundScope.launch { vm.observeUpdates() }
         runCurrent(); advanceUntilIdle()
         first.cancelAndJoin()
@@ -206,16 +209,53 @@ class ParentDetailRealtimeTest {
         val events = MutableSharedFlow<ParentHomeUpdateEvent>(extraBufferCapacity = 32)
         override fun observeUpdates() = events
     }
-    private class FakeSchedule : HomeServerRepository by unused(HomeServerRepository::class.java) {
+    @Test fun dailySchedulesShowAllItemsInTimeOrder() = runTest {
+        val repo = FakeSchedule()
+        val first = repo.data.single()
+        repo.data = listOf(
+            first.copy(id = 2, time = java.time.LocalTime.of(15, 0)),
+            first.copy(id = 1, time = java.time.LocalTime.of(9, 0)),
+            first.copy(id = 3, time = java.time.LocalTime.of(17, 0)),
+        )
+        val vm = ParentScheduleViewModel(repo, Updates(), FakeAuth()).also { store.put("schedule", it) }
+        vm.loadTodaySchedules()
+        advanceUntilIdle()
+        assertEquals(listOf("1", "2", "3"), vm.uiState.value.schedules.map { it.id })
+        assertNull(vm.uiState.value.errorMessage)
+    }
+
+    @Test fun missingSeniorDoesNotRequestSchedulesAndRetryWorks() = runTest {
+        val repo = FakeSchedule()
+        val auth = FakeAuth(null)
+        val vm = ParentScheduleViewModel(repo, Updates(), auth).also { store.put("schedule", it) }
+        vm.loadTodaySchedules()
+        advanceUntilIdle()
+        assertEquals(0, repo.calls)
+        assertNotNull(vm.uiState.value.errorMessage)
+        auth.seniorId = 42L
+        vm.refresh()
+        advanceUntilIdle()
+        assertEquals(1, repo.calls)
+        assertEquals(1, vm.uiState.value.schedules.size)
+        assertNull(vm.uiState.value.errorMessage)
+    }
+
+    private class FakeAuth(var seniorId: Long? = 42L) : AuthRepository by unused(AuthRepository::class.java) {
+        override suspend fun getOnboardingStatus() =
+            OnboardingStatus(true, CareManagerType.None, seniorId, true, true, true)
+    }
+
+    private class FakeSchedule : HospitalRepository by unused(HospitalRepository::class.java) {
         var calls = 0
         var data = listOf(TodayHospitalSchedule(1, "병원", "내과", koreaToday(), koreaNow().toLocalTime(), null, null))
         var fetch: suspend () -> List<TodayHospitalSchedule> = { data }
-        override suspend fun getSeniorHome(): SeniorHomeSnapshot {
+        override suspend fun getDaily(parentId: Long, date: String): List<HospitalAppointment> {
+            assertEquals(42L, parentId)
+            assertEquals(koreaToday().toString(), date)
             calls++
-            val schedules = fetch()
-            return SeniorHomeSnapshot(emptyList(), "MEDIUM", null, schedules.firstOrNull()?.let {
-                ServerTodaySchedule(it.hospitalName, it.department, schedules.size, null, it.id, it.time.toString())
-            })
+            return fetch().map {
+                HospitalAppointment(it.id, it.hospitalName, it.department.orEmpty(), date, it.time.toString(), "")
+            }
         }
     }
     private class FakeMedication : MedicationRepository by unused(MedicationRepository::class.java) {

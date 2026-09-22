@@ -6,7 +6,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentSchedule
-import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.server.HospitalRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +32,9 @@ data class ParentScheduleUiState(
 }
 
 class ParentScheduleViewModel(
-    private val repository: HomeServerRepository,
+    private val repository: HospitalRepository,
     private val updatesRepository: ParentHomeUpdatesRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentScheduleUiState())
     val uiState = _uiState.asStateFlow()
@@ -72,21 +74,18 @@ class ParentScheduleViewModel(
                 }
 
                 runCatching {
-                    val schedule = repository.getSeniorHome().todaySchedule
-                    val time = schedule?.scheduledTime?.let {
-                        runCatching { LocalTime.parse(it.trim()) }.getOrNull()
+                    val seniorId = requireNotNull(
+                        authRepository.getOnboardingStatus().seniorId?.takeIf { it > 0 }
+                    ) { "연결된 시니어 정보를 찾을 수 없어요." }
+                    repository.getDaily(seniorId, today.toString()).map { schedule ->
+                        ParentSchedule(
+                            id = schedule.id.toString(),
+                            date = today,
+                            time = LocalTime.parse(schedule.time.trim()),
+                            title = schedule.hospitalName,
+                            description = schedule.department.takeIf(String::isNotBlank),
+                        )
                     }
-                    listOfNotNull(
-                        schedule?.takeIf { !it.title.isNullOrBlank() && time != null }?.let {
-                            ParentSchedule(
-                                id = it.scheduleId?.toString() ?: "today-schedule",
-                                date = today,
-                                time = requireNotNull(time),
-                                title = requireNotNull(it.title),
-                                description = it.description?.takeIf(String::isNotBlank),
-                            )
-                        }
-                    )
                 }
                     .onSuccess { schedules ->
                         _uiState.update {
@@ -115,9 +114,9 @@ class ParentScheduleViewModel(
     fun refresh() = loadTodaySchedules(isRefresh = true)
 
     companion object {
-        fun factory(repository: HomeServerRepository, updatesRepository: ParentHomeUpdatesRepository) = viewModelFactory {
+        fun factory(repository: HospitalRepository, updatesRepository: ParentHomeUpdatesRepository, authRepository: AuthRepository) = viewModelFactory {
             initializer {
-                ParentScheduleViewModel(repository, updatesRepository)
+                ParentScheduleViewModel(repository, updatesRepository, authRepository)
             }
         }
     }
