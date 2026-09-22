@@ -14,7 +14,7 @@ data class ParentPermissionGuideContent(
 /** Media dimensions are design-space dimensions, not fixed physical screen pixels. */
 fun ParentPermissionStep.guideContent(): ParentPermissionGuideContent = when (this) {
     ParentPermissionStep.BatteryOptimization -> ParentPermissionGuideContent(
-        "배터리 사용량 최적화 중지를\n허용으로 설정해 주세요.", "허용",
+        "앱 정보에서 배터리를 누르고\n제한 없음으로 설정해 주세요.", "제한 없음",
         "시니어가 앱을 사용 중이지 않을 때에도\n시니어On이 동작하기 위해 해당 권한이 필요해요.",
         mediaWidth = 279, mediaHeight = 182,
     )

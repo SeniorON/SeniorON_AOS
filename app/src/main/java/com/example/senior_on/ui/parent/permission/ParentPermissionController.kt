@@ -49,8 +49,8 @@ class AndroidParentPermissionController(private val context: Context) : ParentPe
 
     override fun request(step: ParentPermissionStep, permissions: (Array<String>) -> Unit, settings: (Intent) -> Unit) {
         when (step) {
-            // Public settings list avoids requesting a policy-restricted direct exemption.
-            ParentPermissionStep.BatteryOptimization -> settings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            // Open this app's details; the user selects Battery > Unrestricted.
+            ParentPermissionStep.BatteryOptimization -> settings(appDetails())
             ParentPermissionStep.Notification -> {
                 if (Build.VERSION.SDK_INT >= 33 && !granted(Manifest.permission.POST_NOTIFICATIONS) && canRequest(Manifest.permission.POST_NOTIFICATIONS)) {
                     requestRuntime(arrayOf(Manifest.permission.POST_NOTIFICATIONS), permissions)

@@ -82,7 +82,7 @@ fun ParentPermissionGuideRoute(
         requestInFlight = pending != null,
         statusMessage = message ?: when {
             status == ParentPermissionStatus.NotApplicable -> "삼성 기기에서만 필요한 설정이에요."
-            step == ParentPermissionStep.BatteryOptimization -> "목록에서 시니어On을 찾아 배터리 최적화를 사용하지 않도록 설정해 주세요."
+            step == ParentPermissionStep.BatteryOptimization -> "열리는 앱 정보 화면에서 배터리 > 제한 없음을 선택한 뒤 돌아와 주세요. 기기에 따라 메뉴 이름이 다를 수 있어요."
             else -> null
         },
         onLaterClick = onExit,
