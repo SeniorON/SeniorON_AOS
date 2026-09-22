@@ -14,4 +14,42 @@ class FamilyApiContractTest {
 
         assertEquals(listOf("seniorId"), queries.map(Query::value))
     }
+
+    @Test
+    fun `family code sends the selected senior id`() {
+        assertEquals(listOf("seniorId"), queryNames("getCode"))
+    }
+
+    @Test
+    fun `family home sends the selected senior id`() {
+        assertEquals(listOf("seniorId"), queryNames("getHome"))
+    }
+
+    @Test
+    fun `family photo list sends the selected senior id`() {
+        assertEquals(
+            listOf("seniorId", "uploaderUserId", "cursorCreatedAt", "cursorId", "size"),
+            queryNames("getPhotos"),
+        )
+    }
+
+    @Test
+    fun `photo group connections are scoped by the selected senior`() {
+        assertEquals(listOf("seniorId"), queryNames("getPhotoGroupConnections"))
+        assertEquals(listOf("seniorId"), queryNames("disconnectPhotoGroup"))
+    }
+
+    @Test
+    fun `family member mutations are scoped by the selected senior`() {
+        assertEquals(listOf("seniorId"), queryNames("changePrimaryManager"))
+        assertEquals(listOf("seniorId"), queryNames("deleteMember"))
+    }
+
+    private fun queryNames(methodName: String): List<String> {
+        val method = FamilyApi::class.java.methods.single { it.name == methodName }
+        return method.parameterAnnotations
+            .flatten()
+            .filterIsInstance<Query>()
+            .map(Query::value)
+    }
 }
