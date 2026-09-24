@@ -17,14 +17,18 @@ fun ParentPermissionGuideRoute(
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     controller: ParentPermissionController? = null,
+    onPermissionDeclined: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val platform = controller ?: remember(context) { AndroidParentPermissionController(context) }
-    var step by rememberSaveable { mutableStateOf(ParentPermissionStep.BatteryOptimization) }
+    var step by rememberSaveable { mutableStateOf(firstMissingPermissionStep(platform::status)
+        ?: ParentPermissionStep.BatteryOptimization) }
     var pending by rememberSaveable { mutableStateOf<ParentPermissionStep?>(null) }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     var manualConfirmation by rememberSaveable { mutableStateOf(false) }
-    var reachedEnd by rememberSaveable { mutableStateOf(false) }
+    var reachedEnd by rememberSaveable { mutableStateOf(ParentPermissionStep.entries.all {
+        platform.status(it) == ParentPermissionStatus.Granted || platform.status(it) == ParentPermissionStatus.NotApplicable
+    }) }
 
     fun advance() {
         message = null
@@ -37,9 +41,12 @@ fun ParentPermissionGuideRoute(
         when (platform.status(requested)) {
             ParentPermissionStatus.Granted, ParentPermissionStatus.NotApplicable -> advance()
             ParentPermissionStatus.Manual -> manualConfirmation = true
-            ParentPermissionStatus.Required -> message = if (step == ParentPermissionStep.ForegroundLocation)
-                "위치 권한이 아직 허용되지 않았어요. 외출·귀가 감지에는 정확한 위치가 필요해요. 다시 설정하거나 나중에 진행할 수 있어요."
-                else "아직 설정이 확인되지 않았어요. 다시 설정하거나 나중에 진행할 수 있어요."
+            ParentPermissionStatus.Required -> {
+                onPermissionDeclined()
+                message = if (step == ParentPermissionStep.ForegroundLocation)
+                    "위치 권한이 아직 허용되지 않았어요. 외출·귀가 감지에는 정확한 위치가 필요해요. 다시 설정하거나 나중에 진행할 수 있어요."
+                    else "아직 설정이 확인되지 않았어요. 다시 설정하거나 나중에 진행할 수 있어요."
+            }
         }
     }
     val settingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { returned() }

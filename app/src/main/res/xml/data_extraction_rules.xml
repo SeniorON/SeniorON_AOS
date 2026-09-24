@@ -5,6 +5,8 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="parent_permission_guide.xml"/>
+        <exclude domain="sharedpref" path="parent_permission_requests.xml"/>
         <exclude domain="sharedpref" path="device_registration.xml"/>
         <exclude domain="sharedpref" path="fcm_registration.xml"/>
         <exclude domain="sharedpref" path="auth_token.xml"/>
@@ -16,6 +18,8 @@
         -->
     </cloud-backup>
     <device-transfer>
+        <exclude domain="sharedpref" path="parent_permission_guide.xml"/>
+        <exclude domain="sharedpref" path="parent_permission_requests.xml"/>
         <exclude domain="sharedpref" path="device_registration.xml"/>
         <exclude domain="sharedpref" path="fcm_registration.xml"/>
         <exclude domain="sharedpref" path="auth_token.xml"/>

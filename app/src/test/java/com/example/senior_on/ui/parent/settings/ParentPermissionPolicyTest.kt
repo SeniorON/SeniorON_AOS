@@ -5,6 +5,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ParentPermissionPolicyTest {
+    @Test fun currentMissingHomeIsOfferedOnNewInstallation() {
+        val status: (ParentPermissionStep) -> ParentPermissionStatus = {
+            if (it == ParentPermissionStep.DefaultHome) ParentPermissionStatus.Required else ParentPermissionStatus.Granted
+        }
+        assertTrue(shouldOfferPermissionGuide(false, status))
+        assertFalse(shouldOfferPermissionGuide(true, status))
+        assertEquals(ParentPermissionStep.DefaultHome, firstMissingPermissionStep(status))
+    }
+
+    @Test fun completedPermissionsAndUnverifiableManualStepDoNotForceGuide() {
+        assertFalse(shouldOfferPermissionGuide(false) { ParentPermissionStatus.Granted })
+        assertFalse(shouldOfferPermissionGuide(false) { ParentPermissionStatus.Manual })
+        assertNull(firstMissingPermissionStep { ParentPermissionStatus.NotApplicable })
+    }
+
     @Test fun guideContainsExactlySixStepsInOrder() {
         assertEquals(listOf("BatteryOptimization", "Notification", "ForegroundLocation", "BackgroundLocation", "DefaultHome", "SleepingApps"),
             ParentPermissionStep.entries.map { it.name })

@@ -169,11 +169,23 @@ private fun ParentLauncherContent(
     val guidePreferences = remember(context) {
         context.getSharedPreferences("parent_permission_guide", android.content.Context.MODE_PRIVATE)
     }
-    // This records presentation only, never permission grants or completion.
-    var showPermissionGuide by rememberSaveable {
-        mutableStateOf(!guidePreferences.getBoolean("presented_v2", false))
+    val permissionController = remember(context) {
+        com.example.senior_on.ui.parent.permission.AndroidParentPermissionController(context)
     }
-    LaunchedEffect(Unit) { guidePreferences.edit().putBoolean("presented_v2", true).apply() }
+    var showPermissionGuide by rememberSaveable { mutableStateOf(false) }
+    DisposableEffect(lifecycleOwner, permissionController) {
+        fun checkSetup() {
+            if (com.example.senior_on.ui.parent.permission.shouldOfferPermissionGuide(
+                guidePreferences.getBoolean("dismissed_v3", false), permissionController::status,
+            )) showPermissionGuide = true
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) checkSetup()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        checkSetup()
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     var destination by rememberSaveable {
         mutableStateOf(ParentDestination.Home)
@@ -229,7 +241,12 @@ private fun ParentLauncherContent(
     }
 
     if (showPermissionGuide) {
-        ParentPermissionGuideRoute(onExit = { showPermissionGuide = false }, modifier = modifier)
+        ParentPermissionGuideRoute(onExit = {
+            guidePreferences.edit().putBoolean("dismissed_v3", true).apply()
+            showPermissionGuide = false
+        }, modifier = modifier, onPermissionDeclined = {
+            guidePreferences.edit().putBoolean("dismissed_v3", true).apply()
+        })
     } else when (destination) {
         ParentDestination.Home,
         ParentDestination.LinkDetection,
@@ -253,6 +270,7 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.Settings -> ParentSettingsRoute(
+            onDevicePermissionsClick = { showPermissionGuide = true },
             appContainer = appContainer,
             onSessionEnded = onSessionEnded,
             onBackClick = ::openHome,
