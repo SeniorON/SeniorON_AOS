@@ -40,7 +40,7 @@ private val ParentBottomDialogStyle = SettingsBottomDialogStyle(
 
 enum class ParentSettingsConfirmation(val title: String, val description: String, val confirmLabel: String) {
     // Disconnect only the device; family membership is preserved when the API is connected.
-    Disconnect("연결을 해제할까요?", "자녀와의 연결이 끊어져요.", "연결 해제"),
+    Disconnect("연결을 해제할까요?", "내 계정의 모든 기기 연결이 해제돼요.\n가족 관계는 유지돼요.", "연결 해제"),
     Logout("로그아웃하시겠어요?", "다시 이용하려면 로그인이 필요해요.", "로그아웃"),
     Withdraw("회원 탈퇴하시겠어요?", "탈퇴 후에는 계정 정보를 복구할 수 없어요.", "탈퇴하기"),
     Location("위치 정보를\n끄시겠어요?", "위급 상황이 생겼을 때\n자녀가 위치를\n바로 알기 어려워질 수 있어요", "끄기"),

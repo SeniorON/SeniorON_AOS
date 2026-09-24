@@ -20,11 +20,12 @@ fun ParentSettingsScreen(
     onHelpClick: () -> Unit,
     modifier: Modifier = Modifier,
     previewOnly: Boolean = false,
+    onPhotoClick: (() -> Unit)? = null,
 ) {
     ParentSettingsScaffold("설정", onBackClick, modifier, centeredTitle = false, previewOnly = previewOnly,
         backgroundColor = SeniorOnColors.White, showHeaderShadow = true) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            ParentSettingsProfileHeader(profile)
+            ParentSettingsProfileHeader(profile, onPhotoClick = onPhotoClick)
             ParentSettingsSection("관리") {
                 ParentSettingsMenuRow("내 계정", { onNavigate(ParentSettingsDestination.Account) }, isSectionItem = true)
                 ParentSettingsMenuRow("공유코드 확인", { onNavigate(ParentSettingsDestination.ShareCode) }, isSectionItem = true)

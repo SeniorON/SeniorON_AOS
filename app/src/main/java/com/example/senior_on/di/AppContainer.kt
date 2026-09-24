@@ -90,6 +90,8 @@ interface AppContainer {
     val notificationRepository: NotificationRepository
     val eventRepository: EventRepository
     val userSettingsRepository: UserSettingsRepository
+    val parentSettingsRepository: com.example.senior_on.data.repository.impl.ParentSettingsRepository
+        get() = com.example.senior_on.data.repository.impl.ParentSettingsRepository(SeniorOnNetwork.parentSettingsApi)
     val deviceRepository: DeviceRepository
     val inquiryRepository: InquiryRepository
     val locationRepository: LocationRepository

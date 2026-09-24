@@ -19,10 +19,11 @@ fun ParentAccountScreen(
     onPasswordClick: () -> Unit,
     modifier: Modifier = Modifier,
     previewOnly: Boolean = false,
+    onPhotoClick: (() -> Unit)? = null,
 ) {
     ParentSettingsScaffold("내 계정", onBackClick, modifier, previewOnly = previewOnly, backgroundColor = SeniorOnColors.White) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            ParentSettingsProfileHeader(profile, compact = true)
+            ParentSettingsProfileHeader(profile, compact = true, onPhotoClick = onPhotoClick)
             Column(
                 Modifier.padding(horizontal = 2.5.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp),

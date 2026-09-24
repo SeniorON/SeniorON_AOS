@@ -25,7 +25,7 @@ import com.example.senior_on.ui.theme.*
 
 @Composable
 fun ParentChangePasswordScreen(onBackClick: () -> Unit, onSaveClick: (String, String) -> Unit,
-    modifier: Modifier = Modifier, previewOnly: Boolean = false) {
+    modifier: Modifier = Modifier, previewOnly: Boolean = false, isSaving: Boolean = false) {
     // Do not save passwords into saved-instance state or preview fixtures.
     var current by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -35,7 +35,7 @@ fun ParentChangePasswordScreen(onBackClick: () -> Unit, onSaveClick: (String, St
     ParentSettingsScaffold("비밀번호 변경", onBackClick, modifier.clearFocusOnBackgroundTap(focusManager), previewOnly = previewOnly, centeredTitle = false,
         backgroundColor = SeniorOnColors.White, showHeaderShadow = true, bottomBar = {
         SeniorOnActionButton("변경 완료", { onSaveClick(current, password) },
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(top = 16.dp, bottom = 48.dp), enabled = valid,
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(top = 16.dp, bottom = 48.dp), enabled = valid && !isSaving,
             minHeight = 107.dp, textStyle = SeniorOnTextStyles.HeadingXL,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(SeniorOnRadius.Large))
     }) {

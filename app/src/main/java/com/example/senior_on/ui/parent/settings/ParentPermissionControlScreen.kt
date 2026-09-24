@@ -25,25 +25,26 @@ fun ParentPermissionControlScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     previewOnly: Boolean = false,
+    enabled: Boolean = true,
 ) {
     ParentSettingsScaffold("권한 해제", onBackClick, modifier, previewOnly = previewOnly, backgroundColor = SeniorOnColors.White, showHeaderShadow = true,
-        previewMessage = "자녀의 정보 조회 허용 설정 미리보기입니다. 서버 연동은 준비 중입니다.") {
+        previewMessage = "자녀의 정보 공유 허용 설정 미리보기입니다.") {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            PermissionToggle("위치 정보", "외출·귀가, 긴급알림 위치에 사용돼요", locationEnabled, onLocationChange)
-            PermissionToggle("무응답 감지", "터치 활동이 없을 시 감지해서 알려요", inactivityEnabled, onInactivityChange)
+            PermissionToggle("위치 정보", "외출·귀가, 긴급알림 위치에 사용돼요", locationEnabled, onLocationChange, enabled)
+            PermissionToggle("무응답 감지", "터치 활동이 없을 시 감지해서 알려요", inactivityEnabled, onInactivityChange, enabled)
         }
     }
 }
 
 @Composable
-private fun PermissionToggle(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun PermissionToggle(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     Box(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, modifier = Modifier.padding(end = 68.dp), style = SeniorOnTextStyles.HeadingM, color = SeniorOnColors.Gray800)
             Text(description, style = SeniorOnTextStyles.HeadingXXS, color = SeniorOnColors.Gray500)
         }
-        SeniorOnSwitch(checked = checked, onCheckedChange = onChange, width = 60.dp,
+        SeniorOnSwitch(checked = checked, onCheckedChange = onChange, width = 60.dp, enabled = enabled,
             modifier = Modifier.align(Alignment.TopEnd).semantics { contentDescription = title })
     }
 }

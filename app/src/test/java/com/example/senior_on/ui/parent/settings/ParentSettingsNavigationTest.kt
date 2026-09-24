@@ -30,8 +30,8 @@ class ParentSettingsNavigationTest {
         assertEquals(ParentSettingsDestination.Main, ParentSettingsDestination.ShareCode.back())
     }
 
-    @Test fun disconnectCopyMatchesDeviceConnectionDesign() {
+    @Test fun disconnectCopyExplainsAllDevicesAndPreservedFamilyMembership() {
         assertEquals("연결을 해제할까요?", ParentSettingsConfirmation.Disconnect.title)
-        assertEquals("자녀와의 연결이 끊어져요.", ParentSettingsConfirmation.Disconnect.description)
+        assertEquals("내 계정의 모든 기기 연결이 해제돼요.\n가족 관계는 유지돼요.", ParentSettingsConfirmation.Disconnect.description)
     }
 }

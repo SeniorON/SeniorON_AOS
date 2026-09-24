@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -48,16 +52,16 @@ internal fun ParentSettingsSection(title: String, content: @Composable ColumnSco
 }
 
 @Composable
-internal fun ParentSettingsProfileHeader(profile: ParentSettingsProfile, compact: Boolean = false) {
+internal fun ParentSettingsProfileHeader(profile: ParentSettingsProfile, compact: Boolean = false, onPhotoClick: (() -> Unit)? = null) {
     if (compact) {
         Row(Modifier.fillMaxWidth().background(SeniorOnColors.Background1).padding(horizontal = 16.dp, vertical = 26.dp), verticalAlignment = Alignment.CenterVertically) {
-            ParentSettingsAvatar(Modifier.size(68.dp), compact = true)
+            ParentSettingsAvatar(Modifier.size(68.dp), compact = true, profile = profile, onClick = onPhotoClick)
             Spacer(Modifier.width(16.dp))
             ParentSettingsProfileText(profile)
         }
     } else {
         Column(Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            ParentSettingsAvatar(Modifier.size(98.dp))
+            ParentSettingsAvatar(Modifier.size(98.dp), profile = profile, onClick = onPhotoClick)
             Spacer(Modifier.height(12.dp))
             ParentSettingsProfileText(profile, centered = true)
         }
@@ -74,8 +78,8 @@ private fun ParentSettingsProfileText(profile: ParentSettingsProfile, centered: 
 }
 
 @Composable
-private fun ParentSettingsAvatar(modifier: Modifier, compact: Boolean = false) {
-    Box(modifier) {
+private fun ParentSettingsAvatar(modifier: Modifier, compact: Boolean = false, profile: ParentSettingsProfile, onClick: (() -> Unit)?) {
+    Box(modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick, onClickLabel = "프로필 사진 변경") else Modifier)) {
         Box(
             modifier = Modifier.fillMaxSize()
                 .background(SeniorOnColors.Background1, CircleShape)
@@ -85,6 +89,13 @@ private fun ParentSettingsAvatar(modifier: Modifier, compact: Boolean = false) {
             Icon(painterResource(R.drawable.ic_parent_profile_person), "기본 프로필",
                 modifier = Modifier.size(if (compact) 43.dp else 64.dp),
                 tint = androidx.compose.ui.graphics.Color.Unspecified)
+            if (!profile.imageUrl.isNullOrBlank()) key(profile.imageRevision) {
+                AsyncImage(model = coil3.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(profile.imageUrl).memoryCacheKey("${profile.imageUrl}:${profile.imageRevision}")
+                    .diskCacheKey("${profile.imageUrl}:${profile.imageRevision}").build(),
+                    contentDescription = "프로필 사진", contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape))
+            }
         }
         Icon(painterResource(R.drawable.ic_pencil2), null,
             modifier = Modifier.align(Alignment.BottomEnd).size(if (compact) 22.dp else 30.dp),
@@ -141,8 +152,8 @@ private fun ParentSettingsAvatarPreview() {
     SENIOR_ONTheme {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            ParentSettingsAvatar(Modifier.size(98.dp))
-            ParentSettingsAvatar(Modifier.size(68.dp), compact = true)
+            ParentSettingsAvatar(Modifier.size(98.dp), profile = ParentSettingsProfile(), onClick = null)
+            ParentSettingsAvatar(Modifier.size(68.dp), compact = true, profile = ParentSettingsProfile(), onClick = null)
         }
     }
 }

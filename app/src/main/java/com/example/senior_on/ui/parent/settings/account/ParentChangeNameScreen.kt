@@ -22,7 +22,7 @@ import com.example.senior_on.ui.theme.*
 
 @Composable
 fun ParentChangeNameScreen(currentName: String, onBackClick: () -> Unit, onSaveClick: (String) -> Unit,
-    modifier: Modifier = Modifier, previewOnly: Boolean = false) {
+    modifier: Modifier = Modifier, previewOnly: Boolean = false, isSaving: Boolean = false) {
     var newName by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val nameInteractionSource = remember { MutableInteractionSource() }
@@ -34,7 +34,7 @@ fun ParentChangeNameScreen(currentName: String, onBackClick: () -> Unit, onSaveC
             Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(top = 16.dp, bottom = 48.dp),
             minHeight = 107.dp, textStyle = SeniorOnTextStyles.HeadingXL,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(SeniorOnRadius.Large),
-            enabled = newName.isNotBlank() && newName.trim() != currentName.trim())
+            enabled = !isSaving && newName.isNotBlank() && newName.trim() != currentName.trim())
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 24.dp)) {
             Text("현재 이름", style = SeniorOnTextStyles.HeadingS, color = SeniorOnColors.Gray800)

@@ -12,4 +12,6 @@ enum class ParentSettingsDestination {
 data class ParentSettingsProfile(
     val name: String = "시니어",
     val email: String = "연동 전",
+    val imageUrl: String? = null,
+    val imageRevision: Long = 0,
 )
