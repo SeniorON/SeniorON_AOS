@@ -26,6 +26,11 @@ internal fun notificationViewModel(
             familyRepository = familyRepository,
             homeRepository = homeRepository,
             eventRepository = eventRepository,
+            permissionsLoader = { id ->
+                com.example.senior_on.data.repository.impl.ParentSettingsRepository(
+                    com.example.senior_on.data.remote.api.SeniorOnNetwork.parentSettingsApi,
+                ).getPermissions(id)
+            },
         ),
     )
 }

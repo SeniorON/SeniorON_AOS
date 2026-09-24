@@ -360,8 +360,22 @@ private fun DeviceSettingsCard(device: DisplayDevice?) {
 
     DeviceSectionCard(
         title = "설정 상태",
-        height = if (valuesHidden) 198.dp else 202.dp,
+        height = if (valuesHidden) 260.dp else 264.dp,
     ) {
+        DeviceSettingRow(
+            iconResId = R.drawable.ic_device_status_share,
+            label = "위치 정보 공유",
+            enabled = device?.locationSharingEnabled.takeUnless { valuesHidden },
+            unavailableText = unavailableText,
+            rowHeight = rowHeight,
+        )
+        DeviceSettingRow(
+            iconResId = R.drawable.ic_device_status_share,
+            label = "무활동 정보 공유",
+            enabled = device?.inactivitySharingEnabled.takeUnless { valuesHidden },
+            unavailableText = unavailableText,
+            rowHeight = rowHeight,
+        )
         DeviceSettingRow(
             iconResId = R.drawable.ic_device_status_location,
             label = "위치 권한",

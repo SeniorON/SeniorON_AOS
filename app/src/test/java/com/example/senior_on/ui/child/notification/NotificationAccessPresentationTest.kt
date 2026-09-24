@@ -4,6 +4,45 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NotificationAccessPresentationTest {
+    @Test fun locationRevocationDoesNotDisableInactivityOrSos() {
+        val state = NotificationScreenUiState(emptyList(), locationSharingEnabled = false)
+        assertFalse(state.canAccess(NotificationCategory.Outing))
+        assertTrue(state.canAccess(NotificationCategory.Inactivity))
+        assertTrue(state.canAccess(NotificationCategory.Sos))
+        assertFalse(state.accessWarningPanel()!!.description.contains("무응답 감지"))
+    }
+
+    @Test fun inactivityRevocationDoesNotDisableLocation() {
+        val state = NotificationScreenUiState(emptyList(), inactivitySharingEnabled = false)
+        assertFalse(state.canAccess(NotificationCategory.Inactivity))
+        assertTrue(state.canAccess(NotificationCategory.Outing))
+    }
+
+    @Test fun unknownPermissionsHideSensitiveInformationWithoutClaimingDisconnection() {
+        val state = NotificationScreenUiState(emptyList(), sharingStatusKnown = false)
+        assertFalse(state.canAccess(NotificationCategory.Outing))
+        assertFalse(state.canAccess(NotificationCategory.Inactivity))
+        assertTrue(state.isParentPhoneRegistered)
+        assertEquals("공유 상태를 확인하지 못했어요.", state.accessWarningPanel()!!.title)
+    }
+
+    @Test fun revokedLocationSanitizesCachedSosMessage() {
+        val state = NotificationScreenUiState(emptyList(), locationSharingEnabled = false)
+        val message = NotificationMessageUiState("", "긴급 알림", severity = NotificationSeverity.Danger,
+            address = "집 주소", latitude = 37.0, longitude = 127.0, detail = "집 주소")
+        val visible = state.visibleMessage(message)
+        assertNull(visible.address)
+        assertNull(visible.latitude)
+        assertNull(visible.longitude)
+        assertNull(visible.detail)
+        assertEquals("긴급 알림", visible.title)
+    }
+
+    @Test fun disconnectedDisablesEveryCategoryEvenWithSharingAllowed() {
+        val state = NotificationScreenUiState(emptyList(), isParentPhoneRegistered = false)
+        NotificationCategory.entries.forEach { assertFalse(state.canAccess(it)) }
+    }
+
     @Test fun existingConnectedStateDoesNotShowAccessWarning() {
         assertNull(NotificationScreenUiState(emptyList()).accessWarningPanel())
     }

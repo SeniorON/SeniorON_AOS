@@ -132,7 +132,9 @@ data class NotificationScreenUiState(
     val isParentPhoneRegistered: Boolean = true,
     val hasHomeAddress: Boolean = true,
     val isParentPhoneInternetConnected: Boolean = true,
-    // UI-only until the server exposes senior-controlled information-sharing access.
+    val sharingStatusKnown: Boolean = true,
+    val locationSharingEnabled: Boolean = true,
+    val inactivitySharingEnabled: Boolean = true,
     val isSeniorSharingRevoked: Boolean = false,
     val seniorDisplayName: String = "시니어",
 )

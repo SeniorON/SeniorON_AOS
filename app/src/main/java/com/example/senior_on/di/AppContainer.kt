@@ -212,6 +212,7 @@ class DefaultAppContainer(
     }
     override val displayRepository: DisplayRepository =
         DisplayRepositoryImpl(
+            permissionsLoader = { seniorId -> parentSettingsRepository.getPermissions(seniorId) },
             homeDataSource = homeDataSource,
             deviceDataSource = deviceDataSource,
             familyDataSource = remoteFamilySource,

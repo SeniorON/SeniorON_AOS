@@ -38,6 +38,36 @@ import org.junit.Test
 private const val TEST_SENIOR_ID = 77L
 
 class DisplayRepositoryImplTest {
+    @Test fun sharingFlagsAreSeniorScopedAndDoNotChangeConnectionOrOsPermissions() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(deviceResponse = deviceDetailResponse(connectionStatus = "ONLINE")
+                .copy(locationPermissionGranted = true, lastLocationUpdatedAt = "2026-09-24")),
+            deviceDataSource = FakeDeviceDataSource(),
+            permissionsLoader = { id ->
+                assertEquals(TEST_SENIOR_ID, id)
+                com.example.senior_on.data.remote.api.SeniorPermissionSettings(id, false, true)
+            },
+        )
+        val device = repository.getDevice(TEST_SENIOR_ID)!!
+        assertEquals(DisplayDeviceConnectionStatus.Online, device.connectionStatus)
+        assertEquals(true, device.locationPermissionGranted)
+        assertEquals(false, device.locationSharingEnabled)
+        assertEquals(true, device.inactivitySharingEnabled)
+        assertNull(device.lastLocationUpdatedAtLabel)
+    }
+
+    @Test fun sharingReadFailureIsUnknownNotDisconnected() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            homeDataSource = FakeHomeDataSource(deviceResponse = deviceDetailResponse(connectionStatus = "OFFLINE")),
+            deviceDataSource = FakeDeviceDataSource(),
+            permissionsLoader = { error("network failure") },
+        )
+        val device = repository.getDevice(TEST_SENIOR_ID)!!
+        assertEquals(DisplayDeviceConnectionStatus.Offline, device.connectionStatus)
+        assertNull(device.locationSharingEnabled)
+        assertNull(device.inactivitySharingEnabled)
+    }
+
     @Test
     fun getOverviewForwardsSelectedSeniorIdToHomeRequests() = runBlocking {
         val homeDataSource = FakeHomeDataSource(

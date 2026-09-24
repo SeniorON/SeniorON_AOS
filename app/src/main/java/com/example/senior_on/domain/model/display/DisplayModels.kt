@@ -23,6 +23,8 @@ data class DisplayDevice(
     val appExecutionMaintained: Boolean? = null,
     val lastConnectedAtLabel: String? = null,
     val lastLocationUpdatedAtLabel: String? = null,
+    val locationSharingEnabled: Boolean? = null,
+    val inactivitySharingEnabled: Boolean? = null,
 )
 
 enum class SeniorFontSize {

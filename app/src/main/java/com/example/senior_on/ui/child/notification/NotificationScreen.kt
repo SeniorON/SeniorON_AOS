@@ -80,7 +80,7 @@ fun NotificationScreen(
         it.category == NotificationCategory.RiskLink
     }.map { section ->
         when {
-            accessWarning != null -> section.copy(enabled = false)
+            !uiState.canAccess(section.category) -> section.copy(enabled = false, messages = emptyList(), detectionStandardTime = null)
             section.category == NotificationCategory.Sos -> section.copy(enabled = true)
             else -> section
         }
@@ -149,13 +149,13 @@ fun NotificationScreen(
                 sections.forEachIndexed { index, section ->
                     NotificationSectionCard(
                         section = section,
-                        showDetailArrow = accessWarning == null && section.enabled,
+                        showDetailArrow = uiState.canAccess(section.category) && section.enabled,
                         showToggle = section.category != NotificationCategory.Sos,
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        textMuted = footerPanel?.tone == NotificationFooterTone.Warning,
-                        onClick = { if (!uiState.isSeniorSharingRevoked) onSectionClick(section.category) },
+                        textMuted = !uiState.canAccess(section.category),
+                        onClick = { if (uiState.canAccess(section.category)) onSectionClick(section.category) },
                         onMessageClick = { message ->
-                            if (!uiState.isSeniorSharingRevoked) onNotificationClick(section.category, message)
+                            if (uiState.canAccess(section.category)) onNotificationClick(section.category, message)
                         },
                         onToggleClick = {
                             val isEnabling = !section.enabled
@@ -163,7 +163,7 @@ fun NotificationScreen(
                                 "screen category=${section.category} target=$isEnabling registered=${uiState.isParentPhoneRegistered} online=${uiState.isParentPhoneInternetConnected} sharingRevoked=${uiState.isSeniorSharingRevoked} hasAddress=${uiState.hasHomeAddress}")
                             when {
                                 // Only the senior can restore sharing; never enable it from this UI.
-                                uiState.isSeniorSharingRevoked -> {
+                                !uiState.canAccess(section.category) -> {
                                     android.util.Log.d("NotificationToggle", "blocked: sharing_revoked")
                                 }
                                 section.category == NotificationCategory.Outing &&
@@ -185,7 +185,7 @@ fun NotificationScreen(
                                 }
                             }
                         },
-                        onDetectionTimeClick = { if (!uiState.isSeniorSharingRevoked) onDetectionTimeClick() }
+                        onDetectionTimeClick = { if (uiState.canAccess(NotificationCategory.Inactivity)) onDetectionTimeClick() }
                     )
 
                     val nextSection = sections.getOrNull(index + 1)

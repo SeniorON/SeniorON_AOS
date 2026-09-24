@@ -1,6 +1,10 @@
 package com.example.senior_on.ui.child.notification.viewmodel
 
 import android.util.Log
+import com.example.senior_on.data.remote.api.SeniorPermissionSettings
+import com.example.senior_on.ui.child.notification.canAccess
+import com.example.senior_on.ui.child.notification.enforceAccess
+import com.example.senior_on.ui.child.notification.visibleMessage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -51,8 +55,11 @@ class NotificationViewModel(
     private val familyRepository: FamilyServerRepository?,
     private val homeRepository: HomeServerRepository?,
     private val eventRepository: EventRepository?,
+    private val permissionsLoader: (suspend (Long) -> SeniorPermissionSettings)? = null,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(NotificationUiState())
+    private val _uiState = MutableStateFlow(NotificationUiState(
+        home = emptyNotificationScreenUiState().copy(sharingStatusKnown = permissionsLoader == null),
+    ))
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
     private var inactivityTargetUserId: Long? = null
     private val confirmedSettings = mutableMapOf<NotificationCategory, Boolean>()
@@ -113,14 +120,37 @@ class NotificationViewModel(
                     }
                     inactivityTargetUserId = parentUserId
 
+                    // Family membership survives a device disconnect. Device status is authoritative.
+                    val device = homeRepository?.getDevice(targetSeniorId)
+                    if (homeRepository != null && device?.hasRegisteredDeviceInformation() != true) {
+                        return@coroutineScope NotificationHomeLoadResult(
+                            home = parentNotConnectedNotificationScreenUiState(),
+                        )
+                    }
+
+                    val permissions = permissionsLoader?.let { loader ->
+                        try { loader(targetSeniorId) } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) { null }
+                    }
+                    _uiState.update { current ->
+                        val access = current.home.copy(
+                            isParentPhoneRegistered = true,
+                            sharingStatusKnown = permissionsLoader == null || permissions != null,
+                            locationSharingEnabled = permissions?.locationEnabled ?: (permissionsLoader == null),
+                            inactivitySharingEnabled = permissions?.inactivityDetectionEnabled ?: (permissionsLoader == null),
+                        ).enforceAccess()
+                        current.copy(home = access,
+                            histories = current.histories.filterKeys(access::canAccess)
+                                .mapValues { (_, messages) -> messages.map(access::visibleMessage) },
+                            detailMessages = emptyMap())
+                    }
+
                     val home = async { repository.getHome(requireSeniorId()) }
                     val parentOnline = async { repository.isParentDeviceOnline(requireSeniorId()) }
-                    val parentDevice = homeRepository?.let { repository ->
-                        async {
-                            runCatching { repository.getDevice(targetSeniorId) }
-                        }
-                    }
-                    val inactivitySetting = parentUserId?.let { targetUserId ->
+                    val inactivitySetting = parentUserId?.takeIf {
+                        permissionsLoader == null || permissions?.inactivityDetectionEnabled == true
+                    }?.let { targetUserId ->
                         async {
                             runCatching {
                                 repository.getInactivitySetting(targetUserId)
@@ -135,13 +165,7 @@ class NotificationViewModel(
                         }
                     }
                     val parentHomeSnapshot = parentHome.await()
-                    val parentDeviceResult = parentDevice?.await()
-                    val isParentPhoneRegistered = when {
-                        parentDeviceResult == null -> true
-                        parentDeviceResult.isFailure -> true
-                        else -> parentDeviceResult.getOrNull()
-                            ?.hasRegisteredDeviceInformation() == true
-                    }
+                    val isParentPhoneRegistered = true
                     NotificationHomeLoadResult(
                         home = if (isParentPhoneRegistered) {
                             home.await().toUiState(
@@ -150,7 +174,11 @@ class NotificationViewModel(
                                     ?.seniorAddress
                                     ?.isNotBlank()
                                     ?: true,
-                            )
+                            ).copy(
+                                sharingStatusKnown = permissionsLoader == null || permissions != null,
+                                locationSharingEnabled = permissions?.locationEnabled ?: (permissionsLoader == null),
+                                inactivitySharingEnabled = permissions?.inactivityDetectionEnabled ?: (permissionsLoader == null),
+                            ).enforceAccess()
                         } else {
                             parentNotConnectedNotificationScreenUiState()
                         },
@@ -185,11 +213,20 @@ class NotificationViewModel(
                         }
                     },
                 )
+                val accessibleHome = mergedHome.enforceAccess()
+                NotificationCategory.entries.filterNot(accessibleHome::canAccess).forEach { category ->
+                    settingSyncJobs.remove(category)?.cancel()
+                    historyLoadJobs.remove(category)?.cancel()
+                    desiredSettings.remove(category)
+                }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        home = mergedHome,
+                        home = accessibleHome,
+                        histories = it.histories.filterKeys(accessibleHome::canAccess)
+                            .mapValues { (_, messages) -> messages.map(accessibleHome::visibleMessage) },
+                        detailMessages = emptyMap(),
                         hasLoadedContent = true,
                         inactivityThresholdHours =
                             result.inactivityThresholdHours
@@ -203,6 +240,9 @@ class NotificationViewModel(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
+                        home = it.home.copy(sharingStatusKnown = false).enforceAccess(),
+                        histories = emptyMap(),
+                        detailMessages = emptyMap(),
                         errorMessage = throwable.message,
                     )
                 }
@@ -222,6 +262,7 @@ class NotificationViewModel(
         category: NotificationCategory,
         isPullRefresh: Boolean,
     ) {
+        if (!_uiState.value.home.canAccess(category)) return
         if (historyLoadJobs[category]?.isActive == true) return
         historyLoadJobs[category] = viewModelScope.launch {
             _uiState.update {
@@ -239,7 +280,7 @@ class NotificationViewModel(
                     it.copy(
                         isLoading = false,
                         isHistoryRefreshing = false,
-                        histories = it.histories + (category to messages),
+                        histories = it.histories + (category to if (it.home.canAccess(category)) messages.map(it.home::visibleMessage) else emptyList()),
                     )
                 }
             }.onFailure { throwable ->
@@ -260,6 +301,7 @@ class NotificationViewModel(
     ) {
         Log.d("NotificationToggle", "viewModel seniorId=$seniorId category=$category target=$enabled")
         if (category == NotificationCategory.Sos) return
+        if (!_uiState.value.home.canAccess(category)) return
         val currentEnabled = _uiState.value.home.sections
             .firstOrNull { it.category == category }
             ?.enabled
@@ -280,6 +322,7 @@ class NotificationViewModel(
         category: NotificationCategory,
         message: NotificationMessageUiState,
     ) {
+        if (!_uiState.value.home.canAccess(category)) return
         message.notificationId?.let { notificationId ->
             markNotificationRead(notificationId)
         }
@@ -303,7 +346,7 @@ class NotificationViewModel(
                 )
                 _uiState.update {
                     it.copy(
-                        detailMessages = it.detailMessages + (eventId to detail),
+                        detailMessages = if (it.home.canAccess(category)) it.detailMessages + (eventId to it.home.visibleMessage(detail)) else it.detailMessages,
                         isDetailLoading = false,
                     )
                 }
@@ -333,6 +376,7 @@ class NotificationViewModel(
             val event = events.getDetail(eventId)
             val category = event.type.toNotificationCategory()
                 ?: error("지원하지 않는 알림 유형입니다: ${event.type}")
+            check(_uiState.value.home.canAccess(category)) { "공유가 중단되었거나 기기가 연결되지 않았어요." }
             val fallback = NotificationMessageUiState(
                 time = "",
                 title = title.orEmpty(),
@@ -345,7 +389,7 @@ class NotificationViewModel(
                 notificationId = notificationId,
                 eventId = eventId,
             )
-            val detail = event.toUiState(category, fallback)
+            val detail = _uiState.value.home.visibleMessage(event.toUiState(category, fallback))
             _uiState.update {
                 it.copy(
                     detailMessages = it.detailMessages + (eventId to detail),
@@ -364,6 +408,7 @@ class NotificationViewModel(
     }
 
     fun loadInactivitySetting() {
+        if (!_uiState.value.home.canAccess(NotificationCategory.Inactivity)) return
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -399,6 +444,7 @@ class NotificationViewModel(
         thresholdHours: Int,
         onSuccess: () -> Unit,
     ) {
+        if (!_uiState.value.home.canAccess(NotificationCategory.Inactivity)) return
         if (_uiState.value.isInactivitySettingSaving) return
         viewModelScope.launch {
             _uiState.update {
@@ -454,6 +500,7 @@ class NotificationViewModel(
 
     private suspend fun synchronizeSetting(category: NotificationCategory) {
         while (true) {
+            if (!_uiState.value.home.canAccess(category)) break
             val target = desiredSettings[category] ?: break
             Log.d("NotificationToggle", "request seniorId=$seniorId category=$category target=$target")
             val result = runCatching {
@@ -489,6 +536,7 @@ class NotificationViewModel(
         category: NotificationCategory,
         enabled: Boolean,
     ) {
+        if (!_uiState.value.home.canAccess(category)) return
         _uiState.update { state ->
             state.copy(
                 home = state.home.copy(
@@ -548,6 +596,7 @@ class NotificationViewModel(
         private val familyRepository: FamilyServerRepository?,
         private val homeRepository: HomeServerRepository?,
         private val eventRepository: EventRepository?,
+        private val permissionsLoader: (suspend (Long) -> SeniorPermissionSettings)? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -558,6 +607,7 @@ class NotificationViewModel(
                 familyRepository = familyRepository,
                 homeRepository = homeRepository,
                 eventRepository = eventRepository,
+                permissionsLoader = permissionsLoader,
             ) as T
         }
     }
@@ -592,11 +642,11 @@ private fun formatThresholdHours(thresholdHours: Int): String =
     "${thresholdHours}시간"
 
 private fun DeviceInfo.hasRegisteredDeviceInformation(): Boolean =
-    name.isNotBlank() ||
+    !status.equals("DISCONNECTED", ignoreCase = true) && (name.isNotBlank() ||
         connected ||
         networkConnected ||
         batteryLevel != null ||
         !lastConnectedAt.isNullOrBlank() ||
-        !lastLocationUpdatedAt.isNullOrBlank()
+        !lastLocationUpdatedAt.isNullOrBlank())
 
 private const val DefaultInactivityThresholdHours = 12

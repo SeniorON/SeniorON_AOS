@@ -15,6 +15,52 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorScopedTabsTest {
+    @Test fun revokedInactivityUsesSelectedSeniorAndSkipsThresholdRequest() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        val family = fake(FamilyServerRepository::class.java) { _, _ ->
+            listOf(ServerFamilyMember(901, "시니어", "PARENT", "", false, false, null))
+        }
+        val repo = fake(NotificationRepository::class.java) { method, _ ->
+            when (method) {
+                "getHome" -> NotificationHome(0, emptyList())
+                "isParentDeviceOnline" -> true
+                else -> error("Unexpected request: $method")
+            }
+        }
+        try {
+            val vm = NotificationViewModel(repo, 42, family, null, null, permissionsLoader = { id ->
+                assertEquals(42L, id)
+                com.example.senior_on.data.remote.api.SeniorPermissionSettings(id, true, false)
+            }).also { store.put("notification", it) }
+            advanceUntilIdle()
+            val state = vm.uiState.value
+            assertNull(state.errorMessage)
+            assertTrue(state.home.isParentPhoneRegistered)
+            assertTrue(state.home.locationSharingEnabled)
+            assertFalse(state.home.inactivitySharingEnabled)
+            vm.loadInactivitySetting()
+            advanceUntilIdle()
+            assertNull(vm.uiState.value.errorMessage)
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun disconnectedDeviceWithMetadataDoesNotFetchNotificationHome() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        val repo = fake(NotificationRepository::class.java) { method, _ -> error("Unexpected request: $method") }
+        val home = fake(HomeServerRepository::class.java) { method, _ ->
+            assertEquals("getDevice", method)
+            DeviceInfo("Galaxy", false, "DISCONNECTED", 70, false, "yesterday", "yesterday")
+        }
+        try {
+            val vm = NotificationViewModel(repo, 42, null, home, null).also { store.put("notification", it) }
+            advanceUntilIdle()
+            assertFalse(vm.uiState.value.home.isParentPhoneRegistered)
+            assertNull(vm.uiState.value.errorMessage)
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
+
     @Test fun healthUsesSelectedSeniorInsteadOfFamilyUserId() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()

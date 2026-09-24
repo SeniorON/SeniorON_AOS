@@ -37,16 +37,19 @@ class DisplayRepositoryImpl private constructor(
     private val deviceDataSource: DeviceDataSource?,
     private val familyDataSource: RemoteFamilySource?,
     private val mockDataSource: DisplayDataSource?,
+    private val permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)?,
 ) : DisplayRepository {
     constructor(
         homeDataSource: HomeDataSource,
         deviceDataSource: DeviceDataSource,
         familyDataSource: RemoteFamilySource? = null,
+        permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)? = null,
     ) : this(
         homeDataSource = homeDataSource,
         deviceDataSource = deviceDataSource,
         familyDataSource = familyDataSource,
         mockDataSource = null,
+        permissionsLoader = permissionsLoader,
     )
 
     constructor(dataSource: DisplayDataSource) : this(
@@ -54,6 +57,7 @@ class DisplayRepositoryImpl private constructor(
         deviceDataSource = null,
         familyDataSource = null,
         mockDataSource = dataSource,
+        permissionsLoader = null,
     )
 
     override suspend fun canCurrentUserEditScreen(seniorId: Long): Boolean {
@@ -97,10 +101,11 @@ class DisplayRepositoryImpl private constructor(
             source.getDevice(seniorId).toDisplayDevice()
         }
 
-        return detailedDevice.fold(
+        val result = detailedDevice.fold(
             onSuccess = { device -> overview.copy(device = device) },
             onFailure = { overview },
         )
+        return result.copy(device = withSharing(seniorId, result.device))
     }
 
     override suspend fun getSeniorScreenConfiguration(): SeniorScreenConfiguration {
@@ -115,7 +120,20 @@ class DisplayRepositoryImpl private constructor(
 
     override suspend fun getDevice(seniorId: Long): DisplayDevice? {
         mockDataSource?.let { return it.overview.value.device }
-        return requireNotNull(homeDataSource).getDevice(seniorId).toDisplayDevice()
+        return withSharing(seniorId, requireNotNull(homeDataSource).getDevice(seniorId).toDisplayDevice())
+    }
+
+    private suspend fun withSharing(seniorId: Long, device: DisplayDevice?): DisplayDevice? {
+        if (device == null) return null
+        val loader = permissionsLoader ?: return device
+        val permissions = try { loader(seniorId) }
+        catch (error: kotlinx.coroutines.CancellationException) { throw error }
+        catch (_: Exception) { null }
+        return device.copy(
+            locationSharingEnabled = permissions?.locationEnabled,
+            inactivitySharingEnabled = permissions?.inactivityDetectionEnabled,
+            lastLocationUpdatedAtLabel = device.lastLocationUpdatedAtLabel.takeIf { permissions?.locationEnabled == true },
+        )
     }
 
     override suspend fun updateSeniorProfile(parentInfo: ParentInfo): ParentInfo {
