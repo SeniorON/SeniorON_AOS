@@ -91,6 +91,7 @@ data class RegisteredMedicationUiState(
             MedicationRepeatDuration.Continuous -> null
             MedicationRepeatDuration.Period -> startDate
                 ?.plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+                ?.minusDays(1)
             MedicationRepeatDuration.Date -> null
         }
 
@@ -190,7 +191,8 @@ internal fun TodayMedicationSection(
     onPreviousDayClick: () -> Unit,
     onNextDayClick: () -> Unit,
     onAddTodayMedicationClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    scheduleMessage: String? = null,
 ) {
     val filteredMedications = todayMedications.filter { it.date == selectedDate }
 
@@ -225,7 +227,8 @@ internal fun TodayMedicationSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         TodayMedicationStatusCard(
-            medications = filteredMedications
+            medications = filteredMedications,
+            scheduleMessage = scheduleMessage,
         )
     }
 }
@@ -419,7 +422,8 @@ private fun HealthGreenOutlineAddButton(
 
 @Composable
 private fun TodayMedicationStatusCard(
-    medications: List<TodayMedicationUiState>
+    medications: List<TodayMedicationUiState>,
+    scheduleMessage: String? = null,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
     val backgroundColor = if (medications.isEmpty()) {
@@ -441,9 +445,9 @@ private fun TodayMedicationStatusCard(
             ),
         horizontalAlignment = Alignment.Start
     ) {
-        if (medications.isEmpty()) {
+        if (scheduleMessage != null || medications.isEmpty()) {
             Text(
-                text = "오늘 복용할 약이 없어요",
+                text = scheduleMessage ?: "오늘 복용할 약이 없어요",
                 modifier = Modifier.padding(vertical = 21.dp),
                 style = SeniorOnTextStyles.BodyMSemiBold,
                 color = SeniorOnColors.Gray500

@@ -31,8 +31,7 @@ interface FamilyServerRepository {
     suspend fun getCode(seniorId: Long): FamilyCodeInfo = getCode()
     suspend fun getHome(): ServerFamilyHome
     suspend fun getHome(seniorId: Long): ServerFamilyHome = getHome()
-    suspend fun getMembers(): List<ServerFamilyMember>
-    suspend fun getMembers(seniorId: Long): List<ServerFamilyMember> = getMembers()
+    suspend fun getMembers(seniorId: Long? = null): List<ServerFamilyMember>
     suspend fun changePrimaryManager(userId: Long)
     suspend fun changePrimaryManager(userId: Long, seniorId: Long) = changePrimaryManager(userId)
     suspend fun deleteMember(userId: Long)
@@ -44,20 +43,14 @@ interface FamilyServerRepository {
     suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
         error("Photo-group disconnection is not implemented")
     }
-    suspend fun getPhotoAlbums(): List<ServerFamilyPhotoAlbum>
+    suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum>
     suspend fun getPhotos(
         uploaderId: Long? = null,
         cursorAt: String? = null,
         cursorId: Long? = null,
         size: Int? = null,
+        seniorId: Long? = null,
     ): ServerFamilyPhotoPage
-    suspend fun getPhotos(
-        uploaderId: Long? = null,
-        cursorAt: String? = null,
-        cursorId: Long? = null,
-        size: Int? = null,
-        seniorId: Long,
-    ): ServerFamilyPhotoPage = getPhotos(uploaderId, cursorAt, cursorId, size)
     suspend fun uploadPhoto(
         photo: PreparedFamilyPhoto,
         description: String,
@@ -71,7 +64,7 @@ interface FamilyServerRepository {
         photoGroupIds: List<Long>,
     ): ServerFamilyPhoto = uploadPhoto(photo, description, idempotencyKey)
     suspend fun getPhoto(photoId: Long): ServerFamilyPhoto
-    suspend fun markPhotoViewed(photoId: Long)
+    suspend fun markPhotoViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
 }
 
@@ -101,12 +94,12 @@ interface MedicationRepository {
 }
 
 interface NotificationRepository {
-    suspend fun getNotifications(type: String, cursor: Long? = null, size: Int? = null): NotificationPage
+    suspend fun getNotifications(seniorId: Long, type: String, cursor: Long? = null, size: Int? = null): NotificationPage
     suspend fun markRead(id: Long)
     suspend fun delete(id: Long)
-    suspend fun getHome(): NotificationHome
-    suspend fun updateSetting(type: String, enabled: Boolean): NotificationSetting
-    suspend fun isParentDeviceOnline(): Boolean
+    suspend fun getHome(seniorId: Long): NotificationHome
+    suspend fun updateSetting(seniorId: Long, type: String, enabled: Boolean): NotificationSetting
+    suspend fun isParentDeviceOnline(seniorId: Long): Boolean
     suspend fun getInactivitySetting(userId: Long): InactivitySetting
     suspend fun getMyInactivitySetting(): InactivitySetting
     suspend fun updateInactivitySetting(userId: Long, thresholdHours: Int): InactivitySetting

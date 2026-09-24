@@ -4,26 +4,26 @@ import com.example.senior_on.data.remote.dto.*
 import retrofit2.http.*
 
 interface MedicationApi {
-    @GET("api/medications/parents/{parentUserId}")
-    suspend fun getMedications(@Path("parentUserId") parentUserId: Long): ApiResponse<List<MedicationReadResponse>>
-    @POST("api/medications/parents/{parentUserId}") suspend fun create(
-        @Path("parentUserId") parentUserId: Long, @Body request: MedicationCreateRequest
+    @GET("api/medications/seniors/{seniorId}")
+    suspend fun getMedications(@Path("seniorId") seniorId: Long): ApiResponse<List<MedicationReadResponse>>
+    @POST("api/medications/seniors/{seniorId}") suspend fun create(
+        @Path("seniorId") seniorId: Long, @Body request: MedicationCreateRequest
     ): ApiResponse<MedicationCreateResponse>
-    @PUT("api/medications/parents/{parentUserId}") suspend fun update(
-        @Path("parentUserId") parentUserId: Long, @Body request: MedicationUpdateRequest
+    @PUT("api/medications/seniors/{seniorId}") suspend fun update(
+        @Path("seniorId") seniorId: Long, @Body request: MedicationUpdateRequest
     ): ApiResponse<String>
-    @DELETE("api/medications/parents/{parentUserId}/groups/{medicationGroupId}") suspend fun delete(
-        @Path("parentUserId") parentUserId: Long, @Path("medicationGroupId") medicationGroupId: String
+    @DELETE("api/medications/seniors/{seniorId}/groups/{medicationGroupId}") suspend fun delete(
+        @Path("seniorId") seniorId: Long, @Path("medicationGroupId") medicationGroupId: String
     ): ApiResponse<String>
     @GET("api/v1/medications/schedules") suspend fun getMySchedules(
         @Query("date") date: String
     ): ApiResponse<List<MedicationScheduleResponse>>
-    @GET("api/v1/medications/parents/{parentUserId}/schedules") suspend fun getParentSchedules(
-        @Path("parentUserId") parentUserId: Long, @Query("date") date: String
+    @GET("api/v1/medications/seniors/{seniorId}/schedules") suspend fun getParentSchedules(
+        @Path("seniorId") seniorId: Long, @Query("date") date: String
     ): ApiResponse<List<MedicationScheduleResponse>>
-    @GET("api/v1/medications/parents/{parentUserId}/schedules/monthly")
+    @GET("api/v1/medications/seniors/{seniorId}/schedules/monthly")
     suspend fun getParentMonthlySchedules(
-        @Path("parentUserId") parentUserId: Long,
+        @Path("seniorId") seniorId: Long,
         @Query("year") year: Int,
         @Query("month") month: Int,
     ): ApiResponse<MedicationMonthlyScheduleResponse>

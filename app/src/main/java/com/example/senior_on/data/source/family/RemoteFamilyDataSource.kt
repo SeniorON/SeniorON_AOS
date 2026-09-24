@@ -39,14 +39,8 @@ interface RemoteFamilySource {
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
+        seniorId: Long? = null,
     ): FamilyPhotoListResponse
-    suspend fun getPhotos(
-        seniorId: Long,
-        uploaderId: Long?,
-        cursorAt: String?,
-        cursorId: Long?,
-        size: Int?,
-    ): FamilyPhotoListResponse = getPhotos(uploaderId, cursorAt, cursorId, size)
     suspend fun createPhotoUploadUrl(
         request: FamilyPhotoUploadUrlRequest,
     ): FamilyPhotoUploadUrlResponse
@@ -59,8 +53,8 @@ interface RemoteFamilySource {
         request: FamilyPhotoUploadCompleteRequest,
     ): FamilyPhotoItemResponse
     suspend fun getPhoto(photoId: Long): FamilyPhotoItemResponse
-    suspend fun getAlbums(): List<FamilyPhotoAlbumResponse>
-    suspend fun markViewed(photoId: Long)
+    suspend fun getAlbums(seniorId: Long): List<FamilyPhotoAlbumResponse>
+    suspend fun markViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
 }
 
@@ -109,19 +103,14 @@ class RemoteFamilyDataSource(
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
+        seniorId: Long?,
     ) = api.getPhotos(
+        seniorId = seniorId,
         uploaderUserId = uploaderId,
         cursorCreatedAt = cursorAt,
         cursorId = cursorId,
         size = size,
     ).requireData()
-    override suspend fun getPhotos(
-        seniorId: Long,
-        uploaderId: Long?,
-        cursorAt: String?,
-        cursorId: Long?,
-        size: Int?,
-    ) = api.getPhotos(seniorId, uploaderId, cursorAt, cursorId, size).requireData()
     override suspend fun createPhotoUploadUrl(
         request: FamilyPhotoUploadUrlRequest,
     ) = api.createPhotoUploadUrl(request).requireData()
@@ -137,7 +126,7 @@ class RemoteFamilyDataSource(
         request: FamilyPhotoUploadCompleteRequest,
     ) = api.completePhotoUpload(idempotencyKey, request).requireData()
     override suspend fun getPhoto(photoId: Long) = api.getPhoto(photoId).requireData()
-    override suspend fun getAlbums() = api.getAlbums().requireData()
-    override suspend fun markViewed(photoId: Long) { api.markViewed(photoId) }
+    override suspend fun getAlbums(seniorId: Long) = api.getAlbums(seniorId).requireData()
+    override suspend fun markViewed(photoId: Long, seniorId: Long) { api.markViewed(photoId, seniorId) }
     override suspend fun deletePhoto(photoId: Long) { api.deletePhoto(photoId) }
 }

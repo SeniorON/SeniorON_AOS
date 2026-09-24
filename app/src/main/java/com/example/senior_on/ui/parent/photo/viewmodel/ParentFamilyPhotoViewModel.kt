@@ -8,6 +8,9 @@ import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.domain.model.server.ServerFamilyPhoto
 import com.example.senior_on.domain.model.server.ServerFamilyPhotoCursor
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -54,12 +57,21 @@ data class ParentFamilyPhotoUiState(
 
 class ParentFamilyPhotoViewModel(
     private val repository: FamilyServerRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentFamilyPhotoUiState())
     val uiState = _uiState.asStateFlow()
 
     private var photoLoadJob: Job? = null
     private var nextCursor: ServerFamilyPhotoCursor? = null
+    private val seniorIdMutex = Mutex()
+    private var ownSeniorId: Long? = null
+
+    private suspend fun requireOwnSeniorId(): Long = seniorIdMutex.withLock {
+        ownSeniorId ?: requireNotNull(
+            authRepository.getOnboardingStatus().seniorId?.takeIf { it > 0 }
+        ) { "연결된 시니어 정보를 찾을 수 없어요." }.also { ownSeniorId = it }
+    }
 
     fun loadAlbums(isRefresh: Boolean = false) {
         if (_uiState.value.isRefreshing) return
@@ -71,7 +83,7 @@ class ParentFamilyPhotoViewModel(
                     errorMessage = null,
                 )
             }
-            runCatching { repository.getPhotoAlbums() }
+            runCatching { repository.getPhotoAlbums(requireOwnSeniorId()) }
                 .onSuccess { albums ->
                     _uiState.update { state ->
                         state.copy(
@@ -162,7 +174,7 @@ class ParentFamilyPhotoViewModel(
         if (!photo.isNew) return
 
         viewModelScope.launch {
-            runCatching { repository.markPhotoViewed(serverPhotoId) }
+            runCatching { repository.markPhotoViewed(serverPhotoId, requireOwnSeniorId()) }
                 .onSuccess {
                     _uiState.update { state ->
                         state.copy(
@@ -180,6 +192,12 @@ class ParentFamilyPhotoViewModel(
                     }
                     loadAlbums()
                 }
+                .onFailure { exception ->
+                    if (exception is CancellationException) throw exception
+                    _uiState.update {
+                        it.copy(photoErrorMessage = "사진 확인 상태를 저장하지 못했어요. 다시 시도해 주세요.")
+                    }
+                }
         }
     }
 
@@ -189,6 +207,7 @@ class ParentFamilyPhotoViewModel(
             _uiState.update { it.copy(isPhotoLoading = true, photoErrorMessage = null) }
             runCatching {
                 repository.getPhotos(
+                    seniorId = requireOwnSeniorId(),
                     uploaderId = uploaderId,
                     cursorAt = cursor?.createdAt,
                     cursorId = cursor?.photoId,
@@ -228,8 +247,8 @@ class ParentFamilyPhotoViewModel(
     companion object {
         private const val PHOTO_PAGE_SIZE = 20
 
-        fun factory(repository: FamilyServerRepository) = viewModelFactory {
-            initializer { ParentFamilyPhotoViewModel(repository) }
+        fun factory(repository: FamilyServerRepository, authRepository: AuthRepository) = viewModelFactory {
+            initializer { ParentFamilyPhotoViewModel(repository, authRepository) }
         }
     }
 }

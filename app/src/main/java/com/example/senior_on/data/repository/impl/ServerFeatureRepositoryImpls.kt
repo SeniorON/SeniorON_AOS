@@ -197,10 +197,7 @@ class FamilyServerRepositoryImpl(
             photoGroupId = response.photoGroupId?.requirePositiveFamilyId("photoGroupId"),
         )
     }
-    override suspend fun getMembers() = source.getMembers().map(
-        FamilyMemberResponse::toServerFamilyMember,
-    )
-    override suspend fun getMembers(seniorId: Long) = source.getMembers(seniorId).map(
+    override suspend fun getMembers(seniorId: Long?) = source.getMembers(seniorId).map(
         FamilyMemberResponse::toServerFamilyMember,
     )
     override suspend fun changePrimaryManager(userId: Long) {
@@ -240,7 +237,7 @@ class FamilyServerRepositoryImpl(
         require(photoGroupId > 0L) { "연결된 사진 그룹 정보가 올바르지 않습니다." }
         source.disconnectPhotoGroup(seniorId = seniorId, photoGroupId = photoGroupId)
     }
-    override suspend fun getPhotoAlbums() = source.getAlbums().map { album ->
+    override suspend fun getPhotoAlbums(seniorId: Long) = source.getAlbums(seniorId).map { album ->
         ServerFamilyPhotoAlbum(
             uploaderId = album.uploaderUserId.requirePositiveFamilyId("uploaderUserId"),
             uploaderName = album.uploaderName.orEmpty(),
@@ -254,14 +251,8 @@ class FamilyServerRepositoryImpl(
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-    ) = mapFamilyPhotoPage(source.getPhotos(uploaderId, cursorAt, cursorId, size))
-    override suspend fun getPhotos(
-        uploaderId: Long?,
-        cursorAt: String?,
-        cursorId: Long?,
-        size: Int?,
-        seniorId: Long,
-    ) = mapFamilyPhotoPage(source.getPhotos(seniorId, uploaderId, cursorAt, cursorId, size))
+        seniorId: Long?,
+    ) = mapFamilyPhotoPage(source.getPhotos(uploaderId, cursorAt, cursorId, size, seniorId))
 
     private fun mapFamilyPhotoPage(response: FamilyPhotoListResponse) = response.let {
         ServerFamilyPhotoPage(
@@ -436,7 +427,7 @@ class FamilyServerRepositoryImpl(
     }
     override suspend fun getPhoto(photoId: Long) =
         source.getPhoto(photoId).toServerFamilyPhoto()
-    override suspend fun markPhotoViewed(photoId: Long) = source.markViewed(photoId)
+    override suspend fun markPhotoViewed(photoId: Long, seniorId: Long) = source.markViewed(photoId, seniorId)
     override suspend fun deletePhoto(photoId: Long) = source.deletePhoto(photoId)
 }
 
@@ -669,8 +660,8 @@ internal fun MedicationMonthlyScheduleResponse.toDomain(
 class NotificationRepositoryImpl(
     private val source: NotificationDataSource
 ) : NotificationRepository {
-    override suspend fun getNotifications(type: String, cursor: Long?, size: Int?) =
-        source.getNotifications(type.trim().uppercase(), cursor, size).let {
+    override suspend fun getNotifications(seniorId: Long, type: String, cursor: Long?, size: Int?) =
+        source.getNotifications(seniorId, type.trim().uppercase(), cursor, size).let {
             NotificationPage(
                 it.totalCount ?: 0L,
                 it.items.orEmpty().map { item ->
@@ -684,7 +675,7 @@ class NotificationRepositoryImpl(
         }
     override suspend fun markRead(id: Long) = source.markRead(id)
     override suspend fun delete(id: Long) = source.delete(id)
-    override suspend fun getHome() = source.getSettings().let { response ->
+    override suspend fun getHome(seniorId: Long) = source.getSettings(seniorId).let { response ->
         NotificationHome(
             enabledCount = response.enabledCount ?: 0L,
             items = response.items.orEmpty().map { item ->
@@ -708,11 +699,11 @@ class NotificationRepositoryImpl(
             },
         )
     }
-    override suspend fun updateSetting(type: String, enabled: Boolean) =
-        source.updateSetting(type.trim().uppercase(), NotificationSettingRequest(enabled)).let {
+    override suspend fun updateSetting(seniorId: Long, type: String, enabled: Boolean) =
+        source.updateSetting(seniorId, type.trim().uppercase(), NotificationSettingRequest(enabled)).let {
             NotificationSetting(it.type.orEmpty(), it.enabled == true)
         }
-    override suspend fun isParentDeviceOnline() = source.getParentDeviceStatus().online == true
+    override suspend fun isParentDeviceOnline(seniorId: Long) = source.getParentDeviceStatus(seniorId).online == true
     override suspend fun getInactivitySetting(userId: Long) =
         source.getInactivitySetting(userId).toDomain()
     override suspend fun getMyInactivitySetting() =

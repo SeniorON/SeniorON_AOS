@@ -3,7 +3,8 @@ package com.example.senior_on.ui.parent.launcher.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -22,7 +23,7 @@ data class ParentFamilyMembershipUiState(
 )
 
 class ParentFamilyMembershipViewModel(
-    private val repository: FamilyServerRepository,
+    private val repository: AuthRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentFamilyMembershipUiState())
     val uiState = _uiState.asStateFlow()
@@ -36,7 +37,9 @@ class ParentFamilyMembershipViewModel(
             _uiState.update {
                 it.copy(status = ParentFamilyMembershipStatus.Checking)
             }
-            runCatching { repository.hasFamily() }
+            // Membership does not require a selected senior or the full member list.
+            // Parent accounts may have a family before a senior profile is available.
+            runCatching { repository.getOnboardingStatus().hasFamily }
                 .onSuccess { hasFamily ->
                     _uiState.update {
                         it.copy(
@@ -49,6 +52,7 @@ class ParentFamilyMembershipViewModel(
                     }
                 }
                 .onFailure {
+                    if (it is CancellationException) throw it
                     _uiState.update {
                         it.copy(status = ParentFamilyMembershipStatus.Error)
                     }
@@ -64,7 +68,7 @@ class ParentFamilyMembershipViewModel(
 
     companion object {
         fun factory(
-            repository: FamilyServerRepository,
+            repository: AuthRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =

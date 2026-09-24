@@ -423,6 +423,7 @@ private class FakeRemoteFamilySource(
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
+        seniorId: Long?,
     ) = photos
 
     override suspend fun createPhotoUploadUrl(
@@ -470,9 +471,9 @@ private class FakeRemoteFamilySource(
         return photo
     }
 
-    override suspend fun getAlbums(): List<FamilyPhotoAlbumResponse> = emptyList()
+    override suspend fun getAlbums(seniorId: Long): List<FamilyPhotoAlbumResponse> = emptyList()
 
-    override suspend fun markViewed(photoId: Long) = Unit
+    override suspend fun markViewed(photoId: Long, seniorId: Long) = Unit
 
     override suspend fun deletePhoto(photoId: Long) = Unit
 }

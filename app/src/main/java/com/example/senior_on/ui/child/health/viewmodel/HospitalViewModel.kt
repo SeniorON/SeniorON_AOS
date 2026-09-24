@@ -36,6 +36,7 @@ data class HospitalUiState(
     val editingAppointment: HospitalAppointmentUiState? = null,
     val editorDate: LocalDate = koreaToday(),
     val isLoading: Boolean = false,
+    val hasLoadedContent: Boolean = false,
     val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
@@ -44,11 +45,11 @@ data class HospitalUiState(
 class HospitalViewModel(
     private val hospitalRepository: HospitalRepository,
     private val familyRepository: FamilyServerRepository,
+    private val seniorId: Long? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HospitalUiState())
     val uiState: StateFlow<HospitalUiState> = _uiState.asStateFlow()
 
-    private var parentUserId: Long? = null
     private var fullLoadJob: Job? = null
     private var monthLoadJob: Job? = null
     private var dailyLoadJob: Job? = null
@@ -128,18 +129,18 @@ class HospitalViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             runCatching {
-                val parentId = resolveParentUserId()
+                val targetSeniorId = requireSeniorId()
                 val current = _uiState.value.editingAppointment
                 val domain = draft.toDomain(current?.id ?: 0L)
                 if (_uiState.value.editorMode == HospitalEditorMode.Edit &&
                     current != null &&
                     current.id > 0L
                 ) {
-                    hospitalRepository.update(parentId, domain.copy(id = current.id))
+                    hospitalRepository.update(targetSeniorId, domain.copy(id = current.id))
                 } else {
-                    hospitalRepository.create(parentId, domain)
+                    hospitalRepository.create(targetSeniorId, domain)
                 }
-                refreshAll(parentId, _uiState.value.displayedMonth)
+                refreshAll(targetSeniorId, _uiState.value.displayedMonth)
             }.onSuccess { result ->
                 applyRemoteData(result, closeEditor = true)
             }.onFailure { throwable ->
@@ -160,9 +161,9 @@ class HospitalViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             runCatching {
-                val parentId = resolveParentUserId()
-                hospitalRepository.delete(parentId, target.id)
-                refreshAll(parentId, _uiState.value.displayedMonth)
+                val targetSeniorId = requireSeniorId()
+                hospitalRepository.delete(targetSeniorId, target.id)
+                refreshAll(targetSeniorId, _uiState.value.displayedMonth)
             }.onSuccess { result ->
                 applyRemoteData(result, closeEditor = true)
             }.onFailure {
@@ -199,14 +200,14 @@ class HospitalViewModel(
         fullLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
                     errorMessage = null,
                 )
             }
             runCatching {
-                val parentId = resolveParentUserId()
-                refreshAll(parentId, _uiState.value.displayedMonth)
+                val targetSeniorId = requireSeniorId()
+                refreshAll(targetSeniorId, _uiState.value.displayedMonth)
             }.onSuccess(::applyRemoteData)
                 .onFailure {
                     _uiState.update {
@@ -226,10 +227,10 @@ class HospitalViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val requestedDate = _uiState.value.selectedDate
             runCatching {
-                val parentId = resolveParentUserId()
-                val monthly = hospitalRepository.getMonthly(parentId, month.year, month.monthValue)
+                val targetSeniorId = requireSeniorId()
+                val monthly = hospitalRepository.getMonthly(targetSeniorId, month.year, month.monthValue)
                     .map { it.toUiState(highlighted = false) }
-                val daily = hospitalRepository.getDaily(parentId, requestedDate.toString())
+                val daily = hospitalRepository.getDaily(targetSeniorId, requestedDate.toString())
                     .map { it.toUiState(highlighted = false) }
                 monthly to daily
             }.onSuccess { (monthly, daily) ->
@@ -260,8 +261,8 @@ class HospitalViewModel(
         dailyLoadJob?.cancel()
         dailyLoadJob = viewModelScope.launch {
             runCatching {
-                val parentId = resolveParentUserId()
-                hospitalRepository.getDaily(parentId, date.toString())
+                val targetSeniorId = requireSeniorId()
+                hospitalRepository.getDaily(targetSeniorId, date.toString())
                     .map { it.toUiState(highlighted = false) }
             }.onSuccess { daily ->
                 if (_uiState.value.selectedDate == date) {
@@ -277,14 +278,14 @@ class HospitalViewModel(
     }
 
     private suspend fun refreshAll(
-        parentId: Long,
+        targetSeniorId: Long,
         month: YearMonth,
     ): RemoteHospitalData {
-        val monthly = hospitalRepository.getMonthly(parentId, month.year, month.monthValue)
+        val monthly = hospitalRepository.getMonthly(targetSeniorId, month.year, month.monthValue)
             .map { it.toUiState(highlighted = false) }
-        val daily = hospitalRepository.getDaily(parentId, _uiState.value.selectedDate.toString())
+        val daily = hospitalRepository.getDaily(targetSeniorId, _uiState.value.selectedDate.toString())
             .map { it.toUiState(highlighted = false) }
-        val upcoming = hospitalRepository.getUpcoming(parentId)
+        val upcoming = hospitalRepository.getUpcoming(targetSeniorId)
             .flatMapIndexed { index, group ->
                 group.appointments.map { appointment ->
                     appointment.toUiState(highlighted = index == 0)
@@ -299,6 +300,7 @@ class HospitalViewModel(
     ) {
         _uiState.update { state ->
             state.copy(
+                hasLoadedContent = true,
                 monthlyAppointments = result.monthly,
                 selectedDateAppointments = result.daily,
                 upcomingAppointments = result.upcoming,
@@ -312,25 +314,18 @@ class HospitalViewModel(
         }
     }
 
-    private suspend fun resolveParentUserId(): Long {
-        parentUserId?.let { return it }
-        val id = familyRepository.getMembers()
-            .firstOrNull { member -> member.role.equals(ParentRole, ignoreCase = true) }
-            ?.id
-            ?.takeIf { it > 0L }
-            ?: error("연결된 시니어 사용자를 찾을 수 없습니다.")
-        parentUserId = id
-        return id
-    }
+    private suspend fun requireSeniorId(): Long =
+        requireNotNull(seniorId?.takeIf { it > 0 }) { "관리할 시니어를 먼저 선택해 주세요." }
 
     companion object {
         fun factory(
             hospitalRepository: HospitalRepository,
             familyRepository: FamilyServerRepository,
+            seniorId: Long? = null,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                HospitalViewModel(hospitalRepository, familyRepository) as T
+                HospitalViewModel(hospitalRepository, familyRepository, seniorId) as T
         }
     }
 }

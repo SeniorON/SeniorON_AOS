@@ -10,6 +10,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object SeniorOnNetwork {
+    val parentSettingsApi: ParentSettingsApi by lazy { retrofit.create(ParentSettingsApi::class.java) }
     private const val BASE_URL = "https://senioron.site/"
     private const val FAMILY_PHOTO_UPLOAD_WRITE_TIMEOUT_SECONDS = 120L
     private const val FAMILY_PHOTO_UPLOAD_CALL_TIMEOUT_SECONDS = 150L

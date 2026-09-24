@@ -6,13 +6,19 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentSchedule
-import com.example.senior_on.domain.repository.server.HomeServerRepository
+import com.example.senior_on.domain.repository.server.HospitalRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdateEvent
 
 data class ParentScheduleUiState(
     val date: LocalDate = koreaToday(),
@@ -26,66 +32,91 @@ data class ParentScheduleUiState(
 }
 
 class ParentScheduleViewModel(
-    private val repository: HomeServerRepository
+    private val repository: HospitalRepository,
+    private val updatesRepository: ParentHomeUpdatesRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentScheduleUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun loadTodaySchedules(isRefresh: Boolean = false) {
-        if (_uiState.value.isRefreshing) return
-        viewModelScope.launch {
-            val today = koreaToday()
-            _uiState.update {
-                it.copy(
-                    date = today,
-                    isLoading = !isRefresh,
-                    isRefreshing = isRefresh,
-                    errorMessage = null,
-                )
-            }
+    private var loadJob: Job? = null
+    private var pending = false
+    private var pendingVisible = false
+    private var hasLoaded = false
 
-            runCatching {
-                val schedule = repository.getSeniorHome().todaySchedule
-                val scheduledTime = schedule?.scheduledTime.toLocalTimeOrNull()
-                listOfNotNull(schedule?.title?.takeIf(String::isNotBlank)?.let { title ->
-                    val time = scheduledTime ?: return@let null
-                    ParentSchedule(
-                        id = schedule.scheduleId?.toString() ?: "today-schedule",
-                        date = today,
-                        time = time,
-                        title = title,
-                        description = schedule.description?.takeIf(String::isNotBlank),
-                    )
-                })
+    suspend fun observeUpdates() {
+        loadTodaySchedules(silent = true)
+        updatesRepository.observeUpdates().collect { event ->
+            if (event == ParentHomeUpdateEvent.Subscribed || event == ParentHomeUpdateEvent.ScheduleUpdated) {
+                loadTodaySchedules(silent = true)
             }
-                .onSuccess { schedules ->
-                    _uiState.update {
-                        it.copy(
-                            schedules = schedules.sortedBy(ParentSchedule::time),
-                            isLoading = false,
-                            isRefreshing = false,
+        }
+    }
+
+    fun loadTodaySchedules(isRefresh: Boolean = false, silent: Boolean = false) {
+        pending = true
+        pendingVisible = pendingVisible || (isRefresh && !silent)
+        if (loadJob?.isActive == true) return
+        loadJob = viewModelScope.launch {
+            while (pending) {
+                delay(150)
+                pending = false
+                val visible = pendingVisible
+                pendingVisible = false
+                val today = koreaToday()
+                _uiState.update {
+                    it.copy(
+                        date = today,
+                        isLoading = !hasLoaded,
+                        isRefreshing = visible,
+                        errorMessage = null,
+                    )
+                }
+
+                runCatching {
+                    val seniorId = requireNotNull(
+                        authRepository.getOnboardingStatus().seniorId?.takeIf { it > 0 }
+                    ) { "연결된 시니어 정보를 찾을 수 없어요." }
+                    repository.getDaily(seniorId, today.toString()).map { schedule ->
+                        ParentSchedule(
+                            id = schedule.id.toString(),
+                            date = today,
+                            time = LocalTime.parse(schedule.time.trim()),
+                            title = schedule.hospitalName,
+                            description = schedule.department.takeIf(String::isNotBlank),
                         )
                     }
                 }
-                .onFailure {
-                    _uiState.update {
-                        it.copy(
-                            schedules = emptyList(),
-                            isLoading = false,
-                            isRefreshing = false,
-                            errorMessage = "일정을 불러오지 못했어요."
-                        )
+                    .onSuccess { schedules ->
+                        _uiState.update {
+                            it.copy(
+                                schedules = schedules.sortedBy(ParentSchedule::time),
+                                isLoading = false,
+                                isRefreshing = false,
+                            )
+                        }
                     }
-                }
+                    .onFailure { error ->
+                        if (error is CancellationException) throw error
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                errorMessage = "일정을 불러오지 못했어요."
+                            )
+                        }
+                    }
+                hasLoaded = true
+            }
         }
     }
 
     fun refresh() = loadTodaySchedules(isRefresh = true)
 
     companion object {
-        fun factory(repository: HomeServerRepository) = viewModelFactory {
+        fun factory(repository: HospitalRepository, updatesRepository: ParentHomeUpdatesRepository, authRepository: AuthRepository) = viewModelFactory {
             initializer {
-                ParentScheduleViewModel(repository)
+                ParentScheduleViewModel(repository, updatesRepository, authRepository)
             }
         }
     }
@@ -98,10 +129,4 @@ internal fun LocalTime.toParentDisplayTime(): String {
         else -> value
     }
     return "$period $displayHour:${minute.toString().padStart(2, '0')}"
-}
-
-private fun String?.toLocalTimeOrNull(): LocalTime? {
-    val value = this?.trim().orEmpty()
-    if (value.isEmpty()) return null
-    return runCatching { LocalTime.parse(value) }.getOrNull()
 }

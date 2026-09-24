@@ -28,7 +28,7 @@ class FamilyApiContractTest {
     @Test
     fun `family photo list sends the selected senior id`() {
         assertEquals(
-            listOf("seniorId", "uploaderUserId", "cursorCreatedAt", "cursorId", "size"),
+            listOf("uploaderUserId", "cursorCreatedAt", "cursorId", "size", "seniorId"),
             queryNames("getPhotos"),
         )
     }

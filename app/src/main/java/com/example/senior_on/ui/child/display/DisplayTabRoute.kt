@@ -60,6 +60,9 @@ fun DisplayTabRoute(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshOnScreenTabReentry()
+    }
     val saveableStateHolder = rememberSaveableStateHolder()
     var destination by rememberSaveable { mutableStateOf(DisplayDestination.Overview) }
     var selectedAddress by rememberSaveable { mutableStateOf("") }

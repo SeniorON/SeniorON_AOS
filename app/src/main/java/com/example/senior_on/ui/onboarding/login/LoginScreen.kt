@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -96,6 +98,7 @@ fun LoginScreen(
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
     var isLoggingIn by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val userIdError = loginError == LoginFieldError.InvalidCredentials
     val passwordError = loginError != LoginFieldError.None
     val passwordErrorMessage = when (loginError) {
@@ -105,6 +108,8 @@ fun LoginScreen(
         LoginFieldError.None -> null
     }
     val performLogin: () -> Unit = {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
         loginError = when {
             password.isBlank() -> LoginFieldError.EmptyPassword
             userId.isBlank() -> LoginFieldError.InvalidCredentials
@@ -395,6 +400,7 @@ private fun LoginTextField(
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = SeniorOnColors.Primary600,
         unfocusedBorderColor = SeniorOnColors.Gray200,
@@ -435,7 +441,7 @@ private fun LoginTextField(
                     trailingIcon = {
                         when {
                             trailingIcon != null -> trailingIcon()
-                            showClearButton && value.isNotEmpty() -> {
+                            showClearButton && value.isNotEmpty() && !isFocused -> {
                                 IconButton(onClick = { onValueChange("") }) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_close),

@@ -121,6 +121,31 @@ class ParentHomeRealtimeTest {
         override fun observeUpdates() = events
     }
 
+    @Test fun scheduleEventRefreshesOnlyScheduleCard() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            val repo = FakeHome()
+            val events = FakeUpdates()
+            val vm = ParentHomeViewModel(repo, events).also { store.put("home", it) }
+            backgroundScope.launch { vm.observeHomeUpdates() }
+            runCurrent(); advanceUntilIdle()
+            val initialButtons = vm.uiState.value.buttons
+            repo.next = { snapshot("changed", ServerTodaySchedule("병원", "내과", 1, null, 42, "15:00")) }
+            repeat(5) { events.events.emit(ParentHomeUpdateEvent.ScheduleUpdated) }
+            runCurrent(); advanceUntilIdle()
+            assertEquals(2, repo.homeCalls)
+            assertEquals(initialButtons, vm.uiState.value.buttons)
+            assertEquals("병원", vm.uiState.value.schedule.title)
+            events.events.emit(ParentHomeUpdateEvent.MedicationUpdated)
+            runCurrent(); advanceUntilIdle()
+            assertEquals(2, repo.homeCalls)
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
     private class FakeHome : HomeServerRepository by unusedRepository() {
         var homeCalls = 0
         var next: suspend () -> SeniorHomeSnapshot = { snapshot("initial") }

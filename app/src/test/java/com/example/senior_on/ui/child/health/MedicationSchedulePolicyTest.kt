@@ -41,7 +41,7 @@ class MedicationSchedulePolicyTest {
     }
 
     @Test
-    fun `일주 복용 기간은 시작일과 같은 요일까지 포함한다`() {
+    fun `일주 복용 기간은 시작일 포함 7일이다`() {
         val medication = medication(
             weekdays = (0..6).toSet(),
             startDate = LocalDate.of(2026, 8, 1),
@@ -53,7 +53,8 @@ class MedicationSchedulePolicyTest {
         )
 
         assertTrue(medication.isScheduledOn(LocalDate.of(2026, 8, 7)))
-        assertTrue(medication.isScheduledOn(LocalDate.of(2026, 8, 8)))
+        assertTrue(medication.isScheduledOn(LocalDate.of(2026, 8, 1)))
+        assertFalse(medication.isScheduledOn(LocalDate.of(2026, 8, 8)))
         assertFalse(medication.isScheduledOn(LocalDate.of(2026, 8, 9)))
     }
 
@@ -105,6 +106,18 @@ class MedicationSchedulePolicyTest {
                 remoteSchedules = emptyList(),
             ),
         )
+    }
+
+    @Test
+    fun `복용 기간 안내는 시작일 포함 종료일을 표시한다`() {
+        val repeat = MedicationRepeatSelection(
+            duration = MedicationRepeatDuration.Period,
+            periodValue = 1,
+        )
+        assertEquals("1주 · 9월28일까지", repeat.summaryLabel(LocalDate.of(2026, 9, 22)))
+        assertEquals("1주 · 1월6일까지", repeat.summaryLabel(LocalDate.of(2026, 12, 31)))
+        assertEquals("1주 · 3월3일까지", repeat.summaryLabel(LocalDate.of(2028, 2, 26)))
+        assertEquals("2주 · 10월5일까지", repeat.copy(periodValue = 2).summaryLabel(LocalDate.of(2026, 9, 22)))
     }
 
     private fun medication(

@@ -44,20 +44,23 @@ interface FamilyApi {
         @Query("seniorId") seniorId: Long,
     ): ApiResponse<Unit>
     @GET("api/family/photos") suspend fun getPhotos(
-        @Query("seniorId") seniorId: Long? = null,
         @Query("uploaderUserId") uploaderUserId: Long? = null,
         @Query("cursorCreatedAt") cursorCreatedAt: String? = null,
         @Query("cursorId") cursorId: Long? = null,
-        @Query("size") size: Int? = null
+        @Query("size") size: Int? = null,
+        @Query("seniorId") seniorId: Long? = null,
     ): ApiResponse<FamilyPhotoListResponse>
     @GET("api/family/photos/{familyPhotoId}")
     suspend fun getPhoto(
         @Path("familyPhotoId") familyPhotoId: Long,
     ): ApiResponse<FamilyPhotoItemResponse>
     @GET("api/family/photos/albums")
-    suspend fun getAlbums(): ApiResponse<List<FamilyPhotoAlbumResponse>>
+    suspend fun getAlbums(@Query("seniorId") seniorId: Long): ApiResponse<List<FamilyPhotoAlbumResponse>>
     @PATCH("api/family/photos/{familyPhotoId}/viewed")
-    suspend fun markViewed(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
+    suspend fun markViewed(
+        @Path("familyPhotoId") familyPhotoId: Long,
+        @Query("seniorId") seniorId: Long,
+    ): ApiResponse<Unit>
     @DELETE("api/family/photos/{familyPhotoId}")
     suspend fun deletePhoto(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
     @POST("api/family/photos/upload-url")

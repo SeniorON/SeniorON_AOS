@@ -110,14 +110,18 @@ class ParentHomeStompSource(
                                 }
                                 "MESSAGE" -> if (
                                     subscribed && frame.headers["destination"] == destination &&
-                                    frame.headers["subscription"] == "senior-home" &&
-                                    frame.body.trim() in HOME_UPDATE_EVENT_TYPES
+                                    frame.headers["subscription"] == "senior-home"
                                 ) {
-                                    log(
-                                        "STOMP <-- MESSAGE ${frame.body.trim()} accepted; " +
-                                            "requesting home refresh"
-                                    )
-                                    trySend(ParentHomeUpdateEvent.HomeUpdated)
+                                    val event = when (frame.body.trim()) {
+                                        "HOME_UPDATED" -> ParentHomeUpdateEvent.HomeUpdated
+                                        "SCHEDULE_UPDATED" -> ParentHomeUpdateEvent.ScheduleUpdated
+                                        "MEDICATION_UPDATED" -> ParentHomeUpdateEvent.MedicationUpdated
+                                        else -> null
+                                    }
+                                    if (event != null) {
+                                        log("STOMP <-- MESSAGE ${frame.body.trim()} accepted; requesting refresh")
+                                        trySend(event)
+                                    } else log("STOMP <-- MESSAGE ignored (unknown event)")
                                 } else {
                                     log("STOMP <-- MESSAGE ignored (subscription/topic/event mismatch)")
                                 }
@@ -164,9 +168,3 @@ class ParentHomeStompSource(
         }
     }
 }
-
-private val HOME_UPDATE_EVENT_TYPES = setOf(
-    "HOME_UPDATED",
-    "SCHEDULE_UPDATED",
-    "MEDICATION_UPDATED",
-)

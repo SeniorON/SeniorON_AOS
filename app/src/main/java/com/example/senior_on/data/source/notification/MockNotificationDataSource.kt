@@ -28,6 +28,7 @@ class MockNotificationDataSource(
     private var inactivityHours = DefaultInactivityHours
 
     override suspend fun getNotifications(
+        seniorId: Long,
         type: String,
         cursor: Long?,
         size: Int?,
@@ -58,7 +59,7 @@ class MockNotificationDataSource(
         deletedNotificationIds += id
     }
 
-    override suspend fun getSettings(): NotificationHomeListResponse {
+    override suspend fun getSettings(seniorId: Long): NotificationHomeListResponse {
         val items = NotificationTypes.map { type ->
             val latest = history(type)
                 .filterNot { it.notificationId in deletedNotificationIds }
@@ -88,6 +89,7 @@ class MockNotificationDataSource(
     }
 
     override suspend fun updateSetting(
+        seniorId: Long,
         type: String,
         request: NotificationSettingRequest,
     ): NotificationSettingResponse {
@@ -98,7 +100,7 @@ class MockNotificationDataSource(
         )
     }
 
-    override suspend fun getParentDeviceStatus(): ParentDeviceStatusResponse {
+    override suspend fun getParentDeviceStatus(seniorId: Long): ParentDeviceStatusResponse {
         return ParentDeviceStatusResponse(
             online = scenario != MockNotificationScenario.ParentPhoneOffline &&
                 scenario != MockNotificationScenario.ParentPhoneNotRegistered,

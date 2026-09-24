@@ -24,8 +24,9 @@ import kotlinx.coroutines.launch
 class DisplayViewModel(
     private val parentInfoRepository: ParentInfoRepository,
     private val displayRepository: DisplayRepository,
+    restoreInitialSelection: Boolean = true,
 ) : ViewModel() {
-    private val initialParentInfo = parentInfoRepository.parentInfo.value
+    private val initialParentInfo = parentInfoRepository.parentInfo.value.takeIf { restoreInitialSelection }
     private val initialRelationshipLabel = initialParentInfo?.relationshipLabel
     private var selectedSeniorId = initialParentInfo
         ?.seniorId
@@ -54,6 +55,13 @@ class DisplayViewModel(
         if (selectedSeniorId != null) {
             loadOverview()
         }
+    }
+
+    fun clearSelection() {
+        cancelSeniorScopedRequests()
+        selectedSeniorId = null
+        selectedParentInfoSeed = null
+        _uiState.value = DisplayTabUiState()
     }
 
     fun selectSenior(
@@ -543,11 +551,13 @@ class DisplayViewModel(
         fun factory(
             parentInfoRepository: ParentInfoRepository,
             displayRepository: DisplayRepository,
+            restoreInitialSelection: Boolean = true,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 DisplayViewModel(
                     parentInfoRepository = parentInfoRepository,
                     displayRepository = displayRepository,
+                    restoreInitialSelection = restoreInitialSelection,
                 )
             }
         }

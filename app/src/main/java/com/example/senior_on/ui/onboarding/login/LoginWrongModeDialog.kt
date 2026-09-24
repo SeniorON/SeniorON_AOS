@@ -134,7 +134,7 @@ fun LoginWrongModeDialogOverlay(
                 end = 55.dp,
                 bottom = 256.5.dp
             ),
-        contentAlignment = Alignment.TopStart
+        contentAlignment = Alignment.Center
     ) {
         LoginWrongModeDialogContent(
             type = type,

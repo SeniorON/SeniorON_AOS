@@ -1,6 +1,8 @@
 package com.example.senior_on.ui.child.notification.route
 
 import androidx.compose.runtime.Composable
+import com.example.senior_on.ui.child.notification.canAccess
+import com.example.senior_on.ui.child.notification.visibleMessage
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +33,7 @@ private enum class NotificationDestination {
 fun NotificationRoute(
     repository: NotificationRepository,
     seniorId: Long? = null,
+    sessionKey: String = "",
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -42,26 +45,28 @@ fun NotificationRoute(
     val viewModel = notificationViewModel(
         repository = repository,
         seniorId = seniorId,
+        sessionKey = sessionKey,
         familyRepository = familyRepository,
         homeRepository = homeRepository,
         eventRepository = eventRepository,
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var destination by rememberSaveable {
+    var destination by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf(NotificationDestination.Home)
     }
-    var selectedCategory by rememberSaveable {
+    var selectedCategory by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf<NotificationCategory?>(null)
     }
-    var selectedMessage by remember {
+    var selectedMessage by remember(seniorId, sessionKey) {
         mutableStateOf<NotificationMessageUiState?>(null)
     }
-    var detailReturnDestination by rememberSaveable {
+    var detailReturnDestination by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf(NotificationDestination.Home)
     }
-    var isHistoryDetail by rememberSaveable { mutableStateOf(false) }
+    var isHistoryDetail by rememberSaveable(seniorId, sessionKey) { mutableStateOf(false) }
 
     fun openHistory(category: NotificationCategory) {
+        if (!uiState.hasLoadedContent || !uiState.home.canAccess(category)) return
         selectedCategory = category
         viewModel.loadHistory(category)
         destination = NotificationDestination.History
@@ -73,6 +78,7 @@ fun NotificationRoute(
         loadDetail: Boolean = true,
         fromHistory: Boolean = false,
     ) {
+        if (!uiState.hasLoadedContent || !uiState.home.canAccess(category)) return
         detailReturnDestination = destination
         isHistoryDetail = fromHistory
         selectedCategory = category
@@ -83,7 +89,8 @@ fun NotificationRoute(
         destination = NotificationDestination.Detail
     }
 
-    LaunchedEffect(navigationEvent) {
+    LaunchedEffect(navigationEvent, uiState.hasLoadedContent) {
+        if (!uiState.hasLoadedContent) return@LaunchedEffect
         val event = navigationEvent ?: return@LaunchedEffect
         val eventId = event.eventId
         val category = event.type.toNotificationCategory()
@@ -129,6 +136,18 @@ fun NotificationRoute(
         viewModel.loadLatestHome()
     }
 
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        viewModel.loadLatestHome()
+    }
+    LaunchedEffect(uiState.home) {
+        val category = if (destination == NotificationDestination.InactivitySetting)
+            NotificationCategory.Inactivity else selectedCategory
+        if (category != null && !uiState.home.canAccess(category)) {
+            selectedMessage = null
+            destination = NotificationDestination.Home
+        }
+    }
+
     when (destination) {
         NotificationDestination.Home -> NotificationHomeRoute(
             uiState = uiState.home,
@@ -139,7 +158,7 @@ fun NotificationRoute(
                 viewModel.loadInactivitySetting()
                 destination = NotificationDestination.InactivitySetting
             },
-            isLoading = uiState.isLoading,
+            isLoading = uiState.isLoading && !uiState.hasLoadedContent,
             isRefreshing = uiState.isRefreshing,
             onRefresh = viewModel::refreshHome,
             modifier = modifier,
@@ -147,7 +166,7 @@ fun NotificationRoute(
 
         NotificationDestination.History -> {
             val category = selectedCategory
-            if (category == null) {
+            if (category == null || !uiState.home.canAccess(category)) {
                 destination = NotificationDestination.Home
             } else {
                 NotificationHistoryRoute(
@@ -172,13 +191,13 @@ fun NotificationRoute(
             val message = selected?.eventId
                 ?.let(uiState.detailMessages::get)
                 ?: selected
-            if (category == null || message == null) {
+            if (category == null || message == null || !uiState.home.canAccess(category)) {
                 destination = NotificationDestination.Home
             } else {
                 NotificationDetailRoute(
                     category = category,
-                    message = message,
-                    showLocationUpdate = !isHistoryDetail,
+                    message = uiState.home.visibleMessage(message),
+                    showLocationUpdate = !isHistoryDetail && uiState.home.sharingStatusKnown && uiState.home.locationSharingEnabled,
                     parentPhoneNumber = uiState.parentPhoneNumber,
                     locationRepository = locationRepository,
                     onBackClick = {

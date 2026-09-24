@@ -41,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -187,13 +188,23 @@ internal fun ColumnScope.SeniorHomeContent(
     }
 
     Spacer(modifier = Modifier.height(18.dp))
+    ParentExitHomeButton(onClick = onExitHomeClick, enabled = interactionEnabled)
+    Spacer(modifier = Modifier.height(33.dp))
+}
+
+@Composable
+internal fun ParentExitHomeButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 85.dp)
             .clip(RoundedCornerShape(20.dp))
             .border(2.dp, SeniorOnColors.Primary600, RoundedCornerShape(20.dp))
-            .clickable(enabled = interactionEnabled, role = Role.Button, onClick = onExitHomeClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(start = 96.dp, end = 86.dp, top = 20.dp, bottom = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -204,7 +215,6 @@ internal fun ColumnScope.SeniorHomeContent(
             textAlign = TextAlign.Center,
         )
     }
-    Spacer(modifier = Modifier.height(33.dp))
 }
 
 @Composable
@@ -213,28 +223,31 @@ private fun ParentDateSettingsHeader(
     interactionEnabled: Boolean,
     onSettingsClick: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 78.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        Column(Modifier.fillMaxWidth()) {
             Text(
                 text = now.format(
                     DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
                 ),
                 style = SeniorOnTextStyles.HeadingS,
                 color = SeniorOnColors.Gray700,
-                modifier = Modifier.weight(1f),
                 maxLines = 1,
             )
+            Text(
+                text = now.format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
+                style = SeniorOnTextStyles.Display,
+                color = SeniorOnColors.Gray800,
+                maxLines = 1,
+            )
+        }
             Row(
                 modifier = Modifier
-                    .heightIn(min = 46.dp)
+                    .align(Alignment.TopEnd)
+                    .size(width = 92.dp, height = 46.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(SeniorOnColors.Primary200)
                     .clickable(enabled = interactionEnabled, role = Role.Button, onClick = onSettingsClick)
@@ -245,22 +258,16 @@ private fun ParentDateSettingsHeader(
                 Icon(
                     painter = painterResource(R.drawable.ic_nav_setting),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = SeniorOnColors.Primary600,
+                    modifier = Modifier.size(30.dp),
+                    tint = SeniorOnColors.Primary700,
                 )
                 Text(
                     text = stringResource(R.string.parent_home_settings),
-                    style = SeniorOnTextStyles.HeadingS,
-                    color = SeniorOnColors.Primary600,
+                    style = SeniorOnTextStyles.HeadingS.copy(fontWeight = FontWeight.SemiBold),
+                    color = SeniorOnColors.Primary700,
+                    maxLines = 1,
                 )
             }
-        }
-        Text(
-            text = now.format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
-            style = SeniorOnTextStyles.Display,
-            color = SeniorOnColors.Gray800,
-            maxLines = 1,
-        )
     }
 }
 
@@ -455,7 +462,7 @@ private fun ParentTodayScheduleCard(
 }
 
 @Composable
-private fun ParentHomeGridButton(
+internal fun ParentHomeGridButton(
     button: ParentHomeButtonUiModel,
     textStyle: TextStyle,
     interactionEnabled: Boolean,

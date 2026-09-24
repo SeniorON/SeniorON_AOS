@@ -3,7 +3,7 @@ package com.example.senior_on.ui.child.notification
 import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.animateDpAsState
+import com.example.senior_on.ui.common.component.SeniorOnSwitch
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -131,7 +131,12 @@ data class NotificationScreenUiState(
     val footerPanel: NotificationFooterPanelUiState? = null,
     val isParentPhoneRegistered: Boolean = true,
     val hasHomeAddress: Boolean = true,
-    val isParentPhoneInternetConnected: Boolean = true
+    val isParentPhoneInternetConnected: Boolean = true,
+    val sharingStatusKnown: Boolean = true,
+    val locationSharingEnabled: Boolean = true,
+    val inactivitySharingEnabled: Boolean = true,
+    val isSeniorSharingRevoked: Boolean = false,
+    val seniorDisplayName: String = "시니어",
 )
 
 enum class NotificationFooterTone {
@@ -392,7 +397,10 @@ internal fun NotificationSectionCard(
                 } else {
                     NotificationSeverity.Normal
                 },
-                onClick = onToggleClick,
+                onClick = {
+                    android.util.Log.d("NotificationToggle", "touch category=${section.category} checked=${section.enabled}")
+                    onToggleClick()
+                },
                 modifier = Modifier.align(Alignment.TopEnd)
             )
         }
@@ -462,38 +470,13 @@ private fun NotificationSwitch(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val trackColor = when {
-        !checked -> SeniorOnColors.Gray200
-        severity == NotificationSeverity.Danger -> SeniorOnColors.Red300
-        else -> SeniorOnColors.Primary600
-    }
-    val knobOffsetX by animateDpAsState(
-        targetValue = if (checked) 20.dp else 0.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "NotificationSwitchKnobOffsetX"
+    SeniorOnSwitch(
+        checked = checked,
+        onCheckedChange = { onClick() },
+        modifier = modifier,
+        checkedTrackColor = if (severity == NotificationSeverity.Danger)
+            SeniorOnColors.Red300 else SeniorOnColors.Primary600,
     )
-
-    Box(
-        modifier = modifier
-            .size(width = 46.dp, height = 26.dp)
-            .clip(RoundedCornerShape(98.dp))
-            .background(trackColor)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
-            .padding(2.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Box(
-            modifier = Modifier
-                .size(22.dp)
-                .offset(x = knobOffsetX)
-                .clip(CircleShape)
-                .background(SeniorOnColors.SupportWhite100)
-        )
-    }
 }
 
 @Composable

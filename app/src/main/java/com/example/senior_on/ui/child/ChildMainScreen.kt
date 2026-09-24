@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -202,11 +203,21 @@ fun ChildMainScreen(
             familyPhotoUploadUiState.isUploading
     val childMainNavigationEnabled =
         isChildMainNavigationEnabled(isFamilyPhotoUploading)
+    val selectionRepository = remember(context.applicationContext) {
+        com.example.senior_on.data.repository.impl.SelectedSeniorRepositoryImpl(context)
+    }
+    val selectionViewModel: SelectedSeniorViewModel = viewModel(
+        viewModelStoreOwner = rememberSeniorScopedViewModelStoreOwner("selection:$childSessionViewModelKey"),
+        key = "selected-senior:$childSessionViewModelKey",
+        factory = SelectedSeniorViewModel.factory(authenticatedUserId, selectionRepository),
+    )
+    val selectionState by selectionViewModel.state.collectAsStateWithLifecycle()
     val displayViewModel: DisplayViewModel = viewModel(
         key = "display:$childSessionViewModelKey",
         factory = DisplayViewModel.factory(
             parentInfoRepository = parentInfoRepository,
             displayRepository = displayRepository,
+            restoreInitialSelection = false,
         )
     )
     val displayUiState by displayViewModel.uiState.collectAsStateWithLifecycle()
@@ -223,26 +234,40 @@ fun ChildMainScreen(
         key = "senior-connection:$childSessionViewModelKey",
         factory = SeniorConnectionViewModel.factory(familyServerRepository),
     )
-    val activeSeniorId = displayUiState.selectedSeniorId
-        ?: seniorManagementUiState.managedSeniors.firstOrNull()?.seniorId
+    val activeSeniorId = selectionState.seniorId.takeUnless { selectionState.isLoading }
     var showSeniorManagement by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(
-        seniorManagementUiState.isLoading,
-        seniorManagementUiState.managedSeniors,
-        displayUiState.selectedSeniorId,
-    ) {
-        if (seniorManagementUiState.isLoading) return@LaunchedEffect
-        val managedSeniors = seniorManagementUiState.managedSeniors
-        if (managedSeniors.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.managedSeniors, seniorManagementUiState.errorMessage) {
+        if (!seniorManagementUiState.isLoading && seniorManagementUiState.errorMessage == null) {
+            selectionViewModel.reconcile(seniorManagementUiState.managedSeniors.map { it.seniorId })
+        }
+    }
+    LaunchedEffect(selectionState.seniorId, selectionState.isLoading, seniorManagementUiState.managedSeniors) {
+        if (!selectionState.isLoading) {
+            val selected = seniorManagementUiState.managedSeniors.firstOrNull { it.seniorId == selectionState.seniorId }
+            if (selected == null) displayViewModel.clearSelection()
+            else displayViewModel.selectSenior(selected.seniorId, selected.relationship.displayLabel)
+        }
+    }
+    LaunchedEffect(selectionState.error) {
+        selectionState.error?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show() }
+    }
 
-        val selectedAccount = managedSeniors.firstOrNull { senior ->
-            senior.seniorId == displayUiState.selectedSeniorId
-        } ?: managedSeniors.first()
-        displayViewModel.selectSenior(
-            seniorId = selectedAccount.seniorId,
-            relationshipLabel = selectedAccount.relationship.displayLabel,
-        )
+    val notificationTargetSeniorId = notificationNavigationEvent?.let { event ->
+        event.seniorId ?: seniorManagementUiState.managedSeniors
+            .firstOrNull { event.parentUserId != null && it.parentUserId == event.parentUserId }?.seniorId
+    }
+    LaunchedEffect(notificationNavigationEvent, notificationTargetSeniorId, selectionState.seniorId, seniorManagementUiState.isLoading) {
+        val event = notificationNavigationEvent ?: return@LaunchedEffect
+        if (seniorManagementUiState.isLoading || seniorManagementUiState.errorMessage != null || selectionState.isLoading) return@LaunchedEffect
+        if (event.seniorId != null || event.parentUserId != null) {
+            if (notificationTargetSeniorId == null || seniorManagementUiState.managedSeniors.none { it.seniorId == notificationTargetSeniorId }) {
+                android.widget.Toast.makeText(context, "현재 관리 중인 시니어의 알림이 아니에요.", android.widget.Toast.LENGTH_LONG).show()
+                onNotificationNavigationConsumed()
+            } else if (selectionState.seniorId != notificationTargetSeniorId) {
+                selectionViewModel.select(notificationTargetSeniorId)
+            }
+        }
     }
 
     val connectedDevice = displayUiState.parentInfo?.let { parentInfo ->
@@ -332,10 +357,8 @@ fun ChildMainScreen(
                 addressSearchViewModel = addressSearchViewModel,
                 onClose = { showSeniorManagement = false },
                 onSeniorCreated = { senior ->
-                    displayViewModel.selectSenior(
-                        seniorId = senior.seniorId,
-                        relationshipLabel = senior.relationship.displayLabel,
-                    )
+                    selectionViewModel.reconcile((seniorManagementUiState.managedSeniors.map { it.seniorId } + senior.seniorId).distinct())
+                    selectionViewModel.select(senior.seniorId)
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -357,15 +380,13 @@ fun ChildMainScreen(
                 displayViewModel = displayViewModel,
                 seniorAccounts = seniorManagementUiState.managedSeniors,
                 onSeniorAccountClick = { senior ->
-                    displayViewModel.selectSenior(
-                        seniorId = senior.seniorId,
-                        relationshipLabel = senior.relationship.displayLabel,
-                    )
+                    selectionViewModel.select(senior.seniorId)
                 },
                 onAddSeniorAccountClick = {
                     seniorManagementViewModel.clearError()
                     showSeniorManagement = true
                 },
+                selectedSeniorId = selectionState.seniorId,
                 parentInfo = displayUiState.parentInfo,
                 connectedDevice = connectedDevice,
                 onMemberSettingsClick = {
@@ -407,7 +428,11 @@ fun ChildMainScreen(
                 locationRepository = locationRepository,
                 addressSearchRepository = addressSearchRepository,
                 addressSearchViewModel = addressSearchViewModel,
-                notificationNavigationEvent = notificationNavigationEvent,
+                notificationNavigationEvent = notificationNavigationEvent?.takeIf {
+                    !selectionState.isLoading && selectionState.seniorId != null &&
+                        ((it.seniorId == null && it.parentUserId == null) ||
+                            notificationTargetSeniorId == selectionState.seniorId)
+                },
                 onNotificationNavigationConsumed = onNotificationNavigationConsumed,
                 onParentInfoSave = { updatedParentInfo, onSuccess ->
                     displayViewModel.saveParentInfo(
@@ -498,6 +523,7 @@ private fun ChildMainTabContent(
     seniorAccounts: List<ManagedSenior>,
     onSeniorAccountClick: (ManagedSenior) -> Unit,
     onAddSeniorAccountClick: () -> Unit,
+    selectedSeniorId: Long?,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
     onMemberSettingsClick: () -> Unit,
@@ -547,6 +573,13 @@ private fun ChildMainTabContent(
         return
     }
 
+    if ((selectedTab == ChildMainTab.Health || selectedTab == ChildMainTab.Notification) && selectedSeniorId == null) {
+        androidx.compose.foundation.layout.Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("관리할 시니어를 선택해 주세요.")
+        }
+        return
+    }
+
     if (selectedTab == ChildMainTab.Health) {
         if (
             medicationRepository != null &&
@@ -554,6 +587,8 @@ private fun ChildMainTabContent(
             hospitalSpecialtyRepository != null
         ) {
             HealthMainRoute(
+                seniorId = selectedSeniorId,
+                sessionKey = settingsSessionKey,
                 medicationRepository = medicationRepository,
                 hospitalRepository = hospitalRepository,
                 familyRepository = familyServerRepository,
@@ -693,7 +728,8 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Notification) {
         NotificationRoute(
             repository = notificationRepository,
-            seniorId = parentInfo?.seniorId,
+            seniorId = selectedSeniorId,
+            sessionKey = settingsSessionKey,
             familyRepository = familyServerRepository,
             homeRepository = homeServerRepository,
             eventRepository = eventRepository,

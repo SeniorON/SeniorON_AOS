@@ -3,6 +3,7 @@ package com.example.senior_on.ui.onboarding.familycode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -149,6 +150,8 @@ private fun FamilyShareCodeTextField(
     modifier: Modifier = Modifier,
     focusManager: FocusManager = LocalFocusManager.current
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
     val underlineColor = if (errorMessage != null) {
         SeniorOnColors.Red200
     } else {
@@ -176,6 +179,7 @@ private fun FamilyShareCodeTextField(
             }
         ),
         visualTransformation = FamilyShareCodeVisualTransformation,
+        interactionSource = interactionSource,
         cursorBrush = SolidColor(SeniorOnColors.Primary600),
         decorationBox = { innerTextField ->
             Column(
@@ -199,7 +203,7 @@ private fun FamilyShareCodeTextField(
                         innerTextField()
                     }
 
-                    if (value.isNotEmpty()) {
+                    if (value.isNotEmpty() && !isFocused) {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)

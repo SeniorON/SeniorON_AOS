@@ -37,11 +37,13 @@ data class MedicationUiState(
     val selectedDate: LocalDate = koreaToday(),
     val registeredMedications: List<RegisteredMedicationUiState> = emptyList(),
     val todayMedications: List<TodayMedicationUiState> = emptyList(),
+    val hasLoadedSelectedDate: Boolean = false,
     val medicationMarkedDates: Set<LocalDate> = emptySet(),
     val editorMode: MedicationEditorMode? = null,
     val editingMedication: RegisteredMedicationUiState? = null,
     val addMedicationStartDate: LocalDate? = null,
     val isLoading: Boolean = false,
+    val hasLoadedContent: Boolean = false,
     val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
@@ -50,11 +52,11 @@ data class MedicationUiState(
 class MedicationViewModel(
     private val medicationRepository: MedicationRepository,
     private val familyRepository: FamilyServerRepository,
+    private val seniorId: Long? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MedicationUiState())
     val uiState: StateFlow<MedicationUiState> = _uiState.asStateFlow()
 
-    private var parentUserId: Long? = null
     private var fullLoadJob: Job? = null
     private var scheduleLoadJob: Job? = null
     private var hasEnteredScreen = false
@@ -71,10 +73,11 @@ class MedicationViewModel(
         _uiState.update { state ->
             state.copy(
                 selectedDate = date,
-                todayMedications = buildTodayMedicationsFromRegistered(
-                    date = date,
-                    registered = state.registeredMedications,
-                ),
+                todayMedications = emptyList(),
+                hasLoadedSelectedDate = false,
+                isLoading = true,
+                isRefreshing = false,
+                errorMessage = null,
             )
         }
         loadSchedules(date, refreshMonthly = monthChanged)
@@ -141,15 +144,15 @@ class MedicationViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             runCatching {
-                val parentId = resolveParentUserId()
+                val targetSeniorId = requireSeniorId()
                 val current = _uiState.value.editingMedication
                 val domain = draft.toDomain(current)
                 if (_uiState.value.editorMode == MedicationEditorMode.Edit && current != null) {
-                    medicationRepository.update(parentId, domain)
+                    medicationRepository.update(targetSeniorId, domain)
                 } else {
-                    medicationRepository.create(parentId, domain)
+                    medicationRepository.create(targetSeniorId, domain)
                 }
-                loadRemoteData(parentId, _uiState.value.selectedDate)
+                loadRemoteData(targetSeniorId, _uiState.value.selectedDate)
             }
                 .onSuccess { result ->
                     applyRemoteData(result, closeEditor = true)
@@ -171,9 +174,9 @@ class MedicationViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             runCatching {
-                val parentId = resolveParentUserId()
-                medicationRepository.delete(parentId, medication.id)
-                loadRemoteData(parentId, _uiState.value.selectedDate)
+                val targetSeniorId = requireSeniorId()
+                medicationRepository.delete(targetSeniorId, medication.id)
+                loadRemoteData(targetSeniorId, _uiState.value.selectedDate)
             }
                 .onSuccess { result ->
                     applyRemoteData(result, closeEditor = true)
@@ -218,7 +221,9 @@ class MedicationViewModel(
         if (medicationLogId <= 0L) return
 
         viewModelScope.launch {
-            val resolvedParentUserId = runCatching { resolveParentUserId() }
+            val resolvedParentUserId = runCatching {
+                familyRepository.getMembers(requireSeniorId()).firstOrNull { it.role.equals("PARENT", true) }?.id
+            }
                 .getOrNull()
                 ?: return@launch
             if (resolvedParentUserId != checkedParentUserId) return@launch
@@ -248,14 +253,14 @@ class MedicationViewModel(
         fullLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
                     errorMessage = null,
                 )
             }
             runCatching {
-                val parentId = resolveParentUserId()
-                loadRemoteData(parentId, requestedDate)
+                val targetSeniorId = requireSeniorId()
+                loadRemoteData(targetSeniorId, requestedDate)
             }.onSuccess(::applyRemoteData)
                 .onFailure { throwable ->
                     if (throwable is CancellationException) return@onFailure
@@ -264,7 +269,7 @@ class MedicationViewModel(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                errorMessage = throwable.message,
+                                errorMessage = throwable.message ?: "복약 정보를 불러오지 못했어요",
                             )
                         } else {
                             it
@@ -280,8 +285,8 @@ class MedicationViewModel(
         scheduleLoadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
-                val parentId = resolveParentUserId()
-                val schedules = medicationRepository.getParentSchedules(parentId, date.toString())
+                val targetSeniorId = requireSeniorId()
+                val schedules = medicationRepository.getParentSchedules(targetSeniorId, date.toString())
                     .map { schedule ->
                         schedule.toUiState(
                             date = date,
@@ -291,7 +296,7 @@ class MedicationViewModel(
                 val markedDates = if (refreshMonthly) {
                     val month = YearMonth.from(date)
                     medicationRepository.getParentMonthlySchedules(
-                        parentId = parentId,
+                        parentId = targetSeniorId,
                         year = month.year,
                         month = month.monthValue,
                     ).scheduledDates
@@ -306,6 +311,7 @@ class MedicationViewModel(
                     } else {
                         state.copy(
                             isLoading = false,
+                            hasLoadedSelectedDate = true,
                             todayMedications = buildTodayMedicationsFromRegistered(
                                 date = date,
                                 registered = state.registeredMedications,
@@ -320,7 +326,7 @@ class MedicationViewModel(
                 if (throwable is CancellationException) return@onFailure
                 _uiState.update {
                     if (it.selectedDate == date) {
-                        it.copy(isLoading = false, errorMessage = throwable.message)
+                        it.copy(isLoading = false, errorMessage = throwable.message ?: "복약 정보를 불러오지 못했어요")
                     } else {
                         it
                     }
@@ -330,16 +336,16 @@ class MedicationViewModel(
     }
 
     private suspend fun loadRemoteData(
-        parentId: Long,
+        targetSeniorId: Long,
         date: LocalDate,
     ): RemoteMedicationData {
-        val medications = medicationRepository.getMedications(parentId)
+        val medications = medicationRepository.getMedications(targetSeniorId)
             .map(MedicationInfo::toUiState)
-        val schedules = medicationRepository.getParentSchedules(parentId, date.toString())
+        val schedules = medicationRepository.getParentSchedules(targetSeniorId, date.toString())
             .map { it.toUiState(date, medications) }
         val month = YearMonth.from(date)
         val markedDates = medicationRepository.getParentMonthlySchedules(
-            parentId = parentId,
+            parentId = targetSeniorId,
             year = month.year,
             month = month.monthValue,
         ).scheduledDates
@@ -365,6 +371,8 @@ class MedicationViewModel(
             }
             val selectedDate = state.selectedDate
             state.copy(
+                hasLoadedContent = true,
+                hasLoadedSelectedDate = true,
                 registeredMedications = result.medications,
                 todayMedications = buildTodayMedicationsFromRegistered(
                     date = selectedDate,
@@ -382,25 +390,18 @@ class MedicationViewModel(
         }
     }
 
-    private suspend fun resolveParentUserId(): Long {
-        parentUserId?.let { return it }
-        val id = familyRepository.getMembers()
-            .firstOrNull { member -> member.role.equals(ParentRole, ignoreCase = true) }
-            ?.id
-            ?.takeIf { it > 0L }
-            ?: error("연결된 시니어 사용자를 찾을 수 없습니다.")
-        parentUserId = id
-        return id
-    }
+    private suspend fun requireSeniorId(): Long =
+        requireNotNull(seniorId?.takeIf { it > 0 }) { "관리할 시니어를 먼저 선택해 주세요." }
 
     companion object {
         fun factory(
             medicationRepository: MedicationRepository,
             familyRepository: FamilyServerRepository,
+            seniorId: Long? = null,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                MedicationViewModel(medicationRepository, familyRepository) as T
+                MedicationViewModel(medicationRepository, familyRepository, seniorId) as T
         }
     }
 }
@@ -511,6 +512,7 @@ private fun MedicationDraft.toDomain(
         MedicationRepeatDuration.Period ->
             resolvedStartDate
                 .plusWeeks(repeat.periodValue.coerceAtLeast(1).toLong())
+                .minusDays(1)
         MedicationRepeatDuration.Continuous -> null
     }
     return MedicationInfo(

@@ -152,7 +152,7 @@ private fun SeniorPhoneDesign(
                 buttons = buttons,
                 scheduleUiState = todaySchedule.toPreviewScheduleUiState(),
                 interactionEnabled = false,
-                showSettingsInGrid = true,
+                showSettingsInGrid = false,
                 onMusicClick = {},
                 onScheduleClick = {},
                 onButtonClick = {},

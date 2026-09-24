@@ -6,6 +6,8 @@ enum class ParentHomeUpdateEvent {
     Connecting,
     Subscribed,
     HomeUpdated,
+    ScheduleUpdated,
+    MedicationUpdated,
     Disconnected,
 }
 

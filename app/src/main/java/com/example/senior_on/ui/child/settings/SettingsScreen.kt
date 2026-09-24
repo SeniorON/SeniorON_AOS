@@ -32,6 +32,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import com.example.senior_on.ui.common.component.SettingsLogoutDialog
+import com.example.senior_on.ui.common.component.SettingsWithdrawDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -647,7 +649,6 @@ fun SettingsScreen(
 
             SettingsMenuSectionCard(
                 title = "지원",
-                cardHeight = 206.dp,
                 items = listOf(
                     SettingsMenuItem(
                         label = "도움말 · 문의",
@@ -716,193 +717,6 @@ fun SettingsScreen(
             isConfirmEnabled = !isWithdrawing,
             isConfirmLoading = isWithdrawing,
         )
-    }
-}
-
-@Composable
-private fun SettingsLogoutDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-    isConfirmEnabled: Boolean = true,
-    isConfirmLoading: Boolean = false,
-) {
-    SettingsConfirmBottomDialog(
-        onDismiss = onDismiss,
-        title = buildAnnotatedString {
-            withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                append("로그아웃")
-            }
-            append(" 할까요?")
-        },
-        description = "로그인 화면으로 이동해요",
-        descriptionAnnotated = null,
-        dialogHeight = 207.dp,
-        titleToDescriptionSpacing = 24.dp,
-        cancelText = "취소",
-        confirmText = "로그아웃",
-        confirmBackgroundColor = SeniorOnColors.Primary600,
-        isConfirmEnabled = isConfirmEnabled,
-        isConfirmLoading = isConfirmLoading,
-        onConfirm = onConfirm
-    )
-}
-
-@Composable
-private fun SettingsWithdrawDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-    isConfirmEnabled: Boolean = true,
-    isConfirmLoading: Boolean = false,
-) {
-    SettingsConfirmBottomDialog(
-        onDismiss = onDismiss,
-        title = buildAnnotatedString {
-            append("정말 ")
-            withStyle(SpanStyle(color = SeniorOnColors.Red400)) {
-                append("탈퇴")
-            }
-            append("하시겠어요?")
-        },
-        description = null,
-        descriptionAnnotated = buildAnnotatedString {
-            append("탈퇴 후에는 ")
-            withStyle(SpanStyle(color = SeniorOnColors.Red300)) {
-                append("모든 데이터가\n 복구되지 않아요")
-            }
-        },
-        dialogHeight = 229.dp,
-        titleToDescriptionSpacing = 24.dp,
-        cancelText = "취소",
-        confirmText = "탈퇴",
-        confirmBackgroundColor = SeniorOnColors.Red400,
-        onConfirm = onConfirm,
-        isConfirmEnabled = isConfirmEnabled,
-        isConfirmLoading = isConfirmLoading,
-    )
-}
-
-@Composable
-private fun SettingsConfirmBottomDialog(
-    onDismiss: () -> Unit,
-    title: androidx.compose.ui.text.AnnotatedString,
-    description: String?,
-    descriptionAnnotated: androidx.compose.ui.text.AnnotatedString?,
-    cancelText: String,
-    confirmText: String,
-    confirmBackgroundColor: Color,
-    onConfirm: () -> Unit,
-    dialogHeight: Dp,
-    titleToDescriptionSpacing: Dp = 12.dp,
-    isConfirmEnabled: Boolean = true,
-    isConfirmLoading: Boolean = false,
-    showCancelButton: Boolean = true,
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SeniorOnColors.Black.copy(alpha = 0.5f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss
-                ),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(dialogHeight)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = SeniorOnRadius.XLarge,
-                            topEnd = SeniorOnRadius.XLarge
-                        )
-                    )
-                    .background(SeniorOnColors.White)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 24.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = SeniorOnTextStyles.HeadingXS,
-                    color = SeniorOnColors.Gray800,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(titleToDescriptionSpacing))
-
-                if (descriptionAnnotated != null) {
-                    Text(
-                        text = descriptionAnnotated,
-                        style = SeniorOnTextStyles.BodyMMedium,
-                        color = SeniorOnColors.Gray500,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else if (description != null) {
-                    Text(
-                        text = description,
-                        style = SeniorOnTextStyles.BodyMMedium,
-                        color = SeniorOnColors.Gray500,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(34.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (showCancelButton) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                                .border(
-                                    width = 1.dp,
-                                    color = SeniorOnColors.Gray200,
-                                    shape = RoundedCornerShape(SeniorOnRadius.Small)
-                                )
-                                .clickable(onClick = onDismiss),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = cancelText,
-                                style = SeniorOnTextStyles.ButtonM,
-                                color = SeniorOnColors.Gray500
-                            )
-                        }
-                    }
-
-                    SeniorOnActionButton(
-                        text = confirmText,
-                        onClick = onConfirm,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        enabled = isConfirmEnabled,
-                        isLoading = isConfirmLoading,
-                        containerColor = confirmBackgroundColor,
-                        contentColor = SeniorOnColors.White,
-                        minHeight = 48.dp,
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -1044,16 +858,14 @@ private fun SettingsProfileSection(
 private fun SettingsMenuSectionCard(
     title: String,
     items: List<SettingsMenuItem>,
-    modifier: Modifier = Modifier,
-    cardHeight: Dp? = null
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (cardHeight != null) Modifier.height(cardHeight) else Modifier)
             .clip(RoundedCornerShape(12.dp))
             .background(SeniorOnColors.Background1)
-            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 6.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 12.dp)
     ) {
         Text(
             text = title,
