@@ -44,7 +44,7 @@ fun ParentSettingsRoute(
     val actionState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val profileViewModel: ParentSettingsViewModel = viewModel(factory = viewModelFactory {
         initializer {
-            ParentSettingsViewModel(appContainer.userSettingsRepository, appContainer.authRepository,
+            ParentSettingsViewModel(appContainer.userSettingsRepository, appContainer.parentSeniorProfileRepository,
                 appContainer.parentSettingsRepository, appContainer.familyServerRepository, appContainer.familyPhotoUploadPreparer)
         }
     })

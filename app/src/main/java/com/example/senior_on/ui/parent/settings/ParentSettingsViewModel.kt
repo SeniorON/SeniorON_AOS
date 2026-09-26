@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.data.remote.api.SeniorPermissionSettings
 import com.example.senior_on.data.repository.impl.ParentSettingsRepository
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import kotlinx.coroutines.CancellationException
@@ -24,7 +24,7 @@ data class ParentSettingsState(
 
 class ParentSettingsViewModel(
     private val accounts: UserSettingsRepository,
-    private val auth: AuthRepository,
+    private val profileRepository: ParentSeniorProfileRepository,
     private val settings: ParentSettingsRepository,
     private val family: FamilyServerRepository,
     private val photoPreparer: com.example.senior_on.data.local.FamilyPhotoUploadPreparer? = null,
@@ -57,15 +57,13 @@ class ParentSettingsViewModel(
     }
 
     fun loadPermissions() = perform {
-        val seniorId = auth.getOnboardingStatus().seniorId
-            ?: error("연결된 시니어 정보를 확인하지 못했어요. 다시 시도해 주세요.")
+        val seniorId = profileRepository.getOwnSeniorId()
         val permissions = settings.getPermissions(seniorId)
         mutableState.update { it.copy(permissions = permissions) }
     }
 
     fun loadShareCode() = perform {
-        val seniorId = auth.getOnboardingStatus().seniorId
-            ?: error("연결된 시니어 정보를 확인하지 못했어요.")
+        val seniorId = profileRepository.getOwnSeniorId()
         val code = family.getCode(seniorId).code
         check(code.isNotBlank()) { "공유 코드를 확인하지 못했어요." }
         mutableState.update { it.copy(shareCode = code) }

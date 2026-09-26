@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoViewModel
 
 private enum class ParentPhotoDestination {
@@ -23,12 +23,12 @@ private enum class ParentPhotoDestination {
 @Composable
 fun ParentFamilyPhotoRoute(
     repository: FamilyServerRepository,
-    authRepository: AuthRepository,
+    profileRepository: ParentSeniorProfileRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ParentFamilyPhotoViewModel = viewModel(
-        factory = ParentFamilyPhotoViewModel.factory(repository, authRepository)
+        factory = ParentFamilyPhotoViewModel.factory(repository, profileRepository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) {

@@ -7,7 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentSchedule
 import com.example.senior_on.domain.repository.server.HospitalRepository
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +34,7 @@ data class ParentScheduleUiState(
 class ParentScheduleViewModel(
     private val repository: HospitalRepository,
     private val updatesRepository: ParentHomeUpdatesRepository,
-    private val authRepository: AuthRepository,
+    private val profileRepository: ParentSeniorProfileRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentScheduleUiState())
     val uiState = _uiState.asStateFlow()
@@ -74,9 +74,7 @@ class ParentScheduleViewModel(
                 }
 
                 runCatching {
-                    val seniorId = requireNotNull(
-                        authRepository.getOnboardingStatus().seniorId?.takeIf { it > 0 }
-                    ) { "연결된 시니어 정보를 찾을 수 없어요." }
+                    val seniorId = profileRepository.getOwnSeniorId()
                     repository.getDaily(seniorId, today.toString()).map { schedule ->
                         ParentSchedule(
                             id = schedule.id.toString(),
@@ -114,9 +112,9 @@ class ParentScheduleViewModel(
     fun refresh() = loadTodaySchedules(isRefresh = true)
 
     companion object {
-        fun factory(repository: HospitalRepository, updatesRepository: ParentHomeUpdatesRepository, authRepository: AuthRepository) = viewModelFactory {
+        fun factory(repository: HospitalRepository, updatesRepository: ParentHomeUpdatesRepository, profileRepository: ParentSeniorProfileRepository) = viewModelFactory {
             initializer {
-                ParentScheduleViewModel(repository, updatesRepository, authRepository)
+                ParentScheduleViewModel(repository, updatesRepository, profileRepository)
             }
         }
     }

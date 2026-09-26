@@ -14,6 +14,9 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface SeniorApi {
+    @GET("api/seniors/me/profile")
+    suspend fun getOwnProfile(): ApiResponse<ParentSeniorProfileResponse>
+
     @POST("api/seniors")
     suspend fun createSenior(
         @Header("Authorization") authorization: String? = null,
@@ -30,3 +33,5 @@ interface SeniorApi {
         @Body request: UpdateSeniorRelationRequest
     ): ApiResponse<UpdateSeniorRelationResponse>
 }
+
+data class ParentSeniorProfileResponse(val seniorId: Long?)

@@ -80,6 +80,8 @@ interface AppContainer {
     val accountRecoveryRepository: AccountRecoveryRepository
     val socialAuthRepository: SocialAuthRepository
     val seniorRepository: SeniorRepository
+    val parentSeniorProfileRepository: com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
+        get() = com.example.senior_on.data.repository.impl.ParentSeniorProfileRepositoryImpl(SeniorOnNetwork.seniorApi)
     val sessionRepository: SessionRepository
     val deviceRegistrationRepository: DeviceRegistrationRepository
     val homeServerRepository: HomeServerRepository

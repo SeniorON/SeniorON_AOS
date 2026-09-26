@@ -279,7 +279,7 @@ private fun ParentLauncherContent(
 
         ParentDestination.Schedule -> ParentScheduleRoute(
             repository = appContainer.hospitalRepository,
-            authRepository = appContainer.authRepository,
+            profileRepository = appContainer.parentSeniorProfileRepository,
             updatesRepository = appContainer.parentHomeUpdatesRepository,
             onBackClick = ::openHome,
             modifier = modifier,
@@ -303,7 +303,7 @@ private fun ParentLauncherContent(
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
             repository = appContainer.familyServerRepository,
-            authRepository = appContainer.authRepository,
+            profileRepository = appContainer.parentSeniorProfileRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )

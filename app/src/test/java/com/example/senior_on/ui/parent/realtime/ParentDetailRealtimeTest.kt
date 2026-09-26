@@ -1,7 +1,7 @@
 package com.example.senior_on.ui.parent.realtime
 
 import androidx.lifecycle.ViewModelStore
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import com.example.senior_on.domain.model.auth.OnboardingStatus
 import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.core.time.koreaNow
@@ -240,9 +240,8 @@ class ParentDetailRealtimeTest {
         assertNull(vm.uiState.value.errorMessage)
     }
 
-    private class FakeAuth(var seniorId: Long? = 42L) : AuthRepository by unused(AuthRepository::class.java) {
-        override suspend fun getOnboardingStatus() =
-            OnboardingStatus(true, CareManagerType.None, seniorId, true, true, true)
+    private class FakeAuth(var seniorId: Long? = 42L) : ParentSeniorProfileRepository {
+        override suspend fun getOwnSeniorId() = requireNotNull(seniorId)
     }
 
     private class FakeSchedule : HospitalRepository by unused(HospitalRepository::class.java) {
