@@ -21,6 +21,8 @@ import com.example.senior_on.domain.model.auth.AppUserMode
 import kotlinx.coroutines.delay
 
 class MockAuthDataSource : AuthDataSource {
+    private var currentRole = UserRole.CHILD
+    private var currentUsersId: Long? = null
     override suspend fun checkLoginId(loginId: String): CheckLoginIdResponse {
         delay(MOCK_NETWORK_DELAY_MILLIS)
         return CheckLoginIdResponse(
@@ -68,6 +70,8 @@ class MockAuthDataSource : AuthDataSource {
                 account.password == request.password
         } ?: return null
 
+        currentRole = if (account.role == AppUserMode.Senior) UserRole.PARENT else UserRole.CHILD
+        currentUsersId = account.profile.userId.hashCode().toLong()
         return LoginResponse(
             usersId = account.profile.userId.hashCode().toLong(),
             name = account.name,
@@ -85,11 +89,14 @@ class MockAuthDataSource : AuthDataSource {
         delay(MOCK_NETWORK_DELAY_MILLIS)
         return OnboardingStatusResponse(
             hasFamily = true,
-            managerType = ManagerType.PRIMARY,
-            seniorId = 1L,
-            seniorProfileCompleted = true,
-            relation = null,
             onboardingCompleted = true,
+            currentUserRole = currentRole,
+            families = listOf(com.example.senior_on.data.remote.dto.OnboardingFamilyStatusResponse(
+                familyId = 1L, managerType = if (currentRole == UserRole.PARENT) ManagerType.NONE else ManagerType.PRIMARY,
+                parentUserId = currentUsersId.takeIf { currentRole == UserRole.PARENT },
+                seniorId = 1L, seniorName = "시니어", seniorProfileCompleted = true,
+                relation = com.example.senior_on.data.remote.dto.OnboardingRelation.FATHER,
+            )),
         )
     }
 

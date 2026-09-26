@@ -44,11 +44,19 @@ data class CheckLoginIdResponse(
 
 data class OnboardingStatusResponse(
     val hasFamily: Boolean,
-    val managerType: ManagerType?,
-    val seniorId: Long?,
-    val seniorProfileCompleted: Boolean,
-    val relation: OnboardingRelation?,
     val onboardingCompleted: Boolean,
+    val currentUserRole: UserRole?,
+    val families: List<OnboardingFamilyStatusResponse>?,
+)
+
+data class OnboardingFamilyStatusResponse(
+    val familyId: Long,
+    val managerType: ManagerType?,
+    val parentUserId: Long?,
+    val relation: OnboardingRelation?,
+    val seniorId: Long?,
+    val seniorName: String?,
+    val seniorProfileCompleted: Boolean,
 )
 
 enum class ManagerType {

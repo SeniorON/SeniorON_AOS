@@ -19,6 +19,7 @@ class SessionRepositoryImpl(
                 UserRole.PARENT -> AppUserMode.Senior
             },
             userId = session.userId,
+            usersId = session.usersId,
         )
     }
 

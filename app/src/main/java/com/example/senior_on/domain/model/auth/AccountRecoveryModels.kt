@@ -13,6 +13,7 @@ data class FoundLoginId(
 data class AuthSession(
     val role: AppUserMode,
     val userId: String,
+    val usersId: Long? = null,
 )
 
 fun isValidPassword(password: String): Boolean {

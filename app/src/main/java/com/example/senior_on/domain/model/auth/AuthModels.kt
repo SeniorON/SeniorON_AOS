@@ -56,4 +56,47 @@ data class OnboardingStatus(
     val seniorProfileCompleted: Boolean,
     val relationRegistered: Boolean,
     val onboardingCompleted: Boolean,
+    val currentUserMode: AppUserMode? = null,
+    val families: List<OnboardingFamilyStatus>? = null,
+    val familyId: Long? = null,
 )
+
+data class OnboardingFamilyStatus(
+    val familyId: Long,
+    val managerType: CareManagerType,
+    val parentUserId: Long?,
+    val seniorId: Long?,
+    val seniorName: String?,
+    val seniorProfileCompleted: Boolean,
+    val relationRegistered: Boolean,
+)
+
+/** Select a resumable family without mixing one family's role with another's senior ID. */
+fun OnboardingStatus.forUser(mode: AppUserMode, userId: Long? = null): OnboardingStatus {
+    val available = families ?: return this
+    // Older saved sessions may not contain the numeric usersId. Trust server membership
+    // for parent entry, but never guess an ID from the first family. Feature screens use /me/profile.
+    if (mode == AppUserMode.Senior && userId == null) return copy(
+        managerType = CareManagerType.None, seniorId = null, familyId = null,
+        seniorProfileCompleted = false, relationRegistered = false,
+    )
+    val candidates = if (mode == AppUserMode.Senior) {
+        available.filter { it.parentUserId != null && it.parentUserId == userId }
+    } else available.filter { it.managerType != CareManagerType.None }
+    val completed = candidates.firstOrNull {
+        it.seniorId != null && it.seniorProfileCompleted && it.relationRegistered
+    }
+    val selected = completed
+        ?: candidates.firstOrNull { it.managerType == CareManagerType.Primary && !it.seniorProfileCompleted }
+        ?: candidates.firstOrNull { it.seniorId != null }
+        ?: candidates.firstOrNull()
+    return copy(
+        hasFamily = selected != null,
+        onboardingCompleted = completed != null,
+        managerType = selected?.managerType ?: CareManagerType.None,
+        seniorId = selected?.seniorId,
+        seniorProfileCompleted = selected?.seniorProfileCompleted == true,
+        relationRegistered = selected?.relationRegistered == true,
+        familyId = selected?.familyId,
+    )
+}

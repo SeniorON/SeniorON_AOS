@@ -1,6 +1,8 @@
 
 package com.example.senior_on.ui.onboarding.route
 
+import com.example.senior_on.domain.model.auth.forUser
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -191,9 +193,11 @@ fun OnboardingRoute(
     ) {
         selectedUserMode = mode
         authenticatedUserId = userId
-        connectedSeniorId = status.seniorId
+        val familyStatus = status.forUser(mode, authViewModel.authenticatedUsersId)
+        connectedSeniorId = familyStatus.seniorId
+        createdFamilyId = familyStatus.familyId
 
-        when (resolvePostLoginDestination(mode, status)) {
+        when (resolvePostLoginDestination(mode, familyStatus, authViewModel.authenticatedUsersId)) {
             PostLoginDestination.Authenticated -> {
                 onAuthenticated(mode, userId)
             }
@@ -228,7 +232,7 @@ fun OnboardingRoute(
     fun resolveAfterFamilyJoin() {
         authViewModel.loadOnboardingStatus(
             onResult = { status ->
-                val destination = resolvePostLoginDestination(selectedUserMode, status)
+                val destination = resolvePostLoginDestination(selectedUserMode, status, authViewModel.authenticatedUsersId)
                 if (destination != PostLoginDestination.FamilyShareCode) {
                     retryStatusAfterFamilyJoin = false
                     navigateFromOnboardingStatus(
@@ -568,14 +572,18 @@ internal fun shouldKeepPostLoginSession(
 internal fun resolvePostLoginDestination(
     mode: AppUserMode,
     status: OnboardingStatus,
-): PostLoginDestination = when {
-    status.onboardingCompleted -> PostLoginDestination.Authenticated
-    !status.hasFamily -> PostLoginDestination.FamilyShareCode
-    mode == AppUserMode.Senior -> PostLoginDestination.Authenticated
-    status.managerType == CareManagerType.Primary &&
-        !status.seniorProfileCompleted -> PostLoginDestination.ParentInfoInput
-    status.seniorId == null -> PostLoginDestination.FamilyShareCode
-    status.managerType == CareManagerType.Sub &&
-        !status.relationRegistered -> PostLoginDestination.CaregiverRelationshipInput
-    else -> PostLoginDestination.Authenticated
+    userId: Long? = null,
+): PostLoginDestination {
+    val family = status.forUser(mode, userId)
+    return when {
+        family.onboardingCompleted -> PostLoginDestination.Authenticated
+        !family.hasFamily -> PostLoginDestination.FamilyShareCode
+        mode == AppUserMode.Senior -> PostLoginDestination.Authenticated
+        family.managerType == CareManagerType.Primary &&
+            !family.seniorProfileCompleted -> PostLoginDestination.ParentInfoInput
+        family.seniorId == null -> PostLoginDestination.FamilyShareCode
+        family.managerType == CareManagerType.Sub &&
+            !family.relationRegistered -> PostLoginDestination.CaregiverRelationshipInput
+        else -> PostLoginDestination.Authenticated
+    }
 }
