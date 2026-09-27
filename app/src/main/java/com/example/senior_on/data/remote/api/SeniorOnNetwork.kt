@@ -41,6 +41,9 @@ object SeniorOnNetwork {
         configuredClientBuilder()
             .addInterceptor { chain ->
                 val request = chain.request()
+                if (com.example.senior_on.data.local.ParentConnectionGate.blocks(request.method, request.url.encodedPath)) {
+                    throw java.io.IOException("시니어 기기 재연결 확인이 필요합니다.")
+                }
                 val token = AccessTokenStore.getBearerToken()
                 val authenticatedRequest =
                     if (token != null && request.header("Authorization") == null) {

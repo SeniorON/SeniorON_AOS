@@ -70,8 +70,11 @@ fun ParentLauncherRoute(
     val sessionContext = LocalContext.current
     fun onSessionEnded() {
         needsLogin = true
+        com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(sessionContext)
+        ParentDeviceStatusScheduler.cancel(sessionContext)
         sessionContext.startActivity(
             android.content.Intent(sessionContext, com.example.senior_on.MainActivity::class.java)
+                .putExtra("start_at_parent_login", true)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
         )
         (sessionContext as? android.app.Activity)?.finish()
@@ -98,6 +101,22 @@ fun ParentLauncherRoute(
     // Access-token expiry alone stays on the normal refresh path in the authenticator.
     if (needsLogin || sessionExpirationEvent != null) {
         ParentSessionExpiredRoute(modifier)
+        return
+    }
+
+    // The Android HOME activity can start directly, without the app's onboarding activity.
+    // Capture entry approval only. Closing the gate during disconnect must not dispose
+    // the settings ViewModel before its logout request and local cleanup finish.
+    val entryApproved = remember { com.example.senior_on.data.local.ParentConnectionGate.isReady() }
+    if (!entryApproved) {
+        LaunchedEffect(Unit) {
+            sessionContext.startActivity(
+                android.content.Intent(sessionContext, com.example.senior_on.MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            (sessionContext as? android.app.Activity)?.finish()
+        }
+        ParentFamilyMembershipLoadingScreen(modifier)
         return
     }
 

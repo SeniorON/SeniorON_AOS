@@ -139,6 +139,7 @@ object AccessTokenStore {
 
     @Synchronized
     fun clear() {
+        ParentConnectionGate.hold()
         clearMemoryValues()
         clearPersistedValues()
     }

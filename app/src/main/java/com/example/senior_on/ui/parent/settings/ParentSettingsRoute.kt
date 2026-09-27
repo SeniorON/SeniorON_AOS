@@ -92,8 +92,8 @@ fun ParentSettingsRoute(
                 Toast.makeText(context, "변경했어요.", Toast.LENGTH_SHORT).show()
             }
             "disconnect" -> {
-                Toast.makeText(context, "기기 연결을 해제했어요. 가족 관계는 유지돼요.", Toast.LENGTH_LONG).show()
-                onBackClick()
+                Toast.makeText(context, "기기 연결을 해제했어요. 로그아웃합니다.", Toast.LENGTH_LONG).show()
+                settingsViewModel.logout(clearLocalOnFailure = true)
             }
         }
         profileViewModel.consumeCompleted()

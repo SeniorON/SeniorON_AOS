@@ -29,6 +29,10 @@ class SeniorOnApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AccessTokenStore.initialize(this)
+        com.example.senior_on.data.local.ParentConnectionGate.initialize(
+            com.example.senior_on.data.source.auth.PersistedSessionStore(this).getSession()?.role ==
+                com.example.senior_on.data.remote.dto.UserRole.PARENT
+        )
         FcmTokenSyncScheduler.enqueueIfLoggedIn(this)
         SeniorOnNotificationManager.createAlertChannel(this)
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank()) {

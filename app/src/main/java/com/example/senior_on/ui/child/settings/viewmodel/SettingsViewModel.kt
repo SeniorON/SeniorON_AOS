@@ -29,7 +29,7 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    fun logout() {
+    fun logout(clearLocalOnFailure: Boolean = false) {
         if (_uiState.value.isLoggingOut || _uiState.value.isWithdrawing) return
         viewModelScope.launch {
             _uiState.update {
@@ -40,11 +40,13 @@ class SettingsViewModel(
                 )
             }
             runCatching {
-                val deviceIdentifier = deviceRegistrationRepository
-                    .getDeviceRegistration()
-                    .deviceIdentifier
-                authRepository.logout(deviceIdentifier)
-                sessionRepository.clearSession()
+                try {
+                    val deviceIdentifier = deviceRegistrationRepository.getDeviceRegistration().deviceIdentifier
+                    authRepository.logout(deviceIdentifier)
+                    sessionRepository.clearSession()
+                } finally {
+                    if (clearLocalOnFailure) sessionRepository.clearSession()
+                }
             }.onSuccess {
                 _uiState.update {
                     it.copy(
@@ -53,9 +55,11 @@ class SettingsViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (throwable is kotlinx.coroutines.CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isLoggingOut = false,
+                        logoutCompleted = clearLocalOnFailure,
                         logoutErrorMessage = throwable.message
                             ?: "로그아웃에 실패했습니다.",
                     )

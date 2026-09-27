@@ -6,6 +6,8 @@ import com.example.senior_on.domain.model.auth.forUser
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.lifecycle.viewmodel.initializer
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,6 +46,8 @@ import com.example.senior_on.ui.onboarding.route.SignupTermsRoute
 import com.example.senior_on.ui.onboarding.route.SplashRoute
 
 private enum class SeniorOnRoute {
+    ParentConnectionChecking,
+    ParentReconnection,
     Splash,
     ModeSelection,
     Login,
@@ -115,9 +119,10 @@ private val PostLoginStateRoutes = setOf(
 fun OnboardingRoute(
     appContainer: AppContainer,
     onAuthenticated: (mode: AppUserMode, userId: String) -> Unit,
+    startAtParentLogin: Boolean = false,
 ) {
-    var currentRoute by rememberSaveable { mutableStateOf(InitialRoute) }
-    var selectedUserMode by rememberSaveable { mutableStateOf(AppUserMode.Child) }
+    var currentRoute by rememberSaveable { mutableStateOf(if (startAtParentLogin) SeniorOnRoute.Login else InitialRoute) }
+    var selectedUserMode by rememberSaveable { mutableStateOf(if (startAtParentLogin) AppUserMode.Senior else AppUserMode.Child) }
     var authenticatedUserId by rememberSaveable {
         mutableStateOf("")
     }
@@ -142,6 +147,15 @@ fun OnboardingRoute(
     val saveableStateHolder = rememberSaveableStateHolder()
     val authViewModel = onboardingAuthViewModel(appContainer)
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val reconnectionViewModel: com.example.senior_on.ui.onboarding.viewmodel.ParentReconnectionViewModel =
+        androidx.lifecycle.viewmodel.compose.viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
+            initializer {
+                com.example.senior_on.ui.onboarding.viewmodel.ParentReconnectionViewModel(
+                    appContainer.parentReconnectionRepository, appContainer.authRepository,
+                    appContainer.sessionRepository, appContainer.deviceRegistrationRepository)
+            }
+        })
+    val reconnectionState by reconnectionViewModel.state.collectAsStateWithLifecycle()
     val activity = LocalContext.current.findActivity()
 
     fun clearSavedRouteStates(routes: Set<SeniorOnRoute>) {
@@ -215,7 +229,25 @@ fun OnboardingRoute(
     }
 
     fun resolveOnboardingStatus(mode: AppUserMode, userId: String) {
+        selectedUserMode = mode
+        authenticatedUserId = userId
         retryStatusAfterFamilyJoin = false
+        if (mode == AppUserMode.Senior) {
+            currentRoute = SeniorOnRoute.ParentConnectionChecking
+            reconnectionViewModel.check(onResult = { destination ->
+                when (destination) {
+                    com.example.senior_on.data.repository.impl.ParentConnectionDestination.FirstConnection ->
+                        currentRoute = SeniorOnRoute.FamilyShareCode
+                    com.example.senior_on.data.repository.impl.ParentConnectionDestination.Reconnect ->
+                        currentRoute = SeniorOnRoute.ParentReconnection
+                    com.example.senior_on.data.repository.impl.ParentConnectionDestination.Home -> onAuthenticated(mode, userId)
+                }
+            }, onFailure = { message ->
+                onboardingStatusErrorMessage = message
+                currentRoute = SeniorOnRoute.OnboardingStatusError
+            })
+            return
+        }
         authViewModel.loadOnboardingStatus(
             onResult = { status ->
                 navigateFromOnboardingStatus(mode, userId, status)
@@ -230,6 +262,10 @@ fun OnboardingRoute(
     }
 
     fun resolveAfterFamilyJoin() {
+        if (selectedUserMode == AppUserMode.Senior) {
+            resolveOnboardingStatus(selectedUserMode, authenticatedUserId)
+            return
+        }
         authViewModel.loadOnboardingStatus(
             onResult = { status ->
                 val destination = resolvePostLoginDestination(selectedUserMode, status, authViewModel.authenticatedUsersId)
@@ -259,7 +295,15 @@ fun OnboardingRoute(
     }
 
     fun navigateAfterFamilyConnected() {
-        onAuthenticated(selectedUserMode, authenticatedUserId)
+        if (selectedUserMode == AppUserMode.Senior) resolveOnboardingStatus(selectedUserMode, authenticatedUserId)
+        else onAuthenticated(selectedUserMode, authenticatedUserId)
+    }
+
+    // A recreated pending screen must revalidate rather than trusting saved UI state.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (currentRoute == SeniorOnRoute.ParentConnectionChecking || currentRoute == SeniorOnRoute.ParentReconnection) {
+            if (!reconnectionState.busy) resolveOnboardingStatus(selectedUserMode, authenticatedUserId)
+        }
     }
 
     fun navigateBackFromAddressSearch() {
@@ -296,6 +340,18 @@ fun OnboardingRoute(
 
     saveableStateHolder.SaveableStateProvider(currentRoute.name) {
         when (currentRoute) {
+            SeniorOnRoute.ParentConnectionChecking -> {
+                BackHandler { /* Wait for the bounded request before leaving this session. */ }
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+            }
+            SeniorOnRoute.ParentReconnection -> com.example.senior_on.ui.onboarding.ParentReconnectionScreen(
+                busy = reconnectionState.busy,
+                error = reconnectionState.error,
+                onConfirm = { reconnectionViewModel.confirm { onAuthenticated(selectedUserMode, authenticatedUserId) } },
+                onCancel = { reconnectionViewModel.cancel { returnToLoginFromPostLogin(forceClearSession = true) } },
+            )
             SeniorOnRoute.Splash -> SplashRoute(
                 appContainer = appContainer,
                 onSessionLoaded = { session ->
@@ -528,7 +584,7 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.OnboardingStatusError -> OnboardingStatusErrorScreen(
                 message = onboardingStatusErrorMessage,
-                isRetrying = authUiState.isLoading,
+                isRetrying = authUiState.isLoading || reconnectionState.busy,
                 onRetryClick = {
                     if (retryStatusAfterFamilyJoin) {
                         resolveAfterFamilyJoin()
@@ -537,7 +593,9 @@ fun OnboardingRoute(
                     }
                 },
                 onLoginWithAnotherAccountClick = {
-                    returnToLoginFromPostLogin(forceClearSession = true)
+                    if (selectedUserMode == AppUserMode.Senior) {
+                        reconnectionViewModel.cancel { returnToLoginFromPostLogin(forceClearSession = true) }
+                    } else returnToLoginFromPostLogin(forceClearSession = true)
                 },
             )
         }

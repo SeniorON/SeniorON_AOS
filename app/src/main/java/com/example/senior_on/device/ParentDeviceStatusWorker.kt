@@ -32,6 +32,19 @@ class ParentDeviceStatusWorker(
         }
 
         val appContainer = (applicationContext as SeniorOnApplication).appContainer
+        val gate = com.example.senior_on.data.local.ParentConnectionGate
+        if (!gate.isReady()) {
+            val version = gate.backgroundCheckVersion() ?: return Result.retry()
+            val destination = try {
+                appContainer.parentReconnectionRepository.destination()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                return Result.retry()
+            }
+            if (destination != com.example.senior_on.data.repository.impl.ParentConnectionDestination.Home) return Result.success()
+            if (!gate.approve(version)) return Result.retry()
+        }
         val repository = appContainer.deviceRepository
         val inactivityMonitor = ParentInactivityMonitor(
             context = applicationContext,
@@ -68,6 +81,10 @@ class ParentDeviceStatusWorker(
 }
 
 object ParentDeviceStatusScheduler {
+    fun cancel(context: Context) {
+        WorkManager.getInstance(context.applicationContext).cancelUniqueWork(PeriodicWorkName)
+        WorkManager.getInstance(context.applicationContext).cancelUniqueWork(ImmediateWorkName)
+    }
     private const val PeriodicWorkName = "parent_device_status_periodic"
     private const val ImmediateWorkName = "parent_device_status_immediate"
 

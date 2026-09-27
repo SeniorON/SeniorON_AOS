@@ -14,6 +14,12 @@ import retrofit2.http.PUT
 import retrofit2.http.Query
 
 interface DeviceApi {
+    @GET("api/devices/reconnection")
+    suspend fun getReconnection(): DeviceReconnectionStatus
+
+    @PATCH("api/devices/reconnection")
+    suspend fun reconnect(): Response<Unit>
+
     @PUT("api/devices/status")
     suspend fun updateStatus(@Body request: DeviceStatusUpdateRequest): Response<Unit>
 
@@ -36,3 +42,5 @@ interface DeviceApi {
     @GET("api/devices/home-location")
     suspend fun getHomeLocation(): HomeLocationResponse
 }
+
+data class DeviceReconnectionStatus(val familyConnected: Boolean?, val deviceDisconnected: Boolean?)

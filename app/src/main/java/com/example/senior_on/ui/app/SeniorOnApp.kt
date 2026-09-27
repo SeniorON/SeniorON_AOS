@@ -28,6 +28,7 @@ private enum class AppDestination {
 fun SeniorOnApp(
     appContainer: AppContainer,
     onOpenParentLauncher: () -> Unit,
+    startAtParentLogin: Boolean = false,
 ) {
     val context = LocalContext.current
     val notificationNavigationEvent by
@@ -59,6 +60,7 @@ fun SeniorOnApp(
         AppDestination.Onboarding -> key(onboardingInstance) {
             OnboardingRoute(
                 appContainer = appContainer,
+                startAtParentLogin = startAtParentLogin,
                 onAuthenticated = { mode, userId ->
                     authenticatedUserId = userId
                     authenticatedSessionInstance += 1
