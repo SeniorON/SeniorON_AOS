@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModelStore
 import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.domain.model.auth.OnboardingStatus
 import com.example.senior_on.domain.model.server.*
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.ui.parent.photo.viewmodel.ParentFamilyPhotoViewModel
 import java.lang.reflect.Proxy
@@ -22,10 +22,10 @@ class ParentFamilyPhotoViewModelTest {
         var viewed = false
         var identityRequests = 0
         val calls = mutableListOf<String>()
-        val auth = stub<AuthRepository> { name, _ ->
-            check(name == "getOnboardingStatus")
+        val auth = stub<ParentSeniorProfileRepository> { name, _ ->
+            check(name == "getOwnSeniorId")
             identityRequests++
-            OnboardingStatus(true, CareManagerType.None, 42L, true, true, true)
+            42L
         }
         val repository = stub<FamilyServerRepository> { name, args ->
             calls += name
@@ -71,8 +71,8 @@ class ParentFamilyPhotoViewModelTest {
         val store = ViewModelStore()
         var seniorId: Long? = null
         var requests = 0
-        val auth = stub<AuthRepository> { _, _ ->
-            OnboardingStatus(true, CareManagerType.None, seniorId, true, true, true)
+        val auth = stub<ParentSeniorProfileRepository> { _, _ ->
+            requireNotNull(seniorId)
         }
         val repository = stub<FamilyServerRepository> { name, args ->
             check(name == "getPhotoAlbums")

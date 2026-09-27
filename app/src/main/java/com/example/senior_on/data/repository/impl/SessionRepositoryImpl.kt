@@ -19,6 +19,7 @@ class SessionRepositoryImpl(
                 UserRole.PARENT -> AppUserMode.Senior
             },
             userId = session.userId,
+            usersId = session.usersId,
         )
     }
 
@@ -27,6 +28,7 @@ class SessionRepositoryImpl(
         userId: String,
         mode: AppUserMode,
     ) {
+        com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
         AccessTokenStore.save(accessToken)
         dataSource.saveSession(
             SavedSession(
@@ -48,6 +50,7 @@ class SessionRepositoryImpl(
         keepLoggedIn: Boolean,
         usersId: Long?,
     ) {
+        com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
         // Even when automatic login is not requested, keep the access token across
         // process death for the remainder of its server-defined lifetime. Omitting
         // the refresh token prevents that session from being extended after expiry.

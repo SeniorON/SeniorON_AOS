@@ -95,15 +95,31 @@ class AuthRepositoryImpl(
         val response = dataSource.getOnboardingStatus()
         return OnboardingStatus(
             hasFamily = response.hasFamily,
-            managerType = when (response.managerType) {
-                ManagerType.PRIMARY -> CareManagerType.Primary
-                ManagerType.SUB -> CareManagerType.Sub
-                ManagerType.NONE, null -> CareManagerType.None
-            },
-            seniorId = response.seniorId,
-            seniorProfileCompleted = response.seniorProfileCompleted,
-            relationRegistered = response.relation != null,
+            managerType = CareManagerType.None,
+            seniorId = null,
+            seniorProfileCompleted = false,
+            relationRegistered = false,
             onboardingCompleted = response.onboardingCompleted,
+            currentUserMode = when (response.currentUserRole) {
+                com.example.senior_on.data.remote.dto.UserRole.PARENT -> AppUserMode.Senior
+                com.example.senior_on.data.remote.dto.UserRole.CHILD -> AppUserMode.Child
+                null -> null
+            },
+            families = response.families.orEmpty().map { family ->
+                com.example.senior_on.domain.model.auth.OnboardingFamilyStatus(
+                    familyId = family.familyId,
+                    managerType = when (family.managerType) {
+                        ManagerType.PRIMARY -> CareManagerType.Primary
+                        ManagerType.SUB -> CareManagerType.Sub
+                        else -> CareManagerType.None
+                    },
+                    parentUserId = family.parentUserId,
+                    seniorId = family.seniorId?.takeIf { it > 0 },
+                    seniorName = family.seniorName,
+                    seniorProfileCompleted = family.seniorProfileCompleted,
+                    relationRegistered = family.relation != null,
+                )
+            },
         )
     }
 

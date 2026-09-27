@@ -30,7 +30,6 @@ fun ParentSettingsRoute(
     onSessionEnded: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onDevicePermissionsClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val settingsViewModel: SettingsViewModel = viewModel(
@@ -44,7 +43,7 @@ fun ParentSettingsRoute(
     val actionState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val profileViewModel: ParentSettingsViewModel = viewModel(factory = viewModelFactory {
         initializer {
-            ParentSettingsViewModel(appContainer.userSettingsRepository, appContainer.authRepository,
+            ParentSettingsViewModel(appContainer.userSettingsRepository, appContainer.parentSeniorProfileRepository,
                 appContainer.parentSettingsRepository, appContainer.familyServerRepository, appContainer.familyPhotoUploadPreparer)
         }
     })
@@ -93,8 +92,8 @@ fun ParentSettingsRoute(
                 Toast.makeText(context, "변경했어요.", Toast.LENGTH_SHORT).show()
             }
             "disconnect" -> {
-                Toast.makeText(context, "기기 연결을 해제했어요. 가족 관계는 유지돼요.", Toast.LENGTH_LONG).show()
-                onBackClick()
+                Toast.makeText(context, "기기 연결을 해제했어요. 로그아웃합니다.", Toast.LENGTH_LONG).show()
+                settingsViewModel.logout(clearLocalOnFailure = true)
             }
         }
         profileViewModel.consumeCompleted()
@@ -114,8 +113,7 @@ fun ParentSettingsRoute(
     when (destination) {
         ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back,
             { if (!isBusy) { destination = it; if (it == ParentSettingsDestination.Account) profileViewModel.loadAccount() } },
-            { if (!isBusy) confirmation = it }, {}, modifier, onPhotoClick = editPhoto,
-            onDevicePermissionsClick = onDevicePermissionsClick)
+            { if (!isBusy) confirmation = it }, {}, modifier, onPhotoClick = editPhoto)
         ParentSettingsDestination.Account -> ParentAccountScreen(profile, ::back,
             { if (!isBusy && profileState.profile != null) destination = ParentSettingsDestination.ChangeName },
             { if (!isBusy) destination = ParentSettingsDestination.ChangePassword }, modifier, onPhotoClick = editPhoto)

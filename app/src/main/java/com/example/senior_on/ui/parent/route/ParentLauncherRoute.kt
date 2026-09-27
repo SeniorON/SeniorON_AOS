@@ -70,8 +70,11 @@ fun ParentLauncherRoute(
     val sessionContext = LocalContext.current
     fun onSessionEnded() {
         needsLogin = true
+        com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(sessionContext)
+        ParentDeviceStatusScheduler.cancel(sessionContext)
         sessionContext.startActivity(
             android.content.Intent(sessionContext, com.example.senior_on.MainActivity::class.java)
+                .putExtra("start_at_parent_login", true)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
         )
         (sessionContext as? android.app.Activity)?.finish()
@@ -98,6 +101,22 @@ fun ParentLauncherRoute(
     // Access-token expiry alone stays on the normal refresh path in the authenticator.
     if (needsLogin || sessionExpirationEvent != null) {
         ParentSessionExpiredRoute(modifier)
+        return
+    }
+
+    // The Android HOME activity can start directly, without the app's onboarding activity.
+    // Capture entry approval only. Closing the gate during disconnect must not dispose
+    // the settings ViewModel before its logout request and local cleanup finish.
+    val entryApproved = remember { com.example.senior_on.data.local.ParentConnectionGate.isReady() }
+    if (!entryApproved) {
+        LaunchedEffect(Unit) {
+            sessionContext.startActivity(
+                android.content.Intent(sessionContext, com.example.senior_on.MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            (sessionContext as? android.app.Activity)?.finish()
+        }
+        ParentFamilyMembershipLoadingScreen(modifier)
         return
     }
 
@@ -173,10 +192,21 @@ private fun ParentLauncherContent(
         com.example.senior_on.ui.parent.permission.AndroidParentPermissionController(context)
     }
     var showPermissionGuide by rememberSaveable { mutableStateOf(false) }
+    fun dismissedPermissions(): Set<com.example.senior_on.ui.parent.permission.ParentPermissionStep> {
+        val names = guidePreferences.getStringSet("dismissed_steps_v4", emptySet()).orEmpty()
+        return com.example.senior_on.ui.parent.permission.ParentPermissionStep.entries
+            .filterTo(mutableSetOf()) { it.name in names }
+    }
     DisposableEffect(lifecycleOwner, permissionController) {
         fun checkSetup() {
+            // Ignore the legacy global dismissed_v3 flag: it cannot identify which step was refused.
+            val dismissed = com.example.senior_on.ui.parent.permission.remainingPermissionDismissals(
+                dismissedPermissions(), permissionController::status,
+            )
+            guidePreferences.edit().remove("dismissed_v3")
+                .putStringSet("dismissed_steps_v4", dismissed.map { it.name }.toSet()).apply()
             if (com.example.senior_on.ui.parent.permission.shouldOfferPermissionGuide(
-                guidePreferences.getBoolean("dismissed_v3", false), permissionController::status,
+                dismissed, permissionController::status,
             )) showPermissionGuide = true
         }
         val observer = LifecycleEventObserver { _, event ->
@@ -242,10 +272,10 @@ private fun ParentLauncherContent(
 
     if (showPermissionGuide) {
         ParentPermissionGuideRoute(onExit = {
-            guidePreferences.edit().putBoolean("dismissed_v3", true).apply()
             showPermissionGuide = false
-        }, modifier = modifier, onPermissionDeclined = {
-            guidePreferences.edit().putBoolean("dismissed_v3", true).apply()
+        }, modifier = modifier, dismissedSteps = dismissedPermissions(), onPermissionDeclined = { step ->
+            guidePreferences.edit().putStringSet("dismissed_steps_v4",
+                (dismissedPermissions() + step).map { it.name }.toSet()).apply()
         })
     } else when (destination) {
         ParentDestination.Home,
@@ -270,7 +300,6 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.Settings -> ParentSettingsRoute(
-            onDevicePermissionsClick = { showPermissionGuide = true },
             appContainer = appContainer,
             onSessionEnded = onSessionEnded,
             onBackClick = ::openHome,
@@ -279,7 +308,7 @@ private fun ParentLauncherContent(
 
         ParentDestination.Schedule -> ParentScheduleRoute(
             repository = appContainer.hospitalRepository,
-            authRepository = appContainer.authRepository,
+            profileRepository = appContainer.parentSeniorProfileRepository,
             updatesRepository = appContainer.parentHomeUpdatesRepository,
             onBackClick = ::openHome,
             modifier = modifier,
@@ -303,7 +332,7 @@ private fun ParentLauncherContent(
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
             repository = appContainer.familyServerRepository,
-            authRepository = appContainer.authRepository,
+            profileRepository = appContainer.parentSeniorProfileRepository,
             onBackClick = ::openHome,
             modifier = modifier,
         )

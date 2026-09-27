@@ -76,10 +76,14 @@ import com.example.senior_on.domain.repository.server.*
 import com.google.android.gms.location.LocationServices
 
 interface AppContainer {
+    val parentReconnectionRepository: com.example.senior_on.data.repository.impl.ParentReconnectionRepository
+        get() = com.example.senior_on.data.repository.impl.ParentReconnectionRepository(SeniorOnNetwork.deviceApi)
     val authRepository: AuthRepository
     val accountRecoveryRepository: AccountRecoveryRepository
     val socialAuthRepository: SocialAuthRepository
     val seniorRepository: SeniorRepository
+    val parentSeniorProfileRepository: com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
+        get() = com.example.senior_on.data.repository.impl.ParentSeniorProfileRepositoryImpl(SeniorOnNetwork.seniorApi)
     val sessionRepository: SessionRepository
     val deviceRegistrationRepository: DeviceRegistrationRepository
     val homeServerRepository: HomeServerRepository

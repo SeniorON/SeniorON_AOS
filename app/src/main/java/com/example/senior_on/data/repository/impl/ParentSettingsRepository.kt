@@ -16,7 +16,15 @@ class ParentSettingsRepository(private val api: ParentSettingsApi) {
     }
 
     suspend fun disconnect() = remoteRequest {
-        val response = api.disconnect()
-        if (!response.isSuccessful) throw HttpException(response)
+        val gate = com.example.senior_on.data.local.ParentConnectionGate
+        val wasReady = gate.isReady()
+        val version = gate.hold()
+        try {
+            val response = api.disconnect()
+            if (!response.isSuccessful) throw HttpException(response)
+        } catch (error: Exception) {
+            if (wasReady) gate.approve(version)
+            throw error
+        }
     }
 }

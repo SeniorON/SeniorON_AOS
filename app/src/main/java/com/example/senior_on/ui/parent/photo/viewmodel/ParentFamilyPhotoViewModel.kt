@@ -8,7 +8,7 @@ import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.domain.model.server.ServerFamilyPhoto
 import com.example.senior_on.domain.model.server.ServerFamilyPhotoCursor
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
@@ -57,7 +57,7 @@ data class ParentFamilyPhotoUiState(
 
 class ParentFamilyPhotoViewModel(
     private val repository: FamilyServerRepository,
-    private val authRepository: AuthRepository,
+    private val profileRepository: ParentSeniorProfileRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentFamilyPhotoUiState())
     val uiState = _uiState.asStateFlow()
@@ -68,9 +68,7 @@ class ParentFamilyPhotoViewModel(
     private var ownSeniorId: Long? = null
 
     private suspend fun requireOwnSeniorId(): Long = seniorIdMutex.withLock {
-        ownSeniorId ?: requireNotNull(
-            authRepository.getOnboardingStatus().seniorId?.takeIf { it > 0 }
-        ) { "연결된 시니어 정보를 찾을 수 없어요." }.also { ownSeniorId = it }
+        ownSeniorId ?: profileRepository.getOwnSeniorId().also { ownSeniorId = it }
     }
 
     fun loadAlbums(isRefresh: Boolean = false) {
@@ -247,8 +245,8 @@ class ParentFamilyPhotoViewModel(
     companion object {
         private const val PHOTO_PAGE_SIZE = 20
 
-        fun factory(repository: FamilyServerRepository, authRepository: AuthRepository) = viewModelFactory {
-            initializer { ParentFamilyPhotoViewModel(repository, authRepository) }
+        fun factory(repository: FamilyServerRepository, profileRepository: ParentSeniorProfileRepository) = viewModelFactory {
+            initializer { ParentFamilyPhotoViewModel(repository, profileRepository) }
         }
     }
 }

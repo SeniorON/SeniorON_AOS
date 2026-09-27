@@ -9,15 +9,43 @@ class ParentPermissionPolicyTest {
         val status: (ParentPermissionStep) -> ParentPermissionStatus = {
             if (it == ParentPermissionStep.DefaultHome) ParentPermissionStatus.Required else ParentPermissionStatus.Granted
         }
-        assertTrue(shouldOfferPermissionGuide(false, status))
-        assertFalse(shouldOfferPermissionGuide(true, status))
-        assertEquals(ParentPermissionStep.DefaultHome, firstMissingPermissionStep(status))
+        assertTrue(shouldOfferPermissionGuide(emptySet(), status))
+        assertFalse(shouldOfferPermissionGuide(setOf(ParentPermissionStep.DefaultHome), status))
+        assertEquals(ParentPermissionStep.DefaultHome, firstMissingPermissionStep(status = status))
     }
 
     @Test fun completedPermissionsAndUnverifiableManualStepDoNotForceGuide() {
-        assertFalse(shouldOfferPermissionGuide(false) { ParentPermissionStatus.Granted })
-        assertFalse(shouldOfferPermissionGuide(false) { ParentPermissionStatus.Manual })
+        assertFalse(shouldOfferPermissionGuide { ParentPermissionStatus.Granted })
+        assertFalse(shouldOfferPermissionGuide { ParentPermissionStatus.Manual })
         assertNull(firstMissingPermissionStep { ParentPermissionStatus.NotApplicable })
+    }
+
+    @Test fun decliningBatteryDoesNotHideMissingHome() {
+        val dismissed = setOf(ParentPermissionStep.BatteryOptimization)
+        val status: (ParentPermissionStep) -> ParentPermissionStatus = {
+            if (it == ParentPermissionStep.BatteryOptimization || it == ParentPermissionStep.DefaultHome)
+                ParentPermissionStatus.Required else ParentPermissionStatus.Granted
+        }
+        assertTrue(shouldOfferPermissionGuide(dismissed, status))
+        assertEquals(ParentPermissionStep.DefaultHome, firstMissingPermissionStep(dismissed, status))
+    }
+
+    @Test fun nextStepSkipsOnlyExplicitlyDeferredPermissions() {
+        val dismissed = setOf(ParentPermissionStep.Notification, ParentPermissionStep.ForegroundLocation)
+        assertEquals(ParentPermissionStep.BackgroundLocation,
+            ParentPermissionStep.BatteryOptimization.nextRequired(dismissed) { ParentPermissionStatus.Required })
+        assertNull(firstMissingPermissionStep(ParentPermissionStep.entries.toSet()) { ParentPermissionStatus.Required })
+    }
+
+    @Test fun grantClearsRefusalSoLaterRevocationIsOfferedAgain() {
+        val dismissed = setOf(ParentPermissionStep.DefaultHome, ParentPermissionStep.Notification)
+        val remaining = remainingPermissionDismissals(dismissed) {
+            if (it == ParentPermissionStep.DefaultHome) ParentPermissionStatus.Granted else ParentPermissionStatus.Required
+        }
+        assertEquals(setOf(ParentPermissionStep.Notification), remaining)
+        assertTrue(shouldOfferPermissionGuide(remaining) {
+            if (it == ParentPermissionStep.DefaultHome) ParentPermissionStatus.Required else ParentPermissionStatus.Granted
+        })
     }
 
     @Test fun guideContainsExactlySixStepsInOrder() {

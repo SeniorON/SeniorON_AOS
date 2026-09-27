@@ -6,7 +6,7 @@ import com.example.senior_on.data.remote.dto.ApiResponse
 import com.example.senior_on.data.repository.impl.ParentSettingsRepository
 import com.example.senior_on.domain.model.auth.*
 import com.example.senior_on.domain.model.server.UserAccountSettings
-import com.example.senior_on.domain.repository.auth.AuthRepository
+import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import com.example.senior_on.domain.repository.server.*
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.Dispatchers
@@ -64,9 +64,9 @@ class ParentSettingsViewModelTest {
             check(name == "getSettings")
             UserAccountSettings("부모", "PARENT", "parent@example.com", null, true)
         },
-        stub<AuthRepository> { name ->
-            check(name == "getOnboardingStatus")
-            OnboardingStatus(true, CareManagerType.None, seniorId, true, true, true)
+        stub<ParentSeniorProfileRepository> { name ->
+            check(name == "getOwnSeniorId")
+            requireNotNull(seniorId)
         },
         ParentSettingsRepository(api),
         stub<FamilyServerRepository> { error("Unexpected call: $it") },

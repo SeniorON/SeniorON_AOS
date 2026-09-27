@@ -64,12 +64,17 @@ class AuthViewModel(
     private var signupDraft = SignupDraft()
     private var pendingSocialSignup: PendingSocialSignup? = null
 
+    var authenticatedUsersId: Long? = null
+        private set
+
     var accessToken: String? = null
         private set
 
     fun loadSavedSession(onResult: (AuthSession?) -> Unit) {
         launchRequest {
-            onResult(sessionRepository.validateSavedSession())
+            val session = sessionRepository.validateSavedSession()
+            authenticatedUsersId = session?.usersId
+            onResult(session)
         }
     }
 
@@ -106,6 +111,7 @@ class AuthViewModel(
                 }
                 else -> {
                     accessToken = result.accessToken
+                    authenticatedUsersId = result.usersId
                     sessionRepository.saveLoginSession(
                         accessToken = result.accessToken,
                         refreshToken = result.refreshToken,
@@ -235,6 +241,7 @@ class AuthViewModel(
     }
 
     fun clearSession() {
+        authenticatedUsersId = null
         accessToken = null
         sessionRepository.clearSession()
     }
@@ -265,6 +272,7 @@ class AuthViewModel(
     }
 
     private fun finishSignupWithoutSession() {
+        authenticatedUsersId = null
         accessToken = null
         sessionRepository.clearSession()
         pendingSocialSignup = null
@@ -364,6 +372,7 @@ class AuthViewModel(
 
             if (resultMode == mode) {
                 accessToken = resultAccessToken
+                authenticatedUsersId = resultUsersId
                 sessionRepository.saveLoginSession(
                     accessToken = resultAccessToken,
                     refreshToken = result.refreshToken,

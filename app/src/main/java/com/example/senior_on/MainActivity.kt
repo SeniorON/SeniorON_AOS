@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
                     SeniorOnApp(
                         appContainer = (application as SeniorOnApplication).appContainer,
                         onOpenParentLauncher = ::openParentLauncher,
+                        startAtParentLogin = intent.getBooleanExtra("start_at_parent_login", false),
                     )
                 }
             }
