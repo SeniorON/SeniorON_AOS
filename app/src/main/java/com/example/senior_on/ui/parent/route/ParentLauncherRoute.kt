@@ -173,10 +173,21 @@ private fun ParentLauncherContent(
         com.example.senior_on.ui.parent.permission.AndroidParentPermissionController(context)
     }
     var showPermissionGuide by rememberSaveable { mutableStateOf(false) }
+    fun dismissedPermissions(): Set<com.example.senior_on.ui.parent.permission.ParentPermissionStep> {
+        val names = guidePreferences.getStringSet("dismissed_steps_v4", emptySet()).orEmpty()
+        return com.example.senior_on.ui.parent.permission.ParentPermissionStep.entries
+            .filterTo(mutableSetOf()) { it.name in names }
+    }
     DisposableEffect(lifecycleOwner, permissionController) {
         fun checkSetup() {
+            // Ignore the legacy global dismissed_v3 flag: it cannot identify which step was refused.
+            val dismissed = com.example.senior_on.ui.parent.permission.remainingPermissionDismissals(
+                dismissedPermissions(), permissionController::status,
+            )
+            guidePreferences.edit().remove("dismissed_v3")
+                .putStringSet("dismissed_steps_v4", dismissed.map { it.name }.toSet()).apply()
             if (com.example.senior_on.ui.parent.permission.shouldOfferPermissionGuide(
-                guidePreferences.getBoolean("dismissed_v3", false), permissionController::status,
+                dismissed, permissionController::status,
             )) showPermissionGuide = true
         }
         val observer = LifecycleEventObserver { _, event ->
@@ -242,10 +253,10 @@ private fun ParentLauncherContent(
 
     if (showPermissionGuide) {
         ParentPermissionGuideRoute(onExit = {
-            guidePreferences.edit().putBoolean("dismissed_v3", true).apply()
             showPermissionGuide = false
-        }, modifier = modifier, onPermissionDeclined = {
-            guidePreferences.edit().putBoolean("dismissed_v3", true).apply()
+        }, modifier = modifier, dismissedSteps = dismissedPermissions(), onPermissionDeclined = { step ->
+            guidePreferences.edit().putStringSet("dismissed_steps_v4",
+                (dismissedPermissions() + step).map { it.name }.toSet()).apply()
         })
     } else when (destination) {
         ParentDestination.Home,

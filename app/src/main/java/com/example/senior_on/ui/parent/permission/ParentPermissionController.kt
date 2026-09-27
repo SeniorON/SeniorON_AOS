@@ -96,7 +96,10 @@ private tailrec fun Context.permissionActivity(): Activity? = when (this) {
 }
 
 /** Manual checks must never be treated as system-granted permissions. */
-fun ParentPermissionStep.nextRequired(status: (ParentPermissionStep) -> ParentPermissionStatus): ParentPermissionStep? =
+fun ParentPermissionStep.nextRequired(
+    dismissed: Set<ParentPermissionStep> = emptySet(),
+    status: (ParentPermissionStep) -> ParentPermissionStatus,
+): ParentPermissionStep? =
     ParentPermissionStep.entries.drop(ordinal + 1).firstOrNull {
-        status(it) == ParentPermissionStatus.Required || status(it) == ParentPermissionStatus.Manual
+        it !in dismissed && (status(it) == ParentPermissionStatus.Required || status(it) == ParentPermissionStatus.Manual)
     }

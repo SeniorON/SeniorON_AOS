@@ -17,11 +17,12 @@ fun ParentPermissionGuideRoute(
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     controller: ParentPermissionController? = null,
-    onPermissionDeclined: () -> Unit = {},
+    dismissedSteps: Set<ParentPermissionStep> = emptySet(),
+    onPermissionDeclined: (ParentPermissionStep) -> Unit = {},
 ) {
     val context = LocalContext.current
     val platform = controller ?: remember(context) { AndroidParentPermissionController(context) }
-    var step by rememberSaveable { mutableStateOf(firstMissingPermissionStep(platform::status)
+    var step by rememberSaveable { mutableStateOf(firstMissingPermissionStep(dismissedSteps, platform::status)
         ?: ParentPermissionStep.BatteryOptimization) }
     var pending by rememberSaveable { mutableStateOf<ParentPermissionStep?>(null) }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
@@ -32,7 +33,16 @@ fun ParentPermissionGuideRoute(
 
     fun advance() {
         message = null
-        step.nextRequired(platform::status)?.let { step = it } ?: run { reachedEnd = true }
+        step.nextRequired(dismissedSteps, platform::status)?.let { step = it } ?: run {
+            // Finishing the guide is not proof that every permission was granted.
+            if (ParentPermissionStep.entries.any { platform.status(it) == ParentPermissionStatus.Required }) onExit()
+            else reachedEnd = true
+        }
+    }
+    fun deferCurrent() {
+        if (pending != null) return
+        onPermissionDeclined(step)
+        advance()
     }
     fun returned() {
         val requested = pending ?: return
@@ -42,7 +52,7 @@ fun ParentPermissionGuideRoute(
             ParentPermissionStatus.Granted, ParentPermissionStatus.NotApplicable -> advance()
             ParentPermissionStatus.Manual -> manualConfirmation = true
             ParentPermissionStatus.Required -> {
-                onPermissionDeclined()
+                onPermissionDeclined(step)
                 message = if (step == ParentPermissionStep.ForegroundLocation)
                     "위치 권한이 아직 허용되지 않았어요. 외출·귀가 감지에는 정확한 위치가 필요해요. 다시 설정하거나 나중에 진행할 수 있어요."
                     else "아직 설정이 확인되지 않았어요. 다시 설정하거나 나중에 진행할 수 있어요."
@@ -51,7 +61,14 @@ fun ParentPermissionGuideRoute(
     }
     val settingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { returned() }
     val permissionsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { returned() }
-    fun back() { message = null; step.previous()?.let { step = it } ?: onExit() }
+    fun back() {
+        if (pending != null) return
+        message = null
+        ParentPermissionStep.entries.take(step.ordinal).lastOrNull {
+            it !in dismissedSteps && (platform.status(it) == ParentPermissionStatus.Required ||
+                platform.status(it) == ParentPermissionStatus.Manual)
+        }?.let { step = it } ?: deferCurrent()
+    }
     BackHandler(enabled = pending == null, onBack = ::back)
 
     val status = platform.status(step)
@@ -92,7 +109,7 @@ fun ParentPermissionGuideRoute(
             step == ParentPermissionStep.BatteryOptimization -> "열리는 앱 정보 화면에서 배터리 > 제한 없음을 선택한 뒤 돌아와 주세요. 기기에 따라 메뉴 이름이 다를 수 있어요."
             else -> null
         },
-        onLaterClick = onExit,
+        onLaterClick = ::deferCurrent,
         onManualConfirmClick = if (status == ParentPermissionStatus.Manual && pending == null)
             ({ manualConfirmation = true }) else null,
     )
