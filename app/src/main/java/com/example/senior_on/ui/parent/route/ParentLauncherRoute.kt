@@ -281,7 +281,6 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.Settings -> ParentSettingsRoute(
-            onDevicePermissionsClick = { showPermissionGuide = true },
             appContainer = appContainer,
             onSessionEnded = onSessionEnded,
             onBackClick = ::openHome,

@@ -21,7 +21,6 @@ fun ParentSettingsScreen(
     modifier: Modifier = Modifier,
     previewOnly: Boolean = false,
     onPhotoClick: (() -> Unit)? = null,
-    onDevicePermissionsClick: () -> Unit = {},
 ) {
     ParentSettingsScaffold("설정", onBackClick, modifier, centeredTitle = false, previewOnly = previewOnly,
         backgroundColor = SeniorOnColors.White, showHeaderShadow = true) {
@@ -32,7 +31,6 @@ fun ParentSettingsScreen(
                 ParentSettingsMenuRow("공유코드 확인", { onNavigate(ParentSettingsDestination.ShareCode) }, isSectionItem = true)
                 ParentSettingsMenuRow("자녀와 연결 해제", { onConfirmAction(ParentSettingsConfirmation.Disconnect) }, isSectionItem = true)
                 ParentSettingsMenuRow("권한 해제", { onNavigate(ParentSettingsDestination.PermissionControl) }, isSectionItem = true)
-                ParentSettingsMenuRow("기기 권한·기본 홈 설정", onDevicePermissionsClick, isSectionItem = true)
             }
             Spacer(Modifier.height(16.dp))
             ParentSettingsSection("지원") {

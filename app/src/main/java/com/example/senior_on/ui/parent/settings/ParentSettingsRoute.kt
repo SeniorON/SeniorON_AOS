@@ -30,7 +30,6 @@ fun ParentSettingsRoute(
     onSessionEnded: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onDevicePermissionsClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val settingsViewModel: SettingsViewModel = viewModel(
@@ -114,8 +113,7 @@ fun ParentSettingsRoute(
     when (destination) {
         ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back,
             { if (!isBusy) { destination = it; if (it == ParentSettingsDestination.Account) profileViewModel.loadAccount() } },
-            { if (!isBusy) confirmation = it }, {}, modifier, onPhotoClick = editPhoto,
-            onDevicePermissionsClick = onDevicePermissionsClick)
+            { if (!isBusy) confirmation = it }, {}, modifier, onPhotoClick = editPhoto)
         ParentSettingsDestination.Account -> ParentAccountScreen(profile, ::back,
             { if (!isBusy && profileState.profile != null) destination = ParentSettingsDestination.ChangeName },
             { if (!isBusy) destination = ParentSettingsDestination.ChangePassword }, modifier, onPhotoClick = editPhoto)
