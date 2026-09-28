@@ -52,7 +52,7 @@ class SeniorRepositoryImpl(
 
     override suspend fun getManagedSeniors(): List<ManagedSenior> {
         return dataSource.getManagedSeniors()
-            .map { response -> response.toDomain() }
+            .mapNotNull { response -> response.toDomain() }
             .distinctBy(ManagedSenior::seniorId)
     }
 
@@ -86,7 +86,10 @@ class SeniorRepositoryImpl(
         return SeniorRelationType.valueOf(name)
     }
 
-    private fun ManagedSeniorResponse.toDomain(): ManagedSenior {
+    private fun ManagedSeniorResponse.toDomain(): ManagedSenior? {
+        // A family with only an invitation code has no selectable senior yet.
+        val registeredSeniorId = seniorId?.takeIf { it > 0L } ?: return null
+        val registeredSeniorName = requireNotNull(name) { "시니어 이름이 응답에 없습니다." }
         val relationship = relation?.let { relation ->
             CaregiverRelationship(
                 relation = relation.toDomain(),
@@ -102,9 +105,9 @@ class SeniorRepositoryImpl(
 
         return ManagedSenior(
             familyId = familyId,
-            seniorId = seniorId,
+            seniorId = registeredSeniorId,
             parentUserId = parentUserId,
-            name = name,
+            name = registeredSeniorName,
             relationship = relationship
         )
     }

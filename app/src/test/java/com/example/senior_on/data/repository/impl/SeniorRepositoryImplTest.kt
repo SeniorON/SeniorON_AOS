@@ -11,11 +11,81 @@ import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.domain.model.senior.SeniorRegistration
 import kotlinx.coroutines.runBlocking
+import com.google.gson.Gson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SeniorRepositoryImplTest {
+    @Test
+    fun `code only family does not prevent loading registered seniors`() = runBlocking {
+        val responses = Gson().fromJson(
+            """[
+                {"familyId":1,"seniorId":1,"seniorName":"테스트 시니어","relation":"OTHER","customRelation":"시니어1번","seniorProfileCompleted":true},
+                {"familyId":2,"seniorId":null,"seniorName":null,"relation":null,"customRelation":null,"seniorProfileCompleted":false}
+            ]""",
+            Array<ManagedSeniorResponse>::class.java,
+        )
+        assertNull(responses[1].seniorId)
+        val dataSource = RecordingSeniorDataSource().apply {
+            managedSeniorResponses = responses.toList()
+        }
+
+        val result = SeniorRepositoryImpl(dataSource).getManagedSeniors()
+
+        assertEquals(1, result.size)
+        assertEquals(1L, result.single().seniorId)
+        assertEquals("테스트 시니어", result.single().name)
+    }
+
+    @Test
+    fun `only unregistered families return empty selection list`() = runBlocking {
+        val responses = Gson().fromJson(
+            """[{"familyId":2,"seniorId":null,"seniorName":null}]""",
+            Array<ManagedSeniorResponse>::class.java,
+        )
+        val dataSource = RecordingSeniorDataSource().apply {
+            managedSeniorResponses = responses.toList()
+        }
+
+        assertEquals(emptyList<Any>(), SeniorRepositoryImpl(dataSource).getManagedSeniors())
+    }
+
+    @Test
+    fun `server seniorName maps to managed senior without parent account field`() = runBlocking {
+        val response = Gson().fromJson(
+            """{"familyId":1,"seniorId":1,"seniorName":"테스트 시니어","relation":"OTHER","customRelation":"시니어1번","seniorProfileCompleted":true}""",
+            ManagedSeniorResponse::class.java,
+        )
+        val dataSource = RecordingSeniorDataSource().apply {
+            managedSeniorResponses = listOf(response)
+        }
+
+        val result = SeniorRepositoryImpl(dataSource).getManagedSeniors().single()
+
+        assertEquals("테스트 시니어", result.name)
+        assertEquals(1L, result.familyId)
+        assertEquals(1L, result.seniorId)
+        assertEquals("시니어1번", result.relationship.displayLabel)
+        assertNull(result.parentUserId)
+    }
+
+    @Test
+    fun `legacy name field remains supported`() = runBlocking {
+        val response = Gson().fromJson(
+            """{"familyId":1,"seniorId":1,"parentUserId":2,"name":"기존 시니어","relation":"MOTHER"}""",
+            ManagedSeniorResponse::class.java,
+        )
+        val dataSource = RecordingSeniorDataSource().apply {
+            managedSeniorResponses = listOf(response)
+        }
+
+        val result = SeniorRepositoryImpl(dataSource).getManagedSeniors().single()
+
+        assertEquals("기존 시니어", result.name)
+        assertEquals(2L, result.parentUserId)
+    }
+
     @Test
     fun `create senior sends family identity and normalized request`() = runBlocking {
         val dataSource = RecordingSeniorDataSource()

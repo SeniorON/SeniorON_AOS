@@ -15,9 +15,10 @@ data class CreateSeniorResponse(
 
 data class ManagedSeniorResponse(
     val familyId: Long,
-    val seniorId: Long,
+    val seniorId: Long?,
     val parentUserId: Long?,
-    val name: String,
+    @SerializedName(value = "seniorName", alternate = ["name"])
+    val name: String?,
     val relation: SeniorRelation?,
     val customRelation: String?
 )
