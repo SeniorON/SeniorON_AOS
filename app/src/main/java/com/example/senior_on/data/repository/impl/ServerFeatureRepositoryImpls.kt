@@ -713,7 +713,8 @@ class NotificationRepositoryImpl(
 }
 
 class EventRepositoryImpl(
-    private val source: EventDataSource
+    private val source: EventDataSource,
+    private val sharingGuard: ParentSharingGuard? = null,
 ) : EventRepository {
     override suspend fun createSos(latitude: Double, longitude: Double, battery: Int?) =
         source.createSos(SosEventRequest(latitude, longitude, battery)).let {
@@ -749,16 +750,28 @@ class EventRepositoryImpl(
         }
     override suspend fun createOutingReturn(
         phase: String, latitude: Double, longitude: Double, battery: Int
-    ) = source.createOutingReturn(
-        OutingReturnRequest(phase.trim().uppercase(), latitude, longitude, battery)
-    ).let {
-        SafetyEvent(it.id, "OUTING_RETURN", it.occurredAt, it.address, it.latitude, it.longitude, it.deviceBattery, phase = it.phase)
+    ) = withSharing { permissions ->
+        check(permissions?.locationEnabled != false) { "위치 정보 공유가 중단되었어요." }
+        source.createOutingReturn(
+            OutingReturnRequest(phase.trim().uppercase(), latitude, longitude, battery)
+        ).let {
+            SafetyEvent(it.id, "OUTING_RETURN", it.occurredAt, it.address, it.latitude, it.longitude, it.deviceBattery, phase = it.phase)
+        }
     }
     override suspend fun createInactivity(
-        latitude: Double, longitude: Double, battery: Int, lastSeenAt: String
-    ) = source.createInactivity(InactivityRequest(latitude, longitude, battery, lastSeenAt)).let {
-        SafetyEvent(null, "INACTIVITY", it.lastSeenAt, it.address, it.latitude, it.longitude, battery)
+        latitude: Double?, longitude: Double?, battery: Int, lastSeenAt: String
+    ) = withSharing { permissions ->
+        check(permissions?.inactivityDetectionEnabled != false) { "무응답 감지 공유가 중단되었어요." }
+        val includeLocation = permissions?.locationEnabled != false && latitude != null && longitude != null
+        source.createInactivity(InactivityRequest(
+            latitude.takeIf { includeLocation }, longitude.takeIf { includeLocation }, battery, lastSeenAt,
+        )).let {
+            SafetyEvent(null, "INACTIVITY", it.lastSeenAt, it.address, it.latitude, it.longitude, battery)
+        }
     }
+
+    private suspend fun <T> withSharing(action: suspend (com.example.senior_on.data.remote.api.SeniorPermissionSettings?) -> T): T =
+        if (sharingGuard != null) sharingGuard.withFreshPermissions { action(it) } else action(null)
     override suspend fun getDetail(eventId: Long) = source.getDetail(eventId).let {
         SafetyEvent(
             id = it.eventId,
@@ -827,6 +840,8 @@ class DeviceRepositoryImpl(
     private val source: DeviceDataSource,
     private val identifierSource: DeviceIdentifierDataSource,
     private val localStatusSource: LocalDeviceStatusDataSource,
+    private val sharingGuard: ParentSharingGuard? = null,
+    private val permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)? = null,
 ) : DeviceRepository {
     override suspend fun updateStatus(): Boolean {
         val status = localStatusSource.getStatusSnapshot()
@@ -856,8 +871,9 @@ class DeviceRepositoryImpl(
 
     override suspend fun disconnect(seniorId: Long) = source.disconnect(seniorId)
 
-    override suspend fun getLatestLocation(seniorId: Long): DeviceLocation =
-        source.getLatestLocation(seniorId).let { response ->
+    override suspend fun getLatestLocation(seniorId: Long): DeviceLocation {
+        check(permissionsLoader?.invoke(seniorId)?.locationEnabled != false) { "위치 정보 공유가 중단되었어요." }
+        return source.getLatestLocation(seniorId).let { response ->
             DeviceLocation(
                 latitude = requireNotNull(response.latitude) {
                     "최근 위치의 위도가 없습니다."
@@ -868,8 +884,18 @@ class DeviceRepositoryImpl(
                 lastLocationUpdatedAt = response.lastLocationUpdatedAt,
             )
         }
+    }
 
     override suspend fun updateLocation(latitude: Double, longitude: Double) {
+        if (sharingGuard != null) {
+            sharingGuard.withFreshPermissions { permissions ->
+                check(permissions.locationEnabled) { "위치 정보 공유가 중단되었어요." }
+                sendLocation(latitude, longitude)
+            }
+        } else sendLocation(latitude, longitude)
+    }
+
+    private suspend fun sendLocation(latitude: Double, longitude: Double) {
         source.updateLocation(
             DeviceLocationUpdateRequest(
                 deviceIdentifier = identifierSource.getOrCreateIdentifier(),

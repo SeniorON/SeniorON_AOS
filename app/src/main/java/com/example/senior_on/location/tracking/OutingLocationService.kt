@@ -88,6 +88,10 @@ class OutingLocationService : Service() {
             }
 
             runCatching {
+                if (container.parentSharingGuard?.refresh()?.locationEnabled == false) {
+                    ParentOutingTrackingController.reset(this)
+                    return
+                }
                 val current = container.locationRepository.getCurrentLocation()
                 runCatching {
                     container.deviceRepository.updateLocation(

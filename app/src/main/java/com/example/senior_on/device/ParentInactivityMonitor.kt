@@ -20,11 +20,14 @@ class ParentInactivityMonitor(
     private val eventRepository: EventRepository,
     private val locationRepository: LocationRepository,
     private val deviceRepository: DeviceRepository,
+    private val sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard? = null,
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     private val stateStore = ParentInactivityStateStore(context)
 
     suspend fun refreshSettingAndCheck() = CheckMutex.withLock {
+        val permissions = sharingGuard?.refresh()
+        if (permissions?.inactivityDetectionEnabled == false) return@withLock
         refreshSetting()
 
         var state = stateStore.snapshot()
@@ -50,10 +53,10 @@ class ParentInactivityMonitor(
         if (!ParentInactivityPolicy.shouldCreateEvent(state, currentTime)) return@withLock
 
         val lastActiveAt = checkNotNull(state.lastActiveAtMillis)
-        val location = resolveLocation()
+        val location = if (permissions?.locationEnabled != false) resolveLocation() else null
         eventRepository.createInactivity(
-            latitude = location.latitude,
-            longitude = location.longitude,
+            latitude = location?.latitude,
+            longitude = location?.longitude,
             battery = deviceRepository.getBatteryLevel(),
             lastSeenAt = lastActiveAt.toLocalDateTimeText(),
         )
@@ -79,6 +82,7 @@ class ParentInactivityMonitor(
                 )
             }
             .onFailure { throwable ->
+                if (throwable is kotlinx.coroutines.CancellationException) throw throwable
                 Log.w(LogTag, "Using cached inactivity setting because refresh failed", throwable)
             }
     }
@@ -86,6 +90,7 @@ class ParentInactivityMonitor(
     private suspend fun resolveLocation(): GeoLocation =
         runCatching { locationRepository.getCurrentLocation() }
             .getOrElse { locationFailure ->
+                if (locationFailure is kotlinx.coroutines.CancellationException) throw locationFailure
                 Log.w(LogTag, "Using registered home as inactivity location", locationFailure)
                 deviceRepository.getHomeLocation().let { home ->
                     GeoLocation(home.latitude, home.longitude)

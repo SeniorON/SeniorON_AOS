@@ -6,13 +6,20 @@ import com.example.senior_on.data.source.remoteRequest
 import com.example.senior_on.data.source.requireData
 import retrofit2.HttpException
 
-class ParentSettingsRepository(private val api: ParentSettingsApi) {
+class ParentSettingsRepository(
+    private val api: ParentSettingsApi,
+    private val sharingGuard: ParentSharingGuard? = null,
+    private val onLocationDisabled: () -> Unit = {},
+) {
     suspend fun getPermissions(seniorId: Long) = remoteRequest {
         api.getPermissions(seniorId).requireData()
     }
 
     suspend fun updatePermissions(location: Boolean? = null, inactivity: Boolean? = null) = remoteRequest {
-        api.updatePermissions(SeniorPermissionUpdate(location, inactivity)).requireData()
+        val request = SeniorPermissionUpdate(location, inactivity)
+        val saved = sharingGuard?.update(request) ?: api.updatePermissions(request).requireData()
+        if (!saved.locationEnabled) onLocationDisabled()
+        saved
     }
 
     suspend fun disconnect() = remoteRequest {

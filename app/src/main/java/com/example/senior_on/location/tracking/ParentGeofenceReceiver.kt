@@ -59,6 +59,10 @@ class ParentGeofenceReceiver : BroadcastReceiver() {
             try {
                 val application = context.applicationContext as SeniorOnApplication
                 val container = application.appContainer
+                if (container.parentSharingGuard?.refresh()?.locationEnabled == false) {
+                    ParentOutingTrackingController.reset(context)
+                    return@launch
+                }
                 val stateStore = OutingTrackingStateStore(context)
                 val home = stateStore.getHomeLocation()
                 if (home == null) {

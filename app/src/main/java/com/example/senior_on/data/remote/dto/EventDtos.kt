@@ -19,7 +19,7 @@ data class OutingReturnResponse(
     val deviceBattery: Int?
 )
 data class InactivityRequest(
-    val latitude: Double, val longitude: Double, val deviceBattery: Int,
+    val latitude: Double?, val longitude: Double?, val deviceBattery: Int,
     val lastSeenAt: String
 )
 data class InactivityResponse(
