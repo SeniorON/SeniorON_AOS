@@ -177,7 +177,14 @@ class DefaultAppContainer(
             log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
         )
     }
-    override val familyServerRepository = FamilyServerRepositoryImpl(remoteFamilySource)
+    private val pendingFamilyCodeStore = com.example.senior_on.data.repository.impl.PendingFamilyCodeStore(context)
+    override val familyServerRepository = com.example.senior_on.data.repository.impl.PendingFamilyRepository(
+        delegate = FamilyServerRepositoryImpl(remoteFamilySource),
+        accountId = { PersistedSessionStore(context).getSession()?.usersId },
+        loadStatus = { authRepository.getOnboardingStatus() },
+        read = pendingFamilyCodeStore::read,
+        write = pendingFamilyCodeStore::write,
+    )
     override val hospitalRepository = HospitalRepositoryImpl(hospitalDataSource)
     override val medicationRepository = MedicationRepositoryImpl(medicationDataSource)
     override val notificationRepository = NotificationRepositoryImpl(notificationDataSource)
