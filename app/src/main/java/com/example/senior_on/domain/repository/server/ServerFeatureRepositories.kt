@@ -27,6 +27,7 @@ interface FamilyServerRepository {
     suspend fun hasFamily(): Boolean
     suspend fun join(code: String): FamilyCodeInfo
     suspend fun createCode(): FamilyCodeInfo
+    suspend fun getPendingCode(): FamilyCodeInfo? = null
     suspend fun getCode(): FamilyCodeInfo
     suspend fun getCode(seniorId: Long): FamilyCodeInfo = getCode()
     suspend fun getHome(): ServerFamilyHome

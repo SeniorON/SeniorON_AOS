@@ -364,6 +364,19 @@ fun ChildMainScreen(
                     .weight(1f)
                     .fillMaxSize(),
             )
+        } else if (selectedTab == ChildMainTab.Family && activeSeniorId == null) {
+            if (selectionState.isLoading) {
+                Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                    com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator()
+                }
+            } else {
+                com.example.senior_on.ui.child.family.PendingFamilyCodeRoute(
+                    repository = familyServerRepository,
+                    sessionKey = childSessionViewModelKey,
+                    onBackClick = { selectedTab = ChildMainTab.Screen },
+                    modifier = Modifier.weight(1f).fillMaxSize(),
+                )
+            }
         } else {
             ChildMainTabContent(
                 selectedTab = selectedTab,

@@ -54,6 +54,7 @@ fun FamilyShareCodeCreatedScreen(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     onRetryClick: () -> Unit = {},
+    showNextButton: Boolean = true,
 ) {
     var isCopied by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -90,7 +91,11 @@ fun FamilyShareCodeCreatedScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
                 Text(
-                    text = errorMessage ?: "가족 공유 코드를 생성하고 있어요.",
+                    text = errorMessage ?: if (showNextButton) {
+                        "가족 공유 코드를 생성하고 있어요."
+                    } else {
+                        "가족 공유 코드를 불러오고 있어요."
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     style = SeniorOnTextStyles.BodyMMedium,
                     color = if (errorMessage != null) {
@@ -123,7 +128,7 @@ fun FamilyShareCodeCreatedScreen(
             }
         }
 
-        FamilyShareCodeBottomButton(
+        if (showNextButton || errorMessage != null) FamilyShareCodeBottomButton(
             text = if (errorMessage != null) "다시 시도" else "다음",
             enabled = !isLoading && (errorMessage != null || familyShareCode.isNotBlank()),
             isLoading = isLoading,

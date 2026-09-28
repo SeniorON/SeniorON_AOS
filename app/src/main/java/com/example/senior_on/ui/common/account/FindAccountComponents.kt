@@ -166,7 +166,7 @@ internal fun FindAccountTextField(
     modifier: Modifier = Modifier,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    textStyle: androidx.compose.ui.text.TextStyle = SeniorOnTextStyles.BodyMMedium.copy(
+    textStyle: androidx.compose.ui.text.TextStyle = SeniorOnTextStyles.BodyMRegular.copy(
         color = SeniorOnColors.Gray800
     ),
     isError: Boolean = false,
@@ -187,6 +187,7 @@ internal fun FindAccountTextField(
         errorBorderColor = errorBorderColor,
         focusedContainerColor = SeniorOnColors.SupportWhite100,
         unfocusedContainerColor = SeniorOnColors.SupportWhite100,
+        errorContainerColor = SeniorOnColors.SupportWhite100,
         cursorColor = SeniorOnColors.Primary600
     )
     val fieldShape = RoundedCornerShape(SeniorOnRadius.Small)
@@ -199,7 +200,7 @@ internal fun FindAccountTextField(
                 color = SeniorOnColors.Gray800
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
         BasicTextField(
@@ -209,6 +210,7 @@ internal fun FindAccountTextField(
                 .fillMaxWidth()
                 .height(43.dp),
             textStyle = textStyle,
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(SeniorOnColors.Primary600),
             singleLine = true,
             keyboardOptions = keyboardOptions,
             visualTransformation = visualTransformation,
@@ -225,7 +227,8 @@ internal fun FindAccountTextField(
                             color = SeniorOnColors.Gray300
                         )
                     },
-                    trailingIcon = if (trailingContent != null || (showClearIcon && value.isNotEmpty() && !isFocused)) {
+                    // Reserve the same trailing space while focus and input values change.
+                    trailingIcon = if (trailingContent != null || showClearIcon) {
                         {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 trailingContent?.invoke()
@@ -247,6 +250,8 @@ internal fun FindAccountTextField(
                                             tint = Color.Unspecified
                                         )
                                     }
+                                } else if (showClearIcon) {
+                                    Spacer(modifier = Modifier.size(24.dp))
                                 }
                             }
                         }
@@ -342,7 +347,7 @@ internal fun FindAccountPasswordTextField(
             PasswordVisualTransformation(mask = '●')
         },
         textStyle = if (isVisible) {
-            SeniorOnTextStyles.BodyMMedium.copy(color = SeniorOnColors.Gray800)
+            SeniorOnTextStyles.BodyMRegular.copy(color = SeniorOnColors.Gray800)
         } else {
             SeniorOnTextStyles.PasswordDot.copy(color = SeniorOnColors.Gray800)
         },
@@ -531,6 +536,7 @@ internal fun FindAccountPrimaryButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .height(50.dp)
             .background(backgroundColor, RoundedCornerShape(SeniorOnRadius.Small))
             .clickable(enabled = enabled && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
@@ -542,7 +548,7 @@ internal fun FindAccountPrimaryButton(
                 text = text,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 14.dp),
+                    .padding(horizontal = 8.dp),
                 style = SeniorOnTextStyles.ButtonM,
                 color = SeniorOnColors.SupportWhite100,
                 textAlign = TextAlign.Center
@@ -560,6 +566,7 @@ internal fun FindAccountSecondaryButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .height(50.dp)
             .border(1.dp, SeniorOnColors.Gray200, RoundedCornerShape(SeniorOnRadius.Small))
             .background(SeniorOnColors.White, RoundedCornerShape(SeniorOnRadius.Small))
             .clickable(onClick = onClick),
@@ -569,7 +576,7 @@ internal fun FindAccountSecondaryButton(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 14.dp),
+                .padding(horizontal = 8.dp),
             style = SeniorOnTextStyles.ButtonM,
             color = SeniorOnColors.Gray400,
             textAlign = TextAlign.Center
