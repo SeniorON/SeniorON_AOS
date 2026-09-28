@@ -49,7 +49,7 @@ class ParentPermissionPolicyTest {
     }
 
     @Test fun guideContainsExactlySixStepsInOrder() {
-        assertEquals(listOf("BatteryOptimization", "Notification", "ForegroundLocation", "BackgroundLocation", "DefaultHome", "SleepingApps"),
+        assertEquals(listOf("BatteryOptimization", "Notification", "ForegroundLocation", "BackgroundLocation", "SleepingApps", "DefaultHome"),
             ParentPermissionStep.entries.map { it.name })
     }
 
@@ -64,7 +64,16 @@ class ParentPermissionPolicyTest {
             if (it == ParentPermissionStep.ForegroundLocation) ParentPermissionStatus.Required else ParentPermissionStatus.NotApplicable
         })
         assertNull(ParentPermissionStep.BatteryOptimization.nextRequired { ParentPermissionStatus.Granted })
-        assertNull(ParentPermissionStep.SleepingApps.nextRequired { ParentPermissionStatus.Manual })
+        assertNull(ParentPermissionStep.DefaultHome.nextRequired { ParentPermissionStatus.Manual })
+    }
+
+    @Test fun sleepingAppsComesBeforeFinalHomeStep() {
+        assertEquals(ParentPermissionStep.SleepingApps, ParentPermissionStep.BackgroundLocation.next())
+        assertEquals(ParentPermissionStep.DefaultHome, ParentPermissionStep.SleepingApps.next())
+        assertEquals(ParentPermissionStep.SleepingApps, ParentPermissionStep.DefaultHome.previous())
+        assertEquals(ParentPermissionStep.DefaultHome,
+            ParentPermissionStep.SleepingApps.nextRequired { ParentPermissionStatus.Required })
+        assertNull(ParentPermissionStep.DefaultHome.next())
     }
 
     @Test fun backgroundLocationExplainsConsentAndHomeDoesNotRequestKnox() {
