@@ -25,6 +25,7 @@ class ParentLocationTrackingViewModel(
     context: Context,
     private val repository: DeviceRepository,
     private val locationRepository: LocationRepository,
+    private val sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard? = null,
 ) : ViewModel() {
     private val applicationContext = context.applicationContext
     private val stateStore = OutingTrackingStateStore(applicationContext)
@@ -40,6 +41,10 @@ class ParentLocationTrackingViewModel(
         Log.d(LogTag, "Starting parent location tracking initialization")
         initializationJob = viewModelScope.launch {
             runCatching {
+                if (sharingGuard?.refresh()?.locationEnabled == false) {
+                    com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(applicationContext)
+                    return@runCatching
+                }
                 Log.d(LogTag, "Requesting senior home location from server")
                 val home = repository.getHomeLocation().let {
                     StoredHomeLocation(it.latitude, it.longitude)
@@ -118,12 +123,14 @@ class ParentLocationTrackingViewModel(
             context: Context,
             repository: DeviceRepository,
             locationRepository: LocationRepository,
+            sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard? = null,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 ParentLocationTrackingViewModel(
                     context = context,
                     repository = repository,
                     locationRepository = locationRepository,
+                    sharingGuard = sharingGuard,
                 )
             }
         }

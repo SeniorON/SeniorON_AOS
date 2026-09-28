@@ -52,6 +52,7 @@ class ParentDeviceStatusWorker(
             eventRepository = appContainer.eventRepository,
             locationRepository = appContainer.locationRepository,
             deviceRepository = appContainer.deviceRepository,
+            sharingGuard = appContainer.parentSharingGuard,
         )
 
         val statusResult = runCatching { repository.updateStatus() }

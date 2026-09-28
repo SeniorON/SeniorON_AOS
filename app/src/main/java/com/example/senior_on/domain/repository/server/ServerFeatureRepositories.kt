@@ -109,7 +109,7 @@ interface EventRepository {
     suspend fun createSos(latitude: Double, longitude: Double, battery: Int?): SafetyEvent
     suspend fun createRiskLink(url: String, battery: Int?): SafetyEvent
     suspend fun createOutingReturn(phase: String, latitude: Double, longitude: Double, battery: Int): SafetyEvent
-    suspend fun createInactivity(latitude: Double, longitude: Double, battery: Int, lastSeenAt: String): SafetyEvent
+    suspend fun createInactivity(latitude: Double?, longitude: Double?, battery: Int, lastSeenAt: String): SafetyEvent
     suspend fun getDetail(eventId: Long): SafetyEvent
 }
 

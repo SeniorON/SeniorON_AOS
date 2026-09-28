@@ -273,6 +273,7 @@ class NotificationViewModel(
                 )
             }
             runCatching {
+                check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
                 repository.getNotifications(requireSeniorId(), category.apiType).items
                     .map { notification -> notification.toUiState(category) }
             }.onSuccess { messages ->
@@ -334,6 +335,7 @@ class NotificationViewModel(
                 it.copy(isDetailLoading = true, errorMessage = null)
             }
             runCatching {
+                check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
                 // History/detail screens represent the event snapshot. Do not replace its
                 // coordinates or battery information with the senior device's latest state.
                 events.getDetail(eventId).toUiState(category, message)
@@ -373,6 +375,10 @@ class NotificationViewModel(
         }
 
         return runCatching {
+            // An unknown event type cannot be fetched safely with either category revoked.
+            check(refreshAccess(NotificationCategory.Inactivity) && _uiState.value.home.canAccess(NotificationCategory.Outing)) {
+                "공유가 중단된 알림은 상세 내용을 조회할 수 없어요."
+            }
             val event = events.getDetail(eventId)
             val category = event.type.toNotificationCategory()
                 ?: error("지원하지 않는 알림 유형입니다: ${event.type}")
@@ -417,6 +423,7 @@ class NotificationViewModel(
                 )
             }
             runCatching {
+                check(refreshAccess(NotificationCategory.Inactivity)) { "무응답 감지 공유가 중단되었어요." }
                 val targetUserId = resolveInactivityTargetUserId()
                 repository.getInactivitySetting(targetUserId)
             }.onSuccess { setting ->
@@ -454,6 +461,7 @@ class NotificationViewModel(
                 )
             }
             runCatching {
+                check(refreshAccess(NotificationCategory.Inactivity)) { "무응답 감지 공유가 중단되었어요." }
                 val targetUserId = resolveInactivityTargetUserId()
                 repository.updateInactivitySetting(
                     userId = targetUserId,
@@ -483,6 +491,31 @@ class NotificationViewModel(
 
     private fun requireSeniorId(): Long = requireNotNull(seniorId?.takeIf { it > 0 }) { "관리할 시니어를 먼저 선택해 주세요." }
 
+    private suspend fun refreshAccess(category: NotificationCategory): Boolean {
+        val loader = permissionsLoader ?: return _uiState.value.home.canAccess(category)
+        val permissions = try {
+            loader(requireSeniorId())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+        _uiState.update { current ->
+            val access = current.home.copy(
+                sharingStatusKnown = permissions != null,
+                locationSharingEnabled = permissions?.locationEnabled == true,
+                inactivitySharingEnabled = permissions?.inactivityDetectionEnabled == true,
+            ).enforceAccess()
+            current.copy(
+                home = access,
+                histories = current.histories.filterKeys(access::canAccess)
+                    .mapValues { (_, messages) -> messages.map(access::visibleMessage) },
+                detailMessages = emptyMap(),
+            )
+        }
+        return permissions != null && _uiState.value.home.canAccess(category)
+    }
+
     private suspend fun resolveInactivityTargetUserId(): Long {
         inactivityTargetUserId?.let { return it }
         val targetUserId = requireNotNull(familyRepository) {
@@ -504,6 +537,7 @@ class NotificationViewModel(
             val target = desiredSettings[category] ?: break
             Log.d("NotificationToggle", "request seniorId=$seniorId category=$category target=$target")
             val result = runCatching {
+                check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
                 repository.updateSetting(requireSeniorId(), category.apiType, target)
             }
 

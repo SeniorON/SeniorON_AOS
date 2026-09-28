@@ -168,9 +168,18 @@ private fun ParentLauncherContent(
             context = context,
             repository = appContainer.deviceRepository,
             locationRepository = appContainer.locationRepository,
+            sharingGuard = appContainer.parentSharingGuard,
         ),
     )
     val lifecycleOwner = LocalLifecycleOwner.current
+    val sharing = appContainer.parentSharingGuard?.state?.collectAsStateWithLifecycle()?.value
+    LaunchedEffect(sharing?.locationEnabled) {
+        if (sharing?.locationEnabled == false) {
+            com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(context)
+        } else if (sharing?.locationEnabled == true && context.hasForegroundLocationPermission() && context.hasBackgroundLocationPermission()) {
+            locationTrackingViewModel.initialize()
+        }
+    }
     DisposableEffect(lifecycleOwner, locationTrackingViewModel) {
         fun initializeIfAllowed() {
             if (context.hasForegroundLocationPermission() && context.hasBackgroundLocationPermission()) {
@@ -370,6 +379,7 @@ private fun ParentDeviceStatusLifecycleEffect(
             eventRepository = appContainer.eventRepository,
             locationRepository = appContainer.locationRepository,
             deviceRepository = appContainer.deviceRepository,
+            sharingGuard = appContainer.parentSharingGuard,
         )
     }
     val statusViewModel: ParentDeviceStatusViewModel = viewModel(

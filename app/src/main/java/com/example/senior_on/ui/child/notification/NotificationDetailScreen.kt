@@ -82,6 +82,8 @@ fun NotificationDetailScreen(
     isRefreshing: Boolean = false,
     isDirectionsLoading: Boolean = false,
     showLocationUpdate: Boolean = true,
+    locationSharingEnabled: Boolean = true,
+    sharingStatusKnown: Boolean = true,
     onCallClick: () -> Unit = {},
     onDirectionsClick: () -> Unit = {}
 ) {
@@ -116,6 +118,8 @@ fun NotificationDetailScreen(
             LocationDetailSheet(
                 detail = detail,
                 showLocationUpdate = showLocationUpdate,
+                locationSharingEnabled = locationSharingEnabled,
+                sharingStatusKnown = sharingStatusKnown,
                 onRefreshClick = onRefreshClick,
                 isRefreshing = isRefreshing,
                 onCallClick = onCallClick,
@@ -332,6 +336,8 @@ private val NotificationCategory.heroSpacingRatio: Pair<Float, Float>
 private fun LocationDetailSheet(
     detail: NotificationDetailUiState,
     showLocationUpdate: Boolean,
+    locationSharingEnabled: Boolean,
+    sharingStatusKnown: Boolean,
     onRefreshClick: () -> Unit,
     isRefreshing: Boolean,
     onCallClick: () -> Unit,
@@ -349,6 +355,9 @@ private fun LocationDetailSheet(
         NotificationCategory.RiskLink,
         NotificationCategory.Outing -> null
     }
+    val unavailableMessage = locationUnavailableMessage(
+        sharingStatusKnown, locationSharingEnabled, detail.latitude, detail.longitude,
+    )
 
     Column(
         modifier = modifier
@@ -375,7 +384,7 @@ private fun LocationDetailSheet(
             isRefreshing = isRefreshing,
         )
 
-        Text(
+        if (unavailableMessage == null) Text(
             text = detail.address,
             style = SeniorOnTextStyles.HeadingS,
             color = SeniorOnColors.Black,
@@ -384,10 +393,11 @@ private fun LocationDetailSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        NotificationKakaoMap(
+        if (unavailableMessage == null) NotificationKakaoMap(
             latitude = detail.latitude,
             longitude = detail.longitude,
         )
+        else NotificationMapUnavailable(message = unavailableMessage)
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -411,7 +421,7 @@ private fun LocationDetailSheet(
                 value = detail.battery,
                 showBottomBorder = showLocationUpdate && detail.inactivityHours == null
             )
-            if (showLocationUpdate && detail.inactivityHours == null) {
+            if (unavailableMessage == null && showLocationUpdate && detail.inactivityHours == null) {
                 DetailInformationRow(
                     iconResId = R.drawable.ic_share_location,
                     label = "마지막 위치 업데이트",
@@ -432,7 +442,7 @@ private fun LocationDetailSheet(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        DetailActionButton(
+        if (unavailableMessage == null) DetailActionButton(
             iconResId = R.drawable.ic_direction,
             label = "길 찾기",
             containerColor = SeniorOnColors.SupportWhite100,

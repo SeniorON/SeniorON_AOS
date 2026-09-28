@@ -76,6 +76,8 @@ import com.example.senior_on.domain.repository.server.*
 import com.google.android.gms.location.LocationServices
 
 interface AppContainer {
+    val parentSharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard?
+        get() = null
     val parentReconnectionRepository: com.example.senior_on.data.repository.impl.ParentReconnectionRepository
         get() = com.example.senior_on.data.repository.impl.ParentReconnectionRepository(SeniorOnNetwork.deviceApi)
     val authRepository: AuthRepository
@@ -130,6 +132,21 @@ class DefaultAppContainer(
     private val deviceIdentifierDataSource = LocalDeviceIdentifierDataSource(context)
     private val localDeviceStatusDataSource = AndroidDeviceStatusDataSource(context)
 
+    override val parentSharingGuard = com.example.senior_on.data.repository.impl.ParentSharingGuard(
+        load = {
+            check(com.example.senior_on.data.local.ParentConnectionGate.isReady()) { "기기 연결 확인이 필요합니다." }
+            val id = parentSeniorProfileRepository.getOwnSeniorId()
+            checkNotNull(SeniorOnNetwork.parentSettingsApi.getPermissions(id).data)
+        },
+        save = { request -> checkNotNull(SeniorOnNetwork.parentSettingsApi.updatePermissions(request).data) },
+        sessionKey = { com.example.senior_on.data.local.AccessTokenStore.getBearerToken() },
+    )
+    override val parentSettingsRepository = com.example.senior_on.data.repository.impl.ParentSettingsRepository(
+        SeniorOnNetwork.parentSettingsApi,
+        parentSharingGuard,
+        onLocationDisabled = { com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(context) },
+    )
+
     override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource)
     override val accountRecoveryRepository: AccountRecoveryRepository =
         AccountRecoveryRepositoryImpl(accountRecoveryDataSource)
@@ -164,12 +181,14 @@ class DefaultAppContainer(
     override val hospitalRepository = HospitalRepositoryImpl(hospitalDataSource)
     override val medicationRepository = MedicationRepositoryImpl(medicationDataSource)
     override val notificationRepository = NotificationRepositoryImpl(notificationDataSource)
-    override val eventRepository = EventRepositoryImpl(eventDataSource)
+    override val eventRepository = EventRepositoryImpl(eventDataSource, parentSharingGuard)
     override val userSettingsRepository = UserSettingsRepositoryImpl(userSettingsDataSource)
     override val deviceRepository = DeviceRepositoryImpl(
         source = deviceDataSource,
         identifierSource = deviceIdentifierDataSource,
         localStatusSource = localDeviceStatusDataSource,
+        sharingGuard = parentSharingGuard,
+        permissionsLoader = { seniorId -> parentSettingsRepository.getPermissions(seniorId) },
     )
     override val familyPhotoUploadPreparer = FamilyPhotoUploadPreparer(context)
     override val inquiryRepository: InquiryRepository =

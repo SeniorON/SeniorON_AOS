@@ -31,6 +31,8 @@ internal fun NotificationDetailRoute(
     onRefreshClick: () -> Unit = {},
     isRefreshing: Boolean = false,
     showLocationUpdate: Boolean = true,
+    locationSharingEnabled: Boolean = true,
+    sharingStatusKnown: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -38,6 +40,7 @@ internal fun NotificationDetailRoute(
     var isResolvingDirections by remember { mutableStateOf(false) }
 
     fun openDirectionsFromCurrentLocation() {
+        if (!locationSharingEnabled) return
         if (isResolvingDirections) return
         val destinationLatitude = message.latitude
         val destinationLongitude = message.longitude
@@ -95,6 +98,8 @@ internal fun NotificationDetailRoute(
         category = category,
         message = message,
         showLocationUpdate = showLocationUpdate,
+        locationSharingEnabled = locationSharingEnabled,
+        sharingStatusKnown = sharingStatusKnown,
         modifier = modifier,
         onBackClick = onBackClick,
         onRefreshClick = onRefreshClick,
@@ -110,7 +115,9 @@ internal fun NotificationDetailRoute(
             }
         },
         onDirectionsClick = {
-            if (context.hasLocationPermission()) {
+            if (!locationSharingEnabled) {
+                Unit
+            } else if (context.hasLocationPermission()) {
                 openDirectionsFromCurrentLocation()
             } else {
                 locationPermissionLauncher.launch(

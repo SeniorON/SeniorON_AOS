@@ -133,7 +133,7 @@ internal fun NotificationKakaoMap(
 }
 
 @Composable
-private fun NotificationMapUnavailable(
+internal fun NotificationMapUnavailable(
     message: String,
     modifier: Modifier = Modifier,
 ) {
@@ -147,6 +147,7 @@ private fun NotificationMapUnavailable(
     ) {
         Text(
             text = message,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500,
         )

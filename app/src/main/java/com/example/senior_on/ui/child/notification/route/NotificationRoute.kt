@@ -197,6 +197,8 @@ fun NotificationRoute(
                 NotificationDetailRoute(
                     category = category,
                     message = uiState.home.visibleMessage(message),
+                    sharingStatusKnown = uiState.home.sharingStatusKnown,
+                    locationSharingEnabled = uiState.home.sharingStatusKnown && uiState.home.locationSharingEnabled && !uiState.home.isSeniorSharingRevoked,
                     showLocationUpdate = !isHistoryDetail && uiState.home.sharingStatusKnown && uiState.home.locationSharingEnabled,
                     parentPhoneNumber = uiState.parentPhoneNumber,
                     locationRepository = locationRepository,
