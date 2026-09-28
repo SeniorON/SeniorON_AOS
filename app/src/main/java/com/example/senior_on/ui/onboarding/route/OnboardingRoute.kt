@@ -134,6 +134,7 @@ fun OnboardingRoute(
     }
     var keepPostLoginSession by rememberSaveable { mutableStateOf(false) }
     var showSessionExitDialog by rememberSaveable { mutableStateOf(false) }
+    var showFamilyCodeRequiredDialog by rememberSaveable { mutableStateOf(false) }
     var onboardingStatusErrorMessage by rememberSaveable {
         mutableStateOf(OnboardingStatusLoadErrorMessage)
     }
@@ -521,7 +522,10 @@ fun OnboardingRoute(
                             SeniorOnRoute.FamilyShareCodeInput
                         FamilyShareCodeOption.NoCode -> when (selectedUserMode) {
                             AppUserMode.Child -> SeniorOnRoute.FamilyShareCodeCreated
-                            AppUserMode.Senior -> SeniorOnRoute.FamilyShareCodeInput
+                            AppUserMode.Senior -> {
+                                showFamilyCodeRequiredDialog = true
+                                SeniorOnRoute.FamilyShareCode
+                            }
                         }
                     }
                 }
@@ -599,6 +603,12 @@ fun OnboardingRoute(
                 },
             )
         }
+    }
+
+    if (showFamilyCodeRequiredDialog && currentRoute == SeniorOnRoute.FamilyShareCode) {
+        com.example.senior_on.ui.onboarding.familycode.FamilyCodeRequiredDialog(
+            onDismiss = { showFamilyCodeRequiredDialog = false },
+        )
     }
 
     if (showSessionExitDialog) {
