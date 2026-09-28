@@ -82,7 +82,11 @@ fun FindAccountScreen(
                 FindAccountTab.Password -> {
                     Column {
                         val notice = requestUi.notice ?: requestErrorMessage
-                        if (notice != null) Text(notice, color = SeniorOnColors.Red300)
+                        if (notice != null) Text(
+                            notice,
+                            style = com.example.senior_on.ui.theme.SeniorOnTextStyles.CaptionRegular,
+                            color = SeniorOnColors.Red300,
+                        )
                         FindAccountInfoBanner(
                             text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
                         )
@@ -191,8 +195,6 @@ private fun FindPasswordInputContent(
             value = name,
             onValueChange = onNameChange,
             placeholder = "이름 입력",
-            clearIconResId = R.drawable.ic_close,
-            clearIconSize = 24.dp
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -208,8 +210,6 @@ private fun FindPasswordInputContent(
             } else {
                 null
             },
-            clearIconResId = R.drawable.ic_close,
-            clearIconSize = 24.dp
         )
     }
 }
