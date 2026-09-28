@@ -15,6 +15,41 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorScopedTabsTest {
+    @Test fun newlyRevokedPermissionsPreventHistoryAndDetailRequests() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        var allowed = true
+        val blockedCalls = mutableListOf<String>()
+        val repo = fake(NotificationRepository::class.java) { method, _ ->
+            when (method) {
+                "getHome" -> NotificationHome(0, emptyList())
+                "isParentDeviceOnline" -> true
+                else -> { blockedCalls += method; error("Must not query revoked category") }
+            }
+        }
+        val events = fake(EventRepository::class.java) { method, _ ->
+            blockedCalls += method
+            error("Must not query revoked detail")
+        }
+        try {
+            val vm = NotificationViewModel(repo, 42, null, null, events, permissionsLoader = { id ->
+                com.example.senior_on.data.remote.api.SeniorPermissionSettings(id, allowed, allowed)
+            }).also { store.put("permissions", it) }
+            advanceUntilIdle()
+            allowed = false
+            vm.loadHistory(NotificationCategory.Inactivity)
+            vm.openNotification(NotificationCategory.Outing,
+                com.example.senior_on.ui.child.notification.NotificationMessageUiState(
+                    "", "외출", severity = com.example.senior_on.ui.child.notification.NotificationSeverity.Normal, eventId = 1,
+                ))
+            advanceUntilIdle()
+            assertTrue(blockedCalls.isEmpty())
+            assertFalse(vm.uiState.value.home.inactivitySharingEnabled)
+            assertFalse(vm.uiState.value.home.locationSharingEnabled)
+            assertTrue(vm.uiState.value.detailMessages.isEmpty())
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
+
     @Test fun revokedInactivityUsesSelectedSeniorAndSkipsThresholdRequest() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()

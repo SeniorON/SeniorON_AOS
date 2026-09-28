@@ -4,6 +4,26 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NotificationAccessPresentationTest {
+    @Test fun locationOffKeepsSharingStoppedMessage() {
+        assertEquals("위치 정보 공유가 중단되었어요.", locationUnavailableMessage(true, false, null, null))
+    }
+
+    @Test fun locationOnWithoutCoordinatesRequestsRetry() {
+        val expected = "알 수 없는 오류로 위치를 불러오지 못했어요.\n다시 시도해 주세요."
+        assertEquals(expected, locationUnavailableMessage(true, true, null, null))
+        assertEquals(expected, locationUnavailableMessage(true, true, 37.0, null))
+        assertEquals(expected, locationUnavailableMessage(true, true, Double.NaN, 127.0))
+    }
+
+    @Test fun unknownSharingDoesNotClaimRevocation() {
+        assertEquals("공유 상태를 확인하지 못했어요.\n다시 시도해 주세요.",
+            locationUnavailableMessage(false, false, null, null))
+    }
+
+    @Test fun validSharedLocationHasNoPlaceholder() {
+        assertNull(locationUnavailableMessage(true, true, 37.0, 127.0))
+    }
+
     @Test fun locationRevocationDoesNotDisableInactivityOrSos() {
         val state = NotificationScreenUiState(emptyList(), locationSharingEnabled = false)
         assertFalse(state.canAccess(NotificationCategory.Outing))
