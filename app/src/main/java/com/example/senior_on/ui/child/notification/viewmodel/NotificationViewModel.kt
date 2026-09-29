@@ -56,6 +56,7 @@ class NotificationViewModel(
     private val homeRepository: HomeServerRepository?,
     private val eventRepository: EventRepository?,
     private val permissionsLoader: (suspend (Long) -> SeniorPermissionSettings)? = null,
+    private val detailLog: (String) -> Unit = { Log.d(DetailLogTag, it) },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NotificationUiState(
         home = emptyNotificationScreenUiState().copy(sharingStatusKnown = permissionsLoader == null),
@@ -67,6 +68,7 @@ class NotificationViewModel(
     private val settingSyncJobs = mutableMapOf<NotificationCategory, Job>()
     private val historyLoadJobs = mutableMapOf<NotificationCategory, Job>()
     private var homeLoadJob: Job? = null
+    private var detailLoadJob: Job? = null
     private var hasEnteredScreen = false
 
     init {
@@ -89,6 +91,23 @@ class NotificationViewModel(
     fun refreshHome() {
         if (homeLoadJob?.isActive == true) return
         loadHome(isPullRefresh = true)
+    }
+
+    /** Serialized by the route's conflated socket collector; never repeats writes/read marking. */
+    suspend fun refreshFromSocket(category: NotificationCategory?, message: NotificationMessageUiState?) {
+        if (category == null) {
+            homeLoadJob?.join()
+            loadHome(isPullRefresh = false)
+            homeLoadJob?.join()
+        } else if (message == null) {
+            historyLoadJobs[category]?.join()
+            loadHistory(category, isPullRefresh = false, silent = true)
+            historyLoadJobs[category]?.join()
+        } else {
+            detailLoadJob?.join()
+            openNotification(category, message, silent = true)
+            detailLoadJob?.join()
+        }
     }
 
     private fun loadHome(isPullRefresh: Boolean) {
@@ -261,13 +280,14 @@ class NotificationViewModel(
     private fun loadHistory(
         category: NotificationCategory,
         isPullRefresh: Boolean,
+        silent: Boolean = false,
     ) {
         if (!_uiState.value.home.canAccess(category)) return
         if (historyLoadJobs[category]?.isActive == true) return
         historyLoadJobs[category] = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !silent,
                     isHistoryRefreshing = isPullRefresh,
                     errorMessage = null,
                 )
@@ -285,6 +305,7 @@ class NotificationViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -324,15 +345,17 @@ class NotificationViewModel(
         message: NotificationMessageUiState,
     ) {
         if (!_uiState.value.home.canAccess(category)) return
-        message.notificationId?.let { notificationId ->
+        message.notificationId?.takeUnless { silent }?.let { notificationId ->
             markNotificationRead(notificationId)
         }
         val eventId = message.eventId ?: return
+        silent: Boolean = false,
         val events = eventRepository ?: return
 
-        viewModelScope.launch {
+        detailLoadJob?.cancel()
+        detailLoadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(isDetailLoading = true, errorMessage = null)
+                it.copy(isDetailLoading = !silent, errorMessage = null)
             }
             runCatching {
                 check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
@@ -340,8 +363,7 @@ class NotificationViewModel(
                 // coordinates or battery information with the senior device's latest state.
                 events.getDetail(eventId).toUiState(category, message)
             }.onSuccess { detail ->
-                Log.d(
-                    DetailLogTag,
+                detailLog(
                     "Loaded eventId=$eventId, battery=${detail.deviceBattery}, " +
                         "hasCoordinates=${detail.latitude != null && detail.longitude != null}, " +
                         "occurredAtMillis=${detail.occurredAtMillis}",
@@ -359,6 +381,7 @@ class NotificationViewModel(
                         errorMessage = throwable.message,
                     )
                 }
+                if (throwable is CancellationException) throw throwable
             }
         }
     }
@@ -510,7 +533,7 @@ class NotificationViewModel(
                 home = access,
                 histories = current.histories.filterKeys(access::canAccess)
                     .mapValues { (_, messages) -> messages.map(access::visibleMessage) },
-                detailMessages = emptyMap(),
+                detailMessages = if (access == current.home) current.detailMessages else emptyMap(),
             )
         }
         return permissions != null && _uiState.value.home.canAccess(category)
