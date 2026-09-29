@@ -125,25 +125,25 @@ class HospitalViewModel(
     }
 
     fun saveAppointment(draft: HospitalAppointmentDraft) {
-        if (_uiState.value.isSaving) return
+        val state = _uiState.value
+        if (state.isSaving || state.editorMode !in setOf(HospitalEditorMode.Add, HospitalEditorMode.Edit)) return
+        _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             runCatching {
                 val targetSeniorId = requireSeniorId()
-                val current = _uiState.value.editingAppointment
+                val current = state.editingAppointment
                 val domain = draft.toDomain(current?.id ?: 0L)
-                if (_uiState.value.editorMode == HospitalEditorMode.Edit &&
-                    current != null &&
-                    current.id > 0L
-                ) {
+                if (state.editorMode == HospitalEditorMode.Edit) {
+                    check(current != null && current.id > 0L) { "수정할 병원 일정이 없어요." }
                     hospitalRepository.update(targetSeniorId, domain.copy(id = current.id))
                 } else {
                     hospitalRepository.create(targetSeniorId, domain)
                 }
-                refreshAll(targetSeniorId, _uiState.value.displayedMonth)
-            }.onSuccess { result ->
-                applyRemoteData(result, closeEditor = true)
+            }.onSuccess {
+                _uiState.update { it.copy(isSaving = false, editorMode = null, editingAppointment = null) }
+                loadHospitalData(failureMessage = "저장은 완료됐지만 목록을 불러오지 못했어요. 당겨서 다시 조회해 주세요.")
             }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isSaving = false,
@@ -195,7 +195,7 @@ class HospitalViewModel(
         loadHospitalData(isPullRefresh = true)
     }
 
-    private fun loadHospitalData(isPullRefresh: Boolean = false) {
+    private fun loadHospitalData(isPullRefresh: Boolean = false, failureMessage: String? = null) {
         fullLoadJob?.cancel()
         fullLoadJob = viewModelScope.launch {
             _uiState.update {
@@ -209,12 +209,13 @@ class HospitalViewModel(
                 val targetSeniorId = requireSeniorId()
                 refreshAll(targetSeniorId, _uiState.value.displayedMonth)
             }.onSuccess(::applyRemoteData)
-                .onFailure {
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            errorMessage = "병원 일정을 불러오지 못했습니다.",
+                            errorMessage = failureMessage ?: "병원 일정을 불러오지 못했습니다.",
                         )
                     }
                 }
@@ -308,7 +309,7 @@ class HospitalViewModel(
                 editingAppointment = if (closeEditor) null else state.editingAppointment,
                 isLoading = false,
                 isRefreshing = false,
-                isSaving = false,
+                isSaving = if (closeEditor) false else state.isSaving,
                 errorMessage = null,
             )
         }
