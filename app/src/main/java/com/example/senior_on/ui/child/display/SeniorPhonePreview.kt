@@ -135,13 +135,12 @@ private fun SeniorPhoneDesign(
     ) {
         SeniorPhoneStatusBar(now)
 
-        val contentModifier = if (scrollEnabled) {
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-        } else {
-            Modifier.weight(1f)
-        }
+        val contentModifier = Modifier
+            .weight(1f)
+            .verticalScroll(
+                state = rememberScrollState(),
+                enabled = scrollEnabled,
+            )
         Column(
             modifier = contentModifier.padding(top = 14.dp, bottom = 24.dp),
         ) {
