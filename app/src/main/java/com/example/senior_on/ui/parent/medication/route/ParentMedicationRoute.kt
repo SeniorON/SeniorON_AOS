@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import com.example.senior_on.ui.parent.medication.ParentMedicationScreen
@@ -36,6 +37,7 @@ fun ParentMedicationRoute(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            launch { viewModel.observeTakingDeadlines() }
             viewModel.observeUpdates()
         }
     }

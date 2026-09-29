@@ -7,6 +7,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.core.time.koreaNow
 import com.example.senior_on.core.time.koreaToday
 import com.example.senior_on.domain.model.parent.ParentMedication
+import com.example.senior_on.domain.model.parent.isTakingDeadlineReached
+import java.time.LocalDate
+import java.time.LocalDateTime
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collectLatest
 import com.example.senior_on.domain.model.server.MedicationSchedule
 import com.example.senior_on.domain.repository.server.MedicationRepository
 import java.time.Duration
@@ -44,11 +50,13 @@ data class ParentMedicationUiState(
     val message: String? = null,
     val messageType: ParentMedicationMessageType = ParentMedicationMessageType.Default,
     val isRefreshing: Boolean = false,
+    val expiredMedicationIds: Set<String> = emptySet(),
 )
 
 class ParentMedicationViewModel(
     private val repository: MedicationRepository,
     private val updatesRepository: ParentHomeUpdatesRepository,
+    private val now: () -> LocalDateTime = ::koreaNow,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentMedicationUiState())
     val uiState = _uiState.asStateFlow()
@@ -58,6 +66,24 @@ class ParentMedicationViewModel(
     private var pendingLoad = false
     private var pendingVisible = false
     private var submissionVersion = 0
+
+    /** Called only while the screen is STARTED. List changes cancel the previous deadline wait. */
+    suspend fun observeTakingDeadlines() {
+        uiState.map { it.medications }.distinctUntilChanged().collectLatest { medications ->
+            while (true) {
+                val currentTime = now()
+                val expired = medications.filter { it.isTakingDeadlineReached(currentTime) }
+                    .mapTo(mutableSetOf()) { it.id }
+                _uiState.update { it.copy(expiredMedicationIds = expired) }
+                val nextDeadline = medications.asSequence()
+                    .filter { it.takenAt == null && it.id !in expired }
+                    .map { it.scheduledDate.atTime(it.scheduledTime).plusHours(2) }
+                    .minOrNull() ?: return@collectLatest
+                // No periodic polling: wake only at the nearest remaining deadline.
+                delay(Duration.between(currentTime, nextDeadline).toMillis().coerceAtLeast(1L))
+            }
+        }
+    }
 
     suspend fun observeUpdates() {
         refreshSilently()
@@ -125,6 +151,8 @@ class ParentMedicationViewModel(
                                 ParentMedicationContent.List
                             },
                             medications = medications,
+                            expiredMedicationIds = medications.filter { medication -> medication.isTakingDeadlineReached(now()) }
+                                .mapTo(mutableSetOf()) { medication -> medication.id },
                             isRefreshing = false,
                         )
                     }
@@ -154,7 +182,7 @@ class ParentMedicationViewModel(
             ?: return
         if (_uiState.value.submittingMedicationId != null || medication.takenAt != null) return
 
-        if (!medication.isWithinTakingWindow()) {
+        if (medication.isTakingDeadlineReached(now()) || !medication.isWithinTakingWindow(now().toLocalTime())) {
             _uiState.update {
                 it.copy(
                     message = "복용 시간이 아니에요.",
@@ -254,6 +282,7 @@ private fun MedicationSchedule.toParentMedication(): ParentMedication = ParentMe
     name = name,
     scheduledTime = plannedTime.toLocalTimeOrNull() ?: LocalTime.MIDNIGHT,
     takenAt = if (taken) takenAt.toInstantOrNull() ?: Instant.EPOCH else null,
+    scheduledDate = plannedDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: koreaToday(),
 )
 
 private fun ParentMedication.isWithinTakingWindow(

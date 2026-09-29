@@ -93,9 +93,11 @@ internal fun ParentMedicationCard(
     isSubmitting: Boolean,
     onTakenClick: () -> Unit,
     modifier: Modifier = Modifier,
+    deadlineReached: Boolean = false,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
     val isTaken = medication.takenAt != null
+    val canSubmit = !isSubmitting && !deadlineReached
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -147,9 +149,9 @@ internal fun ParentMedicationCard(
                     .size(width = 96.dp, height = 60.dp)
                     .clip(RoundedCornerShape(SeniorOnRadius.Large))
                     .background(
-                        if (isSubmitting) SeniorOnColors.Gray400 else SeniorOnColors.Primary600,
+                        if (!canSubmit) SeniorOnColors.Gray400 else SeniorOnColors.Primary600,
                     )
-                    .clickable(enabled = !isSubmitting, onClick = onTakenClick),
+                    .clickable(enabled = canSubmit, onClick = onTakenClick),
                 contentAlignment = Alignment.Center,
             ) {
                 if (isSubmitting) {
