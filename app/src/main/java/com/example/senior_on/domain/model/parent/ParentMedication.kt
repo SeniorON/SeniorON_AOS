@@ -15,4 +15,4 @@ data class ParentMedication(
 )
 
 fun ParentMedication.isTakingDeadlineReached(now: LocalDateTime): Boolean =
-    !now.isBefore(scheduledDate.atTime(scheduledTime).plusHours(2))
+    now.isAfter(scheduledDate.atTime(scheduledTime).plusHours(2))

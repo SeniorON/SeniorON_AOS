@@ -38,6 +38,8 @@ class ParentMedicationDeadlineStateTest {
             advanceTimeBy(30_000); runCurrent()
             assertEquals(reads, clockReads)
             advanceTimeBy(29_849); runCurrent()
+            assertTrue(vm.uiState.value.expiredMedicationIds.isEmpty())
+            advanceTimeBy(1); runCurrent()
             assertEquals(setOf("1"), vm.uiState.value.expiredMedicationIds)
 
             schedules = listOf(MedicationSchedule(2, "새 약", "08:01", false, plannedDate = "2026-09-29"))

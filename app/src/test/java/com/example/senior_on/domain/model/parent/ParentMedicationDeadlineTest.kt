@@ -15,7 +15,7 @@ class ParentMedicationDeadlineTest {
     }
 
     @Test fun exactDeadline() {
-        assertTrue(medication.isTakingDeadlineReached(date.atTime(10, 0)))
+        assertFalse(medication.isTakingDeadlineReached(date.atTime(10, 0)))
     }
 
     @Test fun afterDeadline() {
@@ -25,7 +25,8 @@ class ParentMedicationDeadlineTest {
     @Test fun deadlineCrossingMidnight() {
         val lateDose = medication.copy(scheduledTime = LocalTime.of(23, 0))
         assertFalse(lateDose.isTakingDeadlineReached(date.plusDays(1).atTime(0, 59, 59)))
-        assertTrue(lateDose.isTakingDeadlineReached(date.plusDays(1).atTime(1, 0)))
+        assertFalse(lateDose.isTakingDeadlineReached(date.plusDays(1).atTime(1, 0)))
+        assertTrue(lateDose.isTakingDeadlineReached(date.plusDays(1).atTime(1, 0, 0, 1)))
         assertTrue(lateDose.isTakingDeadlineReached(date.plusDays(1).atTime(23, 0)))
     }
 }
