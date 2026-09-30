@@ -162,10 +162,6 @@ fun NotificationScreen(
                             android.util.Log.d("NotificationToggle",
                                 "screen category=${section.category} target=$isEnabling registered=${uiState.isParentPhoneRegistered} online=${uiState.isParentPhoneInternetConnected} sharingRevoked=${uiState.isSeniorSharingRevoked} hasAddress=${uiState.hasHomeAddress}")
                             when {
-                                // Only the senior can restore sharing; never enable it from this UI.
-                                !uiState.canAccess(section.category) -> {
-                                    android.util.Log.d("NotificationToggle", "blocked: sharing_revoked")
-                                }
                                 section.category == NotificationCategory.Outing &&
                                     isEnabling &&
                                     !uiState.hasHomeAddress -> {

@@ -78,11 +78,15 @@ fun ParentSettingsRoute(
         }
     }
     var destination by rememberSaveable { mutableStateOf(ParentSettingsDestination.Main) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmation by rememberSaveable { mutableStateOf<ParentSettingsConfirmation?>(null) }
     val profile = profileState.profile ?: ParentSettingsProfile(
         if (profileState.busy) "불러오는 중" else "계정 정보 확인 필요", "")
     LaunchedEffect(profileState.error) {
-        profileState.error?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+        profileState.error?.let {
+            if (destination == ParentSettingsDestination.ChangePassword) passwordError = it
+            else Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        }
         profileViewModel.consumeError()
     }
     LaunchedEffect(profileState.completed) {
@@ -99,6 +103,7 @@ fun ParentSettingsRoute(
         profileViewModel.consumeCompleted()
     }
     LaunchedEffect(destination) {
+        passwordError = null
         // A restored sub-screen can open while the initial account request is still running.
         profileViewModel.state.first { !it.busy }
         if (destination == ParentSettingsDestination.PermissionControl) profileViewModel.loadPermissions()
@@ -120,7 +125,8 @@ fun ParentSettingsRoute(
         ParentSettingsDestination.ChangeName -> ParentChangeNameScreen(profile.name, ::back,
             { if (!isBusy) profileViewModel.saveName(it) }, modifier, isSaving = isBusy)
         ParentSettingsDestination.ChangePassword -> ParentChangePasswordScreen(::back,
-            { current, new -> if (!isBusy) profileViewModel.savePassword(current, new) }, modifier, isSaving = isBusy)
+            { current, new -> if (!isBusy) profileViewModel.savePassword(current, new) }, modifier, isSaving = isBusy,
+            serverError = passwordError, onClearServerError = { passwordError = null })
         ParentSettingsDestination.ShareCode -> {
             val code = profileState.shareCode
             if (code == null) {

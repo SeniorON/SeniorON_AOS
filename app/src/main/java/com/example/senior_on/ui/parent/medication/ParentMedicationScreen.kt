@@ -193,6 +193,7 @@ private fun ParentMedicationListContent(
         ) { medication ->
             ParentMedicationCard(
                 medication = medication,
+                deadlineReached = medication.id in uiState.expiredMedicationIds,
                 highlighted = medication.id == uiState.highlightedMedicationId,
                 isSubmitting = medication.id == uiState.submittingMedicationId,
                 onTakenClick = { onTakenClick(medication.id) },

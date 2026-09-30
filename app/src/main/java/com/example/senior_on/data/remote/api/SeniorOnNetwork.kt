@@ -85,6 +85,18 @@ object SeniorOnNetwork {
         )
     }
 
+    val notificationStompSource by lazy {
+        com.example.senior_on.data.remote.websocket.NotificationStompSource(
+            socketFactory = okHttpClient.newBuilder()
+                .callTimeout(0, TimeUnit.SECONDS)
+                .pingInterval(30, TimeUnit.SECONDS)
+                .followRedirects(false).followSslRedirects(false).build(),
+            url = "${BASE_URL}ws",
+            bearerToken = AccessTokenStore::getBearerToken,
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnNotificationSocket", it) },
+        )
+    }
+
     private val retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)

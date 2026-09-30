@@ -7,6 +7,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.collect
+import com.example.senior_on.data.remote.websocket.matches
+import com.example.senior_on.data.remote.api.SeniorOnNetwork
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -64,6 +75,34 @@ fun NotificationRoute(
         mutableStateOf(NotificationDestination.Home)
     }
     var isHistoryDetail by rememberSaveable(seniorId, sessionKey) { mutableStateOf(false) }
+
+    val currentDestination by rememberUpdatedState(destination)
+    val currentCategory by rememberUpdatedState(selectedCategory)
+    val currentMessage by rememberUpdatedState(selectedMessage)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, seniorId, sessionKey, lifecycleOwner) {
+        if (seniorId == null || seniorId <= 0) return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            SeniorOnNetwork.notificationStompSource.observe()
+                .filter { signal ->
+                    signal.matches(seniorId, currentMessage?.eventId.takeIf { currentDestination == NotificationDestination.Detail })
+                }
+                // Filter before conflating so another senior/event cannot displace a relevant update.
+                .map { Unit }
+                .conflate()
+                .collect {
+                    delay(150)
+                    when (currentDestination) {
+                        NotificationDestination.Home -> viewModel.refreshFromSocket(null, null)
+                        NotificationDestination.History -> currentCategory?.let { viewModel.refreshFromSocket(it, null) }
+                        NotificationDestination.Detail -> currentCategory?.let { category ->
+                            currentMessage?.let { viewModel.refreshFromSocket(category, it) }
+                        }
+                        NotificationDestination.InactivitySetting -> Unit
+                    }
+                }
+        }
+    }
 
     fun openHistory(category: NotificationCategory) {
         if (!uiState.hasLoadedContent || !uiState.home.canAccess(category)) return
@@ -175,6 +214,7 @@ fun NotificationRoute(
                     isRefreshing = uiState.isHistoryRefreshing,
                     onRefresh = { viewModel.refreshHistory(category) },
                     onBackClick = {
+                        viewModel.loadLatestHome()
                         destination = NotificationDestination.Home
                     },
                     onMessageClick = { message ->
@@ -203,6 +243,8 @@ fun NotificationRoute(
                     parentPhoneNumber = uiState.parentPhoneNumber,
                     locationRepository = locationRepository,
                     onBackClick = {
+                        if (detailReturnDestination == NotificationDestination.History) viewModel.loadHistory(category)
+                        else viewModel.loadLatestHome()
                         destination = detailReturnDestination
                     },
                     onRefreshClick = {

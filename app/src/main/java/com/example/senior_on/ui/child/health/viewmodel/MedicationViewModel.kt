@@ -140,24 +140,27 @@ class MedicationViewModel(
     }
 
     fun saveMedication(draft: MedicationDraft) {
-        if (_uiState.value.isSaving) return
+        val state = _uiState.value
+        if (state.isSaving || state.editorMode !in setOf(MedicationEditorMode.Add, MedicationEditorMode.Edit)) return
+        _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             runCatching {
                 val targetSeniorId = requireSeniorId()
-                val current = _uiState.value.editingMedication
+                val current = state.editingMedication
                 val domain = draft.toDomain(current)
-                if (_uiState.value.editorMode == MedicationEditorMode.Edit && current != null) {
+                if (state.editorMode == MedicationEditorMode.Edit) {
+                    checkNotNull(current) { "수정할 복약 정보가 없어요." }
                     medicationRepository.update(targetSeniorId, domain)
                 } else {
                     medicationRepository.create(targetSeniorId, domain)
                 }
-                loadRemoteData(targetSeniorId, _uiState.value.selectedDate)
             }
-                .onSuccess { result ->
-                    applyRemoteData(result, closeEditor = true)
+                .onSuccess {
+                    _uiState.update { it.copy(isSaving = false, editorMode = null, editingMedication = null, addMedicationStartDate = null) }
+                    loadMedicationData(failureMessage = "저장은 완료됐지만 목록을 불러오지 못했어요. 당겨서 다시 조회해 주세요.")
                 }
-                .onFailure {
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
                     _uiState.update {
                         it.copy(
                             isSaving = false,
@@ -214,6 +217,16 @@ class MedicationViewModel(
         loadMedicationData(isPullRefresh = true)
     }
 
+    /** Serialize socket refreshes without dropping an event received during a date query. */
+    suspend fun refreshFromSocket() {
+        while (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) {
+            fullLoadJob?.join()
+            scheduleLoadJob?.join()
+        }
+        loadMedicationData(isPullRefresh = false)
+        fullLoadJob?.join()
+    }
+
     fun onMedicationChecked(
         checkedParentUserId: Long,
         medicationLogId: Long,
@@ -246,7 +259,7 @@ class MedicationViewModel(
         }
     }
 
-    private fun loadMedicationData(isPullRefresh: Boolean = false) {
+    private fun loadMedicationData(isPullRefresh: Boolean = false, failureMessage: String? = null) {
         scheduleLoadJob?.cancel()
         fullLoadJob?.cancel()
         val requestedDate = _uiState.value.selectedDate
@@ -269,7 +282,7 @@ class MedicationViewModel(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                errorMessage = throwable.message ?: "복약 정보를 불러오지 못했어요",
+                                errorMessage = failureMessage ?: throwable.message ?: "복약 정보를 불러오지 못했어요",
                             )
                         } else {
                             it
@@ -366,7 +379,7 @@ class MedicationViewModel(
                 return@update state.copy(
                     isLoading = false,
                     isRefreshing = false,
-                    isSaving = false,
+                    isSaving = if (closeEditor) false else state.isSaving,
                 )
             }
             val selectedDate = state.selectedDate
@@ -384,7 +397,7 @@ class MedicationViewModel(
                 editingMedication = if (closeEditor) null else state.editingMedication,
                 isLoading = false,
                 isRefreshing = false,
-                isSaving = false,
+                isSaving = if (closeEditor) false else state.isSaving,
                 errorMessage = null,
             )
         }

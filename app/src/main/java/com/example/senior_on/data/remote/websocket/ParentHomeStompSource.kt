@@ -25,15 +25,22 @@ class ParentHomeStompSource(
     private val log: (String) -> Unit = {},
     private val bearerToken: () -> String?,
 ) {
-    fun observe(seniorUserId: Long): Flow<ParentHomeUpdateEvent> = flow {
-        require(seniorUserId > 0)
+    fun observe(seniorUserId: Long): Flow<ParentHomeUpdateEvent> =
+        observeTopic(seniorUserId, "home")
+
+    /** Medication topics use Senior IDs, unlike the legacy home topic's User IDs. */
+    fun observeMedication(seniorId: Long): Flow<ParentHomeUpdateEvent> =
+        observeTopic(seniorId, "medication")
+
+    private fun observeTopic(id: Long, topic: String): Flow<ParentHomeUpdateEvent> = flow {
+        require(id > 0)
         var retryDelay = 1_000L
         while (currentCoroutineContext().isActive && bearerToken() != null) {
             val connectionStartedAt = System.nanoTime()
             emit(ParentHomeUpdateEvent.Connecting)
             log("WS connecting /ws")
             try {
-                connection(seniorUserId).collect { event ->
+                connection("/topic/senior/$id/$topic").collect { event ->
                     emit(event)
                 }
             } catch (cancelled: CancellationException) {
@@ -52,13 +59,12 @@ class ParentHomeStompSource(
         log("WS observation stopped: no access token")
     }
 
-    private fun connection(seniorUserId: Long): Flow<ParentHomeUpdateEvent> = callbackFlow {
+    private fun connection(destination: String): Flow<ParentHomeUpdateEvent> = callbackFlow {
         val token = bearerToken()
         if (token == null) {
             close()
             return@callbackFlow
         }
-        val destination = "/topic/senior/$seniorUserId/home"
         val decoder = HomeStompDecoder()
         var subscribed = false
         val connectTimeout = launch {

@@ -13,6 +13,28 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ParentHomeStompSourceTest {
+    @Test fun medicationChannelUsesSeniorIdAndRejectsOtherTopics() = runTest {
+        val factory = FakeFactory()
+        val events = mutableListOf<ParentHomeUpdateEvent>()
+        val job = backgroundScope.launch {
+            ParentHomeStompSource(factory, "https://example.test/ws") { "Bearer token" }
+                .observeMedication(3).collect { events += it }
+        }
+        runCurrent()
+        val socket = factory.sockets.single()
+        socket.connect()
+        runCurrent()
+        assertTrue(socket.sent.last().contains("destination:/topic/senior/3/medication"))
+        socket.message("/topic/senior/4/medication", "MEDICATION_UPDATED")
+        socket.message("/topic/senior/3/home", "MEDICATION_UPDATED")
+        socket.message("/topic/senior/3/medication", "MEDICATION_UPDATED")
+        runCurrent()
+        assertEquals(1, events.count { it == ParentHomeUpdateEvent.MedicationUpdated })
+        job.cancel()
+        runCurrent()
+        assertTrue(socket.cancelled)
+    }
+
     @Test fun subscribesToOwnTopicAndReconcilesOnEachConnection() = runTest {
         val factory = FakeFactory()
         var token: String? = "Bearer first"

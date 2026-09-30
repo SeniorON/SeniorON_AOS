@@ -393,7 +393,7 @@ private fun DaysLeftBadge(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "D-$daysLeft",
+            text = if (daysLeft == 0) "D-day" else "D-$daysLeft",
             style = SeniorOnTextStyles.CaptionMedium,
             color = if (highlighted) SeniorOnColors.SupportWhite100 else SeniorOnColors.Gray500
         )

@@ -25,32 +25,56 @@ import com.example.senior_on.ui.theme.*
 
 @Composable
 fun ParentChangePasswordScreen(onBackClick: () -> Unit, onSaveClick: (String, String) -> Unit,
-    modifier: Modifier = Modifier, previewOnly: Boolean = false, isSaving: Boolean = false) {
+    modifier: Modifier = Modifier, previewOnly: Boolean = false, isSaving: Boolean = false,
+    serverError: String? = null, onClearServerError: () -> Unit = {}) {
     // Do not save passwords into saved-instance state or preview fixtures.
     var current by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
-    val valid = current.isNotBlank() && isValidPassword(password) && password == confirmation && password != current
+    var validationError by remember { mutableStateOf<String?>(null) }
+    fun clearError() {
+        validationError = null
+        onClearServerError()
+    }
     ParentSettingsScaffold("비밀번호 변경", onBackClick, modifier.clearFocusOnBackgroundTap(focusManager), previewOnly = previewOnly, centeredTitle = false,
         backgroundColor = SeniorOnColors.White, showHeaderShadow = true, bottomBar = {
-        SeniorOnActionButton("변경 완료", { onSaveClick(current, password) },
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(top = 16.dp, bottom = 48.dp), enabled = valid && !isSaving,
-            minHeight = 107.dp, textStyle = SeniorOnTextStyles.HeadingXL,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(SeniorOnRadius.Large))
+        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(top = 16.dp, bottom = 48.dp)) {
+            (validationError ?: serverError)?.let {
+                Text(it, color = SeniorOnColors.Red300, style = SeniorOnTextStyles.CaptionRegular,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+            }
+            SeniorOnActionButton("변경 완료", {
+                focusManager.clearFocus()
+                onClearServerError()
+                validationError = parentPasswordValidationError(current, password, confirmation)
+                if (validationError == null) onSaveClick(current, password)
+            }, Modifier.fillMaxWidth(), enabled = !isSaving, isLoading = isSaving,
+                minHeight = 107.dp, textStyle = SeniorOnTextStyles.HeadingXL,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(SeniorOnRadius.Large))
+        }
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Spacer(Modifier.height(24.dp))
-            ParentPasswordField("현재 비밀번호", "비밀번호 입력", current, { current = it })
+            ParentPasswordField("현재 비밀번호", "비밀번호 입력", current, { current = it; clearError() })
             Spacer(Modifier.height(16.dp))
             Box(Modifier.fillMaxWidth().height(10.dp).background(SeniorOnColors.Background1))
             Spacer(Modifier.height(16.dp))
-            ParentPasswordField("새 비밀번호", "새 비밀번호 입력", password, { password = it }, "영문, 숫자 포함 8자 이상")
+            ParentPasswordField("새 비밀번호", "새 비밀번호 입력", password, { password = it; clearError() }, "영문, 숫자 포함 8자 이상")
             Spacer(Modifier.height(24.dp))
-            ParentPasswordField("새 비밀번호 확인", "새 비밀번호 재입력", confirmation, { confirmation = it },
-                if (confirmation.isNotEmpty() && confirmation != password) "비밀번호가 일치하지 않아요." else null)
+            ParentPasswordField("새 비밀번호 확인", "새 비밀번호 재입력", confirmation, { confirmation = it; clearError() })
         }
     }
+}
+
+internal fun parentPasswordValidationError(current: String, password: String, confirmation: String): String? = when {
+    current.isBlank() -> "현재 비밀번호를 입력해 주세요."
+    password.isBlank() -> "새 비밀번호를 입력해 주세요."
+    confirmation.isBlank() -> "새 비밀번호 확인을 입력해 주세요."
+    !isValidPassword(password) -> "새 비밀번호는 영문과 숫자를 포함해 8자 이상 입력해 주세요."
+    password == current -> "현재 비밀번호와 다른 새 비밀번호를 입력해 주세요."
+    password != confirmation -> "새 비밀번호와 확인 입력이 일치하지 않아요."
+    else -> null
 }
 
 @Composable

@@ -20,6 +20,7 @@ class MedicationDateLoadingTest {
         val store = ViewModelStore()
         var fail = false
         var empty = false
+        var missed = false
         val family = stub<FamilyServerRepository> { _, _ -> error("Unexpected family lookup") }
         val repository = stub<MedicationRepository> { method, args ->
             when (method) {
@@ -29,8 +30,8 @@ class MedicationDateLoadingTest {
                 "getParentSchedules" -> {
                     if (fail) throw IOException()
                     if (empty) emptyList<MedicationSchedule>() else listOf(MedicationSchedule(
-                        logId = 1L, name = "약", plannedTime = "09:00", taken = true,
-                        ingredient = "서버 성분", plannedDate = args[1] as String, status = "TAKEN",
+                        logId = 1L, name = "약", plannedTime = "09:00", taken = !missed,
+                        ingredient = "서버 성분", plannedDate = args[1] as String, status = if (missed) "MISSED" else "TAKEN",
                     ))
                 }
                 "getParentMonthlySchedules" -> MedicationMonthlySchedule(
@@ -44,6 +45,14 @@ class MedicationDateLoadingTest {
             advanceUntilIdle()
             assertEquals("테스트", vm.uiState.value.registeredMedications.single().name)
             assertEquals("서버 성분", vm.uiState.value.todayMedications.single().name)
+            val originalDate = vm.uiState.value.selectedDate
+            missed = true
+            vm.refreshFromSocket()
+            assertEquals(originalDate, vm.uiState.value.selectedDate)
+            assertEquals(MedicationDoseStatus.Missed, vm.uiState.value.todayMedications.single().status)
+            assertFalse(vm.uiState.value.isRefreshing)
+            assertFalse(vm.uiState.value.isLoading)
+            missed = false
             val nextDate = vm.uiState.value.selectedDate.plusDays(1)
             vm.selectDate(nextDate)
             assertTrue(vm.uiState.value.todayMedications.isEmpty())

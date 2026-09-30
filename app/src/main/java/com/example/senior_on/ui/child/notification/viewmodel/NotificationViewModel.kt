@@ -56,6 +56,7 @@ class NotificationViewModel(
     private val homeRepository: HomeServerRepository?,
     private val eventRepository: EventRepository?,
     private val permissionsLoader: (suspend (Long) -> SeniorPermissionSettings)? = null,
+    private val detailLog: (String) -> Unit = { Log.d(DetailLogTag, it) },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NotificationUiState(
         home = emptyNotificationScreenUiState().copy(sharingStatusKnown = permissionsLoader == null),
@@ -67,6 +68,7 @@ class NotificationViewModel(
     private val settingSyncJobs = mutableMapOf<NotificationCategory, Job>()
     private val historyLoadJobs = mutableMapOf<NotificationCategory, Job>()
     private var homeLoadJob: Job? = null
+    private var detailLoadJob: Job? = null
     private var hasEnteredScreen = false
 
     init {
@@ -89,6 +91,23 @@ class NotificationViewModel(
     fun refreshHome() {
         if (homeLoadJob?.isActive == true) return
         loadHome(isPullRefresh = true)
+    }
+
+    /** Serialized by the route's conflated socket collector; never repeats writes/read marking. */
+    suspend fun refreshFromSocket(category: NotificationCategory?, message: NotificationMessageUiState?) {
+        if (category == null) {
+            homeLoadJob?.join()
+            loadHome(isPullRefresh = false)
+            homeLoadJob?.join()
+        } else if (message == null) {
+            historyLoadJobs[category]?.join()
+            loadHistory(category, isPullRefresh = false, silent = true)
+            historyLoadJobs[category]?.join()
+        } else {
+            detailLoadJob?.join()
+            openNotification(category, message, silent = true)
+            detailLoadJob?.join()
+        }
     }
 
     private fun loadHome(isPullRefresh: Boolean) {
@@ -261,13 +280,14 @@ class NotificationViewModel(
     private fun loadHistory(
         category: NotificationCategory,
         isPullRefresh: Boolean,
+        silent: Boolean = false,
     ) {
         if (!_uiState.value.home.canAccess(category)) return
         if (historyLoadJobs[category]?.isActive == true) return
         historyLoadJobs[category] = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !silent,
                     isHistoryRefreshing = isPullRefresh,
                     errorMessage = null,
                 )
@@ -285,6 +305,7 @@ class NotificationViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -300,21 +321,27 @@ class NotificationViewModel(
         category: NotificationCategory,
         enabled: Boolean,
     ) {
-        Log.d("NotificationToggle", "viewModel seniorId=$seniorId category=$category target=$enabled")
         if (category == NotificationCategory.Sos) return
-        if (!_uiState.value.home.canAccess(category)) return
-        val currentEnabled = _uiState.value.home.sections
-            .firstOrNull { it.category == category }
-            ?.enabled
-            ?: return
-
-        confirmedSettings.putIfAbsent(category, currentEnabled)
-        desiredSettings[category] = enabled
-        setLocalSetting(category, enabled)
-
-        if (settingSyncJobs[category]?.isActive != true) {
-            settingSyncJobs[category] = viewModelScope.launch {
-                synchronizeSetting(category)
+        if (settingSyncJobs[category]?.isActive == true) return
+        settingSyncJobs[category] = viewModelScope.launch {
+            try {
+                // Keep the toggle unchanged until both permission validation and the write succeed.
+                val allowed = refreshAccess(category)
+                check(_uiState.value.home.sharingStatusKnown) { "공유 상태를 확인하지 못했어요. 다시 시도해 주세요." }
+                check(allowed) { "해당 정보의 공유가 중단되었거나 기기가 연결되지 않았어요." }
+                val home = _uiState.value.home
+                check(home.isParentPhoneInternetConnected) { "시니어 기기의 인터넷 연결을 확인해 주세요." }
+                check(category != NotificationCategory.Outing || !enabled || home.hasHomeAddress) { "집 주소를 먼저 등록해 주세요." }
+                repository.updateSetting(requireSeniorId(), category.apiType, enabled)
+                confirmedSettings[category] = enabled
+                setLocalSetting(category, enabled)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                _uiState.update { it.copy(errorMessage = failure.message ?: "알림 설정을 변경하지 못했어요.") }
+            } finally {
+                desiredSettings.remove(category)
+                settingSyncJobs.remove(category)
             }
         }
     }
@@ -322,17 +349,19 @@ class NotificationViewModel(
     fun openNotification(
         category: NotificationCategory,
         message: NotificationMessageUiState,
+        silent: Boolean = false,
     ) {
         if (!_uiState.value.home.canAccess(category)) return
-        message.notificationId?.let { notificationId ->
+        message.notificationId?.takeUnless { silent }?.let { notificationId ->
             markNotificationRead(notificationId)
         }
         val eventId = message.eventId ?: return
         val events = eventRepository ?: return
 
-        viewModelScope.launch {
+        detailLoadJob?.cancel()
+        detailLoadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(isDetailLoading = true, errorMessage = null)
+                it.copy(isDetailLoading = !silent, errorMessage = null)
             }
             runCatching {
                 check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
@@ -340,8 +369,7 @@ class NotificationViewModel(
                 // coordinates or battery information with the senior device's latest state.
                 events.getDetail(eventId).toUiState(category, message)
             }.onSuccess { detail ->
-                Log.d(
-                    DetailLogTag,
+                detailLog(
                     "Loaded eventId=$eventId, battery=${detail.deviceBattery}, " +
                         "hasCoordinates=${detail.latitude != null && detail.longitude != null}, " +
                         "occurredAtMillis=${detail.occurredAtMillis}",
@@ -353,6 +381,7 @@ class NotificationViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isDetailLoading = false,
@@ -510,7 +539,7 @@ class NotificationViewModel(
                 home = access,
                 histories = current.histories.filterKeys(access::canAccess)
                     .mapValues { (_, messages) -> messages.map(access::visibleMessage) },
-                detailMessages = emptyMap(),
+                detailMessages = if (access == current.home) current.detailMessages else emptyMap(),
             )
         }
         return permissions != null && _uiState.value.home.canAccess(category)
@@ -529,41 +558,6 @@ class NotificationViewModel(
             ?: error("가족 구성원 중 시니어 사용자를 찾을 수 없습니다.")
         inactivityTargetUserId = targetUserId
         return targetUserId
-    }
-
-    private suspend fun synchronizeSetting(category: NotificationCategory) {
-        while (true) {
-            if (!_uiState.value.home.canAccess(category)) break
-            val target = desiredSettings[category] ?: break
-            Log.d("NotificationToggle", "request seniorId=$seniorId category=$category target=$target")
-            val result = runCatching {
-                check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
-                repository.updateSetting(requireSeniorId(), category.apiType, target)
-            }
-
-            if (result.isSuccess) {
-                Log.d("NotificationToggle", "success seniorId=$seniorId category=$category target=$target")
-                confirmedSettings[category] = target
-                if (desiredSettings[category] == target) {
-                    desiredSettings.remove(category)
-                    break
-                }
-                continue
-            }
-
-            Log.d("NotificationToggle", "failure seniorId=$seniorId category=$category target=$target errorType=${result.exceptionOrNull()?.javaClass?.simpleName}")
-            if (desiredSettings[category] == target) {
-                desiredSettings.remove(category)
-                confirmedSettings[category]?.let { confirmed ->
-                    setLocalSetting(category, confirmed)
-                }
-                _uiState.update {
-                    it.copy(errorMessage = result.exceptionOrNull()?.message)
-                }
-                break
-            }
-        }
-        settingSyncJobs.remove(category)
     }
 
     private fun setLocalSetting(

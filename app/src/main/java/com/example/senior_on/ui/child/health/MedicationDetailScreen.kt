@@ -123,7 +123,7 @@ fun MedicationDetailScreen(
     }
     var weekdays by rememberSaveable(initialDraft, stateSaver = WeekdaySetSaver) {
         mutableStateOf(
-            initialDraft.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
+            initialDraft.weekdays
         )
     }
     var startDate by rememberSaveable(
@@ -139,7 +139,7 @@ fun MedicationDetailScreen(
         mutableStateOf(
             initialDraft.repeat.copy(
                 weekdays = initialDraft.weekdays.ifEmpty {
-                    initialDraft.repeat.weekdays.ifEmpty { MedicationWeekdayLabels.indices.toSet() }
+                    initialDraft.repeat.weekdays
                 },
             )
         )
@@ -155,7 +155,7 @@ fun MedicationDetailScreen(
     val isComplete = category.isNotBlank() &&
         times.isNotEmpty() &&
         startDate != null &&
-        weekdays.isNotEmpty()
+        (repeatSelection.frequency == MedicationRepeatFrequency.Daily || weekdays.isNotEmpty())
     val hasInput =
         category.isNotBlank() || name.isNotBlank() || times.isNotEmpty() || startDate != null
     val hasChanges =
