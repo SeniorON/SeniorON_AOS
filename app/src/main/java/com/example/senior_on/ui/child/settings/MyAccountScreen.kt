@@ -25,6 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
@@ -316,6 +318,8 @@ fun ChangePasswordScreen(
     var isNewVisible by rememberSaveable { mutableStateOf(false) }
     var isConfirmVisible by rememberSaveable { mutableStateOf(false) }
     var hasCompleteAttempted by rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val isSameAsCurrent = newPassword.isNotEmpty() && newPassword == currentPassword
     val isNewPasswordFormatValid = isValidPassword(newPassword)
@@ -367,6 +371,7 @@ fun ChangePasswordScreen(
                 onVisibilityToggle = { isCurrentVisible = !isCurrentVisible },
                 isError = currentPasswordErrorMessage != null,
                 errorMessage = currentPasswordErrorMessage,
+                reservedSupportingText = "비밀번호가 일치하지 않아요.",
                 errorBorderColor = SeniorOnColors.Red200,
                 showErrorIcon = true,
                 visibilityIconColor = SeniorOnColors.Gray300,
@@ -397,6 +402,7 @@ fun ChangePasswordScreen(
                 isError = newPasswordError != null,
                 errorMessage = newPasswordError,
                 supportMessage = "영문, 숫자 포함 8자 이상",
+                reservedSupportingText = "영문과 숫자를 포함해 8자 이상 입력해 주세요.",
                 errorBorderColor = SeniorOnColors.Red200,
                 showErrorIcon = true,
                 visibilityIconColor = SeniorOnColors.Gray300,
@@ -416,6 +422,7 @@ fun ChangePasswordScreen(
                 isVisible = isConfirmVisible,
                 onVisibilityToggle = { isConfirmVisible = !isConfirmVisible },
                 isError = showConfirmPasswordError,
+                reservedSupportingText = "비밀번호가 일치하지 않아요.",
                 errorMessage = if (showConfirmPasswordError) {
                     "비밀번호가 일치하지 않아요."
                 } else {
@@ -433,6 +440,8 @@ fun ChangePasswordScreen(
             enabled = canComplete,
             isLoading = isSaving,
             onClick = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
                 hasCompleteAttempted = true
                 if (
                     isNewPasswordFormatValid &&

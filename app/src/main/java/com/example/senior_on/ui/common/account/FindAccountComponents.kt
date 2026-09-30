@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +33,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -172,6 +175,7 @@ internal fun FindAccountTextField(
     isError: Boolean = false,
     errorMessage: String? = null,
     supportMessage: String? = null,
+    reservedSupportingText: String? = null,
     errorBorderColor: Color = SeniorOnColors.Red300,
     showErrorIcon: Boolean = false,
     showClearIcon: Boolean = true,
@@ -282,37 +286,51 @@ internal fun FindAccountTextField(
             }
         )
 
-        when {
-            isError && errorMessage != null -> {
-                Row(
-                    modifier = Modifier.padding(top = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (showErrorIcon) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_sm_alertfilled),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = Color.Unspecified,
+        Box {
+            if (reservedSupportingText != null) {
+                // Measure even while hidden, including wrapped text at larger font scales.
+                Text(
+                    text = reservedSupportingText,
+                    modifier = Modifier
+                        .padding(top = 6.dp, start = if (showErrorIcon) 20.dp else 0.dp)
+                        .heightIn(min = 16.dp)
+                        .alpha(0f)
+                        .clearAndSetSemantics {},
+                    style = SeniorOnTextStyles.CaptionRegular,
+                )
+            }
+            when {
+                isError && errorMessage != null -> {
+                    Row(
+                        modifier = Modifier.padding(top = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (showErrorIcon) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_sm_alertfilled),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.Unspecified,
+                            )
+
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+
+                        Text(
+                            text = errorMessage,
+                            style = SeniorOnTextStyles.CaptionRegular,
+                            color = SeniorOnColors.Red300
                         )
-
-                        Spacer(modifier = Modifier.width(4.dp))
                     }
-
+                }
+                supportMessage != null -> {
                     Text(
-                        text = errorMessage,
+                        text = supportMessage,
+                        modifier = Modifier.padding(top = 6.dp),
                         style = SeniorOnTextStyles.CaptionRegular,
-                        color = SeniorOnColors.Red300
+                        color = SeniorOnColors.Gray400
                     )
                 }
-            }
-            supportMessage != null -> {
-                Text(
-                    text = supportMessage,
-                    modifier = Modifier.padding(top = 6.dp),
-                    style = SeniorOnTextStyles.CaptionRegular,
-                    color = SeniorOnColors.Gray400
-                )
             }
         }
     }
@@ -330,10 +348,12 @@ internal fun FindAccountPasswordTextField(
     isError: Boolean = false,
     errorMessage: String? = null,
     supportMessage: String? = null,
+    reservedSupportingText: String? = null,
     errorBorderColor: Color = SeniorOnColors.Red300,
     showErrorIcon: Boolean = false,
     visibilityIconColor: Color = SeniorOnColors.Gray400,
 ) {
+    val passwordTransformation = remember { PasswordVisualTransformation(mask = '●') }
     FindAccountTextField(
         label = label,
         value = value,
@@ -344,7 +364,7 @@ internal fun FindAccountPasswordTextField(
         visualTransformation = if (isVisible) {
             VisualTransformation.None
         } else {
-            PasswordVisualTransformation(mask = '●')
+            passwordTransformation
         },
         textStyle = if (isVisible) {
             SeniorOnTextStyles.BodyMRegular.copy(color = SeniorOnColors.Gray800)
@@ -354,6 +374,7 @@ internal fun FindAccountPasswordTextField(
         isError = isError,
         errorMessage = errorMessage,
         supportMessage = supportMessage,
+        reservedSupportingText = reservedSupportingText,
         errorBorderColor = errorBorderColor,
         showErrorIcon = showErrorIcon,
         showClearIcon = false,
