@@ -129,15 +129,11 @@ internal fun ColumnScope.SeniorHomeContent(
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     interactionEnabled: Boolean = true,
-    showSettingsInGrid: Boolean = false,
     onExitHomeClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
 ) {
     val gridButtons = buttons
-        .filterNot {
-            it.type == SeniorHomeButtonType.Schedule ||
-                (!showSettingsInGrid && it.type == SeniorHomeButtonType.Settings)
-        }
+        .filterNot { it.type == SeniorHomeButtonType.Schedule }
         .withEmergencyAtFixedGridSlot()
 
     ParentDateSettingsHeader(
