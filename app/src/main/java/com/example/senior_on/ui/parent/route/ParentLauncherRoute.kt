@@ -62,6 +62,7 @@ fun ParentLauncherRoute(
     appContainer: AppContainer,
     onExitToOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier,
+    homeRequest: Int = 0,
 ) {
 
     val sessionExpirationEvent by
@@ -75,6 +76,7 @@ fun ParentLauncherRoute(
         sessionContext.startActivity(
             android.content.Intent(sessionContext, com.example.senior_on.MainActivity::class.java)
                 .putExtra("start_at_parent_login", true)
+                .putExtra(com.example.senior_on.MainActivity.SelectHomeAfterSessionEnd, true)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
         )
         (sessionContext as? android.app.Activity)?.finish()
@@ -142,6 +144,7 @@ fun ParentLauncherRoute(
 
         ParentFamilyMembershipStatus.Error ->
             ParentLauncherContent(
+                homeRequest = homeRequest,
                 appContainer = appContainer,
                 onSessionEnded = ::onSessionEnded,
                 modifier = modifier,
@@ -149,6 +152,7 @@ fun ParentLauncherRoute(
 
         ParentFamilyMembershipStatus.Connected ->
             ParentLauncherContent(
+                homeRequest = homeRequest,
                 appContainer = appContainer,
                 onSessionEnded = ::onSessionEnded,
                 modifier = modifier,
@@ -161,6 +165,7 @@ private fun ParentLauncherContent(
     appContainer: AppContainer,
     onSessionEnded: () -> Unit,
     modifier: Modifier = Modifier,
+    homeRequest: Int = 0,
 ) {
     val context = LocalContext.current
     val locationTrackingViewModel: ParentLocationTrackingViewModel = viewModel(
@@ -271,6 +276,14 @@ private fun ParentLauncherContent(
     fun openHome() {
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
+    }
+
+    var handledHomeRequest by rememberSaveable { mutableStateOf(0) }
+    LaunchedEffect(homeRequest) {
+        if (homeRequest > handledHomeRequest) {
+            handledHomeRequest = homeRequest
+            openHome()
+        }
     }
 
     BackHandler {

@@ -2,6 +2,8 @@ package com.example.senior_on
 
 import android.os.Bundle
 import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +16,7 @@ import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.notification.MedicationCheckedEventStore
 import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.ui.parent.launcher.ParentLauncherActivity
+import com.example.senior_on.ui.parent.launcher.ParentHomeRoleManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +42,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        if (savedInstanceState == null) offerHomeSelectionAfterSessionEnd()
+    }
+
+    private fun offerHomeSelectionAfterSessionEnd() {
+        if (!intent.getBooleanExtra(SelectHomeAfterSessionEnd, false)) return
+        // Consume before opening Settings so returning/recreating does not open it again.
+        intent.removeExtra(SelectHomeAfterSessionEnd)
+        if (!ParentHomeRoleManager.isDefaultHome(this)) return
+
+        val opened = listOf(Settings.ACTION_HOME_SETTINGS, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+            .any { action -> runCatching { startActivity(Intent(action)) }.isSuccess }
+        Toast.makeText(
+            this,
+            if (opened) R.string.parent_exit_home_select else R.string.parent_exit_home_failed,
+            Toast.LENGTH_LONG,
+        ).show()
     }
 
     private fun openParentLauncher() {
@@ -56,6 +75,7 @@ class MainActivity : ComponentActivity() {
         publishMedicationReminder(intent)
         publishMedicationChecked(intent)
         publishNotificationNavigation(intent)
+        offerHomeSelectionAfterSessionEnd()
     }
 
     private fun publishMedicationReminder(intent: Intent?) {
@@ -117,7 +137,8 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private companion object {
+    companion object {
+        const val SelectHomeAfterSessionEnd = "select_home_after_session_end"
         const val FirebaseMessageIdKey = "google.message_id"
         const val FirebaseNotificationEnabledKey = "gcm.n.e"
     }
