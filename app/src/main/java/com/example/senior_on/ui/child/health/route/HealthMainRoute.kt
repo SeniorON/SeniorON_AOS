@@ -11,6 +11,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.senior_on.data.remote.api.SeniorOnNetwork
+import com.example.senior_on.domain.repository.parent.ParentHomeUpdateEvent
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HospitalRepository
@@ -68,6 +77,19 @@ fun HealthMainRoute(
     var wasDeletingAppointment by remember { mutableStateOf(false) }
     var pendingHospitalId by rememberSaveable(seniorId, sessionKey) { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(seniorId, sessionKey, medicationViewModel, lifecycleOwner) {
+        val selectedSeniorId = seniorId?.takeIf { it > 0 } ?: return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            SeniorOnNetwork.parentHomeStompSource.observeMedication(selectedSeniorId)
+                .filter { it == ParentHomeUpdateEvent.MedicationUpdated || it == ParentHomeUpdateEvent.Subscribed }
+                .conflate()
+                .collect {
+                    delay(150)
+                    medicationViewModel.refreshFromSocket()
+                }
+        }
+    }
 
     LaunchedEffect(medicationCheckedEvent) {
         medicationCheckedEvent?.let { event ->

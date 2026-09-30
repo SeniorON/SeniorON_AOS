@@ -217,6 +217,16 @@ class MedicationViewModel(
         loadMedicationData(isPullRefresh = true)
     }
 
+    /** Serialize socket refreshes without dropping an event received during a date query. */
+    suspend fun refreshFromSocket() {
+        while (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) {
+            fullLoadJob?.join()
+            scheduleLoadJob?.join()
+        }
+        loadMedicationData(isPullRefresh = false)
+        fullLoadJob?.join()
+    }
+
     fun onMedicationChecked(
         checkedParentUserId: Long,
         medicationLogId: Long,
