@@ -392,6 +392,7 @@ fun ChildMainScreen(
                 settingsSessionKey = childSessionViewModelKey,
                 displayViewModel = displayViewModel,
                 seniorAccounts = seniorManagementUiState.managedSeniors,
+                isSeniorAccountsLoading = seniorManagementUiState.isLoading,
                 onSeniorAccountClick = { senior ->
                     selectionViewModel.select(senior.seniorId)
                 },
@@ -534,6 +535,7 @@ private fun ChildMainTabContent(
     settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
     seniorAccounts: List<ManagedSenior>,
+    isSeniorAccountsLoading: Boolean,
     onSeniorAccountClick: (ManagedSenior) -> Unit,
     onAddSeniorAccountClick: () -> Unit,
     selectedSeniorId: Long?,
@@ -579,6 +581,7 @@ private fun ChildMainTabContent(
             viewModel = displayViewModel,
             addressSearchViewModel = addressSearchViewModel,
             seniorAccounts = seniorAccounts,
+            isSeniorAccountsLoading = isSeniorAccountsLoading,
             onSeniorAccountClick = onSeniorAccountClick,
             onAddSeniorAccountClick = onAddSeniorAccountClick,
             modifier = modifier,
