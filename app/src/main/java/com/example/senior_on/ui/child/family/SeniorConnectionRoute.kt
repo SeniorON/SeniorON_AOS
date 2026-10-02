@@ -18,6 +18,7 @@ private enum class SeniorConnectionDestination { Intro, CodeInput, Connected }
 @Composable
 fun SeniorConnectionRoute(
     seniorId: Long,
+    canManageConnections: Boolean,
     onBackClick: () -> Unit,
     viewModel: SeniorConnectionViewModel,
     modifier: Modifier = Modifier,
@@ -43,6 +44,18 @@ fun SeniorConnectionRoute(
             }
         }
     }
+    LaunchedEffect(canManageConnections) {
+        if (!canManageConnections) {
+            pendingDisconnectSenior = null
+            if (destination == SeniorConnectionDestination.CodeInput) {
+                destination = if (uiState.connectedSeniors.isEmpty()) {
+                    SeniorConnectionDestination.Intro
+                } else {
+                    SeniorConnectionDestination.Connected
+                }
+            }
+        }
+    }
 
     when {
         uiState.isLoading && destination == null -> SeniorConnectionLoadingScreen(
@@ -65,8 +78,10 @@ fun SeniorConnectionRoute(
                 }
             },
             onConnectClick = { code ->
-                viewModel.connect(seniorId, code) {
-                    destination = SeniorConnectionDestination.Connected
+                if (canManageConnections) {
+                    viewModel.connect(seniorId, code) {
+                        destination = SeniorConnectionDestination.Connected
+                    }
                 }
             },
             isConnecting = uiState.isConnecting,
@@ -76,19 +91,31 @@ fun SeniorConnectionRoute(
         )
         destination == SeniorConnectionDestination.Connected -> ConnectedSeniorListScreen(
             seniors = uiState.connectedSeniors,
+            canManageConnections = canManageConnections,
             onBackClick = onBackClick,
-            onAddClick = { destination = SeniorConnectionDestination.CodeInput },
-            onDisconnectClick = { senior -> pendingDisconnectSenior = senior },
+            onAddClick = {
+                if (canManageConnections) {
+                    destination = SeniorConnectionDestination.CodeInput
+                }
+            },
+            onDisconnectClick = { senior ->
+                if (canManageConnections) pendingDisconnectSenior = senior
+            },
             modifier = modifier,
         )
         else -> SeniorConnectionScreen(
             onBackClick = onBackClick,
-            onCodeEntryClick = { destination = SeniorConnectionDestination.CodeInput },
+            canManageConnections = canManageConnections,
+            onCodeEntryClick = {
+                if (canManageConnections) {
+                    destination = SeniorConnectionDestination.CodeInput
+                }
+            },
             modifier = modifier,
         )
     }
 
-    pendingDisconnectSenior?.let { senior ->
+    pendingDisconnectSenior?.takeIf { canManageConnections }?.let { senior ->
         SeniorDisconnectConfirmationDialog(
             senior = senior,
             isDisconnecting = uiState.disconnectingPhotoGroupId == senior.photoGroupId,
