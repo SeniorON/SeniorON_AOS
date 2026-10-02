@@ -191,18 +191,18 @@ private class FakeFamilyRepository(
 
     override suspend fun hasFamily(): Boolean = error("unused")
     override suspend fun join(code: String): FamilyCodeInfo = error("unused")
-    override suspend fun getCode(): FamilyCodeInfo = error("unused")
-    override suspend fun getHome(): ServerFamilyHome = error("unused")
-    override suspend fun getMembers(seniorId: Long?): List<ServerFamilyMember> = error("unused")
-    override suspend fun changePrimaryManager(userId: Long) = error("unused")
-    override suspend fun deleteMember(userId: Long) = error("unused")
+    override suspend fun getCode(seniorId: Long): FamilyCodeInfo = error("unused")
+    override suspend fun getHome(seniorId: Long): ServerFamilyHome = error("unused")
+    override suspend fun getMembers(seniorId: Long): List<ServerFamilyMember> = error("unused")
+    override suspend fun changePrimaryManager(userId: Long, seniorId: Long) = error("unused")
+    override suspend fun deleteMember(userId: Long, seniorId: Long) = error("unused")
     override suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum> = error("unused")
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-        seniorId: Long?,
+        seniorId: Long,
     ): ServerFamilyPhotoPage = error("unused")
     override suspend fun uploadPhoto(
         photo: PreparedFamilyPhoto,

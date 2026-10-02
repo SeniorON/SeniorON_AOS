@@ -85,6 +85,9 @@ data class FamilyTabUiState(
     val canManageMembers: Boolean
         get() = currentUserRole == FamilyCaregiverRole.Primary
 
+    val canManageSeniorConnections: Boolean
+        get() = canManageMembers
+
     val isMemberMutationInProgress: Boolean
         get() = changingPrimaryMemberId != null || deletingMemberId != null
 }

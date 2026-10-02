@@ -48,6 +48,12 @@ class PendingFamilyRepository(
 ) : FamilyServerRepository by delegate {
     private val mutex = Mutex()
 
+    override suspend fun hasFamily(): Boolean = loadStatus().let { status ->
+        status.families
+            ?.any { it.managerType != CareManagerType.None }
+            ?: status.hasFamily
+    }
+
     override suspend fun getPendingCode(): FamilyCodeInfo? = mutex.withLock { resolve(false) }
     override suspend fun createCode(): FamilyCodeInfo = mutex.withLock { checkNotNull(resolve(true)) }
 

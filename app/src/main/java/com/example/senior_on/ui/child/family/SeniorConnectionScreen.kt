@@ -61,6 +61,7 @@ import java.util.Locale
 internal fun SeniorConnectionScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    canManageConnections: Boolean = true,
     onCodeEntryClick: () -> Unit = {},
 ) {
     SeniorConnectionScaffold("시니어 연결", onBackClick, modifier) {
@@ -68,13 +69,13 @@ internal fun SeniorConnectionScreen(
             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(70.dp))
+            Spacer(modifier = Modifier.height(84.dp))
             Image(
                 painter = painterResource(id = R.drawable.img_senior_connection),
                 contentDescription = null,
                 modifier = Modifier.size(116.dp),
             )
-            Spacer(modifier = Modifier.height(17.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = buildAnnotatedString {
                     withStyle(SpanStyle(color = SeniorOnColors.Primary700)) { append("시니어 코드") }
@@ -85,23 +86,29 @@ internal fun SeniorConnectionScreen(
                 style = SeniorOnTextStyles.HeadingXS,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "연결할 시니어의 코드를 입력해주세요.\n" +
-                    "연결하면 시니어와 보호자가 같은 가족 사진을 함께 볼 수 있어요.",
+                text = if (canManageConnections) {
+                    "연결할 시니어의 코드를 입력해주세요.\n" +
+                        "연결하면 시니어와 보호자가 같은 가족 사진을 함께 볼 수 있어요."
+                } else {
+                    "시니어 연결은 주 담당자가 관리할 수 있어요."
+                },
                 style = SeniorOnTextStyles.CaptionMedium,
                 color = SeniorOnColors.Gray600,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(63.dp))
-            FamilyTextActionButton(
-                text = "코드 입력하기",
-                backgroundColor = SeniorOnColors.Primary600,
-                contentColor = SeniorOnColors.White,
-                onClick = onCodeEntryClick,
-                modifier = Modifier.fillMaxWidth(),
-                buttonHeight = 58.dp,
-            )
+            Spacer(modifier = Modifier.height(53.dp))
+            if (canManageConnections) {
+                FamilyTextActionButton(
+                    text = "코드 입력하기",
+                    backgroundColor = SeniorOnColors.Primary600,
+                    contentColor = SeniorOnColors.White,
+                    onClick = onCodeEntryClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    buttonHeight = 58.dp,
+                )
+            }
         }
     }
 }
@@ -124,22 +131,22 @@ internal fun SeniorCodeInputScreen(
             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(107.dp))
+            Spacer(modifier = Modifier.height(120.dp))
             Text(
                 text = buildAnnotatedString {
                     withStyle(SpanStyle(color = SeniorOnColors.Primary700)) { append("시니어 코드") }
                     append("를 입력해 주세요")
                 },
-                style = SeniorOnTextStyles.HeadingXS,
+                style = SeniorOnTextStyles.HeadingS,
                 color = SeniorOnColors.Gray800,
             )
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "연결할 시니어의 코드를 확인해 주세요.",
                 style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray500,
             )
-            Spacer(modifier = Modifier.height(45.dp))
+            Spacer(modifier = Modifier.height(52.dp))
             SeniorCodeTextField(
                 value = code,
                 onValueChange = {
@@ -150,18 +157,19 @@ internal fun SeniorCodeInputScreen(
                 focusManager = focusManager,
                 onDone = { if (isValid && !isConnecting) onConnectClick(code) },
             )
-            Spacer(modifier = Modifier.height(49.dp))
+            Spacer(modifier = Modifier.height(58.dp))
             FamilyTextActionButton(
-                text = if (isConnecting) "연결 중..." else "연결하기",
+                text = "연결하기",
                 backgroundColor = SeniorOnColors.Primary600,
                 contentColor = SeniorOnColors.White,
                 enabled = isValid && !isConnecting,
+                isLoading = isConnecting,
                 onClick = {
                     focusManager.clearFocus()
                     onConnectClick(code)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                buttonHeight = 52.dp,
+                buttonHeight = 58.dp,
             )
         }
     }
@@ -179,7 +187,7 @@ private fun SeniorCodeTextField(
         BasicTextField(
             value = formatSeniorConnectionCode(value),
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
+            modifier = Modifier.fillMaxWidth().height(68.dp),
             textStyle = SeniorOnTextStyles.BodyLBold.copy(
                 color = SeniorOnColors.Gray800,
                 textAlign = TextAlign.Center,
@@ -231,6 +239,7 @@ private fun SeniorCodeTextField(
 @Composable
 internal fun ConnectedSeniorListScreen(
     seniors: List<ServerConnectedSenior>,
+    canManageConnections: Boolean,
     onBackClick: () -> Unit,
     onAddClick: () -> Unit,
     onDisconnectClick: (ServerConnectedSenior) -> Unit,
@@ -244,19 +253,28 @@ internal fun ConnectedSeniorListScreen(
         ) {
             item { Spacer(modifier = Modifier.height(10.dp)) }
             items(seniors, key = ServerConnectedSenior::photoGroupId) { senior ->
-                ConnectedSeniorCard(senior, onDisconnectClick = { onDisconnectClick(senior) })
+                ConnectedSeniorCard(
+                    senior = senior,
+                    canManageConnections = canManageConnections,
+                    onDisconnectClick = { onDisconnectClick(senior) },
+                )
             }
-            item {
+            if (canManageConnections) item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
                         .clip(RoundedCornerShape(SeniorOnRadius.Medium))
                         .border(1.dp, SeniorOnColors.Primary400, RoundedCornerShape(SeniorOnRadius.Medium))
                         .clickable(onClick = onAddClick),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("＋", style = SeniorOnTextStyles.HeadingXS, color = SeniorOnColors.Primary600)
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        painter = painterResource(R.drawable.ic_plus),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = SeniorOnColors.Primary600,
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text("시니어 추가하기", style = SeniorOnTextStyles.BodyMSemiBold, color = SeniorOnColors.Primary600)
                 }
             }
@@ -268,15 +286,17 @@ internal fun ConnectedSeniorListScreen(
 @Composable
 private fun ConnectedSeniorCard(
     senior: ServerConnectedSenior,
+    canManageConnections: Boolean,
     onDisconnectClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(SeniorOnRadius.Medium))
-            .background(SeniorOnColors.White).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().height(if (canManageConnections) 146.dp else 84.dp)
+            .clip(RoundedCornerShape(SeniorOnRadius.Medium))
+            .background(SeniorOnColors.White).padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape)
+                modifier = Modifier.size(52.dp).clip(CircleShape)
                     .background(SeniorOnColors.AccountAvatarBackground)
                     .border(1.dp, SeniorOnColors.Green, CircleShape),
                 contentAlignment = Alignment.Center,
@@ -288,7 +308,7 @@ private fun ConnectedSeniorCard(
                     tint = SeniorOnColors.AccountAvatarForeground,
                 )
             }
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(senior.name, style = SeniorOnTextStyles.BodyLBold, color = SeniorOnColors.Gray800)
                 Text(
@@ -306,15 +326,17 @@ private fun ConnectedSeniorCard(
                 color = SeniorOnColors.Primary700,
             )
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Box(
-            modifier = Modifier.fillMaxWidth().height(42.dp)
-                .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                .background(SeniorOnColors.Gray50)
-                .clickable(onClick = onDisconnectClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("연결 해제", style = SeniorOnTextStyles.BodySMedium, color = SeniorOnColors.Gray600)
+        if (canManageConnections) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth().height(46.dp)
+                    .clip(RoundedCornerShape(SeniorOnRadius.Small))
+                    .background(SeniorOnColors.Gray50)
+                    .clickable(onClick = onDisconnectClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("연결 해제", style = SeniorOnTextStyles.BodySMedium, color = SeniorOnColors.Gray600)
+            }
         }
     }
 }
