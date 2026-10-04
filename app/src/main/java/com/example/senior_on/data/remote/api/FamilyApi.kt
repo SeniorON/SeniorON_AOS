@@ -10,25 +10,25 @@ interface FamilyApi {
     @POST("api/family/code-create") suspend fun createCode(): ApiResponse<FamilyCodeCreateResponse>
     @GET("api/family/code")
     suspend fun getCode(
-        @Query("seniorId") seniorId: Long? = null,
+        @Query("seniorId") seniorId: Long,
     ): ApiResponse<FamilyCodeResponse>
     @GET("api/family/home")
     suspend fun getHome(
-        @Query("seniorId") seniorId: Long? = null,
+        @Query("seniorId") seniorId: Long,
     ): ApiResponse<FamilyHomeResponse>
     @GET("api/family/members")
     suspend fun getMembers(
-        @Query("seniorId") seniorId: Long? = null,
+        @Query("seniorId") seniorId: Long,
     ): ApiResponse<List<FamilyMemberResponse>>
     @PATCH("api/family/primary-manager")
     suspend fun changePrimaryManager(
-        @Query("seniorId") seniorId: Long? = null,
+        @Query("seniorId") seniorId: Long,
         @Body request: FamilyPrimaryManagerUpdateRequest,
     ): ApiResponse<FamilyPrimaryManagerUpdateResponse>
     @DELETE("api/family/members/{targetUserId}")
     suspend fun deleteMember(
         @Path("targetUserId") targetUserId: Long,
-        @Query("seniorId") seniorId: Long? = null,
+        @Query("seniorId") seniorId: Long,
     ): ApiResponse<Unit>
     @GET("api/family/photo-groups/connections")
     suspend fun getPhotoGroupConnections(
@@ -48,7 +48,7 @@ interface FamilyApi {
         @Query("cursorCreatedAt") cursorCreatedAt: String? = null,
         @Query("cursorId") cursorId: Long? = null,
         @Query("size") size: Int? = null,
-        @Query("seniorId") seniorId: Long? = null,
+        @Query("seniorId") seniorId: Long,
     ): ApiResponse<FamilyPhotoListResponse>
     @GET("api/family/photos/{familyPhotoId}")
     suspend fun getPhoto(

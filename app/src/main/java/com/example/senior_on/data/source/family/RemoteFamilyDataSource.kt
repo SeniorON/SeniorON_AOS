@@ -11,20 +11,14 @@ import retrofit2.HttpException
 interface RemoteFamilySource {
     suspend fun join(request: FamilyJoinRequest): FamilyJoinResponse
     suspend fun createCode(): FamilyCodeCreateResponse
-    suspend fun getCode(): FamilyCodeResponse
-    suspend fun getCode(seniorId: Long): FamilyCodeResponse = getCode()
-    suspend fun getHome(): FamilyHomeResponse
-    suspend fun getHome(seniorId: Long): FamilyHomeResponse = getHome()
-    suspend fun getMembers(seniorId: Long? = null): List<FamilyMemberResponse>
-    suspend fun changePrimaryManager(
-        request: FamilyPrimaryManagerUpdateRequest,
-    ): FamilyPrimaryManagerUpdateResponse
+    suspend fun getCode(seniorId: Long): FamilyCodeResponse
+    suspend fun getHome(seniorId: Long): FamilyHomeResponse
+    suspend fun getMembers(seniorId: Long): List<FamilyMemberResponse>
     suspend fun changePrimaryManager(
         seniorId: Long,
         request: FamilyPrimaryManagerUpdateRequest,
-    ): FamilyPrimaryManagerUpdateResponse = changePrimaryManager(request)
-    suspend fun deleteMember(userId: Long)
-    suspend fun deleteMember(userId: Long, seniorId: Long) = deleteMember(userId)
+    ): FamilyPrimaryManagerUpdateResponse
+    suspend fun deleteMember(userId: Long, seniorId: Long)
     suspend fun getPhotoGroupConnections(
         seniorId: Long,
     ): List<FamilyPhotoGroupConnectionResponse> = emptyList()
@@ -39,7 +33,7 @@ interface RemoteFamilySource {
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-        seniorId: Long? = null,
+        seniorId: Long,
     ): FamilyPhotoListResponse
     suspend fun createPhotoUploadUrl(
         request: FamilyPhotoUploadUrlRequest,
@@ -68,49 +62,50 @@ class RemoteFamilyDataSource(
     override suspend fun createCode() = remoteRequest {
         api.createCode().requireData()
     }
-    override suspend fun getCode() = remoteRequest {
-        api.getCode().requireData()
-    }
     override suspend fun getCode(seniorId: Long) = remoteRequest {
         api.getCode(seniorId).requireData()
     }
-    override suspend fun getHome() = api.getHome().requireData()
-    override suspend fun getHome(seniorId: Long) = api.getHome(seniorId).requireData()
-    override suspend fun getMembers(seniorId: Long?) =
+    override suspend fun getHome(seniorId: Long) = remoteRequest {
+        api.getHome(seniorId).requireData()
+    }
+    override suspend fun getMembers(seniorId: Long) = remoteRequest {
         api.getMembers(seniorId).requireData()
-    override suspend fun changePrimaryManager(request: FamilyPrimaryManagerUpdateRequest) =
-        api.changePrimaryManager(request = request).requireData()
+    }
     override suspend fun changePrimaryManager(
         seniorId: Long,
         request: FamilyPrimaryManagerUpdateRequest,
-    ) = api.changePrimaryManager(seniorId, request).requireData()
-    override suspend fun deleteMember(userId: Long) {
-        api.deleteMember(userId)
+    ) = remoteRequest {
+        api.changePrimaryManager(seniorId, request).requireData()
     }
     override suspend fun deleteMember(userId: Long, seniorId: Long) {
-        api.deleteMember(userId, seniorId)
+        remoteRequest { api.deleteMember(userId, seniorId); Unit }
     }
     override suspend fun getPhotoGroupConnections(seniorId: Long) =
         api.getPhotoGroupConnections(seniorId).requireData()
     override suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
-        api.connectPhotoGroup(request)
+        remoteRequest { api.connectPhotoGroup(request); Unit }
     }
     override suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        api.disconnectPhotoGroup(photoGroupId = photoGroupId, seniorId = seniorId)
+        remoteRequest {
+            api.disconnectPhotoGroup(photoGroupId = photoGroupId, seniorId = seniorId)
+            Unit
+        }
     }
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-        seniorId: Long?,
-    ) = api.getPhotos(
-        seniorId = seniorId,
-        uploaderUserId = uploaderId,
-        cursorCreatedAt = cursorAt,
-        cursorId = cursorId,
-        size = size,
-    ).requireData()
+        seniorId: Long,
+    ) = remoteRequest {
+        api.getPhotos(
+            seniorId = seniorId,
+            uploaderUserId = uploaderId,
+            cursorCreatedAt = cursorAt,
+            cursorId = cursorId,
+            size = size,
+        ).requireData()
+    }
     override suspend fun createPhotoUploadUrl(
         request: FamilyPhotoUploadUrlRequest,
     ) = api.createPhotoUploadUrl(request).requireData()

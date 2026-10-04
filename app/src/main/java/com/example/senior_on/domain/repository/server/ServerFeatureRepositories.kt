@@ -28,15 +28,11 @@ interface FamilyServerRepository {
     suspend fun join(code: String): FamilyCodeInfo
     suspend fun createCode(): FamilyCodeInfo
     suspend fun getPendingCode(): FamilyCodeInfo? = null
-    suspend fun getCode(): FamilyCodeInfo
-    suspend fun getCode(seniorId: Long): FamilyCodeInfo = getCode()
-    suspend fun getHome(): ServerFamilyHome
-    suspend fun getHome(seniorId: Long): ServerFamilyHome = getHome()
-    suspend fun getMembers(seniorId: Long? = null): List<ServerFamilyMember>
-    suspend fun changePrimaryManager(userId: Long)
-    suspend fun changePrimaryManager(userId: Long, seniorId: Long) = changePrimaryManager(userId)
-    suspend fun deleteMember(userId: Long)
-    suspend fun deleteMember(userId: Long, seniorId: Long) = deleteMember(userId)
+    suspend fun getCode(seniorId: Long): FamilyCodeInfo
+    suspend fun getHome(seniorId: Long): ServerFamilyHome
+    suspend fun getMembers(seniorId: Long): List<ServerFamilyMember>
+    suspend fun changePrimaryManager(userId: Long, seniorId: Long)
+    suspend fun deleteMember(userId: Long, seniorId: Long)
     suspend fun getConnectedSeniors(seniorId: Long): List<ServerConnectedSenior> = emptyList()
     suspend fun connectPhotoGroup(seniorId: Long, seniorCode: String) {
         error("Photo-group connection is not implemented")
@@ -50,7 +46,7 @@ interface FamilyServerRepository {
         cursorAt: String? = null,
         cursorId: Long? = null,
         size: Int? = null,
-        seniorId: Long? = null,
+        seniorId: Long,
     ): ServerFamilyPhotoPage
     suspend fun uploadPhoto(
         photo: PreparedFamilyPhoto,

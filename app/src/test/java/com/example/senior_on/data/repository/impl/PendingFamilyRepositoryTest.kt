@@ -65,6 +65,12 @@ class PendingFamilyRepositoryTest {
         assertNull(repository.getPendingCode())
     }
 
+    @Test fun membershipRecoveryUsesOnboardingFamiliesWithoutFamilyHomeRequest() = runTest {
+        families = listOf(family(role = CareManagerType.Sub))
+
+        assertTrue(repository.hasFamily())
+    }
+
     @Test fun otherAccountCannotReuseCachedCode() = runTest {
         saved[1L] = code
         account = 2L

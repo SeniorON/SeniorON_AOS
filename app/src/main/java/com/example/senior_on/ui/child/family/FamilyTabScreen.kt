@@ -163,6 +163,7 @@ fun FamilyTabScreen(
 
                     item {
                         SharedPhotoHeader(
+                            canManageConnections = uiState.canManageSeniorConnections,
                             onSeniorConnectionClick = onSeniorConnectionClick,
                         )
                     }
@@ -599,6 +600,7 @@ private fun FamilyManagementButtons(
 
 @Composable
 private fun SharedPhotoHeader(
+    canManageConnections: Boolean,
     onSeniorConnectionClick: () -> Unit,
 ) {
     Row(
@@ -632,26 +634,28 @@ private fun SharedPhotoHeader(
             )
         }
 
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(22.dp))
-                .background(SeniorOnColors.Primary200)
-                .clickable(onClick = onSeniorConnectionClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_plus),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = SeniorOnColors.Primary700,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "시니어 연결",
-                style = SeniorOnTextStyles.BodyMMedium,
-                color = SeniorOnColors.Primary700,
-            )
+        if (canManageConnections) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(SeniorOnColors.Primary200)
+                    .clickable(onClick = onSeniorConnectionClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_plus),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = SeniorOnColors.Primary700,
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "시니어 연결",
+                    style = SeniorOnTextStyles.BodyMMedium,
+                    color = SeniorOnColors.Primary700,
+                )
+            }
         }
     }
 }

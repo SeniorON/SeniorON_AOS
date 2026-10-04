@@ -163,11 +163,9 @@ class FamilyServerRepositoryImpl(
     private val photoUploadMutex = Mutex()
     private val pendingPhotoUploads = mutableMapOf<String, PendingFamilyPhotoUpload>()
 
-    override suspend fun hasFamily(): Boolean = try {
-        source.getHome().members.orEmpty().isNotEmpty()
-    } catch (exception: HttpException) {
-        if (exception.code() == 404) false else throw exception
-    }
+    override suspend fun hasFamily(): Boolean = error(
+        "Family membership must be checked through onboarding status",
+    )
 
     override suspend fun join(code: String) = source.join(
         FamilyJoinRequest(normalizeFamilyCodeForRequest(code))
@@ -177,13 +175,9 @@ class FamilyServerRepositoryImpl(
     override suspend fun createCode() = source.createCode().let {
         FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }
-    override suspend fun getCode() = source.getCode().let {
-        FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
-    }
     override suspend fun getCode(seniorId: Long) = source.getCode(seniorId).let {
         FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
     }
-    override suspend fun getHome() = mapFamilyHome(source.getHome())
     override suspend fun getHome(seniorId: Long) = mapFamilyHome(source.getHome(seniorId))
 
     private fun mapFamilyHome(response: FamilyHomeResponse) = response.let {
@@ -197,19 +191,15 @@ class FamilyServerRepositoryImpl(
             photoGroupId = response.photoGroupId?.requirePositiveFamilyId("photoGroupId"),
         )
     }
-    override suspend fun getMembers(seniorId: Long?) = source.getMembers(seniorId).map(
+    override suspend fun getMembers(seniorId: Long) = source.getMembers(seniorId).map(
         FamilyMemberResponse::toServerFamilyMember,
     )
-    override suspend fun changePrimaryManager(userId: Long) {
-        source.changePrimaryManager(FamilyPrimaryManagerUpdateRequest(userId))
-    }
     override suspend fun changePrimaryManager(userId: Long, seniorId: Long) {
         source.changePrimaryManager(
             seniorId = seniorId,
             request = FamilyPrimaryManagerUpdateRequest(userId),
         )
     }
-    override suspend fun deleteMember(userId: Long) = source.deleteMember(userId)
     override suspend fun deleteMember(userId: Long, seniorId: Long) =
         source.deleteMember(userId, seniorId)
     override suspend fun getConnectedSeniors(seniorId: Long) =
@@ -251,7 +241,7 @@ class FamilyServerRepositoryImpl(
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-        seniorId: Long?,
+        seniorId: Long,
     ) = mapFamilyPhotoPage(source.getPhotos(uploaderId, cursorAt, cursorId, size, seniorId))
 
     private fun mapFamilyPhotoPage(response: FamilyPhotoListResponse) = response.let {
