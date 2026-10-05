@@ -232,12 +232,6 @@ fun SettingsTabRoute(
         onWithdrawConfirm()
     }
 
-    LaunchedEffect(profileImageUiState.loadErrorMessage) {
-        val message = profileImageUiState.loadErrorMessage ?: return@LaunchedEffect
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        profileImageViewModel.consumeLoadError()
-    }
-
     LaunchedEffect(profileImageUiState.uploadErrorMessage) {
         val message = profileImageUiState.uploadErrorMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -374,6 +368,10 @@ fun SettingsTabRoute(
     ) {
         when (destination) {
         SettingsDestination.Main -> SettingsScreen(
+            profileLoading = profileImageUiState.isLoading,
+            hasLoadedProfile = profileImageUiState.hasLoadedProfile,
+            profileLoadError = profileImageUiState.loadErrorMessage,
+            onProfileRetry = profileImageViewModel::loadSettingsProfile,
             modifier = Modifier.fillMaxSize(),
             profile = profile,
             onMyAccountClick = { destination = SettingsDestination.MyAccount },
@@ -603,6 +601,10 @@ fun SettingsScreen(
     onApplyDefaultImageClick: () -> Unit = {},
     isLoggingOut: Boolean = false,
     isWithdrawing: Boolean = false,
+    profileLoading: Boolean = false,
+    hasLoadedProfile: Boolean = true,
+    profileLoadError: String? = null,
+    onProfileRetry: () -> Unit = {},
 ) {
     var showProfilePhotoSheet by rememberSaveable { mutableStateOf(false) }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
@@ -614,7 +616,13 @@ fun SettingsScreen(
             .background(SeniorOnColors.White)
     ) {
         SettingsTopBar()
-
+        com.example.senior_on.ui.common.QueryRetryContent(
+            error = profileLoadError,
+            loading = profileLoading,
+            hasContent = hasLoadedProfile,
+            onRetry = onProfileRetry,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -671,6 +679,7 @@ fun SettingsScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
         }
     }
 

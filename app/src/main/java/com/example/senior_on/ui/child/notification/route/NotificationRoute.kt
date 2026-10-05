@@ -21,6 +21,10 @@ import com.example.senior_on.data.remote.api.SeniorOnNetwork
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.senior_on.ui.child.notification.NotificationTopBar
+import com.example.senior_on.ui.child.notification.NotificationHistoryTopBar
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.server.HomeServerRepository
@@ -187,8 +191,61 @@ fun NotificationRoute(
         }
     }
 
+    val queryError = when (destination) {
+        NotificationDestination.Home -> uiState.homeQueryError
+        NotificationDestination.History -> uiState.historyQueryErrors[selectedCategory]
+        NotificationDestination.Detail -> uiState.detailQueryErrors[selectedMessage?.eventId]
+        NotificationDestination.InactivitySetting -> uiState.settingQueryError
+    }
+    val queryLoading = when (destination) {
+        NotificationDestination.Home -> uiState.isLoading || uiState.isRefreshing
+        NotificationDestination.History -> uiState.isLoading || uiState.isHistoryRefreshing
+        NotificationDestination.Detail -> uiState.isDetailLoading
+        NotificationDestination.InactivitySetting -> uiState.isInactivitySettingLoading
+    }
+    val hasQueryContent = when (destination) {
+        NotificationDestination.Home -> uiState.hasLoadedContent
+        NotificationDestination.History -> uiState.histories.containsKey(selectedCategory)
+        NotificationDestination.Detail -> uiState.detailMessages.containsKey(selectedMessage?.eventId)
+        NotificationDestination.InactivitySetting -> uiState.hasLoadedSetting
+    }
+    androidx.activity.compose.BackHandler(enabled = destination != NotificationDestination.Home) {
+        destination = if (destination == NotificationDestination.Detail) detailReturnDestination else NotificationDestination.Home
+    }
+    com.example.senior_on.ui.common.QueryRetryContent(
+        error = if (destination == NotificationDestination.Home) null else queryError,
+        loading = queryLoading,
+        hasContent = destination == NotificationDestination.Home || hasQueryContent,
+        onRetry = {
+            when (destination) {
+                NotificationDestination.Home -> viewModel.loadHome()
+                NotificationDestination.History -> selectedCategory?.let(viewModel::loadHistory)
+                NotificationDestination.Detail -> selectedCategory?.let { category ->
+                    selectedMessage?.let { viewModel.openNotification(category, it, silent = true) }
+                }
+                NotificationDestination.InactivitySetting -> viewModel.loadInactivitySetting()
+            }
+        },
+        modifier = modifier.fillMaxSize(),
+        placeholderHeader = {
+            if (destination == NotificationDestination.Home) {
+                NotificationTopBar(NotificationSeverity.Empty, 0, Modifier.statusBarsPadding())
+            } else {
+                NotificationHistoryTopBar(
+                    title = if (destination == NotificationDestination.InactivitySetting) "감지 기준 시간" else "알림",
+                    onBackClick = {
+                        destination = if (destination == NotificationDestination.Detail) detailReturnDestination else NotificationDestination.Home
+                    },
+                    modifier = Modifier.statusBarsPadding(),
+                )
+            }
+        },
+    ) {
     when (destination) {
         NotificationDestination.Home -> NotificationHomeRoute(
+            queryError = uiState.homeQueryError,
+            hasLoadedContent = uiState.hasLoadedContent,
+            onRetry = viewModel::loadHome,
             uiState = uiState.home,
             onSectionClick = ::openHistory,
             onNotificationClick = ::openDetail,
@@ -200,7 +257,7 @@ fun NotificationRoute(
             isLoading = uiState.isLoading && !uiState.hasLoadedContent,
             isRefreshing = uiState.isRefreshing,
             onRefresh = viewModel::refreshHome,
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
         )
 
         NotificationDestination.History -> {
@@ -220,7 +277,7 @@ fun NotificationRoute(
                     onMessageClick = { message ->
                         openDetail(category, message, fromHistory = true)
                     },
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -251,7 +308,7 @@ fun NotificationRoute(
                         viewModel.openNotification(category, message)
                     },
                     isRefreshing = uiState.isDetailLoading,
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -268,7 +325,8 @@ fun NotificationRoute(
                     destination = NotificationDestination.Home
                 }
             },
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
         )
+    }
     }
 }

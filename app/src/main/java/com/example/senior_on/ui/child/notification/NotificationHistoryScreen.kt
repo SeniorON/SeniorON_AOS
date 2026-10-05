@@ -148,7 +148,7 @@ fun NotificationHistoryScreen(
 }
 
 @Composable
-private fun NotificationHistoryTopBar(
+internal fun NotificationHistoryTopBar(
     title: String,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier

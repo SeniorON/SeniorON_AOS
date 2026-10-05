@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MedicationUiState(
+    val queryError: String? = null,
     val selectedDate: LocalDate = koreaToday(),
     val registeredMedications: List<RegisteredMedicationUiState> = emptyList(),
     val todayMedications: List<TodayMedicationUiState> = emptyList(),
@@ -157,7 +158,7 @@ class MedicationViewModel(
             }
                 .onSuccess {
                     _uiState.update { it.copy(isSaving = false, editorMode = null, editingMedication = null, addMedicationStartDate = null) }
-                    loadMedicationData(failureMessage = "저장은 완료됐지만 목록을 불러오지 못했어요. 당겨서 다시 조회해 주세요.")
+                    loadMedicationData(failureMessage = "저장은 완료됐지만 목록을 불러오지 못했어요. 다시 시도해 주세요.")
                 }
                 .onFailure { throwable ->
                     if (throwable is CancellationException) throw throwable
@@ -200,8 +201,14 @@ class MedicationViewModel(
     }
 
     fun retry() {
-        loadMedicationData()
+        if (fullLoadJob?.isActive == true || scheduleLoadJob?.isActive == true) return
+        if (retryDateOnly && _uiState.value.hasLoadedContent) {
+            loadSchedules(_uiState.value.selectedDate, refreshMonthly = retryMonthly)
+        } else loadMedicationData()
     }
+
+    private var retryDateOnly = false
+    private var retryMonthly = false
 
     fun loadLatestMedicationData() {
         if (!hasEnteredScreen) {
@@ -260,6 +267,7 @@ class MedicationViewModel(
     }
 
     private fun loadMedicationData(isPullRefresh: Boolean = false, failureMessage: String? = null) {
+        retryDateOnly = false
         scheduleLoadJob?.cancel()
         fullLoadJob?.cancel()
         val requestedDate = _uiState.value.selectedDate
@@ -268,6 +276,7 @@ class MedicationViewModel(
                 it.copy(
                     isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
+                    queryError = null,
                     errorMessage = null,
                 )
             }
@@ -282,7 +291,7 @@ class MedicationViewModel(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                errorMessage = failureMessage ?: throwable.message ?: "복약 정보를 불러오지 못했어요",
+                                queryError = failureMessage ?: "복약 정보를 불러오지 못했어요.",
                             )
                         } else {
                             it
@@ -293,10 +302,12 @@ class MedicationViewModel(
     }
 
     private fun loadSchedules(date: LocalDate, refreshMonthly: Boolean) {
+        retryDateOnly = true
+        retryMonthly = refreshMonthly
         fullLoadJob?.cancel()
         scheduleLoadJob?.cancel()
         scheduleLoadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, queryError = null) }
             runCatching {
                 val targetSeniorId = requireSeniorId()
                 val schedules = medicationRepository.getParentSchedules(targetSeniorId, date.toString())
@@ -339,7 +350,7 @@ class MedicationViewModel(
                 if (throwable is CancellationException) return@onFailure
                 _uiState.update {
                     if (it.selectedDate == date) {
-                        it.copy(isLoading = false, errorMessage = throwable.message ?: "복약 정보를 불러오지 못했어요")
+                        it.copy(isLoading = false, queryError = "선택한 날짜의 복약 정보를 불러오지 못했어요.")
                     } else {
                         it
                     }
@@ -385,6 +396,7 @@ class MedicationViewModel(
             val selectedDate = state.selectedDate
             state.copy(
                 hasLoadedContent = true,
+                queryError = null,
                 hasLoadedSelectedDate = true,
                 registeredMedications = result.medications,
                 todayMedications = buildTodayMedicationsFromRegistered(

@@ -373,6 +373,14 @@ fun ChildMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
+        if (!showSeniorManagement && selectedTab == ChildMainTab.Screen &&
+            seniorManagementUiState.managedSeniors.isNotEmpty() && seniorManagementUiState.listError != null) {
+            com.example.senior_on.ui.common.QueryRetryMessage(
+                message = seniorManagementUiState.listError!!,
+                loading = seniorManagementUiState.isLoading,
+                onRetry = seniorManagementViewModel::refreshSeniors,
+            )
+        }
         if (showSeniorManagement) {
             SeniorManagementRoute(
                 uiState = seniorManagementUiState,
@@ -387,6 +395,26 @@ fun ChildMainScreen(
                     .weight(1f)
                     .fillMaxSize(),
             )
+        } else if (selectedTab != ChildMainTab.Setting &&
+            seniorManagementUiState.managedSeniors.isEmpty() &&
+            (seniorManagementUiState.isLoading || seniorManagementUiState.listError != null)) {
+            com.example.senior_on.ui.common.QueryRetryContent(
+                error = seniorManagementUiState.listError,
+                loading = seniorManagementUiState.isLoading,
+                hasContent = false,
+                onRetry = seniorManagementViewModel::refreshSeniors,
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                placeholderHeader = {
+                    com.example.senior_on.ui.child.display.DisplayTopBar(
+                        title = when (selectedTab) {
+                            ChildMainTab.Screen -> "화면"
+                            ChildMainTab.Health -> "건강"
+                            ChildMainTab.Notification -> "알림"
+                            else -> "가족"
+                        },
+                    )
+                },
+            ) {}
         } else if (selectedTab == ChildMainTab.Family && activeSeniorId == null) {
             if (selectionState.isLoading) {
                 Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {

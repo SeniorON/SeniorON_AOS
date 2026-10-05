@@ -64,6 +64,9 @@ fun NotificationScreen(
 @Composable
 fun NotificationScreen(
     uiState: NotificationScreenUiState,
+    queryError: String? = null,
+    hasLoadedContent: Boolean = true,
+    onRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
     onSectionClick: (NotificationCategory) -> Unit = {},
     onNotificationClick: (NotificationCategory, NotificationMessageUiState) -> Unit = { _, _ -> },
@@ -129,17 +132,19 @@ fun NotificationScreen(
             count = notificationCount
         )
 
-        if (isLoading) {
-            com.example.senior_on.ui.common.InitialContentLoading(Modifier.weight(1f))
-            return@Column
-        }
-
+        com.example.senior_on.ui.common.QueryRetryContent(
+            error = queryError,
+            loading = isLoading || isRefreshing,
+            hasContent = hasLoadedContent,
+            onRetry = onRetry,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .fillMaxSize(),
         ) {
             Column(
                 modifier = Modifier
@@ -226,6 +231,7 @@ fun NotificationScreen(
                 }
             }
         }
+    }
     }
 
     if (showHomeAddressMissingDialog) {

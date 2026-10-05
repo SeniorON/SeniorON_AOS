@@ -19,6 +19,7 @@ data class ProfileImageUiState(
     val profileImageRevision: Long = 0L,
     val isUsingDefaultImage: Boolean = true,
     val isLoading: Boolean = false,
+    val hasLoadedProfile: Boolean = false,
     val isUploading: Boolean = false,
     val loadErrorMessage: String? = null,
     val uploadErrorMessage: String? = null,
@@ -30,10 +31,10 @@ class ProfileImageViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileImageUiState())
     val uiState: StateFlow<ProfileImageUiState> = _uiState.asStateFlow()
-    private var hasLoadedSettingsProfile = false
 
     fun loadSettingsProfile() {
-        if (hasLoadedSettingsProfile || _uiState.value.isLoading) return
+        if (_uiState.value.isLoading || _uiState.value.isUploading) return
+        _uiState.update { it.copy(isLoading = true, loadErrorMessage = null) }
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -44,12 +45,12 @@ class ProfileImageViewModel(
             runCatching {
                 userSettingsRepository.getSettings()
             }.onSuccess { settings ->
-                hasLoadedSettingsProfile = true
                 val profileImageUrl = settings.profileImageUrl
                     ?.takeIf { value -> value.isNotBlank() }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        hasLoadedProfile = true,
                         profileName = settings.name.takeIf(String::isNotBlank),
                         profileRole = settings.role.takeIf(String::isNotBlank),
                         profileEmail = settings.email.takeIf(String::isNotBlank),
@@ -58,11 +59,11 @@ class ProfileImageViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (throwable is kotlinx.coroutines.CancellationException) throw throwable
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        loadErrorMessage = throwable.message
-                            ?: "프로필 정보를 불러오지 못했습니다.",
+                        loadErrorMessage = "설정 정보를 불러오지 못했어요.",
                     )
                 }
             }

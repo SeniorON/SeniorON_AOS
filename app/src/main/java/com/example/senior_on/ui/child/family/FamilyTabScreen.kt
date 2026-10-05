@@ -116,9 +116,9 @@ fun FamilyTabScreen(
         ) {
             FamilyTopBar()
 
-            if (uiState.isLoading && uiState.members.isEmpty()) {
+            if (uiState.isLoading) {
                 FamilyLoadingContent(modifier = Modifier.weight(1f))
-            } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
+            } else if (uiState.errorMessage != null) {
                 FamilyErrorContent(
                     message = uiState.errorMessage,
                     onRetryClick = onRetryClick,

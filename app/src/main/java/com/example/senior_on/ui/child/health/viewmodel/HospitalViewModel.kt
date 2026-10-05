@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HospitalUiState(
+    val queryError: String? = null,
+    val hasLoadedSelectedDate: Boolean = false,
     val displayedMonth: YearMonth = koreaYearMonth(),
     val selectedDate: LocalDate = koreaToday(),
     val monthlyAppointments: List<HospitalAppointmentUiState> = emptyList(),
@@ -54,6 +56,8 @@ class HospitalViewModel(
     private var monthLoadJob: Job? = null
     private var dailyLoadJob: Job? = null
     private var hasEnteredScreen = false
+    private enum class QueryScope { All, Month, Date }
+    private var retryScope = QueryScope.All
 
     init {
         loadHospitalData()
@@ -67,6 +71,8 @@ class HospitalViewModel(
             it.copy(
                 displayedMonth = month,
                 selectedDate = month.atDay(selectedDay),
+                hasLoadedSelectedDate = false,
+                selectedDateAppointments = emptyList(),
             )
         }
         loadMonthly(month)
@@ -78,6 +84,8 @@ class HospitalViewModel(
         _uiState.update {
             it.copy(
                 selectedDate = date,
+                hasLoadedSelectedDate = false,
+                selectedDateAppointments = emptyList(),
                 displayedMonth = YearMonth.from(date),
             )
         }
@@ -141,7 +149,7 @@ class HospitalViewModel(
                 }
             }.onSuccess {
                 _uiState.update { it.copy(isSaving = false, editorMode = null, editingAppointment = null) }
-                loadHospitalData(failureMessage = "저장은 완료됐지만 목록을 불러오지 못했어요. 당겨서 다시 조회해 주세요.")
+                loadHospitalData(failureMessage = "저장은 완료됐지만 목록을 불러오지 못했어요. 다시 시도해 주세요.")
             }.onFailure { throwable ->
                 if (throwable is CancellationException) throw throwable
                 _uiState.update {
@@ -195,27 +203,44 @@ class HospitalViewModel(
         loadHospitalData(isPullRefresh = true)
     }
 
+    fun retry() {
+        if (fullLoadJob?.isActive == true || monthLoadJob?.isActive == true || dailyLoadJob?.isActive == true) return
+        when (if (_uiState.value.hasLoadedContent) retryScope else QueryScope.All) {
+            QueryScope.All -> loadHospitalData()
+            QueryScope.Month -> loadMonthly(_uiState.value.displayedMonth)
+            QueryScope.Date -> loadDaily(_uiState.value.selectedDate)
+        }
+    }
+
     private fun loadHospitalData(isPullRefresh: Boolean = false, failureMessage: String? = null) {
+        retryScope = QueryScope.All
         fullLoadJob?.cancel()
+        monthLoadJob?.cancel()
+        dailyLoadJob?.cancel()
+        val requestedDate = _uiState.value.selectedDate
+        val requestedMonth = _uiState.value.displayedMonth
         fullLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
+                    queryError = null,
                     errorMessage = null,
                 )
             }
             runCatching {
                 val targetSeniorId = requireSeniorId()
-                refreshAll(targetSeniorId, _uiState.value.displayedMonth)
-            }.onSuccess(::applyRemoteData)
+                refreshAll(targetSeniorId, requestedMonth, requestedDate)
+            }.onSuccess { result ->
+                if (_uiState.value.selectedDate == requestedDate && _uiState.value.displayedMonth == requestedMonth) applyRemoteData(result)
+            }
                 .onFailure { throwable ->
                     if (throwable is CancellationException) throw throwable
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            errorMessage = failureMessage ?: "병원 일정을 불러오지 못했습니다.",
+                            queryError = failureMessage ?: "병원 일정을 불러오지 못했어요.",
                         )
                     }
                 }
@@ -223,9 +248,12 @@ class HospitalViewModel(
     }
 
     private fun loadMonthly(month: YearMonth) {
+        retryScope = QueryScope.Month
+        fullLoadJob?.cancel()
+        dailyLoadJob?.cancel()
         monthLoadJob?.cancel()
         monthLoadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, queryError = null) }
             val requestedDate = _uiState.value.selectedDate
             runCatching {
                 val targetSeniorId = requireSeniorId()
@@ -241,6 +269,7 @@ class HospitalViewModel(
                             isLoading = false,
                             monthlyAppointments = monthly,
                             selectedDateAppointments = daily,
+                            hasLoadedSelectedDate = true,
                         )
                     } else {
                         it
@@ -251,7 +280,7 @@ class HospitalViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "병원 일정을 불러오지 못했습니다.",
+                        queryError = "병원 일정을 불러오지 못했어요.",
                     )
                 }
             }
@@ -259,20 +288,24 @@ class HospitalViewModel(
     }
 
     private fun loadDaily(date: LocalDate) {
+        retryScope = QueryScope.Date
+        fullLoadJob?.cancel()
+        monthLoadJob?.cancel()
         dailyLoadJob?.cancel()
         dailyLoadJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, queryError = null) }
             runCatching {
                 val targetSeniorId = requireSeniorId()
                 hospitalRepository.getDaily(targetSeniorId, date.toString())
                     .map { it.toUiState(highlighted = false) }
             }.onSuccess { daily ->
                 if (_uiState.value.selectedDate == date) {
-                    _uiState.update { it.copy(selectedDateAppointments = daily) }
+                    _uiState.update { it.copy(selectedDateAppointments = daily, hasLoadedSelectedDate = true, isLoading = false) }
                 }
             }.onFailure { throwable ->
                 if (throwable is CancellationException) throw throwable
                 _uiState.update {
-                    it.copy(errorMessage = "선택한 날짜의 병원 일정을 불러오지 못했습니다.")
+                    it.copy(isLoading = false, queryError = "선택한 날짜의 병원 일정을 불러오지 못했어요.")
                 }
             }
         }
@@ -281,10 +314,11 @@ class HospitalViewModel(
     private suspend fun refreshAll(
         targetSeniorId: Long,
         month: YearMonth,
+        date: LocalDate = _uiState.value.selectedDate,
     ): RemoteHospitalData {
         val monthly = hospitalRepository.getMonthly(targetSeniorId, month.year, month.monthValue)
             .map { it.toUiState(highlighted = false) }
-        val daily = hospitalRepository.getDaily(targetSeniorId, _uiState.value.selectedDate.toString())
+        val daily = hospitalRepository.getDaily(targetSeniorId, date.toString())
             .map { it.toUiState(highlighted = false) }
         val upcoming = hospitalRepository.getUpcoming(targetSeniorId)
             .flatMapIndexed { index, group ->
@@ -302,6 +336,8 @@ class HospitalViewModel(
         _uiState.update { state ->
             state.copy(
                 hasLoadedContent = true,
+                hasLoadedSelectedDate = true,
+                queryError = null,
                 monthlyAppointments = result.monthly,
                 selectedDateAppointments = result.daily,
                 upcomingAppointments = result.upcoming,

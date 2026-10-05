@@ -224,32 +224,17 @@ internal fun DisplayTabErrorScreen(
             .background(SeniorOnColors.White),
     ) {
         DisplayTopBar(title = topBarTitle)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = message,
-                style = SeniorOnTextStyles.BodyMMedium,
-                color = SeniorOnColors.Gray500,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "다시 시도",
-                modifier = Modifier.clickable(onClick = onRetryClick),
-                style = SeniorOnTextStyles.BodyMSemiBold,
-                color = SeniorOnColors.Primary600,
-            )
-        }
+        com.example.senior_on.ui.common.QueryRetryMessage(
+            message = message,
+            loading = false,
+            onRetry = onRetryClick,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+        )
     }
 }
 
 @Composable
-private fun DisplayTopBar(
+internal fun DisplayTopBar(
     title: String?,
     onAccountSelectorClick: (() -> Unit)? = null,
 ) {
