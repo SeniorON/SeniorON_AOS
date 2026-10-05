@@ -37,6 +37,7 @@ import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.notification.isMedicationNotification
 import com.example.senior_on.notification.isHospitalNotification
+import com.example.senior_on.notification.isFamilyPhotoNotification
 import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
@@ -272,6 +273,7 @@ private fun ParentLauncherContent(
     var highlightedMedicationLogId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
+    var notificationPhotoId by rememberSaveable { mutableStateOf<Long?>(null) }
     var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
@@ -282,6 +284,10 @@ private fun ParentLauncherContent(
         val event = notificationNavigationEvent ?: return@LaunchedEffect
         try {
             when {
+                event.isFamilyPhotoNotification -> {
+                    notificationPhotoId = event.familyPhotoId
+                    destination = ParentDestination.FamilyPhotos
+                }
                 event.isMedicationNotification -> {
                     highlightedMedicationLogId = event.medicationLogId
                     MedicationReminderEventStore.consume()
@@ -309,6 +315,7 @@ private fun ParentLauncherContent(
     )
 
     fun openHome() {
+        notificationPhotoId = null
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
     }
@@ -389,6 +396,8 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
+            notificationPhotoId = notificationPhotoId,
+            onNotificationPhotoClosed = { notificationPhotoId = null },
             repository = appContainer.familyServerRepository,
             profileRepository = appContainer.parentSeniorProfileRepository,
             onBackClick = ::openHome,

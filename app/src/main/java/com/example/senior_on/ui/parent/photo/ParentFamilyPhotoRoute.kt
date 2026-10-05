@@ -9,6 +9,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.senior_on.notification.FamilyPhotoSharedEventStore
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
@@ -26,19 +30,60 @@ fun ParentFamilyPhotoRoute(
     profileRepository: ParentSeniorProfileRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    notificationPhotoId: Long? = null,
+    onNotificationPhotoClosed: () -> Unit = {},
 ) {
     val viewModel: ParentFamilyPhotoViewModel = viewModel(
         factory = ParentFamilyPhotoViewModel.factory(repository, profileRepository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(viewModel) {
-        viewModel.loadAlbums()
-    }
     var destination by rememberSaveable {
         mutableStateOf(ParentPhotoDestination.FamilyMembers)
     }
     var selectedMemberId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedPhotoId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(viewModel, notificationPhotoId) {
+        if (notificationPhotoId != null) viewModel.openNotificationPhoto(notificationPhotoId)
+        else viewModel.closeNotificationPhoto()
+    }
+    if (notificationPhotoId != null) {
+        val photo = uiState.notificationPhoto?.takeIf { it.id == notificationPhotoId.toString() }
+        BackHandler(onBack = onNotificationPhotoClosed)
+        com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
+            error = uiState.notificationPhotoError,
+            loading = uiState.notificationPhotoLoading,
+            hasContent = photo != null,
+            onRetry = { viewModel.openNotificationPhoto(notificationPhotoId) },
+            modifier = modifier,
+            title = "가족 사진",
+            onBackClick = onNotificationPhotoClosed,
+        ) {
+            if (photo != null) ParentPhotoViewerScreen(
+                member = com.example.senior_on.ui.parent.photo.viewmodel.ParentPhotoMemberUiModel(
+                    memberId = photo.memberId, memberName = photo.memberName, photoCount = 1,
+                    hasNewPhotos = photo.isNew, latestPhotoSource = photo.imageSource, photos = listOf(photo),
+                ),
+                initialPhotoId = photo.id,
+                onBackClick = onNotificationPhotoClosed,
+                onPhotoViewed = viewModel::markNotificationPhotoViewed,
+                modifier = modifier,
+            )
+        }
+        return
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, lifecycleOwner, destination) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            // StateFlow also triggers a refresh on entry/resume after a missed FCM.
+            FamilyPhotoSharedEventStore.revision.collect {
+                viewModel.refreshFromNotification(
+                    refreshSelectedPhotos = destination == ParentPhotoDestination.MemberPhotos,
+                )
+            }
+        }
+    }
 
     fun goBack() {
         when (destination) {

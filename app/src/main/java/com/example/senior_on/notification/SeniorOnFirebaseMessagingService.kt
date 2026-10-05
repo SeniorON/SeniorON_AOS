@@ -8,6 +8,7 @@ import com.google.firebase.messaging.RemoteMessage
 class SeniorOnFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+        FamilyPhotoSharedEventStore.publish(message.data)
         MedicationReminderEventStore.publish(message.data)
         MedicationCheckedEventStore.publish(message.data)
         SeniorOnNotificationManager.showRemoteMessage(
