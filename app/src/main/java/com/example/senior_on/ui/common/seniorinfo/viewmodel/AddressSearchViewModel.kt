@@ -9,12 +9,10 @@ import com.example.senior_on.domain.model.address.AddressSearchResult
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -29,24 +27,26 @@ data class AddressSearchUiState(
     val currentLocationResult: AddressSearchResult? = null
 )
 
-@OptIn(FlowPreview::class)
 class AddressSearchViewModel(
     private val repository: AddressSearchRepository
 ) : ViewModel() {
-    private val searchQuery = MutableStateFlow("")
+    private var searchJob: Job? = null
+    private var locationJob: Job? = null
+    private var requestVersion = 0L
     private val _uiState = MutableStateFlow(AddressSearchUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            searchQuery
-                .debounce(SearchDebounceMillis)
-                .map(String::trim)
-                .collectLatest(::search)
-        }
+    fun reset() {
+        requestVersion++
+        searchJob?.cancel()
+        locationJob?.cancel()
+        _uiState.value = AddressSearchUiState()
     }
 
     fun onQueryChange(query: String) {
+        requestVersion++
+        searchJob?.cancel()
+        locationJob?.cancel()
         val limitedQuery = query.take(MaxSearchQueryLength)
 
         _uiState.update {
@@ -60,7 +60,11 @@ class AddressSearchViewModel(
                 currentLocationResult = null
             )
         }
-        searchQuery.value = limitedQuery
+        val version = requestVersion
+        searchJob = viewModelScope.launch {
+            delay(SearchDebounceMillis)
+            search(limitedQuery.trim(), version)
+        }
     }
 
     fun onLocationRequestStarted() {
@@ -104,7 +108,9 @@ class AddressSearchViewModel(
         latitude: Double,
         longitude: Double
     ) {
-        viewModelScope.launch {
+        locationJob?.cancel()
+        val version = requestVersion
+        locationJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isLocating = true,
@@ -118,6 +124,7 @@ class AddressSearchViewModel(
                     latitude = latitude,
                     longitude = longitude
                 )
+                if (version != requestVersion) return@launch
 
                 _uiState.update {
                     if (result == null) {
@@ -135,6 +142,7 @@ class AddressSearchViewModel(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
+                if (version != requestVersion) return@launch
                 _uiState.update {
                     it.copy(
                         isLocating = false,
@@ -159,7 +167,7 @@ class AddressSearchViewModel(
         }
     }
 
-    private suspend fun search(query: String) {
+    private suspend fun search(query: String, version: Long) {
         if (query.length < MinSearchQueryLength) {
             return
         }
@@ -174,6 +182,7 @@ class AddressSearchViewModel(
 
         try {
             val results = repository.searchAddress(query)
+            if (version != requestVersion) return
             _uiState.update {
                 it.copy(
                     results = results,
@@ -184,6 +193,7 @@ class AddressSearchViewModel(
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
+            if (version != requestVersion) return
             _uiState.update {
                 it.copy(
                     results = emptyList(),
