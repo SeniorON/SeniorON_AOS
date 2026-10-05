@@ -5,6 +5,59 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ParentPermissionPolicyTest {
+    @Test fun freshGuideOffersDeferredButStillMissingPermissionsAgain() {
+        val status: (ParentPermissionStep) -> ParentPermissionStatus = {
+            if (it == ParentPermissionStep.Notification) ParentPermissionStatus.Granted
+            else ParentPermissionStatus.Required
+        }
+        val previousGuideDeferrals = ParentPermissionStep.entries.toSet()
+        assertFalse(shouldOfferPermissionGuide(previousGuideDeferrals, status))
+        assertTrue(shouldOfferPermissionGuide(status = status))
+        assertEquals(ParentPermissionStep.BatteryOptimization, firstMissingPermissionStep(status = status))
+        assertEquals(ParentPermissionStep.ForegroundLocation,
+            ParentPermissionStep.BatteryOptimization.nextRequired(status = status))
+    }
+
+    @Test fun backFromFiveDoesNotAdvanceToSixWhenEarlierStepsAreComplete() {
+        val status: (ParentPermissionStep) -> ParentPermissionStatus = {
+            when (it) {
+                ParentPermissionStep.SleepingApps -> ParentPermissionStatus.Manual
+                ParentPermissionStep.DefaultHome -> ParentPermissionStatus.Required
+                else -> ParentPermissionStatus.Granted
+            }
+        }
+        assertNull(ParentPermissionStep.SleepingApps.previousRequired(status = status))
+        assertEquals(ParentPermissionStep.SleepingApps,
+            ParentPermissionStep.DefaultHome.previousRequired(status = status))
+    }
+
+    @Test fun backSelectsNearestPendingStepAndSkipsNotApplicableSteps() {
+        assertEquals(ParentPermissionStep.BackgroundLocation,
+            ParentPermissionStep.DefaultHome.previousRequired {
+                when (it) {
+                    ParentPermissionStep.SleepingApps -> ParentPermissionStatus.NotApplicable
+                    else -> ParentPermissionStatus.Required
+                }
+            })
+        assertNull(ParentPermissionStep.BatteryOptimization.previousRequired { ParentPermissionStatus.Required })
+    }
+
+    @Test fun backFromFourReturnsToThreeEvenWhenFirstThreeWereDeferred() {
+        val dismissed = setOf(ParentPermissionStep.BatteryOptimization,
+            ParentPermissionStep.Notification, ParentPermissionStep.ForegroundLocation)
+        val status: (ParentPermissionStep) -> ParentPermissionStatus = { ParentPermissionStatus.Required }
+        val firstStep = firstMissingPermissionStep(dismissed, status)
+        assertEquals(ParentPermissionStep.BackgroundLocation, firstStep)
+        assertEquals(ParentPermissionStep.ForegroundLocation, firstStep!!.previousRequired(status))
+        assertEquals(ParentPermissionStep.Notification, ParentPermissionStep.ForegroundLocation.previousRequired(status))
+        assertEquals(ParentPermissionStep.BatteryOptimization, ParentPermissionStep.Notification.previousRequired(status))
+        assertEquals(ParentPermissionStep.BatteryOptimization,
+            ParentPermissionStep.BackgroundLocation.previousRequired {
+                if (it == ParentPermissionStep.BatteryOptimization) ParentPermissionStatus.Required
+                else ParentPermissionStatus.Granted
+            })
+    }
+
     @Test fun currentMissingHomeIsOfferedOnNewInstallation() {
         val status: (ParentPermissionStep) -> ParentPermissionStatus = {
             if (it == ParentPermissionStep.DefaultHome) ParentPermissionStatus.Required else ParentPermissionStatus.Granted

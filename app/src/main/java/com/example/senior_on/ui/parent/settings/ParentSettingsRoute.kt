@@ -27,7 +27,6 @@ import androidx.activity.result.PickVisualMediaRequest
 @Composable
 fun ParentSettingsRoute(
     appContainer: AppContainer,
-    onSessionEnded: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -68,13 +67,6 @@ fun ParentSettingsRoute(
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             settingsViewModel.consumeLogoutError()
             settingsViewModel.consumeWithdrawError()
-        }
-    }
-    LaunchedEffect(actionState.logoutCompleted, actionState.withdrawCompleted) {
-        if (actionState.logoutCompleted || actionState.withdrawCompleted) {
-            settingsViewModel.consumeLogoutCompleted()
-            settingsViewModel.consumeWithdrawCompleted()
-            onSessionEnded()
         }
     }
     var destination by rememberSaveable { mutableStateOf(ParentSettingsDestination.Main) }
