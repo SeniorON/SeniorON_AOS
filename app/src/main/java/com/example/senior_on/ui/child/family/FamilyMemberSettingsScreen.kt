@@ -149,8 +149,14 @@ fun FamilyMemberSettingsScreen(
                 selectedMemberId = selectedMember?.id,
                 selectedMemberCanBecomePrimary = selectedMember?.canBecomePrimary == true,
                 isOperationInProgress = uiState.isMemberMutationInProgress,
-                isChangingPrimary = uiState.changingPrimaryMemberId == selectedMember?.id,
-                isDeletingMember = uiState.deletingMemberId == selectedMember?.id,
+                isChangingPrimary = isSelectedMemberMutationLoading(
+                    mutationMemberId = uiState.changingPrimaryMemberId,
+                    selectedMemberId = selectedMember?.id,
+                ),
+                isDeletingMember = isSelectedMemberMutationLoading(
+                    mutationMemberId = uiState.deletingMemberId,
+                    selectedMemberId = selectedMember?.id,
+                ),
                 errorMessage = uiState.memberMutationErrorMessage,
                 onAddFamilyClick = onAddFamilyClick,
                 onChangePrimaryRequest = {
@@ -187,6 +193,11 @@ fun FamilyMemberSettingsScreen(
         }
     }
 }
+
+internal fun isSelectedMemberMutationLoading(
+    mutationMemberId: String?,
+    selectedMemberId: String?,
+): Boolean = selectedMemberId != null && mutationMemberId == selectedMemberId
 
 @Composable
 private fun FamilyMemberSettingsHeader() {

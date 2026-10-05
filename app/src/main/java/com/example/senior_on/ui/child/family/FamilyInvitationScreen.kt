@@ -273,7 +273,7 @@ private fun FamilyInvitationHero(memberCount: Long) {
 
             Text(
                 text = buildAnnotatedString {
-                    append("현재 보호자 구성원은 ")
+                    append("현재 가족 구성원은 ")
                     withStyle(SeniorOnTextStyles.BodyMSemiBold.toSpanStyle()) {
                         append("${memberCount}명")
                     }
@@ -296,7 +296,7 @@ private fun FamilyInvitationCodeTitle() {
                 append("나의 ")
             }
             withStyle(SpanStyle(color = SeniorOnColors.Primary700)) {
-                append("가족 공유 코드")
+                append("시니어 코드")
             }
         },
         style = SeniorOnTextStyles.BodyMSemiBold

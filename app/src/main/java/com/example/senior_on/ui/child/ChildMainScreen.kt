@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -47,6 +49,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
+import com.example.senior_on.data.local.isSupportedFamilyPhotoMimeType
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.model.parent.ParentInfo
@@ -300,7 +303,27 @@ fun ChildMainScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.let { navigateToPhotoShare(it.toString()) }
+        uri?.let {
+            val extensionMimeType = it.lastPathSegment
+                ?.substringAfterLast('.', missingDelimiterValue = "")
+                ?.takeIf(String::isNotEmpty)
+                ?.let { extension ->
+                    MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
+                }
+            if (isSupportedFamilyPhotoMimeType(
+                    reportedMimeType = context.contentResolver.getType(it),
+                    extensionMimeType = extensionMimeType,
+                )
+            ) {
+                navigateToPhotoShare(it.toString())
+            } else {
+                Toast.makeText(
+                    context,
+                    "JPG, PNG, WEBP 형식의 사진만 선택할 수 있어요.",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
     }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -732,6 +755,7 @@ private fun ChildMainTabContent(
             ChildFamilyDestination.SeniorConnection -> activeSeniorId?.let { seniorId ->
                 SeniorConnectionRoute(
                     seniorId = seniorId,
+                    canManageConnections = familyUiState.canManageSeniorConnections,
                     onBackClick = onFamilyBackClick,
                     viewModel = seniorConnectionViewModel,
                     modifier = modifier,
