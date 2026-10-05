@@ -47,6 +47,7 @@ fun ParentSettingsRoute(
         }
     })
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(profileViewModel) { profileViewModel.loadAccount() }
     val isBusy = actionState.isLoggingOut || actionState.isWithdrawing || profileState.busy
     var showPhotoOptions by remember { mutableStateOf(false) }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -107,6 +108,41 @@ fun ParentSettingsRoute(
         else destination = destination.back()
     }
     BackHandler(onBack = ::back)
+    val queryKey = when (destination) {
+        ParentSettingsDestination.Main, ParentSettingsDestination.Account -> "account"
+        ParentSettingsDestination.PermissionControl -> "permissions"
+        ParentSettingsDestination.ShareCode -> "shareCode"
+        else -> null
+    }
+    val hasQueryContent = when (queryKey) {
+        "account" -> profileState.profile != null
+        "permissions" -> profileState.permissions != null
+        "shareCode" -> profileState.shareCode != null
+        else -> true
+    }
+    com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
+        error = profileState.queryErrors[queryKey],
+        loading = profileState.busy,
+        hasContent = hasQueryContent,
+        onRetry = {
+            when (queryKey) {
+                "account" -> profileViewModel.loadAccount()
+                "permissions" -> profileViewModel.loadPermissions()
+                "shareCode" -> profileViewModel.loadShareCode()
+            }
+        },
+        modifier = modifier,
+        title = when (destination) {
+            ParentSettingsDestination.Account -> "내 계정"
+            ParentSettingsDestination.PermissionControl -> "권한 해제"
+            ParentSettingsDestination.ShareCode -> "가족 공유 코드"
+            else -> "설정"
+        },
+        onBackClick = {
+            if (destination == ParentSettingsDestination.Main) onBackClick()
+            else destination = destination.back()
+        },
+    ) {
     when (destination) {
         ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back,
             { if (!isBusy) { destination = it; if (it == ParentSettingsDestination.Account) profileViewModel.loadAccount() } },
@@ -151,6 +187,7 @@ fun ParentSettingsRoute(
                 { if (!isBusy) { if (it) profileViewModel.savePermissions(inactivity = true) else confirmation = ParentSettingsConfirmation.Inactivity } },
                 ::back, modifier, enabled = !isBusy)
         }
+    }
     }
     confirmation?.let { action ->
         ParentSettingsConfirmDialog(action, { confirmation = null }, {

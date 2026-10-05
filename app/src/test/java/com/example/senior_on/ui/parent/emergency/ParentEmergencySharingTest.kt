@@ -18,6 +18,39 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ParentEmergencySharingTest {
+    @Test fun failedSendWaitsForExplicitRetryAndIgnoresDoubleTap() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        var requests = 0
+        var fail = true
+        val vm = ParentEmergencyAlertViewModel(
+            stub<EventRepository> { name, _ ->
+                check(name == "createSos")
+                requests++
+                if (fail) error("offline")
+                SafetyEvent(1L, "SOS", null, null, null, null, 70)
+            },
+            object : LocationRepository {
+                override suspend fun getCurrentLocation(): GeoLocation = error("sharing off")
+            },
+            stub<DeviceRepository> { _, _ -> 70 },
+            null,
+        )
+        try {
+            vm.sendEmergencyAlert()
+            vm.sendEmergencyAlert()
+            advanceUntilIdle()
+            assertEquals(1, requests)
+            assertEquals(ParentEmergencyAlertStatus.Failed, vm.uiState.value.status)
+            advanceTimeBy(10_000)
+            assertEquals(1, requests)
+            fail = false
+            vm.startCountdown()
+            advanceUntilIdle()
+            assertEquals(2, requests)
+            assertEquals(ParentEmergencyAlertStatus.Sent, vm.uiState.value.status)
+        } finally { vm.reset(); Dispatchers.resetMain() }
+    }
+
     @Test fun offSkipsLocationAndOnIncludesCoordinates() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

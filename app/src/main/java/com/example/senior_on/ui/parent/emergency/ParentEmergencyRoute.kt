@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -56,7 +59,12 @@ fun ParentEmergencyRoute(
     }
 
     val scope = rememberCoroutineScope()
+    var preparing by remember { mutableStateOf(false) }
     suspend fun prepareAlert(sendImmediately: Boolean) {
+        if (preparing || viewModel.uiState.value.status == ParentEmergencyAlertStatus.Sending ||
+            viewModel.uiState.value.status == ParentEmergencyAlertStatus.Sent) return
+        preparing = true
+        try {
         val locationShared = try {
             sharingGuard?.refresh()?.locationEnabled == true
         } catch (error: Exception) {
@@ -70,6 +78,9 @@ fun ParentEmergencyRoute(
             viewModel.sendEmergencyAlert()
         } else {
             viewModel.startCountdown()
+        }
+        } finally {
+            preparing = false
         }
     }
 
@@ -93,6 +104,16 @@ fun ParentEmergencyRoute(
             onBackClick = ::cancelAndGoBack,
             modifier = modifier,
         )
+    } else if (uiState.status == ParentEmergencyAlertStatus.Failed) {
+        com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
+            error = uiState.errorMessage ?: "긴급알림을 보내지 못했어요.\n다시 시도해 주세요.",
+            loading = preparing,
+            hasContent = false,
+            onRetry = { scope.launch { prepareAlert(false) } },
+            modifier = modifier,
+            title = "긴급알림",
+            onBackClick = ::cancelAndGoBack,
+        ) {}
     } else {
         ParentEmergencyAlertScreen(
             uiState = uiState,

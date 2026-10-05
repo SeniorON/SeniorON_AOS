@@ -67,9 +67,8 @@ class ParentScheduleViewModel(
                 _uiState.update {
                     it.copy(
                         date = today,
-                        isLoading = !hasLoaded,
+                        isLoading = !hasLoaded || it.errorMessage != null,
                         isRefreshing = visible,
-                        errorMessage = null,
                     )
                 }
 
@@ -89,6 +88,7 @@ class ParentScheduleViewModel(
                         _uiState.update {
                             it.copy(
                                 schedules = schedules.sortedBy(ParentSchedule::time),
+                                errorMessage = null,
                                 isLoading = false,
                                 isRefreshing = false,
                             )
@@ -100,7 +100,7 @@ class ParentScheduleViewModel(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                errorMessage = "일정을 불러오지 못했어요."
+                                errorMessage = "일정을 불러오지 못했어요.\n인터넷 연결을 확인하고\n다시 시도해 주세요."
                             )
                         }
                     }

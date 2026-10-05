@@ -74,6 +74,7 @@ class ParentEmergencyAlertViewModel(
         countdownJob?.cancel()
         countdownJob = null
 
+        _uiState.update { it.copy(status = ParentEmergencyAlertStatus.Sending, errorMessage = null) }
         sendJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -105,8 +106,7 @@ class ParentEmergencyAlertViewModel(
                     _uiState.update {
                         it.copy(
                             status = ParentEmergencyAlertStatus.Failed,
-                            errorMessage = throwable.message
-                                ?: "긴급알림을 보내지 못했어요. 다시 시도해 주세요."
+                            errorMessage = "긴급알림 전송 결과를 확인하지 못했어요.\n인터넷 연결을 확인해 주세요.\n다시 시도하면 알림이 다시 전송될 수 있어요."
                         )
                     }
                 }
