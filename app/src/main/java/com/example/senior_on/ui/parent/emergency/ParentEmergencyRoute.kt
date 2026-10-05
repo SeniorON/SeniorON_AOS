@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -26,6 +29,7 @@ fun ParentEmergencyRoute(
     repository: EventRepository,
     locationRepository: LocationRepository,
     deviceRepository: DeviceRepository,
+    sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard?,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -35,6 +39,7 @@ fun ParentEmergencyRoute(
             repository = repository,
             locationRepository = locationRepository,
             deviceRepository = deviceRepository,
+            sharingGuard = sharingGuard,
         )
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -50,14 +55,26 @@ fun ParentEmergencyRoute(
         }
     }
 
-    LaunchedEffect(viewModel) {
-        if (uiState.status == ParentEmergencyAlertStatus.Idle) {
-            if (context.hasLocationPermission()) {
-                viewModel.startCountdown()
-            } else {
-                locationPermissionLauncher.launch(LOCATION_PERMISSIONS)
-            }
+    val scope = rememberCoroutineScope()
+    suspend fun prepareAlert(sendImmediately: Boolean) {
+        val locationShared = try {
+            sharingGuard?.refresh()?.locationEnabled == true
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            viewModel.onSharingCheckFailed()
+            return
         }
+        if (locationShared && !context.hasLocationPermission()) {
+            locationPermissionLauncher.launch(LOCATION_PERMISSIONS)
+        } else if (sendImmediately) {
+            viewModel.sendEmergencyAlert()
+        } else {
+            viewModel.startCountdown()
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        if (uiState.status == ParentEmergencyAlertStatus.Idle) prepareAlert(false)
     }
 
     fun cancelAndGoBack() {
@@ -81,11 +98,7 @@ fun ParentEmergencyRoute(
             uiState = uiState,
             onBackClick = ::cancelAndGoBack,
             onSendClick = {
-                if (context.hasLocationPermission()) {
-                    viewModel.sendEmergencyAlert()
-                } else {
-                    locationPermissionLauncher.launch(LOCATION_PERMISSIONS)
-                }
+                scope.launch { prepareAlert(true) }
             },
             onCancelClick = ::cancelAndGoBack,
             modifier = modifier,

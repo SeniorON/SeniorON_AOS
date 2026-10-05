@@ -345,6 +345,7 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.Emergency -> ParentEmergencyRoute(
+            sharingGuard = appContainer.parentSharingGuard,
             repository = appContainer.eventRepository,
             locationRepository = appContainer.locationRepository,
             deviceRepository = appContainer.deviceRepository,

@@ -119,6 +119,7 @@ data class NotificationMessageUiState(
     val deviceBattery: Int? = null,
     val lastSeenAt: String? = null,
     val lastLocationUpdatedAtMillis: Long? = null,
+    val category: NotificationCategory? = null,
 )
 
 enum class NotificationMovementType {

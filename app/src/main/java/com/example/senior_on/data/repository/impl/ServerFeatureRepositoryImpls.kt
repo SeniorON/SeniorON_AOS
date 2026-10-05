@@ -706,8 +706,9 @@ class EventRepositoryImpl(
     private val source: EventDataSource,
     private val sharingGuard: ParentSharingGuard? = null,
 ) : EventRepository {
-    override suspend fun createSos(latitude: Double, longitude: Double, battery: Int?) =
-        source.createSos(SosEventRequest(latitude, longitude, battery)).let {
+    override suspend fun createSos(latitude: Double?, longitude: Double?, battery: Int?) = withSharing { permissions ->
+        val includeLocation = permissions?.locationEnabled != false && latitude != null && longitude != null
+        source.createSos(SosEventRequest(latitude.takeIf { includeLocation }, longitude.takeIf { includeLocation }, battery)).let {
             SafetyEvent(
                 id = it.id,
                 type = "SOS",
@@ -720,6 +721,7 @@ class EventRepositoryImpl(
                 notifiedCount = it.notifiedCount,
             )
         }
+    }
     override suspend fun createRiskLink(url: String, battery: Int?) =
         source.createRiskLink(RiskLinkRequest(url.trim(), battery)).let {
             SafetyEvent(

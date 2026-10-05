@@ -37,6 +37,7 @@ class ParentEmergencyAlertViewModel(
     private val repository: EventRepository,
     private val locationRepository: LocationRepository,
     private val deviceRepository: DeviceRepository,
+    private val sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentEmergencyAlertUiState())
     val uiState = _uiState.asStateFlow()
@@ -82,10 +83,12 @@ class ParentEmergencyAlertViewModel(
             }
 
             runCatching {
-                val currentLocation = locationRepository.getCurrentLocation()
+                val currentLocation = if (sharingGuard?.refresh()?.locationEnabled == true) {
+                    locationRepository.getCurrentLocation()
+                } else null
                 repository.createSos(
-                    latitude = currentLocation.latitude,
-                    longitude = currentLocation.longitude,
+                    latitude = currentLocation?.latitude,
+                    longitude = currentLocation?.longitude,
                     // ViewModel이 재사용되어도 각 SOS 전송 시점의 배터리를 기록합니다.
                     battery = deviceRepository.getBatteryLevel(),
                 )
@@ -121,6 +124,12 @@ class ParentEmergencyAlertViewModel(
         }
     }
 
+    fun onSharingCheckFailed() {
+        countdownJob?.cancel()
+        _uiState.update { it.copy(status = ParentEmergencyAlertStatus.Failed,
+            errorMessage = "공유 상태를 확인하지 못했어요. 다시 시도해 주세요.") }
+    }
+
     fun cancel() {
         countdownJob?.cancel()
         countdownJob = null
@@ -144,12 +153,14 @@ class ParentEmergencyAlertViewModel(
             repository: EventRepository,
             locationRepository: LocationRepository,
             deviceRepository: DeviceRepository,
+            sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard?,
         ) = viewModelFactory {
             initializer {
                 ParentEmergencyAlertViewModel(
                     repository = repository,
                     locationRepository = locationRepository,
                     deviceRepository = deviceRepository,
+                    sharingGuard = sharingGuard,
                 )
             }
         }
