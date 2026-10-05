@@ -43,6 +43,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +61,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.data.source.mock.fixtures.MockUserFixtures
@@ -271,7 +277,7 @@ fun ParentMemberPhotoGridScreen(
                 item(key = "loading") { ParentPhotoLoading() }
             }
             if (errorMessage != null) {
-                item(key = "error") {
+                item(key = "error", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                     ParentPhotoError(errorMessage, onRetryClick)
                 }
             }
@@ -514,20 +520,59 @@ private fun ParentPhotoImage(
             modifier = modifier,
             contentScale = ContentScale.Crop
         )
-        is FamilyImageSource.Remote -> AsyncImage(
-            model = imageSource.url,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = ContentScale.Crop,
-            error = painterResource(R.drawable.ic_photo)
-        )
-        is FamilyImageSource.Uri -> AsyncImage(
+        is FamilyImageSource.Remote -> {
+            val context = LocalContext.current
+            val cacheKey = remember(imageSource.url) { parentPhotoCacheKey(imageSource.url) }
+            val request = remember(context, imageSource.url, cacheKey) {
+                ImageRequest.Builder(context)
+                    .data(imageSource.url)
+                    .memoryCacheKey(cacheKey)
+                    .diskCacheKey(cacheKey)
+                    .placeholderMemoryCacheKey(cacheKey)
+                    .build()
+            }
+            // AsyncImage resolves the decode size from layout constraints, not original dimensions.
+            ParentLoadingPhotoImage(
+                model = request,
+                contentDescription = contentDescription,
+                modifier = modifier,
+            )
+        }
+        is FamilyImageSource.Uri -> ParentLoadingPhotoImage(
             model = imageSource.value,
             contentDescription = contentDescription,
             modifier = modifier,
-            contentScale = ContentScale.Crop,
-            error = painterResource(R.drawable.ic_photo)
         )
+    }
+}
+
+@Composable
+private fun ParentLoadingPhotoImage(
+    model: Any,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    var isLoading by remember(model) { mutableStateOf(false) }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        AsyncImage(
+            model = model,
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            error = painterResource(R.drawable.ic_photo),
+            // A cached thumbnail is already visible; do not cover it with a spinner.
+            onLoading = { isLoading = it.painter == null },
+            onSuccess = { isLoading = false },
+            onError = { isLoading = false },
+        )
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(32.dp).semantics {
+                    this.contentDescription = "사진을 불러오는 중"
+                },
+                color = SeniorOnColors.Primary600,
+            )
+        }
     }
 }
 
@@ -547,21 +592,22 @@ private fun ParentPhotoError(
     onRetryClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = message,
-            style = SeniorOnTextStyles.BodyLMedium,
-            color = SeniorOnColors.Gray500
+            style = SeniorOnTextStyles.HeadingL,
+            color = SeniorOnColors.Gray500,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Text(
             text = "다시 시도",
             modifier = Modifier
                 .padding(top = 12.dp)
                 .clickable(onClick = onRetryClick),
-            style = SeniorOnTextStyles.BodyLBold,
+            style = SeniorOnTextStyles.HeadingL,
             color = SeniorOnColors.Primary600
         )
     }
