@@ -14,6 +14,7 @@ import com.example.senior_on.di.AppContainer
 import com.example.senior_on.data.local.SessionExpirationEventStore
 import com.example.senior_on.domain.model.auth.AppUserMode
 import com.example.senior_on.notification.NotificationNavigationEventStore
+import com.example.senior_on.notification.isFamilyPhotoNotification
 import com.example.senior_on.location.tracking.ParentOutingTrackingController
 import com.example.senior_on.ui.child.route.ChildMainRoute
 import com.example.senior_on.ui.onboarding.route.OnboardingRoute
@@ -41,6 +42,7 @@ fun SeniorOnApp(
     var authenticatedUserId by rememberSaveable { mutableStateOf("") }
     var authenticatedSessionInstance by rememberSaveable { mutableIntStateOf(0) }
     var onboardingInstance by rememberSaveable { mutableIntStateOf(0) }
+    val photoNotificationEntry = notificationNavigationEvent?.isFamilyPhotoNotification == true
 
     fun openOnboarding() {
         ParentOutingTrackingController.reset(context)
@@ -61,6 +63,7 @@ fun SeniorOnApp(
             OnboardingRoute(
                 appContainer = appContainer,
                 startAtParentLogin = startAtParentLogin,
+                startFromPhotoNotification = photoNotificationEntry,
                 onAuthenticated = { mode, userId ->
                     authenticatedUserId = userId
                     authenticatedSessionInstance += 1
@@ -83,8 +86,9 @@ fun SeniorOnApp(
                 NotificationNavigationEventStore::consume,
         )
 
-        AppDestination.ParentLauncher -> LaunchedEffect(Unit) {
-            onOpenParentLauncher()
+        AppDestination.ParentLauncher -> {
+            com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen()
+            LaunchedEffect(Unit) { onOpenParentLauncher() }
         }
     }
 }

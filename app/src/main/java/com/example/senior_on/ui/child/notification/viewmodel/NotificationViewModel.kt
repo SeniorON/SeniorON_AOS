@@ -33,6 +33,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CancellationException
 
 data class NotificationUiState(
+    val homeQueryError: String? = null,
+    val historyQueryErrors: Map<NotificationCategory, String> = emptyMap(),
+    val detailQueryErrors: Map<Long, String> = emptyMap(),
+    val settingQueryError: String? = null,
+    val hasLoadedSetting: Boolean = false,
     val isLoading: Boolean = false,
     val hasLoadedContent: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -76,6 +81,7 @@ class NotificationViewModel(
     }
 
     fun loadHome() {
+        if (homeLoadJob?.isActive == true) return
         loadHome(isPullRefresh = false)
     }
 
@@ -117,6 +123,7 @@ class NotificationViewModel(
                 it.copy(
                     isLoading = !isPullRefresh && !it.hasLoadedContent,
                     isRefreshing = isPullRefresh,
+                    homeQueryError = null,
                     errorMessage = null,
                 )
             }
@@ -165,6 +172,7 @@ class NotificationViewModel(
                             detailMessages = emptyMap())
                     }
 
+                    check(permissionsLoader == null || permissions != null) { "공유 상태를 확인하지 못했어요." }
                     val home = async { repository.getHome(requireSeniorId()) }
                     val parentOnline = async { repository.isParentDeviceOnline(requireSeniorId()) }
                     val inactivitySetting = parentUserId?.takeIf {
@@ -262,7 +270,7 @@ class NotificationViewModel(
                         home = it.home.copy(sharingStatusKnown = false).enforceAccess(),
                         histories = emptyMap(),
                         detailMessages = emptyMap(),
-                        errorMessage = throwable.message,
+                        homeQueryError = "알림 정보를 불러오지 못했어요.",
                     )
                 }
             }
@@ -289,6 +297,7 @@ class NotificationViewModel(
                 it.copy(
                     isLoading = !isPullRefresh && !silent,
                     isHistoryRefreshing = isPullRefresh,
+                    historyQueryErrors = it.historyQueryErrors - category,
                     errorMessage = null,
                 )
             }
@@ -310,7 +319,7 @@ class NotificationViewModel(
                     it.copy(
                         isLoading = false,
                         isHistoryRefreshing = false,
-                        errorMessage = throwable.message,
+                        historyQueryErrors = it.historyQueryErrors + (category to "알림 기록을 불러오지 못했어요."),
                     )
                 }
             }
@@ -361,7 +370,7 @@ class NotificationViewModel(
         detailLoadJob?.cancel()
         detailLoadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(isDetailLoading = !silent, errorMessage = null)
+                it.copy(isDetailLoading = true, detailQueryErrors = it.detailQueryErrors - eventId, errorMessage = null)
             }
             runCatching {
                 check(refreshAccess(category)) { "해당 정보의 공유가 중단되었어요." }
@@ -385,7 +394,7 @@ class NotificationViewModel(
                 _uiState.update {
                     it.copy(
                         isDetailLoading = false,
-                        errorMessage = throwable.message,
+                        detailQueryErrors = it.detailQueryErrors + (eventId to "알림 상세 정보를 불러오지 못했어요."),
                     )
                 }
             }
@@ -443,11 +452,13 @@ class NotificationViewModel(
     }
 
     fun loadInactivitySetting() {
+        if (_uiState.value.isInactivitySettingLoading) return
         if (!_uiState.value.home.canAccess(NotificationCategory.Inactivity)) return
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isInactivitySettingLoading = true,
+                    settingQueryError = null,
                     errorMessage = null,
                 )
             }
@@ -463,13 +474,14 @@ class NotificationViewModel(
                         ),
                         inactivityThresholdHours = setting.thresholdHours,
                         isInactivitySettingLoading = false,
+                        hasLoadedSetting = true,
                     )
                 }
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
                         isInactivitySettingLoading = false,
-                        errorMessage = throwable.message,
+                        settingQueryError = "감지 기준 시간을 불러오지 못했어요.",
                     )
                 }
             }
@@ -537,6 +549,7 @@ class NotificationViewModel(
             ).enforceAccess()
             current.copy(
                 home = access,
+                homeQueryError = if (permissions == null) "공유 상태를 확인하지 못했어요. 다시 시도해 주세요." else current.homeQueryError,
                 histories = current.histories.filterKeys(access::canAccess)
                     .mapValues { (_, messages) -> messages.map(access::visibleMessage) },
                 detailMessages = if (access == current.home) current.detailMessages else emptyMap(),

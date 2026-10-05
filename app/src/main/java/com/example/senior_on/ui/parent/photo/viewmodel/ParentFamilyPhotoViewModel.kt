@@ -53,6 +53,9 @@ data class ParentFamilyPhotoUiState(
     val hasMorePhotos: Boolean = false,
     val errorMessage: String? = null,
     val photoErrorMessage: String? = null,
+    val notificationPhoto: ParentFamilyPhotoUiModel? = null,
+    val notificationPhotoLoading: Boolean = false,
+    val notificationPhotoError: String? = null,
 )
 
 class ParentFamilyPhotoViewModel(
@@ -63,6 +66,52 @@ class ParentFamilyPhotoViewModel(
     val uiState = _uiState.asStateFlow()
 
     private var photoLoadJob: Job? = null
+    private var notificationPhotoJob: Job? = null
+    private var notificationViewedJob: Job? = null
+
+    fun openNotificationPhoto(photoId: Long) {
+        notificationPhotoJob?.cancel()
+        notificationViewedJob?.cancel()
+        _uiState.update { it.copy(notificationPhoto = null, notificationPhotoLoading = true, notificationPhotoError = null) }
+        notificationPhotoJob = viewModelScope.launch {
+            try {
+                require(photoId > 0)
+                val photo = repository.getPhoto(photoId)
+                check(photo.id == photoId)
+                _uiState.update { it.copy(notificationPhoto = photo.toParentUiModel(), notificationPhotoLoading = false) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update { it.copy(notificationPhotoLoading = false,
+                    notificationPhotoError = "사진을 불러오지 못했어요.\n인터넷 연결을 확인해 주세요.\n삭제되었거나 볼 수 없는 사진일 수도 있어요.") }
+            }
+        }
+    }
+
+    fun closeNotificationPhoto() {
+        notificationPhotoJob?.cancel()
+        _uiState.update { it.copy(notificationPhoto = null, notificationPhotoLoading = false, notificationPhotoError = null) }
+    }
+
+    fun markNotificationPhotoViewed(photoId: String) {
+        val photo = _uiState.value.notificationPhoto ?: return
+        if (photo.id != photoId || !photo.isNew || notificationViewedJob?.isActive == true) return
+        notificationViewedJob = viewModelScope.launch {
+            try {
+                repository.markPhotoViewed(photoId.toLong(), requireOwnSeniorId())
+                _uiState.update { state ->
+                    state.copy(notificationPhoto = state.notificationPhoto?.let {
+                        if (it.id == photoId) it.copy(isNew = false) else it
+                    })
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // A failed viewed receipt must not hide a successfully loaded photo.
+            }
+        }
+    }
+    private var albumLoadJob: Job? = null
     private var nextCursor: ServerFamilyPhotoCursor? = null
     private val seniorIdMutex = Mutex()
     private var ownSeniorId: Long? = null
@@ -73,11 +122,16 @@ class ParentFamilyPhotoViewModel(
 
     fun loadAlbums(isRefresh: Boolean = false) {
         if (_uiState.value.isRefreshing) return
-        viewModelScope.launch {
+        loadAlbumsInternal(isRefresh = isRefresh)
+    }
+
+    private fun loadAlbumsInternal(isRefresh: Boolean = false, background: Boolean = false) {
+        albumLoadJob?.cancel()
+        albumLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = !isRefresh,
-                    isRefreshing = isRefresh,
+                    isLoading = if (background) it.isLoading else !isRefresh,
+                    isRefreshing = if (background) it.isRefreshing else isRefresh,
                     errorMessage = null,
                 )
             }
@@ -126,6 +180,15 @@ class ParentFamilyPhotoViewModel(
         else selectMember(memberId, isRefresh = true)
     }
 
+    fun refreshFromNotification(refreshSelectedPhotos: Boolean) {
+        loadAlbumsInternal(background = true)
+        if (!refreshSelectedPhotos) return
+        val memberId = _uiState.value.selectedMemberId?.toLongOrNull() ?: return
+        photoLoadJob?.cancel()
+        nextCursor = null
+        loadPhotoPage(memberId, append = false, background = true)
+    }
+
     fun selectMember(memberId: String, isRefresh: Boolean = false) {
         val normalizedId = memberId.toLongOrNull() ?: return
         photoLoadJob?.cancel()
@@ -151,7 +214,7 @@ class ParentFamilyPhotoViewModel(
 
     fun loadMorePhotos() {
         val state = _uiState.value
-        if (state.isPhotoLoading || !state.hasMorePhotos) return
+        if (photoLoadJob?.isActive == true || state.isPhotoLoading || !state.hasMorePhotos) return
         val memberId = state.selectedMemberId?.toLongOrNull() ?: return
         if (nextCursor == null) return
         loadPhotoPage(memberId, append = true)
@@ -199,10 +262,12 @@ class ParentFamilyPhotoViewModel(
         }
     }
 
-    private fun loadPhotoPage(uploaderId: Long, append: Boolean) {
+    private fun loadPhotoPage(uploaderId: Long, append: Boolean, background: Boolean = false) {
         val cursor = if (append) nextCursor else null
         photoLoadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isPhotoLoading = true, photoErrorMessage = null) }
+            _uiState.update {
+                it.copy(isPhotoLoading = if (background) it.isPhotoLoading else true, photoErrorMessage = null)
+            }
             runCatching {
                 repository.getPhotos(
                     seniorId = requireOwnSeniorId(),

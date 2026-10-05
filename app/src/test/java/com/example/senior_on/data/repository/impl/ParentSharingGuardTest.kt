@@ -11,6 +11,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ParentSharingGuardTest {
+    @Test fun sosLocationOffStripsCoordinatesButStillSends() = runTest {
+        val source = Events()
+        EventRepositoryImpl(source, guard(false, true)).createSos(37.0, 127.0, 70)
+        assertNull(source.sos.single().latitude)
+        assertNull(source.sos.single().longitude)
+        assertEquals(70, source.sos.single().deviceBattery)
+    }
+
+    @Test fun sosLocationOnKeepsCoordinatesAndAllowsNullPair() = runTest {
+        val source = Events()
+        val repository = EventRepositoryImpl(source, guard(true, true))
+        repository.createSos(37.0, 127.0, 70)
+        assertEquals(37.0, source.sos.single().latitude)
+        assertEquals(127.0, source.sos.single().longitude)
+        repository.createSos(null, null, 70)
+        assertNull(source.sos.last().latitude)
+        assertNull(source.sos.last().longitude)
+    }
     @Test fun locationUploadAndGuardianReadAreBlockedBeforeCallingRemote() = runTest {
         var calls = 0
         val source = java.lang.reflect.Proxy.newProxyInstance(
@@ -110,6 +128,7 @@ class ParentSharingGuardTest {
     )
 
     private class Events : EventDataSource {
+        val sos = mutableListOf<SosEventRequest>()
         val requests = mutableListOf<InactivityRequest>()
         var outings = 0
         override suspend fun createInactivity(request: InactivityRequest): InactivityResponse {
@@ -120,7 +139,10 @@ class ParentSharingGuardTest {
             outings++
             return OutingReturnResponse(1, request.phase, null, request.latitude, request.longitude, null, request.deviceBattery)
         }
-        override suspend fun createSos(request: SosEventRequest): SosEventResponse = error("unused")
+        override suspend fun createSos(request: SosEventRequest): SosEventResponse {
+            sos += request
+            return SosEventResponse(1L, request.latitude, request.longitude, null, request.deviceBattery, 1, 1)
+        }
         override suspend fun createRiskLink(request: RiskLinkRequest): RiskLinkResponse = error("unused")
         override suspend fun getDetail(eventId: Long): EventDetailResponse = error("unused")
     }

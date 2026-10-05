@@ -45,6 +45,8 @@ fun HealthMainScreen(
     onHospitalEditClick: (HospitalAppointmentUiState) -> Unit = {},
     onHospitalDeleteClick: (HospitalAppointmentUiState) -> Unit = {},
     onHospitalRefresh: () -> Unit = {},
+    onMedicationRetry: () -> Unit = onMedicationRefresh,
+    onHospitalRetry: () -> Unit = onHospitalRefresh,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -66,19 +68,28 @@ fun HealthMainScreen(
             return@Column
         }
 
+        val medicationSelected = selectedSection == HealthSection.Health
+        com.example.senior_on.ui.common.QueryRetryContent(
+            error = if (medicationSelected) medicationUiState.queryError else hospitalUiState.queryError,
+            loading = if (medicationSelected) medicationUiState.isLoading || medicationUiState.isRefreshing
+                else hospitalUiState.isLoading || hospitalUiState.isRefreshing,
+            hasContent = if (medicationSelected) medicationUiState.hasLoadedContent && medicationUiState.hasLoadedSelectedDate
+                else hospitalUiState.hasLoadedContent && hospitalUiState.hasLoadedSelectedDate,
+            onRetry = if (medicationSelected) onMedicationRetry else onHospitalRetry,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
         when (selectedSection) {
             HealthSection.Health -> PullToRefreshBox(
                 isRefreshing = medicationUiState.isRefreshing,
                 onRefresh = onMedicationRefresh,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxSize(),
             ) {
                 HealthScreen(
                     registeredMedications = medicationUiState.registeredMedications,
                     todayMedications = medicationUiState.todayMedications,
                     scheduleMessage = if (medicationUiState.hasLoadedSelectedDate) null
-                        else if (medicationUiState.errorMessage != null)
+                        else if (medicationUiState.queryError != null)
                             "복약 정보를 불러오지 못했어요. 당겨서 다시 시도해 주세요."
                         else "복약 정보를 불러오는 중이에요",
                     medicationMarkedDates = medicationUiState.medicationMarkedDates,
@@ -95,8 +106,7 @@ fun HealthMainScreen(
                 isRefreshing = hospitalUiState.isRefreshing,
                 onRefresh = onHospitalRefresh,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxSize(),
             ) {
                 HospitalScreen(
                     appointments = hospitalUiState.monthlyAppointments,
@@ -113,6 +123,7 @@ fun HealthMainScreen(
                     onDeleteAppointmentClick = onHospitalDeleteClick,
                 )
             }
+        }
         }
     }
 }

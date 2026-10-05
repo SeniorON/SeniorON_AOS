@@ -7,6 +7,38 @@ import org.junit.Test
 
 class NotificationUiMapperTest {
     @Test
+    fun `SOS without coordinates does not reuse an old address as title`() {
+        val event = SafetyEvent(42L, "SOS", null, "old address", null, null, 72)
+        val actual = event.toUiState(NotificationCategory.Sos,
+            NotificationMessageUiState("", "cached address", severity = NotificationSeverity.Danger))
+        assertEquals("긴급 도움 요청", actual.title)
+        assertEquals(NotificationCategory.Sos, actual.category)
+    }
+
+    @Test
+    fun `SOS history summary is hidden when location sharing is off or unknown`() {
+        val message = com.example.senior_on.domain.model.server.AppNotification(
+            1L, 42L, "긴급 알림", "private address", "2026-10-01T12:00:00", false,
+        ).toUiState(NotificationCategory.Sos)
+        listOf(
+            NotificationScreenUiState(emptyList(), locationSharingEnabled = false),
+            NotificationScreenUiState(emptyList(), sharingStatusKnown = false),
+        ).forEach { assertEquals("긴급 도움 요청", it.visibleMessage(message).title) }
+    }
+
+    @Test
+    fun `SOS home address title is hidden before detail is fetched`() {
+        val home = com.example.senior_on.domain.model.server.NotificationHome(1, listOf(
+            com.example.senior_on.domain.model.server.NotificationHomeItem(
+                "SOS", true, true, null, null, "private summary", null, null,
+                null, "private address", null, null, null,
+            ),
+        )).toUiState(true, true)
+        val visible = home.copy(locationSharingEnabled = false).enforceAccess()
+        assertEquals("긴급 도움 요청", visible.sections.first { it.category == NotificationCategory.Sos }.messages.single().title)
+    }
+
+    @Test
     fun `SOS event detail keeps location and device information`() {
         val fallback = NotificationMessageUiState(
             time = "fallback",

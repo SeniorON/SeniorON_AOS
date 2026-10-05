@@ -1,5 +1,12 @@
 package com.example.senior_on.ui.parent.permission
 
+/** Back navigation includes deferred permissions; only actual completion skips a step. */
+internal fun ParentPermissionStep.previousRequired(
+    status: (ParentPermissionStep) -> ParentPermissionStatus,
+): ParentPermissionStep? = ParentPermissionStep.entries.take(ordinal).lastOrNull {
+    status(it) == ParentPermissionStatus.Required || status(it) == ParentPermissionStatus.Manual
+}
+
 /** Dismissal affects automatic presentation only, never the actual permission state. */
 internal fun shouldOfferPermissionGuide(
     dismissed: Set<ParentPermissionStep> = emptySet(),

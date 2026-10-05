@@ -28,6 +28,33 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class FamilyViewModelPhotoUrlRefreshTest {
     @Test
+    fun `family tab reentry exposes failed refresh after successful load`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var fail = false
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = FRESH_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                homeProvider = {
+                    if (fail) throw IOException("offline")
+                    ServerFamilyHome(emptyList(), listOf(serverPhoto(url = FRESH_URL)))
+                },
+            )
+            val vm = FamilyViewModel(repository)
+            vm.loadLatestFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            fail = true
+            vm.loadLatestFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            assertEquals("가족 정보를 불러오지 못했어요.", vm.uiState.value.errorMessage)
+            fail = false
+            vm.loadFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            assertEquals(null, vm.uiState.value.errorMessage)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
     fun `시니어를 전환하면 늦게 끝난 이전 시니어 응답을 무시한다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

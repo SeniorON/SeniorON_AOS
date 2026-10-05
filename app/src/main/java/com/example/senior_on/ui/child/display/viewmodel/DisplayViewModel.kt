@@ -126,6 +126,7 @@ class DisplayViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = true,
+                    queryError = null,
                     canEditScreen = false,
                     isEditPermissionLoading = true,
                     errorMessage = null,
@@ -184,6 +185,7 @@ class DisplayViewModel(
             _uiState.update {
                 it.copy(
                     isRefreshing = true,
+                    queryError = null,
                     isEditPermissionLoading = true,
                     errorMessage = null,
                 )
@@ -221,7 +223,7 @@ class DisplayViewModel(
                     .onFailure { throwable ->
                         if (isCurrentSenior(requestSeniorId)) {
                             _uiState.update {
-                                it.copy(errorMessage = throwable.toDisplayErrorMessage())
+                                it.copy(queryError = "홈 정보를 불러오지 못했어요.")
                             }
                         }
                     }
@@ -281,6 +283,8 @@ class DisplayViewModel(
                 )
             }.onSuccess { overview ->
                 applyOverview(requestSeniorId, overview)
+            }.onFailure { throwable ->
+                handleLoadFailure(requestSeniorId, throwable)
             }
         }
     }
@@ -329,6 +333,7 @@ class DisplayViewModel(
                 availableButtonOptions = overview.availableButtonOptions,
                 isLoading = false,
                 hasLoadedOverview = true,
+                queryError = null,
             )
         }
     }
@@ -514,11 +519,12 @@ class DisplayViewModel(
     }
 
     private fun handleLoadFailure(requestSeniorId: Long, throwable: Throwable) {
+        if (throwable is kotlinx.coroutines.CancellationException) return
         if (isCurrentSenior(requestSeniorId)) {
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    errorMessage = throwable.toDisplayErrorMessage(),
+                    queryError = "홈 정보를 불러오지 못했어요.",
                 )
             }
         }

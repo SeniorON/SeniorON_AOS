@@ -178,6 +178,8 @@ fun HealthMainRoute(
         }
 
         else -> HealthMainScreen(
+            onMedicationRetry = medicationViewModel::retry,
+            onHospitalRetry = hospitalViewModel::retry,
             selectedSection = selectedSection,
             medicationUiState = medicationUiState,
             hospitalUiState = hospitalUiState,

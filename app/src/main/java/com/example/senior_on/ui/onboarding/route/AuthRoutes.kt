@@ -2,6 +2,8 @@ package com.example.senior_on.ui.onboarding.route
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.example.senior_on.di.AppContainer
@@ -16,18 +18,27 @@ import com.example.senior_on.ui.onboarding.social.SocialLoginTokenProvider
 @Composable
 fun SplashRoute(
     appContainer: AppContainer,
-    onSessionLoaded: (AuthSession?) -> Unit
+    onSessionLoaded: (AuthSession?) -> Unit,
+    showLoadingOnly: Boolean = false,
 ) {
     val viewModel = onboardingAuthViewModel(appContainer)
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        delay(SPLASH_DELAY_MILLIS)
+    LaunchedEffect(showLoadingOnly) {
+        if (!showLoadingOnly) delay(SPLASH_DELAY_MILLIS)
         viewModel.loadSavedSession { session ->
             onSessionLoaded(session)
         }
     }
 
-    SplashScreen()
+    if (showLoadingOnly) {
+        com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
+            error = state.errorMessage?.let { "로그인 상태를 확인하지 못했어요.\n인터넷 연결을 확인하고\n다시 시도해 주세요." },
+            loading = state.isLoading,
+            hasContent = false,
+            onRetry = { viewModel.loadSavedSession(onSessionLoaded) },
+        ) {}
+    } else SplashScreen()
 }
 
 @Composable

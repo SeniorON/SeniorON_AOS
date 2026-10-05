@@ -120,6 +120,7 @@ fun OnboardingRoute(
     appContainer: AppContainer,
     onAuthenticated: (mode: AppUserMode, userId: String) -> Unit,
     startAtParentLogin: Boolean = false,
+    startFromPhotoNotification: Boolean = false,
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(if (startAtParentLogin) SeniorOnRoute.Login else InitialRoute) }
     var selectedUserMode by rememberSaveable { mutableStateOf(if (startAtParentLogin) AppUserMode.Senior else AppUserMode.Child) }
@@ -355,9 +356,13 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.Splash -> SplashRoute(
                 appContainer = appContainer,
+                showLoadingOnly = startFromPhotoNotification,
                 onSessionLoaded = { session ->
                     if (session == null) {
-                        currentRoute = SeniorOnRoute.ModeSelection
+                        if (startFromPhotoNotification) {
+                            selectedUserMode = AppUserMode.Senior
+                            currentRoute = SeniorOnRoute.Login
+                        } else currentRoute = SeniorOnRoute.ModeSelection
                     } else {
                         keepPostLoginSession = true
                         resolveOnboardingStatus(session.role, session.userId)

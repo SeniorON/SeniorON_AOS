@@ -192,15 +192,15 @@ fun DisplayTabRoute(
     saveableStateHolder.SaveableStateProvider(destination.name) {
         when (destination) {
             DisplayDestination.Overview -> when {
-                uiState.errorMessage != null && !uiState.hasLoadedOverview ->
+                uiState.queryError != null ->
                     DisplayTabErrorScreen(
-                        message = uiState.errorMessage.orEmpty(),
+                        message = uiState.queryError.orEmpty(),
                         onRetryClick = viewModel::loadOverview,
                         topBarTitle = uiState.resolveDisplayTopBarTitle(),
                         modifier = modifier,
                     )
 
-                shouldShowDisplayInitialLoading(
+                uiState.isLoading || shouldShowDisplayInitialLoading(
                     uiState = uiState,
                     isSeniorAccountsLoading = isSeniorAccountsLoading,
                     hasSeniorAccounts = seniorAccounts.isNotEmpty(),
