@@ -42,13 +42,34 @@ fun ParentFamilyPhotoRoute(
     }
     var selectedMemberId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedPhotoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var visiblePhotoId by rememberSaveable { mutableStateOf<String?>(null) }
+    val deletedIds by FamilyPhotoSharedEventStore.deletedPhotoIds.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(deletedIds, notificationPhotoId, destination) {
+        val activePhoto = notificationPhotoId ?: visiblePhotoId?.toLongOrNull()
+        if (activePhoto in deletedIds &&
+            (notificationPhotoId != null || destination == ParentPhotoDestination.Viewer)) {
+            android.widget.Toast.makeText(context, "삭제된 사진이에요.", android.widget.Toast.LENGTH_SHORT).show()
+            visiblePhotoId = null
+            selectedPhotoId = null
+            destination = ParentPhotoDestination.FamilyMembers
+            if (notificationPhotoId != null) onNotificationPhotoClosed()
+        }
+        viewModel.applyDeletedPhotos(deletedIds)
+    }
 
-    LaunchedEffect(viewModel, notificationPhotoId) {
-        if (notificationPhotoId != null) viewModel.openNotificationPhoto(notificationPhotoId)
-        else viewModel.closeNotificationPhoto()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentVisiblePhotoId by androidx.compose.runtime.rememberUpdatedState(visiblePhotoId)
+    LaunchedEffect(viewModel, notificationPhotoId, lifecycleOwner) {
+        if (notificationPhotoId != null) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.openNotificationPhoto(notificationPhotoId)
+                kotlinx.coroutines.awaitCancellation()
+            }
+        } else viewModel.closeNotificationPhoto()
     }
     if (notificationPhotoId != null) {
-        val photo = uiState.notificationPhoto?.takeIf { it.id == notificationPhotoId.toString() }
+        val photo = uiState.notificationPhoto?.takeIf { it.id == notificationPhotoId.toString() && notificationPhotoId !in deletedIds }
         BackHandler(onBack = onNotificationPhotoClosed)
         com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
             error = uiState.notificationPhotoError,
@@ -73,7 +94,6 @@ fun ParentFamilyPhotoRoute(
         return
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(viewModel, lifecycleOwner, destination) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             // StateFlow also triggers a refresh on entry/resume after a missed FCM.
@@ -81,6 +101,14 @@ fun ParentFamilyPhotoRoute(
                 viewModel.refreshFromNotification(
                     refreshSelectedPhotos = destination == ParentPhotoDestination.MemberPhotos,
                 )
+                if (destination == ParentPhotoDestination.Viewer) {
+                    val id = currentVisiblePhotoId?.toLongOrNull()
+                    if (id != null && viewModel.isPhotoMissing(id)) {
+                        FamilyPhotoSharedEventStore.publish(mapOf(
+                            "type" to "FAMILY_PHOTO_DELETED", "familyPhotoId" to id.toString(),
+                        ))
+                    }
+                }
             }
         }
     }
@@ -138,6 +166,7 @@ fun ParentFamilyPhotoRoute(
                     onBackClick = ::goBack,
                     onPhotoClick = { photoId ->
                         selectedPhotoId = photoId
+                        visiblePhotoId = photoId
                         destination = ParentPhotoDestination.Viewer
                     },
                     onLoadMore = viewModel::loadMorePhotos,
@@ -169,7 +198,10 @@ fun ParentFamilyPhotoRoute(
                     member = member,
                     initialPhotoId = photoId,
                     onBackClick = ::goBack,
-                    onPhotoViewed = viewModel::markPhotoViewed,
+                    onPhotoViewed = { id ->
+                        visiblePhotoId = id
+                        viewModel.markPhotoViewed(id)
+                    },
                     modifier = modifier,
                 )
             }
