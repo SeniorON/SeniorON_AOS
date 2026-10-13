@@ -62,6 +62,7 @@ fun SignupEmailVerificationScreen(
     modifier: Modifier = Modifier,
 ) {
     var email by rememberSaveable { mutableStateOf("") }
+    var emailRevision by rememberSaveable { mutableStateOf(0) }
     var verificationCode by rememberSaveable { mutableStateOf("") }
     var hasRequestedCode by rememberSaveable { mutableStateOf(false) }
     var verificationResult by rememberSaveable { mutableStateOf(EmailVerificationResult.None) }
@@ -70,8 +71,8 @@ fun SignupEmailVerificationScreen(
     var isRequestingCode by remember { mutableStateOf(false) }
     var isVerifyingCode by remember { mutableStateOf(false) }
 
-    val canRequestVerification = email.isValidEmail() && !isRequestingCode && !isVerifyingCode && !requestUi.locked
     val isVerified = verificationResult == EmailVerificationResult.Verified
+    val canRequestVerification = email.isValidEmail() && !isVerified && !isRequestingCode && !isVerifyingCode && !requestUi.locked
     val hasCode = hasRequestedCode || remainingSeconds > 0
     val shouldShowVerificationCodeInput = hasCode
     val canVerifyCode = hasCode &&
@@ -100,7 +101,9 @@ fun SignupEmailVerificationScreen(
                 SignupUnderlinedTextField(
                     value = email,
                     onValueChange = {
+                        if (email == it) return@SignupUnderlinedTextField
                         email = it
+                        emailRevision++
                         onEmailChange()
                         hasRequestedCode = false
                         verificationCode = ""
@@ -126,10 +129,11 @@ fun SignupEmailVerificationScreen(
                         onEmailChange()
                         isRequestingCode = true
                         val requestedEmail = email
+                        val requestedRevision = emailRevision
                         onSendVerificationCode(requestedEmail) { isSent ->
                             isRequestingCode = false
 
-                            if (isSent && email == requestedEmail) {
+                            if (isSent && email == requestedEmail && emailRevision == requestedRevision) {
                                 verificationCode = ""
                                 verificationResult = EmailVerificationResult.None
                                 hasRequestedCode = true
@@ -143,7 +147,8 @@ fun SignupEmailVerificationScreen(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = requestUi.notice ?: emailRequestErrorMessage.orEmpty(),
+                    text = if (requestUi.notice != null) signupVerificationCooldownText(requestUi.remainingRequestSeconds)
+                        else emailRequestErrorMessage.orEmpty(),
                     style = SeniorOnTextStyles.CaptionRegular,
                     color = SeniorOnColors.Red300
                 )
@@ -167,8 +172,10 @@ fun SignupEmailVerificationScreen(
             Column {
                 Row(verticalAlignment = Alignment.Bottom) {
                     SignupVerificationCodeField(
+                        enabled = !isVerified && !isRequestingCode && !isVerifyingCode,
                         value = verificationCode,
                         onValueChange = {
+                            if (isVerified || isRequestingCode || isVerifyingCode) return@SignupVerificationCodeField
                             verificationCode = it.filter(Char::isDigit).take(6)
                             verificationResult = EmailVerificationResult.None
                             onEmailChange()
@@ -190,11 +197,13 @@ fun SignupEmailVerificationScreen(
                         enabled = canVerifyCode,
                         isLoading = isVerifyingCode,
                         onClick = {
+                            if (!canVerifyCode) return@SignupCodeVerificationButton
                             isVerifyingCode = true
                             val requestedEmail = email
+                            val requestedRevision = emailRevision
                             onVerifyCode(requestedEmail, verificationCode) { verified ->
                                 isVerifyingCode = false
-                                verificationResult = if (email != requestedEmail) {
+                                verificationResult = if (email != requestedEmail || emailRevision != requestedRevision) {
                                     EmailVerificationResult.None
                                 } else if (verified) {
                                     EmailVerificationResult.Verified
@@ -239,6 +248,7 @@ fun SignupEmailVerificationScreen(
 
 @Composable
 private fun SignupVerificationCodeField(
+    enabled: Boolean = true,
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
@@ -260,6 +270,7 @@ private fun SignupVerificationCodeField(
                 .height(43.dp)
         ) {
             BasicTextField(
+                enabled = enabled,
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier
@@ -401,6 +412,9 @@ private fun Int.toTimerText(): String {
     val seconds = this % 60
     return "%02d:%02d".format(minutes, seconds)
 }
+
+internal fun signupVerificationCooldownText(seconds: Int): String =
+    "잠시 후 다시 요청해 주세요. (${seconds.coerceAtLeast(0).toTimerText()})"
 
 @Preview(
     name = "Signup Email Verification",
