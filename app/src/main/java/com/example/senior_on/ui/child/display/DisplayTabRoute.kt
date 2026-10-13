@@ -58,6 +58,8 @@ fun DisplayTabRoute(
     isSeniorAccountsLoading: Boolean = false,
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
+    isDisconnectingRelationship: Boolean = false,
+    onDisconnectRelationship: (() -> Unit) -> Unit = {},
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -280,7 +282,7 @@ fun DisplayTabRoute(
                 device = uiState.device,
                 relationshipLabel = uiState.relationshipLabel ?: "부모님",
                 isRefreshing = uiState.isRefreshingDevice,
-                isDisconnecting = uiState.isSaving,
+                isDisconnecting = isDisconnectingRelationship,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onRefreshClick = {
@@ -288,14 +290,10 @@ fun DisplayTabRoute(
                     onRefreshClick()
                 },
                 onDisconnectClick = {
-                    viewModel.disconnectDevice(
-                        onSuccess = {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.DeviceConnection.name
-                            )
-                            destination = DisplayDestination.Overview
-                        },
-                    )
+                    onDisconnectRelationship {
+                        saveableStateHolder.removeState(DisplayDestination.DeviceConnection.name)
+                        destination = DisplayDestination.Overview
+                    }
                 },
                 onInstallGuideClick = onInstallGuideClick,
             )

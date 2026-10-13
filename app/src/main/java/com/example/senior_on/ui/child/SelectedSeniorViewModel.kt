@@ -25,13 +25,14 @@ class SelectedSeniorViewModel(
     private val availableIds = MutableStateFlow<List<Long>?>(null)
     private val _state = MutableStateFlow(SelectedSeniorState())
     val state = _state.asStateFlow()
+    private var replacingSelection = false
 
     init {
         viewModelScope.launch {
             try {
                 combine(repository.observe(accountId), availableIds) { saved, ids -> saved to ids }
                     .collect { (saved, ids) ->
-                        if (ids != null) {
+                        if (ids != null && !replacingSelection) {
                             val selected = saved?.takeIf { it in ids } ?: ids.firstOrNull()
                             if (saved != selected) repository.select(accountId, selected)
                             _state.value = SelectedSeniorState(selected, isLoading = false)
@@ -46,6 +47,19 @@ class SelectedSeniorViewModel(
     }
 
     fun reconcile(ids: List<Long>) { availableIds.value = ids.filter { it > 0 }.distinct() }
+
+    suspend fun replaceAfterDisconnect(ids: List<Long>) {
+        replacingSelection = true
+        try {
+            val validIds = ids.filter { it > 0 }.distinct()
+            val first = validIds.firstOrNull()
+            repository.select(accountId, first)
+            availableIds.value = validIds
+            _state.value = SelectedSeniorState(first, isLoading = false)
+        } finally {
+            replacingSelection = false
+        }
+    }
 
     fun select(seniorId: Long) {
         if (seniorId !in availableIds.value.orEmpty()) return

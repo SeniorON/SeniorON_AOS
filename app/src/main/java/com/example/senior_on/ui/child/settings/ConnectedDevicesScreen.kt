@@ -408,11 +408,8 @@ private fun DisconnectDeviceDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("연결 해제 시 부모님 폰의\n")
-                        withStyle(SpanStyle(color = SeniorOnColors.Red300)) {
-                            append("모든 설정이 초기화")
-                        }
-                        append("되고 알림 수신이 중단돼요")
+                        append("내 목록에서 해당 시니어가 삭제돼요.\n")
+                        append("시니어의 정보와 다른 가족의 연결은 유지돼요.")
                     },
                     style = SeniorOnTextStyles.BodyMMedium,
                     color = SeniorOnColors.Gray500,

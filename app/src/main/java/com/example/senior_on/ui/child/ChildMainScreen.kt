@@ -373,7 +373,7 @@ fun ChildMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
-        if (!showSeniorManagement && selectedTab == ChildMainTab.Screen &&
+        if (!seniorManagementUiState.disconnectRefreshPending && !showSeniorManagement && selectedTab == ChildMainTab.Screen &&
             seniorManagementUiState.managedSeniors.isNotEmpty() && seniorManagementUiState.listError != null) {
             com.example.senior_on.ui.common.QueryRetryMessage(
                 message = seniorManagementUiState.listError!!,
@@ -381,7 +381,15 @@ fun ChildMainScreen(
                 onRetry = seniorManagementViewModel::refreshSeniors,
             )
         }
-        if (showSeniorManagement) {
+        if (seniorManagementUiState.disconnectRefreshPending) {
+            com.example.senior_on.ui.common.QueryRetryContent(
+                error = seniorManagementUiState.disconnectRefreshError,
+                loading = seniorManagementUiState.isDisconnecting,
+                hasContent = false,
+                onRetry = seniorManagementViewModel::retryDisconnectRefresh,
+                modifier = Modifier.weight(1f).fillMaxSize(),
+            ) {}
+        } else if (showSeniorManagement) {
             SeniorManagementRoute(
                 uiState = seniorManagementUiState,
                 viewModel = seniorManagementViewModel,
@@ -442,6 +450,32 @@ fun ChildMainScreen(
                 familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
                 settingsSessionKey = childSessionViewModelKey,
                 displayViewModel = displayViewModel,
+                isDisconnectingRelationship = seniorManagementUiState.isDisconnecting,
+                onDisconnectRelationship = { finished ->
+                    activeSeniorId?.let { seniorId ->
+                        seniorManagementViewModel.disconnectRelationship(
+                            seniorId = seniorId,
+                            isPrimary = { id ->
+                                val member = familyServerRepository.getMembers(id).firstOrNull { it.isMe }
+                                    ?: error("담당자 정보를 확인하지 못했어요. 다시 시도해 주세요.")
+                                require(member.managerType.equals("PRIMARY", true) || member.managerType.equals("SUB", true)) {
+                                    "담당자 정보를 확인하지 못했어요."
+                                }
+                                member.managerType.equals("PRIMARY", true)
+                            },
+                            saveSelection = selectionViewModel::replaceAfterDisconnect,
+                            removeRelationship = { id ->
+                                requireNotNull(deviceRepository) { "연결 해제 서비스를 사용할 수 없어요." }
+                                    .disconnect(id)
+                            },
+                            onMessage = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
+                            onSuccess = {
+                                finished()
+                                selectedTab = ChildMainTab.Screen
+                            },
+                        )
+                    }
+                },
                 seniorAccounts = seniorManagementUiState.managedSeniors,
                 isSeniorAccountsLoading = seniorManagementUiState.isLoading,
                 onSeniorAccountClick = { senior ->
@@ -585,6 +619,8 @@ private fun ChildMainTabContent(
     familyInvitationViewModelKey: String,
     settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
+    isDisconnectingRelationship: Boolean,
+    onDisconnectRelationship: (() -> Unit) -> Unit,
     seniorAccounts: List<ManagedSenior>,
     isSeniorAccountsLoading: Boolean,
     onSeniorAccountClick: (ManagedSenior) -> Unit,
@@ -630,6 +666,8 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Screen) {
         DisplayTabRoute(
             viewModel = displayViewModel,
+            isDisconnectingRelationship = isDisconnectingRelationship,
+            onDisconnectRelationship = onDisconnectRelationship,
             addressSearchViewModel = addressSearchViewModel,
             seniorAccounts = seniorAccounts,
             isSeniorAccountsLoading = isSeniorAccountsLoading,
@@ -812,6 +850,8 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
             sessionKey = settingsSessionKey,
+            isDisconnectingRelationship = isDisconnectingRelationship,
+            onDisconnectRelationship = onDisconnectRelationship,
             parentInfo = parentInfo,
             connectedDevice = connectedDevice,
             displayViewModel = displayViewModel,

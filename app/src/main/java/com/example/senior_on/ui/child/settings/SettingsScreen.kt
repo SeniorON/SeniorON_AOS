@@ -160,6 +160,8 @@ fun SettingsTabRoute(
     modifier: Modifier = Modifier,
     onLogoutConfirm: () -> Unit = {},
     onWithdrawConfirm: () -> Unit = {},
+    isDisconnectingRelationship: Boolean = false,
+    onDisconnectRelationship: (() -> Unit) -> Unit = {},
 ) {
     val viewModel: SettingsViewModel = viewModel(
         key = settingsSessionViewModelKey(sessionKey, "actions"),
@@ -430,7 +432,7 @@ fun SettingsTabRoute(
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
             device = connectedDevice,
-            isDisconnecting = displayUiState.isSaving,
+            isDisconnecting = isDisconnectingRelationship,
             onBackClick = navigateBack,
             onDeviceInfoClick = {
                 displayViewModel.refreshDevice()
@@ -448,8 +450,8 @@ fun SettingsTabRoute(
                 }
             },
             onDisconnectConfirm = {
-                displayViewModel.disconnectDevice {
-                    destination = SettingsDestination.SeniorAppInstallGuide
+                onDisconnectRelationship {
+                    destination = SettingsDestination.Main
                 }
             },
             modifier = Modifier.fillMaxSize()
@@ -464,8 +466,8 @@ fun SettingsTabRoute(
             onBackClick = navigateBack,
             onRefreshClick = displayViewModel::refreshDevice,
             onDisconnectClick = {
-                displayViewModel.disconnectDevice {
-                    destination = SettingsDestination.ConnectedDevices
+                onDisconnectRelationship {
+                    destination = SettingsDestination.Main
                 }
             },
             onInstallGuideClick = {
@@ -473,7 +475,7 @@ fun SettingsTabRoute(
                 destination = SettingsDestination.ConnectionGuide
             },
             isRefreshing = displayUiState.isRefreshing,
-            isDisconnecting = displayUiState.isSaving,
+            isDisconnecting = isDisconnectingRelationship,
             modifier = Modifier.fillMaxSize(),
         )
 

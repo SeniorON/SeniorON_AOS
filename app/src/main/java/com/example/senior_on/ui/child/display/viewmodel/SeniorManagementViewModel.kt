@@ -25,6 +25,9 @@ data class SeniorManagementUiState(
     val familyCode: String? = null,
     val errorMessage: String? = null,
     val listError: String? = null,
+    val isDisconnecting: Boolean = false,
+    val disconnectRefreshPending: Boolean = false,
+    val disconnectRefreshError: String? = null,
 )
 
 class SeniorManagementViewModel(
@@ -33,6 +36,7 @@ class SeniorManagementViewModel(
 ) : ViewModel() {
     private var refreshJob: Job? = null
     private var familyCodeJob: Job? = null
+    private var pendingDisconnectRefresh: (suspend () -> Unit)? = null
     private val _uiState = MutableStateFlow(SeniorManagementUiState())
     val uiState: StateFlow<SeniorManagementUiState> = _uiState.asStateFlow()
 
@@ -41,7 +45,11 @@ class SeniorManagementViewModel(
     }
 
     fun refreshSeniors() {
-        if (refreshJob?.isActive == true) return
+        if (pendingDisconnectRefresh != null) {
+            retryDisconnectRefresh()
+            return
+        }
+        if (refreshJob?.isActive == true || _uiState.value.isDisconnecting) return
 
         refreshJob = viewModelScope.launch {
             _uiState.update {
@@ -187,6 +195,73 @@ class SeniorManagementViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun disconnectRelationship(
+        seniorId: Long,
+        isPrimary: suspend (Long) -> Boolean,
+        saveSelection: suspend (List<Long>) -> Unit,
+        onMessage: (String) -> Unit,
+        onSuccess: () -> Unit,
+        removeRelationship: suspend (Long) -> Unit,
+    ) {
+        if (_uiState.value.isDisconnecting || _uiState.value.isLoading) return
+        if (pendingDisconnectRefresh != null) {
+            retryDisconnectRefresh()
+            return
+        }
+        _uiState.update { it.copy(isDisconnecting = true) }
+        viewModelScope.launch {
+            try {
+                if (isPrimary(seniorId)) {
+                    onMessage("주담당자는 연결을 해제할 수 없어요.")
+                    return@launch
+                }
+                removeRelationship(seniorId)
+                // Once DELETE succeeds, retries must never send it again.
+                pendingDisconnectRefresh = {
+                    val seniors = seniorRepository.getManagedSeniors()
+                    saveSelection(seniors.map { it.seniorId })
+                    _uiState.update { it.copy(managedSeniors = seniors, listError = null, errorMessage = null) }
+                    onSuccess()
+                }
+                _uiState.update { it.copy(disconnectRefreshPending = true) }
+                completeDisconnectRefresh()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Throwable) {
+                onMessage(error.message ?: "연결 해제 요청에 실패했어요. 다시 시도해 주세요.")
+            } finally {
+                _uiState.update { it.copy(isDisconnecting = false) }
+            }
+        }
+    }
+
+    fun retryDisconnectRefresh() {
+        if (_uiState.value.isDisconnecting || pendingDisconnectRefresh == null) return
+        _uiState.update { it.copy(isDisconnecting = true) }
+        viewModelScope.launch {
+            try {
+                completeDisconnectRefresh()
+            } finally {
+                _uiState.update { it.copy(isDisconnecting = false) }
+            }
+        }
+    }
+
+    private suspend fun completeDisconnectRefresh() {
+        _uiState.update { it.copy(disconnectRefreshError = null) }
+        try {
+            pendingDisconnectRefresh?.invoke()
+            pendingDisconnectRefresh = null
+            _uiState.update { it.copy(disconnectRefreshPending = false) }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Throwable) {
+            _uiState.update {
+                it.copy(disconnectRefreshError = "연결 해제는 완료됐지만 목록을 갱신하지 못했어요. 다시 시도해 주세요.")
+            }
+        }
     }
 
     class Factory(
