@@ -22,6 +22,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -63,6 +67,13 @@ class AuthViewModel(
 
     private var signupDraft = SignupDraft()
     private var pendingSocialSignup: PendingSocialSignup? = null
+    private var requestJob: Job? = null
+
+    fun cancelPendingRequest() {
+        requestJob?.cancel()
+        requestJob = null
+        _uiState.value = AuthUiState()
+    }
 
     var authenticatedUsersId: Long? = null
         private set
@@ -73,6 +84,7 @@ class AuthViewModel(
     fun loadSavedSession(onResult: (AuthSession?) -> Unit) {
         launchRequest {
             val session = sessionRepository.validateSavedSession()
+            currentCoroutineContext().ensureActive()
             authenticatedUsersId = session?.usersId
             onResult(session)
         }
@@ -90,6 +102,7 @@ class AuthViewModel(
         ) {
             val deviceRegistration =
                 deviceRegistrationRepository.getDeviceRegistration()
+            currentCoroutineContext().ensureActive()
             val result = authRepository.login(
                 LoginCredentials(
                     loginId = loginId,
@@ -98,6 +111,7 @@ class AuthViewModel(
                     deviceIdentifier = deviceRegistration.deviceIdentifier
                 )
             )
+            currentCoroutineContext().ensureActive()
             when {
                 result == null || result.mode == null -> {
                     accessToken = null
@@ -188,7 +202,9 @@ class AuthViewModel(
         launchRequest(
             onFailure = { _ -> onResult(null) }
         ) {
-            onResult(authRepository.isLoginIdAvailable(loginId))
+            val available = authRepository.isLoginIdAvailable(loginId)
+            currentCoroutineContext().ensureActive()
+            onResult(available)
         }
     }
 
@@ -206,6 +222,7 @@ class AuthViewModel(
                     mode = mode,
                     agreements = agreements,
                 )
+                currentCoroutineContext().ensureActive()
                 finishSignupWithoutSession()
                 onResult(true)
                 return@launchRequest
@@ -226,6 +243,7 @@ class AuthViewModel(
                     agreeMarketing = agreements.marketing
                 )
             )
+            currentCoroutineContext().ensureActive()
             finishSignupWithoutSession()
             onResult(true)
         }
@@ -236,7 +254,9 @@ class AuthViewModel(
         onFailure: (String) -> Unit,
     ) {
         launchRequest(onFailure = onFailure) {
-            onResult(authRepository.getOnboardingStatus())
+            val status = authRepository.getOnboardingStatus()
+            currentCoroutineContext().ensureActive()
+            onResult(status)
         }
     }
 
@@ -324,6 +344,7 @@ class AuthViewModel(
     fun hasPendingSocialSignup(): Boolean = pendingSocialSignup != null
 
     fun resetSignupFlow() {
+        cancelPendingRequest()
         signupDraft = SignupDraft()
         pendingSocialSignup = null
         _uiState.value = AuthUiState()
@@ -347,6 +368,7 @@ class AuthViewModel(
                 deviceRegistration.fcmToken,
                 deviceRegistration.deviceIdentifier,
             )
+            currentCoroutineContext().ensureActive()
 
             if (result.isNewUser) {
                 pendingSocialSignup = PendingSocialSignup(
@@ -416,7 +438,9 @@ class AuthViewModel(
                 onResult(false)
             }
         ) {
-            onResult(request())
+            val result = request()
+            currentCoroutineContext().ensureActive()
+            onResult(result)
         }
     }
 
@@ -424,13 +448,17 @@ class AuthViewModel(
         onFailure: (String) -> Unit = {},
         request: suspend () -> Unit
     ) {
-        viewModelScope.launch {
+        cancelPendingRequest()
+        val job = viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
             _uiState.value = AuthUiState(isLoading = true)
             runCatching { request() }
                 .onSuccess {
+                    currentCoroutineContext().ensureActive()
                     _uiState.value = AuthUiState()
                 }
                 .onFailure { throwable ->
+                    currentCoroutineContext().ensureActive()
+                    if (throwable is CancellationException) throw throwable
                     val errorMessage = throwable.message
                         ?: DEFAULT_ERROR_MESSAGE
                     _uiState.value = AuthUiState(
@@ -440,6 +468,8 @@ class AuthViewModel(
                     onFailure(errorMessage)
                 }
         }
+        requestJob = job
+        job.start()
     }
 
     class Factory(

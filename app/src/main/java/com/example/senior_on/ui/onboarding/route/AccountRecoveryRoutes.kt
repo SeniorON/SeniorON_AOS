@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.onboarding.route
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.di.AppContainer
@@ -19,21 +20,22 @@ fun FindAccountRoute(
     onPasswordVerification: () -> Unit
 ) {
     val viewModel = accountRecoveryViewModel(appContainer)
+    DisposableEffect(viewModel) { onDispose { viewModel.cancelPendingRequest() } }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FindAccountScreen(
-        requestErrorMessage = uiState.errorMessage.takeUnless { uiState.errorCode?.startsWith("EMAIL429_") == true },
-        onInputChange = viewModel::clearRequestError,
+        requestErrorMessage = uiState.errorMessage,
+        onInputChange = viewModel::resetFlow,
         initialTab = initialTab,
         onBackClick = onBackClick,
         onFindIdNextClick = { name, email, onComplete ->
-            viewModel.findLoginId(name, email) {
-                onFindIdResult()
+            viewModel.findLoginId(name, email) { result ->
+                if (result != null) onFindIdResult()
                 onComplete()
             }
         },
         onFindPasswordNextClick = { name, userId, onResult ->
-            viewModel.sendPasswordResetVerificationCode(
+            viewModel.continuePasswordRecovery(
                 name = name,
                 loginId = userId
             ) { sent ->
@@ -75,11 +77,14 @@ fun FindPasswordVerifyRoute(
     onTabSelected: (FindAccountTab) -> Unit
 ) {
     val viewModel = accountRecoveryViewModel(appContainer)
+    DisposableEffect(viewModel) { onDispose { viewModel.cancelPendingRequest() } }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FindPasswordVerifyScreen(
+        onInputChange = viewModel::clearRequestError,
+        verificationId = uiState.verificationId,
         requestLoginId = uiState.requestLoginId,
-        requestErrorMessage = uiState.errorMessage.takeUnless { uiState.errorCode?.startsWith("EMAIL429_") == true },
+        requestErrorMessage = uiState.errorMessage,
         maskedEmail = "계정에 등록된 이메일",
         onBackClick = onBackClick,
         onVerifySuccess = onVerifySuccess,
@@ -96,6 +101,7 @@ fun FindPasswordResetRoute(
     onLoginClick: () -> Unit
 ) {
     val viewModel = accountRecoveryViewModel(appContainer)
+    DisposableEffect(viewModel) { onDispose { viewModel.cancelPendingRequest() } }
 
     FindPasswordResetScreen(
         onBackClick = onBackClick,

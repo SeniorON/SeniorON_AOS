@@ -25,6 +25,9 @@ fun CaregiverRelationshipRoute(
 ) {
     val authViewModel = onboardingAuthViewModel(appContainer)
     val seniorViewModel = seniorOnboardingViewModel(appContainer)
+    androidx.compose.runtime.DisposableEffect(seniorViewModel) {
+        onDispose { seniorViewModel.cancelPendingRequest() }
+    }
     val uiState by seniorViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(seniorViewModel, seniorId) {
@@ -74,6 +77,9 @@ fun ParentInfoInputRoute(
 ) {
     val authViewModel = onboardingAuthViewModel(appContainer)
     val seniorViewModel = seniorOnboardingViewModel(appContainer)
+    androidx.compose.runtime.DisposableEffect(seniorViewModel) {
+        onDispose { seniorViewModel.cancelPendingRequest() }
+    }
     val uiState by seniorViewModel.uiState.collectAsStateWithLifecycle()
 
     ParentInfoInputScreen(

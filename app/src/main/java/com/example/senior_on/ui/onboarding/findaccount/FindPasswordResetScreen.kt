@@ -39,7 +39,7 @@ fun FindPasswordResetScreen(
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var isPasswordConfirmVisible by rememberSaveable { mutableStateOf(false) }
     var showSuccessDialog by rememberSaveable { mutableStateOf(false) }
-    var isSubmitting by rememberSaveable { mutableStateOf(false) }
+    var isSubmitting by androidx.compose.runtime.remember { mutableStateOf(false) }
 
     val isPasswordValid = password.isEmpty() || isValidPassword(password)
     val isPasswordConfirmValid = passwordConfirm.isEmpty() || password == passwordConfirm

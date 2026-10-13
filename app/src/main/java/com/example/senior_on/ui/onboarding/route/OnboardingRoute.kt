@@ -172,6 +172,8 @@ fun OnboardingRoute(
     var selectedHomeLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     val saveableStateHolder = rememberSaveableStateHolder()
     val authViewModel = onboardingAuthViewModel(appContainer)
+    val recoveryViewModel = accountRecoveryViewModel(appContainer)
+    val seniorViewModel = seniorOnboardingViewModel(appContainer)
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
     val reconnectionViewModel: com.example.senior_on.ui.onboarding.viewmodel.ParentReconnectionViewModel =
         androidx.lifecycle.viewmodel.compose.viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
@@ -190,6 +192,38 @@ fun OnboardingRoute(
         }
     }
 
+    fun resetRecovery() {
+        recoveryViewModel.resetFlow()
+        clearSavedRouteStates(setOf(SeniorOnRoute.FindAccount, SeniorOnRoute.FindIdResult,
+            SeniorOnRoute.FindPasswordVerify, SeniorOnRoute.FindPasswordReset))
+    }
+
+    fun startRecovery(tab: FindAccountTab) {
+        authViewModel.cancelPendingRequest()
+        resetRecovery()
+        findAccountInitialTab = tab
+        currentRoute = SeniorOnRoute.FindAccount
+    }
+
+    fun finishRecovery() {
+        resetRecovery()
+        currentRoute = SeniorOnRoute.Login
+    }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            authViewModel.cancelPendingRequest()
+            recoveryViewModel.cancelPendingRequest()
+            seniorViewModel.cancelPendingRequest()
+            reconnectionViewModel.cancelPendingRequest()
+            if (activity?.isChangingConfigurations != true) {
+                authViewModel.resetSignupFlow()
+                recoveryViewModel.resetFlow()
+                seniorViewModel.resetFlow()
+            }
+        }
+    }
+
     fun resetOnboardingDraft() {
         authViewModel.resetSignupFlow()
         clearSavedRouteStates(OnboardingDraftRoutes)
@@ -202,6 +236,8 @@ fun OnboardingRoute(
     }
 
     fun returnToLoginFromPostLogin(forceClearSession: Boolean = false) {
+        authViewModel.cancelPendingRequest()
+        seniorViewModel.resetFlow()
         if (forceClearSession || !keepPostLoginSession) {
             authViewModel.clearSession()
         }
@@ -336,9 +372,27 @@ fun OnboardingRoute(
         currentRoute = SeniorOnRoute.ParentInfoInput
     }
 
+    fun selectMode(mode: AppUserMode) {
+        authViewModel.cancelPendingRequest()
+        if (selectedUserMode != mode) {
+            resetOnboardingDraft()
+            resetRecovery()
+            clearSavedRouteStates(setOf(SeniorOnRoute.Login))
+        }
+        selectedUserMode = mode
+        currentRoute = SeniorOnRoute.Login
+    }
+
     fun navigateBackInOnboarding() {
         val previous = onboardingPreviousRoute(currentRoute, authViewModel.hasPendingSocialSignup())
             ?: return
+        authViewModel.cancelPendingRequest()
+        recoveryViewModel.cancelPendingRequest()
+        if (currentRoute == SeniorOnRoute.FindAccount) resetRecovery()
+        if (currentRoute == SeniorOnRoute.Login) {
+            clearSavedRouteStates(setOf(SeniorOnRoute.Login))
+            resetRecovery()
+        }
         if (currentRoute == SeniorOnRoute.Signup) resetOnboardingDraft()
         if (currentRoute == SeniorOnRoute.FindPasswordVerify) {
             findAccountInitialTab = FindAccountTab.Password
@@ -356,6 +410,7 @@ fun OnboardingRoute(
     }
 
     BackHandler(enabled = currentRoute == SeniorOnRoute.CaregiverRelationshipInput) {
+        seniorViewModel.cancelPendingRequest()
         if (relationshipBackRoute == SeniorOnRoute.Login) {
             handlePostLoginRootBack()
         } else {
@@ -364,6 +419,7 @@ fun OnboardingRoute(
     }
 
     BackHandler(enabled = currentRoute == SeniorOnRoute.ParentInfoInput) {
+        seniorViewModel.cancelPendingRequest()
         if (parentInfoBackRoute == SeniorOnRoute.Login) {
             handlePostLoginRootBack()
         } else {
@@ -410,12 +466,10 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.ModeSelection -> ModeSelectionRoute(
                 onChildClick = {
-                    selectedUserMode = AppUserMode.Child
-                    currentRoute = SeniorOnRoute.Login
+                    selectMode(AppUserMode.Child)
                 },
                 onSeniorClick = {
-                    selectedUserMode = AppUserMode.Senior
-                    currentRoute = SeniorOnRoute.Login
+                    selectMode(AppUserMode.Senior)
                 }
             )
             SeniorOnRoute.Login -> LoginRoute(
@@ -430,12 +484,10 @@ fun OnboardingRoute(
                 },
                 onBackClick = ::navigateBackInOnboarding,
                 onFindIdClick = {
-                    findAccountInitialTab = FindAccountTab.Id
-                    currentRoute = SeniorOnRoute.FindAccount
+                    startRecovery(FindAccountTab.Id)
                 },
                 onFindPasswordClick = {
-                    findAccountInitialTab = FindAccountTab.Password
-                    currentRoute = SeniorOnRoute.FindAccount
+                    startRecovery(FindAccountTab.Password)
                 },
                 onSignUpClick = {
                     resetOnboardingDraft()
@@ -451,19 +503,21 @@ fun OnboardingRoute(
                 initialTab = findAccountInitialTab,
                 onBackClick = ::navigateBackInOnboarding,
                 onFindIdResult = {
+                    findAccountInitialTab = FindAccountTab.Id
                     currentRoute = SeniorOnRoute.FindIdResult
                 },
                 onPasswordVerification = {
+                    findAccountInitialTab = FindAccountTab.Password
+                    clearSavedRouteStates(setOf(SeniorOnRoute.FindPasswordVerify, SeniorOnRoute.FindPasswordReset))
                     currentRoute = SeniorOnRoute.FindPasswordVerify
                 }
             )
             SeniorOnRoute.FindIdResult -> FindIdResultRoute(
                 appContainer = appContainer,
                 onBackClick = ::navigateBackInOnboarding,
-                onLoginClick = { currentRoute = SeniorOnRoute.Login },
+                onLoginClick = ::finishRecovery,
                 onFindPasswordClick = {
-                    findAccountInitialTab = FindAccountTab.Password
-                    currentRoute = SeniorOnRoute.FindAccount
+                    startRecovery(FindAccountTab.Password)
                 }
             )
             SeniorOnRoute.FindPasswordVerify -> FindPasswordVerifyRoute(
@@ -471,6 +525,8 @@ fun OnboardingRoute(
                 onBackClick = ::navigateBackInOnboarding,
                 onVerifySuccess = { currentRoute = SeniorOnRoute.FindPasswordReset },
                 onTabSelected = { tab ->
+                    recoveryViewModel.resetFlow()
+                    clearSavedRouteStates(setOf(SeniorOnRoute.FindPasswordVerify, SeniorOnRoute.FindPasswordReset))
                     findAccountInitialTab = tab
                     currentRoute = SeniorOnRoute.FindAccount
                 }
@@ -478,7 +534,7 @@ fun OnboardingRoute(
             SeniorOnRoute.FindPasswordReset -> FindPasswordResetRoute(
                 appContainer = appContainer,
                 onBackClick = ::navigateBackInOnboarding,
-                onLoginClick = { currentRoute = SeniorOnRoute.Login }
+                onLoginClick = ::finishRecovery
             )
             SeniorOnRoute.Signup -> SignupEntryRoute(
                 appContainer = appContainer,
@@ -506,6 +562,7 @@ fun OnboardingRoute(
                 onBackClick = ::navigateBackInOnboarding,
                 onReselectClick = {
                     resetOnboardingDraft()
+                    clearSavedRouteStates(setOf(SeniorOnRoute.Login))
                     currentRoute = SeniorOnRoute.ModeSelection
                 },
                 onContinueClick = { currentRoute = SeniorOnRoute.SignupNameBirth }

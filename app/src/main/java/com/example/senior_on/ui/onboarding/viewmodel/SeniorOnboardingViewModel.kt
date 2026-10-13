@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.net.SocketTimeoutException
 import java.time.LocalDate
 
@@ -38,6 +41,18 @@ class SeniorOnboardingViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SeniorOnboardingUiState())
     val uiState: StateFlow<SeniorOnboardingUiState> = _uiState.asStateFlow()
+    private var requestJob: Job? = null
+
+    fun resetFlow() {
+        cancelPendingRequest()
+        _uiState.value = SeniorOnboardingUiState()
+    }
+
+    fun cancelPendingRequest() {
+        requestJob?.cancel()
+        requestJob = null
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
 
     init {
         viewModelScope.launch {
@@ -52,6 +67,7 @@ class SeniorOnboardingViewModel(
 
         launchRequest(onFailure = {}) {
             val senior = seniorRepository.getManagedSeniors().firstOrNull()
+            currentCoroutineContext().ensureActive()
             val seniorId = requireNotNull(senior?.seniorId) {
                 "연결된 시니어 정보를 찾을 수 없습니다."
             }
@@ -63,7 +79,10 @@ class SeniorOnboardingViewModel(
     }
 
     fun setConnectedSenior(seniorId: Long) {
-        _uiState.value = _uiState.value.copy(connectedSeniorId = seniorId)
+        if (_uiState.value.connectedSeniorId != seniorId) {
+            resetFlow()
+            _uiState.value = _uiState.value.copy(connectedSeniorId = seniorId)
+        }
     }
 
     fun createSenior(
@@ -93,6 +112,7 @@ class SeniorOnboardingViewModel(
                 },
             )
             // The server-issued ID is the only valid identity for a registered senior.
+            currentCoroutineContext().ensureActive()
             // Local cache failures must not turn a completed server registration into
             // a retry that can create a duplicate senior.
             runCatching {
@@ -100,6 +120,7 @@ class SeniorOnboardingViewModel(
                     result.toParentInfo(registration)
                 )
             }
+            currentCoroutineContext().ensureActive()
             _uiState.value = _uiState.value.copy(registeredSenior = result)
             onResult(result)
         }
@@ -135,6 +156,7 @@ class SeniorOnboardingViewModel(
                 relationship = relationship
             )
             // The server response is the source of truth for onboarding completion.
+            currentCoroutineContext().ensureActive()
             // A best-effort local cache write must not turn a successful API request
             // into a failed onboarding result.
             runCatching {
@@ -143,6 +165,7 @@ class SeniorOnboardingViewModel(
                     relationship = relationship
                 )
             }
+            currentCoroutineContext().ensureActive()
             onResult(result)
         }
     }
@@ -151,16 +174,20 @@ class SeniorOnboardingViewModel(
         onFailure: () -> Unit,
         request: suspend () -> Unit
     ) {
-        viewModelScope.launch {
+        cancelPendingRequest()
+        requestJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null
             )
             runCatching { request() }
                 .onSuccess {
+                    currentCoroutineContext().ensureActive()
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }
                 .onFailure { throwable ->
+                    currentCoroutineContext().ensureActive()
+                    if (throwable is CancellationException) throw throwable
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = throwable.message

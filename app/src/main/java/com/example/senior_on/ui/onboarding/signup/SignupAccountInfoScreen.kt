@@ -58,7 +58,7 @@ fun SignupAccountInfoScreen(
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var isPasswordConfirmVisible by rememberSaveable { mutableStateOf(false) }
     var idCheckState by rememberSaveable { mutableStateOf(IdCheckState.Idle) }
-    var isCheckingId by rememberSaveable { mutableStateOf(false) }
+    var isCheckingId by androidx.compose.runtime.remember { mutableStateOf(false) }
 
     val isPasswordValid = password.isEmpty() || isValidPassword(password)
     val isPasswordConfirmValid = passwordConfirm.isEmpty() || password == passwordConfirm
