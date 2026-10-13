@@ -40,6 +40,9 @@ data class MedicationUiState(
     val todayMedications: List<TodayMedicationUiState> = emptyList(),
     val hasLoadedSelectedDate: Boolean = false,
     val medicationMarkedDates: Set<LocalDate> = emptySet(),
+    val calendarMarkedDates: Set<LocalDate> = emptySet(),
+    val calendarLoading: Boolean = false,
+    val calendarError: String? = null,
     val editorMode: MedicationEditorMode? = null,
     val editingMedication: RegisteredMedicationUiState? = null,
     val addMedicationStartDate: LocalDate? = null,
@@ -60,10 +63,34 @@ class MedicationViewModel(
 
     private var fullLoadJob: Job? = null
     private var scheduleLoadJob: Job? = null
+    private var calendarJob: Job? = null
+    private var calendarRequest = 0
     private var hasEnteredScreen = false
 
     init {
         loadMedicationData()
+    }
+
+    fun loadCalendarMonth(month: YearMonth) {
+        val request = ++calendarRequest
+        calendarJob?.cancel()
+        _uiState.update { it.copy(calendarLoading = true, calendarError = null, calendarMarkedDates = emptySet()) }
+        calendarJob = viewModelScope.launch {
+            try {
+                val dates = medicationRepository.getParentMonthlySchedules(
+                    parentId = requireSeniorId(), year = month.year, month = month.monthValue,
+                ).scheduledDates
+                if (request == calendarRequest) {
+                    _uiState.update { it.copy(calendarLoading = false, calendarMarkedDates = dates) }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (request == calendarRequest) {
+                    _uiState.update { it.copy(calendarLoading = false, calendarError = "일정 표시 재시도") }
+                }
+            }
+        }
     }
 
     fun selectDate(date: LocalDate) {

@@ -154,6 +154,7 @@ fun HealthMainRoute(
         }
     }
 
+
     when {
         selectedSection == HealthSection.Health && medicationUiState.editorMode != null -> {
             MedicationEditorRoute(
@@ -189,6 +190,7 @@ fun HealthMainRoute(
                 hospitalViewModel.closeEditor()
             },
             onMedicationDateSelected = medicationViewModel::selectDate,
+            onMedicationMonthSelected = medicationViewModel::loadCalendarMonth,
             onAddTodayMedicationClick = medicationViewModel::openAddTodayMedication,
             onAddRegisteredMedicationClick = medicationViewModel::openAddMedication,
             onMedicationClick = medicationViewModel::openMedication,

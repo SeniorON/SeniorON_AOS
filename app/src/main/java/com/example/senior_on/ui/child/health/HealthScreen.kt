@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +38,18 @@ fun HealthScreen(
     onAddRegisteredMedicationClick: () -> Unit = {},
     onRegisteredMedicationClick: (RegisteredMedicationUiState) -> Unit = {},
     scheduleMessage: String? = null,
+    onCalendarMonthChange: (YearMonth) -> Unit = {},
+    calendarLoading: Boolean = false,
+    calendarError: String? = null,
 ) {
     var showCalendar by rememberSaveable { mutableStateOf(false) }
-    val displayedMonth = remember(selectedDate) { YearMonth.from(selectedDate) }
+    var displayedMonthText by rememberSaveable(selectedDate) {
+        mutableStateOf(YearMonth.from(selectedDate).toString())
+    }
+    val displayedMonth = YearMonth.parse(displayedMonthText)
+    LaunchedEffect(showCalendar, displayedMonth) {
+        if (showCalendar) onCalendarMonthChange(displayedMonth)
+    }
     val activeRegisteredMedications = remember(registeredMedications, selectedDate) {
         registeredMedications.filter { medication ->
             medication.isActiveOn(selectedDate)
@@ -92,33 +102,34 @@ fun HealthScreen(
 
             HealthCalendarCard(
                 displayedMonth = displayedMonth,
-                selectedDay = selectedDate.dayOfMonth,
+                selectedDay = selectedDate.dayOfMonth.takeIf { YearMonth.from(selectedDate) == displayedMonth },
                 markedDates = medicationMarkedDates,
                 onDayClick = { day ->
                     onSelectedDateChange(displayedMonth.atDay(day))
                     showCalendar = false
                 },
                 onPreviousMonthClick = {
-                    val movedMonth = displayedMonth.minusMonths(1)
-                    onSelectedDateChange(
-                        movedMonth.atDay(
-                            selectedDate.dayOfMonth.coerceAtMost(movedMonth.lengthOfMonth())
-                        )
-                    )
+                    displayedMonthText = displayedMonth.minusMonths(1).toString()
                 },
                 onNextMonthClick = {
-                    val movedMonth = displayedMonth.plusMonths(1)
-                    onSelectedDateChange(
-                        movedMonth.atDay(
-                            selectedDate.dayOfMonth.coerceAtMost(movedMonth.lengthOfMonth())
-                        )
-                    )
+                    displayedMonthText = displayedMonth.plusMonths(1).toString()
                 },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = HealthCalendarCardTopOffset)
                     .zIndex(2f)
             )
+            if (calendarLoading || calendarError != null) {
+                androidx.compose.material3.Text(
+                    text = if (calendarLoading) "일정 표시를 불러오는 중이에요" else calendarError.orEmpty(),
+                    style = com.example.senior_on.ui.theme.SeniorOnTextStyles.BodySRegular,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                        .padding(top = HealthCalendarCardTopOffset + HealthCalendarCardHeight)
+                        .zIndex(2f)
+                        .background(SeniorOnColors.SupportWhite100)
+                        .clickable(enabled = !calendarLoading) { onCalendarMonthChange(displayedMonth) },
+                )
+            }
         }
     }
 }

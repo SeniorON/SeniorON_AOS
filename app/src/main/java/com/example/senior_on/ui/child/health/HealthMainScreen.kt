@@ -34,6 +34,7 @@ fun HealthMainScreen(
     hospitalUiState: HospitalUiState = HospitalUiState(),
     onSectionClick: (HealthSection) -> Unit = {},
     onMedicationDateSelected: (LocalDate) -> Unit = {},
+    onMedicationMonthSelected: (YearMonth) -> Unit = {},
     onAddTodayMedicationClick: () -> Unit = {},
     onAddRegisteredMedicationClick: () -> Unit = {},
     onMedicationClick: (RegisteredMedicationUiState) -> Unit = {},
@@ -73,7 +74,7 @@ fun HealthMainScreen(
             error = if (medicationSelected) medicationUiState.queryError else hospitalUiState.queryError,
             loading = if (medicationSelected) medicationUiState.isLoading || medicationUiState.isRefreshing
                 else hospitalUiState.isLoading || hospitalUiState.isRefreshing,
-            hasContent = if (medicationSelected) medicationUiState.hasLoadedContent && medicationUiState.hasLoadedSelectedDate
+            hasContent = if (medicationSelected) medicationUiState.hasLoadedContent
                 else hospitalUiState.hasLoadedContent && hospitalUiState.hasLoadedSelectedDate,
             onRetry = if (medicationSelected) onMedicationRetry else onHospitalRetry,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -92,7 +93,10 @@ fun HealthMainScreen(
                         else if (medicationUiState.queryError != null)
                             "복약 정보를 불러오지 못했어요. 당겨서 다시 시도해 주세요."
                         else "복약 정보를 불러오는 중이에요",
-                    medicationMarkedDates = medicationUiState.medicationMarkedDates,
+                    medicationMarkedDates = medicationUiState.calendarMarkedDates,
+                    onCalendarMonthChange = onMedicationMonthSelected,
+                    calendarLoading = medicationUiState.calendarLoading,
+                    calendarError = medicationUiState.calendarError,
                     selectedDate = medicationUiState.selectedDate,
                     modifier = Modifier.fillMaxSize(),
                     onSelectedDateChange = onMedicationDateSelected,

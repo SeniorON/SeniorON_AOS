@@ -276,7 +276,7 @@ private fun HealthDateNavigator(
     onNextDayClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().calendarSwipe("day", onPreviousDayClick, onNextDayClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -309,12 +309,12 @@ private fun HealthDateNavigator(
 @Composable
 internal fun HealthCalendarCard(
     displayedMonth: YearMonth,
-    selectedDay: Int,
+    selectedDay: Int?,
     markedDates: Set<LocalDate>,
     onDayClick: (Int) -> Unit,
     onPreviousMonthClick: () -> Unit,
     onNextMonthClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Large)
 
