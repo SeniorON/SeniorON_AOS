@@ -45,7 +45,7 @@ import com.example.senior_on.ui.onboarding.route.SignupNameBirthRoute
 import com.example.senior_on.ui.onboarding.route.SignupTermsRoute
 import com.example.senior_on.ui.onboarding.route.SplashRoute
 
-private enum class SeniorOnRoute {
+internal enum class SeniorOnRoute {
     ParentConnectionChecking,
     ParentReconnection,
     Splash,
@@ -68,6 +68,30 @@ private enum class SeniorOnRoute {
     ParentInfoInput,
     AddressSearch,
     OnboardingStatusError,
+}
+
+// Routes with session cleanup or their own back handler are handled separately.
+internal fun onboardingPreviousRoute(
+    route: SeniorOnRoute,
+    isSocialSignup: Boolean,
+): SeniorOnRoute? = when (route) {
+    SeniorOnRoute.Login -> SeniorOnRoute.ModeSelection
+    SeniorOnRoute.Signup, SeniorOnRoute.FindAccount -> SeniorOnRoute.Login
+    SeniorOnRoute.SignupModeGuide -> SeniorOnRoute.Signup
+    SeniorOnRoute.SignupNameBirth -> SeniorOnRoute.SignupModeGuide
+    SeniorOnRoute.SignupEmailVerification -> SeniorOnRoute.SignupNameBirth
+    SeniorOnRoute.SignupAccountInfo -> SeniorOnRoute.SignupEmailVerification
+    SeniorOnRoute.SignupTermsAgreement -> if (isSocialSignup) {
+        SeniorOnRoute.SignupNameBirth
+    } else SeniorOnRoute.SignupAccountInfo
+    SeniorOnRoute.FindIdResult, SeniorOnRoute.FindPasswordVerify -> SeniorOnRoute.FindAccount
+    SeniorOnRoute.FindPasswordReset -> SeniorOnRoute.FindPasswordVerify
+    SeniorOnRoute.FamilyShareCodeInput, SeniorOnRoute.FamilyShareCodeCreated -> SeniorOnRoute.FamilyShareCode
+    SeniorOnRoute.Splash, SeniorOnRoute.ModeSelection,
+    SeniorOnRoute.ParentConnectionChecking, SeniorOnRoute.ParentReconnection,
+    SeniorOnRoute.FamilyShareCode, SeniorOnRoute.CaregiverRelationshipInput,
+    SeniorOnRoute.ParentInfoInput, SeniorOnRoute.AddressSearch,
+    SeniorOnRoute.OnboardingStatusError -> null
 }
 
 internal enum class PostLoginDestination {
@@ -312,6 +336,21 @@ fun OnboardingRoute(
         currentRoute = SeniorOnRoute.ParentInfoInput
     }
 
+    fun navigateBackInOnboarding() {
+        val previous = onboardingPreviousRoute(currentRoute, authViewModel.hasPendingSocialSignup())
+            ?: return
+        if (currentRoute == SeniorOnRoute.Signup) resetOnboardingDraft()
+        if (currentRoute == SeniorOnRoute.FindPasswordVerify) {
+            findAccountInitialTab = FindAccountTab.Password
+        }
+        currentRoute = previous
+    }
+
+    BackHandler(
+        enabled = onboardingPreviousRoute(currentRoute, authViewModel.hasPendingSocialSignup()) != null,
+        onBack = ::navigateBackInOnboarding,
+    )
+
     BackHandler(enabled = currentRoute == SeniorOnRoute.AddressSearch) {
         navigateBackFromAddressSearch()
     }
@@ -389,7 +428,7 @@ fun OnboardingRoute(
                     )
                     resolveOnboardingStatus(selectedUserMode, userId)
                 },
-                onBackClick = { currentRoute = SeniorOnRoute.ModeSelection },
+                onBackClick = ::navigateBackInOnboarding,
                 onFindIdClick = {
                     findAccountInitialTab = FindAccountTab.Id
                     currentRoute = SeniorOnRoute.FindAccount
@@ -410,7 +449,7 @@ fun OnboardingRoute(
             SeniorOnRoute.FindAccount -> FindAccountRoute(
                 appContainer = appContainer,
                 initialTab = findAccountInitialTab,
-                onBackClick = { currentRoute = SeniorOnRoute.Login },
+                onBackClick = ::navigateBackInOnboarding,
                 onFindIdResult = {
                     currentRoute = SeniorOnRoute.FindIdResult
                 },
@@ -420,7 +459,7 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.FindIdResult -> FindIdResultRoute(
                 appContainer = appContainer,
-                onBackClick = { currentRoute = SeniorOnRoute.FindAccount },
+                onBackClick = ::navigateBackInOnboarding,
                 onLoginClick = { currentRoute = SeniorOnRoute.Login },
                 onFindPasswordClick = {
                     findAccountInitialTab = FindAccountTab.Password
@@ -429,10 +468,7 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.FindPasswordVerify -> FindPasswordVerifyRoute(
                 appContainer = appContainer,
-                onBackClick = {
-                    findAccountInitialTab = FindAccountTab.Password
-                    currentRoute = SeniorOnRoute.FindAccount
-                },
+                onBackClick = ::navigateBackInOnboarding,
                 onVerifySuccess = { currentRoute = SeniorOnRoute.FindPasswordReset },
                 onTabSelected = { tab ->
                     findAccountInitialTab = tab
@@ -441,16 +477,13 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.FindPasswordReset -> FindPasswordResetRoute(
                 appContainer = appContainer,
-                onBackClick = { currentRoute = SeniorOnRoute.FindPasswordVerify },
+                onBackClick = ::navigateBackInOnboarding,
                 onLoginClick = { currentRoute = SeniorOnRoute.Login }
             )
             SeniorOnRoute.Signup -> SignupEntryRoute(
                 appContainer = appContainer,
                 selectedMode = selectedUserMode,
-                onBackClick = {
-                    resetOnboardingDraft()
-                    currentRoute = SeniorOnRoute.Login
-                },
+                onBackClick = ::navigateBackInOnboarding,
                 onEmailClick = {
                     resetOnboardingDraft()
                     currentRoute = SeniorOnRoute.SignupModeGuide
@@ -470,7 +503,7 @@ fun OnboardingRoute(
                 },
             )
             SeniorOnRoute.SignupModeGuide -> SignupModeGuideRoute(
-                onBackClick = { currentRoute = SeniorOnRoute.Signup },
+                onBackClick = ::navigateBackInOnboarding,
                 onReselectClick = {
                     resetOnboardingDraft()
                     currentRoute = SeniorOnRoute.ModeSelection
@@ -479,7 +512,7 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.SignupNameBirth -> SignupNameBirthRoute(
                 appContainer = appContainer,
-                onBackClick = { currentRoute = SeniorOnRoute.SignupModeGuide },
+                onBackClick = ::navigateBackInOnboarding,
                 onNextClick = { isSocialSignup ->
                     currentRoute = if (isSocialSignup) {
                         SeniorOnRoute.SignupTermsAgreement
@@ -490,14 +523,14 @@ fun OnboardingRoute(
             )
             SeniorOnRoute.SignupEmailVerification -> SignupEmailVerificationRoute(
                 appContainer = appContainer,
-                onBackClick = { currentRoute = SeniorOnRoute.SignupNameBirth },
+                onBackClick = ::navigateBackInOnboarding,
                 onNextClick = {
                     currentRoute = SeniorOnRoute.SignupAccountInfo
                 }
             )
             SeniorOnRoute.SignupAccountInfo -> SignupAccountInfoRoute(
                 appContainer = appContainer,
-                onBackClick = { currentRoute = SeniorOnRoute.SignupEmailVerification },
+                onBackClick = ::navigateBackInOnboarding,
                 onNextClick = {
                     currentRoute = SeniorOnRoute.SignupTermsAgreement
                 }
@@ -505,13 +538,7 @@ fun OnboardingRoute(
             SeniorOnRoute.SignupTermsAgreement -> SignupTermsRoute(
                 appContainer = appContainer,
                 selectedMode = selectedUserMode,
-                onBackClick = { isSocialSignup ->
-                    currentRoute = if (isSocialSignup) {
-                        SeniorOnRoute.SignupNameBirth
-                    } else {
-                        SeniorOnRoute.SignupAccountInfo
-                    }
-                },
+                onBackClick = { navigateBackInOnboarding() },
                 onSignupSuccess = {
                     clearSavedRouteStates(SignupStateRoutes)
                     authenticatedUserId = ""
@@ -538,7 +565,7 @@ fun OnboardingRoute(
             SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputRoute(
                 appContainer = appContainer,
                 userId = authenticatedUserId,
-                onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
+                onBackClick = ::navigateBackInOnboarding,
                 onJoinSuccess = { resolveAfterFamilyJoin() }
             )
             SeniorOnRoute.CaregiverRelationshipInput -> CaregiverRelationshipRoute(
@@ -557,7 +584,7 @@ fun OnboardingRoute(
             SeniorOnRoute.FamilyShareCodeCreated -> FamilyShareCodeCreatedRoute(
                 appContainer = appContainer,
                 userId = authenticatedUserId,
-                onBackClick = { currentRoute = SeniorOnRoute.FamilyShareCode },
+                onBackClick = ::navigateBackInOnboarding,
                 onNextClick = { familyId ->
                     createdFamilyId = familyId
                     parentInfoBackRoute = SeniorOnRoute.FamilyShareCodeCreated
