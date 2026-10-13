@@ -161,6 +161,7 @@ fun ChildMainScreen(
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
+    var tabReselectionToken by remember { mutableStateOf(0) }
     LaunchedEffect(notificationNavigationEvent) {
         notificationNavigationEvent?.let { event ->
             if (event.isMedicationNotification || event.isHospitalNotification) {
@@ -447,6 +448,7 @@ fun ChildMainScreen(
                 familyPhotoUploadViewModel = familyPhotoUploadViewModel,
                 seniorConnectionViewModel = seniorConnectionViewModel,
                 activeSeniorId = activeSeniorId,
+                tabReselectionToken = tabReselectionToken,
                 familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
                 settingsSessionKey = childSessionViewModelKey,
                 displayViewModel = displayViewModel,
@@ -563,6 +565,7 @@ fun ChildMainScreen(
                 enabled = childMainNavigationEnabled,
                 onTabClick = { tab ->
                     if (childMainNavigationEnabled) {
+                        if (selectedTab == tab) tabReselectionToken++
                         val isScreenTabReentry =
                             tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
                         selectedTab = tab
@@ -616,6 +619,7 @@ private fun ChildMainTabContent(
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     seniorConnectionViewModel: SeniorConnectionViewModel,
     activeSeniorId: Long?,
+    tabReselectionToken: Int,
     familyInvitationViewModelKey: String,
     settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
@@ -665,6 +669,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Screen) {
         DisplayTabRoute(
+            tabReselectionToken = tabReselectionToken,
             viewModel = displayViewModel,
             isDisconnectingRelationship = isDisconnectingRelationship,
             onDisconnectRelationship = onDisconnectRelationship,
@@ -692,6 +697,7 @@ private fun ChildMainTabContent(
             hospitalSpecialtyRepository != null
         ) {
             HealthMainRoute(
+                tabReselectionToken = tabReselectionToken,
                 seniorId = selectedSeniorId,
                 sessionKey = settingsSessionKey,
                 medicationRepository = medicationRepository,
@@ -833,6 +839,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Notification) {
         NotificationRoute(
+            tabReselectionToken = tabReselectionToken,
             repository = notificationRepository,
             seniorId = selectedSeniorId,
             sessionKey = settingsSessionKey,
@@ -849,6 +856,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            tabReselectionToken = tabReselectionToken,
             sessionKey = settingsSessionKey,
             isDisconnectingRelationship = isDisconnectingRelationship,
             onDisconnectRelationship = onDisconnectRelationship,

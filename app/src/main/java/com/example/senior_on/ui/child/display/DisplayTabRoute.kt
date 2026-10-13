@@ -46,6 +46,7 @@ private enum class DisplayDestination {
 
 @Composable
 fun DisplayTabRoute(
+    tabReselectionToken: Int = 0,
     viewModel: DisplayViewModel,
     addressSearchViewModel: AddressSearchViewModel,
     modifier: Modifier = Modifier,
@@ -90,6 +91,18 @@ fun DisplayTabRoute(
         mutableStateOf<SeniorHomeButtonType?>(null)
     }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
+    com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
+        if (!uiState.isSaving && !isDisconnectingRelationship &&
+            (destination != DisplayDestination.Overview || showLargePreview)) {
+            destination = DisplayDestination.Overview
+            showLargePreview = false
+            pendingAppNameInput = null
+            buttonEditDraftItems = emptyList()
+            buttonAddEntryItems = emptyList()
+            transientImportedButtons = emptyList()
+            viewModel.refreshOnScreenTabReentry()
+        }
+    }
 
     fun importButton(button: DisplayHomeButton) {
         val importedMusicButton = button.importedMusicButtonTypeOrNull()

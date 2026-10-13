@@ -46,6 +46,7 @@ private enum class NotificationDestination {
 
 @Composable
 fun NotificationRoute(
+    tabReselectionToken: Int = 0,
     repository: NotificationRepository,
     seniorId: Long? = null,
     sessionKey: String = "",
@@ -105,6 +106,15 @@ fun NotificationRoute(
                         NotificationDestination.InactivitySetting -> Unit
                     }
                 }
+        }
+    }
+
+    com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
+        if (destination != NotificationDestination.Home && !uiState.isInactivitySettingSaving) {
+            destination = NotificationDestination.Home
+            selectedCategory = null
+            selectedMessage = null
+            viewModel.loadLatestHome()
         }
     }
 

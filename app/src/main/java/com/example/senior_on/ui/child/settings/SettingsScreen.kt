@@ -145,6 +145,7 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    tabReselectionToken: Int = 0,
     sessionKey: String,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
@@ -294,6 +295,16 @@ fun SettingsTabRoute(
     var profileName by rememberSaveable(sessionKey) { mutableStateOf("") }
     var profileAccountType by rememberSaveable(sessionKey) { mutableStateOf("계정") }
     var profileEmail by rememberSaveable(sessionKey) { mutableStateOf("") }
+    var childFormBusy by remember(destination) { mutableStateOf(false) }
+    com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
+        if (destination != SettingsDestination.Main && !profileImageUiState.isUploading &&
+            !settingsUiState.isLoggingOut && !settingsUiState.isWithdrawing &&
+            !displayUiState.isSaving && !isDisconnectingRelationship && !childFormBusy) {
+            destination = SettingsDestination.Main
+            focusManager.clearFocus()
+            profileImageViewModel.loadSettingsProfile()
+        }
+    }
 
     LaunchedEffect(profileImageUiState.profileName) {
         profileImageUiState.profileName?.let { serverName ->
@@ -412,6 +423,7 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.ChangeName -> ChangeNameRoute(
+            onBusyChanged = { childFormBusy = it },
             userSettingsRepository = userSettingsRepository,
             onBackClick = navigateBack,
             onNameChanged = { newName ->
@@ -422,6 +434,7 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.ChangePassword -> ChangePasswordRoute(
+            onBusyChanged = { childFormBusy = it },
             userSettingsRepository = userSettingsRepository,
             onBackClick = navigateBack,
             onPasswordChanged = {
@@ -569,6 +582,7 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryRoute(
+            onBusyChanged = { childFormBusy = it },
             inquiryRepository = inquiryRepository,
             onBackClick = navigateBack,
             modifier = Modifier.fillMaxSize()

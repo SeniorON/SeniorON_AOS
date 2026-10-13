@@ -39,6 +39,7 @@ import java.time.LocalDate
 
 @Composable
 fun HealthMainRoute(
+    tabReselectionToken: Int = 0,
     seniorId: Long? = null,
     sessionKey: String = "",
     medicationRepository: MedicationRepository,
@@ -154,6 +155,17 @@ fun HealthMainRoute(
         }
     }
 
+    com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
+        if (!medicationUiState.isSaving && !hospitalUiState.isSaving &&
+            (medicationUiState.editorMode != null || hospitalUiState.editorMode != null || appointmentToDelete != null)) {
+            medicationViewModel.backFromMedicationEditor()
+            hospitalViewModel.closeEditor()
+            appointmentToDelete = null
+            pendingHospitalId = null
+            if (selectedSection == HealthSection.Health) medicationViewModel.loadLatestMedicationData()
+            else hospitalViewModel.loadLatestHospitalData()
+        }
+    }
 
     when {
         selectedSection == HealthSection.Health && medicationUiState.editorMode != null -> {
