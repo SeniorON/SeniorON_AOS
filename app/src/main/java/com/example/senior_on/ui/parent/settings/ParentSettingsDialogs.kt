@@ -123,7 +123,7 @@ private fun ParentInactivityConfirmationCardPreview() {
 @Composable
 private fun ParentDisconnectDialogPreview() {
     SENIOR_ONTheme {
-        ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {}, {})
+        ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {})
         ParentSettingsConfirmDialog(ParentSettingsConfirmation.Disconnect, {}, {})
     }
 }
@@ -132,7 +132,7 @@ private fun ParentDisconnectDialogPreview() {
 @Composable
 private fun ParentLogoutDialogPreview() {
     SENIOR_ONTheme {
-        ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {}, {})
+        ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {})
         ParentSettingsConfirmDialog(ParentSettingsConfirmation.Logout, {}, {})
     }
 }
@@ -141,7 +141,7 @@ private fun ParentLogoutDialogPreview() {
 @Composable
 private fun ParentWithdrawDialogPreview() {
     SENIOR_ONTheme {
-        ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {}, {})
+        ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {})
         ParentSettingsConfirmDialog(ParentSettingsConfirmation.Withdraw, {}, {})
     }
 }

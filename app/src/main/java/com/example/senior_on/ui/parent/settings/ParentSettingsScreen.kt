@@ -17,7 +17,6 @@ fun ParentSettingsScreen(
     onBackClick: () -> Unit,
     onNavigate: (ParentSettingsDestination) -> Unit,
     onConfirmAction: (ParentSettingsConfirmation) -> Unit,
-    onHelpClick: () -> Unit,
     modifier: Modifier = Modifier,
     previewOnly: Boolean = false,
     onPhotoClick: (() -> Unit)? = null,
@@ -34,7 +33,6 @@ fun ParentSettingsScreen(
             }
             Spacer(Modifier.height(16.dp))
             ParentSettingsSection("지원") {
-                ParentSettingsMenuRow("도움말", onHelpClick, isSectionItem = true)
                 ParentSettingsMenuRow("로그아웃", { onConfirmAction(ParentSettingsConfirmation.Logout) }, isSectionItem = true)
                 ParentSettingsMenuRow("탈퇴하기", { onConfirmAction(ParentSettingsConfirmation.Withdraw) }, textColor = SeniorOnColors.Red300, isSectionItem = true)
             }
@@ -46,5 +44,5 @@ fun ParentSettingsScreen(
 @Preview(widthDp = 360, heightDp = 800, showBackground = true)
 @Composable
 private fun ParentSettingsPreview() {
-    SENIOR_ONTheme { ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {}, {}) }
+    SENIOR_ONTheme { ParentSettingsScreen(ParentSettingsProfile("김순자", "Kim@email.com"), {}, {}, {}) }
 }
