@@ -152,7 +152,7 @@ fun FindPasswordVerifyScreen(
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         isError = verificationError != null,
-                        errorMessage = null,
+                        errorMessage = verificationError,
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -176,7 +176,6 @@ fun FindPasswordVerifyScreen(
                     )
                 }
 
-                verificationError?.let { Text(it, color = SeniorOnColors.Red300) }
                 if (requestUi.remainingRequestSeconds > 0) {
                     val seconds = requestUi.remainingRequestSeconds
                     Text(

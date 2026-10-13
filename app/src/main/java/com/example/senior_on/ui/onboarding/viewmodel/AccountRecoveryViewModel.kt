@@ -72,7 +72,7 @@ class AccountRecoveryViewModel(
         onResult: (FoundLoginId?) -> Unit
     ) {
         _uiState.value = _uiState.value.copy(foundLoginId = "", foundJoinDate = "", recoveryName = "")
-        launchRequest(onFailure = { onResult(null) }) {
+        launchRequest(onFailure = { onResult(null) }, errorText = { recoveryLookupErrorText(it, false) }) {
             val result = repository.findLoginId(name = name, email = email)
             currentCoroutineContext().ensureActive()
             _uiState.value = _uiState.value.copy(
@@ -113,7 +113,7 @@ class AccountRecoveryViewModel(
             requestLoginId = loginId.trim(), verificationId = null,
             passwordResetVerified = false, passwordResetComplete = false,
         )
-        launchRequest(onFailure = { onResult(false) }) {
+        launchRequest(onFailure = { onResult(false) }, errorText = { recoveryLookupErrorText(it, true) }) {
             val result = repository.sendPasswordResetVerificationCode(
                 name = name,
                 loginId = loginId
@@ -166,7 +166,7 @@ class AccountRecoveryViewModel(
         }
 
         _uiState.value = _uiState.value.copy(passwordResetVerified = false)
-        launchRequest(onFailure = { onResult(false) }) {
+        launchRequest(onFailure = { onResult(false) }, errorText = ::recoveryVerificationErrorText) {
             val verified = repository.verifyPasswordResetVerificationCode(
                 verificationId = verificationId,
                 verificationCode = verificationCode

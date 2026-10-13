@@ -74,7 +74,6 @@ fun FindAccountScreen(
             }
         },
         bottomBar = {
-            requestErrorMessage?.let { Text(it, color = SeniorOnColors.Red300) }
             when (selectedTab) {
                 FindAccountTab.Id -> {
                     Column {
@@ -94,7 +93,7 @@ fun FindAccountScreen(
                 FindAccountTab.Password -> {
                     Column {
                         FindAccountInfoBanner(
-                            text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
+                            text = "가입한 이메일로 인증번호를 보내드려요."
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -123,7 +122,7 @@ fun FindAccountScreen(
                 name = name,
                 onNameChange = { name = it; invalidateResult() },
                 email = email,
-                errorMessage = null,
+                errorMessage = requestErrorMessage,
                 onEmailChange = { email = it; invalidateResult() }
             )
             FindAccountTab.Password -> FindPasswordInputContent(
@@ -137,7 +136,7 @@ fun FindAccountScreen(
                     userId = it
                     invalidateResult()
                 },
-                errorMessage = null,
+                errorMessage = requestErrorMessage,
             )
         }
     }
