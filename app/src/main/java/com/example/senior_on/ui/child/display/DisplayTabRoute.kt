@@ -49,6 +49,7 @@ private enum class DisplayDestination {
 fun DisplayTabRoute(
     viewModel: DisplayViewModel,
     addressSearchViewModel: AddressSearchViewModel,
+    resetToOverviewEvent: Int = 0,
     modifier: Modifier = Modifier,
     onRefreshClick: () -> Unit = {},
     onInstallGuideClick: () -> Unit = {},
@@ -95,6 +96,26 @@ fun DisplayTabRoute(
         mutableStateOf<SeniorHomeButtonType?>(null)
     }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(resetToOverviewEvent) {
+        if (resetToOverviewEvent <= 0) return@LaunchedEffect
+        destination = DisplayDestination.Overview
+        selectedAddress = ""
+        selectedAddressLatitude = null
+        selectedAddressLongitude = null
+        showInternetRequiredDialog = false
+        showLargePreview = false
+        buttonEditDraftItems = emptyList()
+        buttonAddEntryItems = emptyList()
+        transientImportedButtons = emptyList()
+        pendingAppNameInput = null
+        showInstalledAppPicker = false
+        autoSelectKey = null
+        autoSelectMusicButton = null
+        DisplayDestination.entries
+            .filterNot { it == DisplayDestination.Overview }
+            .forEach { saveableStateHolder.removeState(it.name) }
+    }
 
     fun importButton(button: DisplayHomeButton) {
         val importedMusicButton = button.importedMusicButtonTypeOrNull()
