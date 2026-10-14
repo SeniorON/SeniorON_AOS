@@ -146,7 +146,6 @@ private data class SettingsMenuItem(
 @Composable
 fun SettingsTabRoute(
     sessionKey: String,
-    resetToMainEvent: Int = 0,
     parentInfo: ParentInfo?,
     connectedDevice: ConnectedSeniorDeviceUiState?,
     displayViewModel: DisplayViewModel,
@@ -299,15 +298,6 @@ fun SettingsTabRoute(
     var profileName by rememberSaveable(sessionKey) { mutableStateOf("") }
     var profileAccountType by rememberSaveable(sessionKey) { mutableStateOf("계정") }
     var profileEmail by rememberSaveable(sessionKey) { mutableStateOf("") }
-
-    LaunchedEffect(resetToMainEvent) {
-        if (resetToMainEvent <= 0) return@LaunchedEffect
-        destination = SettingsDestination.Main
-        connectionGuideReturnDestination = SettingsDestination.HelpInquiry
-        selectedParentAddress = ""
-        selectedParentAddressLatitude = null
-        selectedParentAddressLongitude = null
-    }
 
     LaunchedEffect(profileImageUiState.profileName) {
         profileImageUiState.profileName?.let { serverName ->

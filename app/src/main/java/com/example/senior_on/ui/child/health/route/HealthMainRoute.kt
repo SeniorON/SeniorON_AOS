@@ -41,7 +41,6 @@ import java.time.LocalDate
 fun HealthMainRoute(
     seniorId: Long? = null,
     sessionKey: String = "",
-    resetToMainEvent: Int = 0,
     medicationRepository: MedicationRepository,
     hospitalRepository: HospitalRepository,
     familyRepository: FamilyServerRepository,
@@ -79,16 +78,6 @@ fun HealthMainRoute(
     var pendingHospitalId by rememberSaveable(seniorId, sessionKey) { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    LaunchedEffect(resetToMainEvent) {
-        if (resetToMainEvent <= 0) return@LaunchedEffect
-        selectedSection = HealthSection.Health
-        appointmentToDelete = null
-        pendingHospitalId = null
-        medicationViewModel.backFromMedicationEditor()
-        hospitalViewModel.closeEditor()
-    }
-
     LaunchedEffect(seniorId, sessionKey, medicationViewModel, lifecycleOwner) {
         val selectedSeniorId = seniorId?.takeIf { it > 0 } ?: return@LaunchedEffect
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {

@@ -159,7 +159,7 @@ fun ChildMainScreen(
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
-    var tabRootResetEvent by rememberSaveable { mutableIntStateOf(0) }
+    var screenRootResetEvent by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(notificationNavigationEvent) {
         notificationNavigationEvent?.let { event ->
             if (event.isMedicationNotification || event.isHospitalNotification) {
@@ -382,7 +382,7 @@ fun ChildMainScreen(
         } else {
             ChildMainTabContent(
                 selectedTab = selectedTab,
-                tabRootResetEvent = tabRootResetEvent,
+                screenRootResetEvent = screenRootResetEvent,
                 familyDestination = familyDestination,
                 selectedPhotoId = selectedPhotoId,
                 selectedPhotoUri = selectedPhotoUri,
@@ -483,12 +483,11 @@ fun ChildMainScreen(
                     if (childMainNavigationEnabled) {
                         val isScreenTabReentry =
                             tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
-                        val tabSelection = resolveChildMainTabClick(
+                        screenRootResetEvent = resolveScreenRootResetEvent(
                             targetTab = tab,
-                            currentResetEvent = tabRootResetEvent,
+                            currentResetEvent = screenRootResetEvent,
                         )
-                        selectedTab = tabSelection.selectedTab
-                        tabRootResetEvent = tabSelection.rootResetEvent
+                        selectedTab = tab
                         if (isScreenTabReentry) {
                             displayViewModel.refreshOnScreenTabReentry()
                         }
@@ -528,23 +527,19 @@ internal fun resolveChildFamilyPhotoUploadSuccessDestination(
 internal fun isChildMainNavigationEnabled(isFamilyPhotoUploading: Boolean): Boolean =
     !isFamilyPhotoUploading
 
-internal data class ChildMainTabSelection(
-    val selectedTab: ChildMainTab,
-    val rootResetEvent: Int,
-)
-
-internal fun resolveChildMainTabClick(
+internal fun resolveScreenRootResetEvent(
     targetTab: ChildMainTab,
     currentResetEvent: Int,
-): ChildMainTabSelection = ChildMainTabSelection(
-    selectedTab = targetTab,
-    rootResetEvent = currentResetEvent + 1,
-)
+): Int = if (targetTab == ChildMainTab.Screen) {
+    currentResetEvent + 1
+} else {
+    currentResetEvent
+}
 
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
-    tabRootResetEvent: Int,
+    screenRootResetEvent: Int,
     familyDestination: ChildFamilyDestination,
     selectedPhotoId: String?,
     selectedPhotoUri: String?,
@@ -602,7 +597,7 @@ private fun ChildMainTabContent(
         DisplayTabRoute(
             viewModel = displayViewModel,
             addressSearchViewModel = addressSearchViewModel,
-            resetToOverviewEvent = tabRootResetEvent,
+            resetToOverviewEvent = screenRootResetEvent,
             seniorAccounts = seniorAccounts,
             isSeniorAccountsLoading = isSeniorAccountsLoading,
             onSeniorAccountClick = onSeniorAccountClick,
@@ -628,7 +623,6 @@ private fun ChildMainTabContent(
             HealthMainRoute(
                 seniorId = selectedSeniorId,
                 sessionKey = settingsSessionKey,
-                resetToMainEvent = tabRootResetEvent,
                 medicationRepository = medicationRepository,
                 hospitalRepository = hospitalRepository,
                 familyRepository = familyServerRepository,
@@ -770,7 +764,6 @@ private fun ChildMainTabContent(
             repository = notificationRepository,
             seniorId = selectedSeniorId,
             sessionKey = settingsSessionKey,
-            resetToHomeEvent = tabRootResetEvent,
             familyRepository = familyServerRepository,
             homeRepository = homeServerRepository,
             eventRepository = eventRepository,
@@ -785,7 +778,6 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
             sessionKey = settingsSessionKey,
-            resetToMainEvent = tabRootResetEvent,
             parentInfo = parentInfo,
             connectedDevice = connectedDevice,
             displayViewModel = displayViewModel,

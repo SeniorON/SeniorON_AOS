@@ -45,7 +45,6 @@ fun NotificationRoute(
     repository: NotificationRepository,
     seniorId: Long? = null,
     sessionKey: String = "",
-    resetToHomeEvent: Int = 0,
     familyRepository: FamilyServerRepository? = null,
     homeRepository: HomeServerRepository? = null,
     eventRepository: EventRepository? = null,
@@ -76,15 +75,6 @@ fun NotificationRoute(
         mutableStateOf(NotificationDestination.Home)
     }
     var isHistoryDetail by rememberSaveable(seniorId, sessionKey) { mutableStateOf(false) }
-
-    LaunchedEffect(resetToHomeEvent) {
-        if (resetToHomeEvent <= 0) return@LaunchedEffect
-        destination = NotificationDestination.Home
-        selectedCategory = null
-        selectedMessage = null
-        detailReturnDestination = NotificationDestination.Home
-        isHistoryDetail = false
-    }
 
     val currentDestination by rememberUpdatedState(destination)
     val currentCategory by rememberUpdatedState(selectedCategory)
