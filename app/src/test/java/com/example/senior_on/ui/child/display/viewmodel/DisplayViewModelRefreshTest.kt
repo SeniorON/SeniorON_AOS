@@ -89,6 +89,37 @@ class DisplayViewModelRefreshTest {
     }
 
     @Test
+    fun `변경한 시니어 관계는 화면 탭 재진입 후에도 유지된다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = RecordingDisplayRepository()
+            val viewModel = DisplayViewModel(
+                parentInfoRepository = ParentInfoRepositoryImpl(
+                    MockParentInfoDataSource(MockSeniorFixtures.mother)
+                ),
+                displayRepository = repository,
+            )
+            advanceUntilIdle()
+            val updatedParentInfo = MockSeniorFixtures.mother.copy(
+                relationshipLabel = "아버지",
+            )
+
+            viewModel.saveParentInfo(updatedParentInfo)
+            advanceUntilIdle()
+            repository.overview = repository.overview.copy(
+                parentInfo = updatedParentInfo,
+            )
+            viewModel.refreshOnScreenTabReentry()
+            advanceUntilIdle()
+
+            assertEquals("아버지", viewModel.uiState.value.relationshipLabel)
+            assertEquals("아버지", viewModel.uiState.value.parentInfo?.relationshipLabel)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun `화면 탭 재진입은 홈과 편집 권한을 갱신한다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
