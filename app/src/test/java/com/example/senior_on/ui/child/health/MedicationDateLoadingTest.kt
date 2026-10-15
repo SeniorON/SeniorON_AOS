@@ -72,15 +72,17 @@ class MedicationDateLoadingTest {
             assertFalse(vm.uiState.value.hasLoadedSelectedDate)
             assertFalse(vm.uiState.value.isLoading)
             assertTrue(vm.uiState.value.todayMedications.isEmpty())
-            assertNotNull(vm.uiState.value.errorMessage)
+            assertNotNull(vm.uiState.value.queryError)
+            assertNull(vm.uiState.value.errorMessage)
 
             fail = false
             empty = true
-            vm.refreshMedicationData()
+            vm.retry()
             advanceUntilIdle()
             assertTrue(vm.uiState.value.hasLoadedSelectedDate)
             assertTrue(vm.uiState.value.todayMedications.isEmpty())
             assertNull(vm.uiState.value.errorMessage)
+            assertNull(vm.uiState.value.queryError)
         } finally {
             store.clear()
             Dispatchers.resetMain()

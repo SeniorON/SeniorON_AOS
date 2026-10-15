@@ -11,7 +11,7 @@ class FamilyTabUiStateTest {
             members = listOf(currentUser(FamilyCaregiverRole.Primary)),
         )
 
-        assertTrue(state.canManagePhotoGroups)
+        assertTrue(state.canManageSeniorConnections)
     }
 
     @Test
@@ -20,7 +20,7 @@ class FamilyTabUiStateTest {
             members = listOf(currentUser(FamilyCaregiverRole.Assistant)),
         )
 
-        assertFalse(state.canManagePhotoGroups)
+        assertFalse(state.canManageSeniorConnections)
     }
 
     private fun currentUser(role: FamilyCaregiverRole) = FamilyMemberUiModel(

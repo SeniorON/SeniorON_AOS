@@ -21,9 +21,15 @@ internal fun NotificationHomeRoute(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    queryError: String? = null,
+    hasLoadedContent: Boolean = true,
+    onRetry: () -> Unit = onRefresh,
 ) {
     NotificationScreen(
         uiState = uiState,
+        queryError = queryError,
+        hasLoadedContent = hasLoadedContent,
+        onRetry = onRetry,
         modifier = modifier,
         onSectionClick = onSectionClick,
         onNotificationClick = onNotificationClick,

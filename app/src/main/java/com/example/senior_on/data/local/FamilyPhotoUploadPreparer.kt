@@ -231,3 +231,10 @@ internal fun resolveFamilyPhotoMimeType(
     }
     return normalizedMimeType
 }
+
+internal fun isSupportedFamilyPhotoMimeType(
+    reportedMimeType: String?,
+    extensionMimeType: String?,
+): Boolean = runCatching {
+    resolveFamilyPhotoMimeType(reportedMimeType, extensionMimeType)
+}.isSuccess

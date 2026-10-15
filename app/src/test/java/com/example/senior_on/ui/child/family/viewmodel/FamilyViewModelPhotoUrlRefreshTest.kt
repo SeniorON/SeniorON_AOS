@@ -13,7 +13,9 @@ import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -49,6 +51,74 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 THUMBNAIL_URL,
                 (photo.thumbnailSource as FamilyImageSource.Remote).url,
             )
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `family tab reentry exposes failed refresh after successful load`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var fail = false
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = FRESH_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                homeProvider = {
+                    if (fail) throw IOException("offline")
+                    ServerFamilyHome(emptyList(), listOf(serverPhoto(url = FRESH_URL)))
+                },
+            )
+            val vm = FamilyViewModel(repository)
+            vm.loadLatestFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            fail = true
+            vm.loadLatestFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            assertEquals("가족 정보를 불러오지 못했어요.", vm.uiState.value.errorMessage)
+            fail = false
+            vm.loadFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            assertEquals(null, vm.uiState.value.errorMessage)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `시니어를 전환하면 늦게 끝난 이전 시니어 응답을 무시한다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val firstRequestStarted = CompletableDeferred<Unit>()
+            val releaseFirstRequest = CompletableDeferred<Unit>()
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = EXPIRED_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                homeProvider = { seniorId ->
+                    if (seniorId == SENIOR_ID) {
+                        firstRequestStarted.complete(Unit)
+                        withContext(NonCancellable) { releaseFirstRequest.await() }
+                    }
+                    ServerFamilyHome(
+                        members = emptyList(),
+                        recentPhotos = listOf(
+                            serverPhoto(url = "https://example.com/$seniorId.jpg"),
+                        ),
+                    )
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            runCurrent()
+            firstRequestStarted.await()
+            viewModel.loadFamilyOverview(SECOND_SENIOR_ID)
+            runCurrent()
+            releaseFirstRequest.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(SECOND_SENIOR_ID, viewModel.uiState.value.seniorId)
+            val imageSource = viewModel.uiState.value.sharedPhotos.single().imageSource
+                as FamilyImageSource.Remote
+            assertEquals("https://example.com/$SECOND_SENIOR_ID.jpg", imageSource.url)
         } finally {
             Dispatchers.resetMain()
         }
@@ -218,6 +288,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
     private companion object {
         const val PHOTO_ID = 91L
         const val SENIOR_ID = 7L
+        const val SECOND_SENIOR_ID = 8L
         const val EXPIRED_URL = "https://example.com/expired.jpg"
         const val FRESH_URL = "https://example.com/fresh.jpg"
         const val THUMBNAIL_URL = "https://example.com/thumbnail.jpg"
@@ -244,6 +315,7 @@ private class FakeFamilyServerRepository(
     private val refreshedPhoto: ServerFamilyPhoto,
     private var photoDetailFailuresRemaining: Int = 0,
     private val photoPageProvider: (suspend (Int) -> ServerFamilyPhotoPage)? = null,
+    private val homeProvider: (suspend (Long) -> ServerFamilyHome)? = null,
 ) : FamilyServerRepository {
     private val home = ServerFamilyHome(
         members = emptyList(),
@@ -262,7 +334,7 @@ private class FakeFamilyServerRepository(
     override suspend fun getCode(seniorId: Long) = FamilyCodeInfo(1L, "ABCD-1234")
     override suspend fun getHome(seniorId: Long): ServerFamilyHome {
         homeRequestCount++
-        return home
+        return homeProvider?.invoke(seniorId) ?: home
     }
     override suspend fun getMembers(seniorId: Long): List<ServerFamilyMember> = emptyList()
     override suspend fun changePrimaryManager(userId: Long, seniorId: Long) = Unit

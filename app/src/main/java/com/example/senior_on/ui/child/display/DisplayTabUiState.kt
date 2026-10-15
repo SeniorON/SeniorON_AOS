@@ -10,6 +10,7 @@ import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 
 @Immutable
 data class DisplayTabUiState(
+    val queryError: String? = null,
     val selectedSeniorId: Long? = null,
     val parentInfo: ParentInfo? = null,
     val relationshipLabel: String? = null,

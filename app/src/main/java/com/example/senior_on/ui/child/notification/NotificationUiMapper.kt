@@ -79,6 +79,7 @@ internal fun AppNotification.toUiState(
         notificationId = id,
         eventId = eventId,
         isRead = read,
+        category = category,
     )
 
 internal val NotificationCategory.apiType: String
@@ -108,6 +109,7 @@ private fun NotificationHomeItem.toMessageUiState(
         movementType = category.outingMovementFrom(phase),
         notificationId = notificationId,
         eventId = eventId,
+        category = category,
     )
 }
 
@@ -116,13 +118,16 @@ internal fun SafetyEvent.toUiState(
     fallback: NotificationMessageUiState,
 ): NotificationMessageUiState {
     val resolvedTitle = when (category) {
-        NotificationCategory.Sos -> address ?: message
+        NotificationCategory.Sos -> if (latitude != null && longitude != null) {
+            address?.takeIf { it.isNotBlank() } ?: "긴급 도움 요청"
+        } else "긴급 도움 요청"
         NotificationCategory.Inactivity -> message
         NotificationCategory.RiskLink -> linkUrl ?: message
         NotificationCategory.Outing -> message
     }.orEmpty().ifBlank { fallback.title }
 
     return fallback.copy(
+        category = category,
         time = occurredAt ?: fallback.time,
         title = resolvedTitle,
         detail = when (category) {

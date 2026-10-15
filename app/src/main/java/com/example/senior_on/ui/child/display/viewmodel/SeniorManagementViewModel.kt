@@ -24,6 +24,7 @@ data class SeniorManagementUiState(
     val createdFamilyId: Long? = null,
     val familyCode: String? = null,
     val errorMessage: String? = null,
+    val listError: String? = null,
 )
 
 class SeniorManagementViewModel(
@@ -46,6 +47,7 @@ class SeniorManagementViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = true,
+                    listError = null,
                     errorMessage = null,
                 )
             }
@@ -54,6 +56,7 @@ class SeniorManagementViewModel(
                 _uiState.update {
                     it.copy(
                         managedSeniors = managedSeniors,
+                        listError = null,
                         isLoading = false,
                     )
                 }
@@ -64,6 +67,7 @@ class SeniorManagementViewModel(
                     it.copy(
                         isLoading = false,
                         errorMessage = throwable.toSeniorManagementError(),
+                        listError = "시니어 목록을 불러오지 못했어요.",
                     )
                 }
             }

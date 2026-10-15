@@ -97,6 +97,7 @@ fun AddressSearchScreen(
             fusedLocationProviderClient = fusedLocationClient,
             cancellationTokenSource = cancellationTokenSource,
             onSuccess = { latitude, longitude ->
+                if (locationCancellationTokenSource !== cancellationTokenSource) return@requestCurrentLocation
                 locationCancellationTokenSource = null
                 viewModel.onCurrentLocationFound(
                     latitude = latitude,
@@ -104,6 +105,7 @@ fun AddressSearchScreen(
                 )
             },
             onFailure = {
+                if (locationCancellationTokenSource !== cancellationTokenSource) return@requestCurrentLocation
                 locationCancellationTokenSource = null
                 viewModel.onLocationRequestFailed()
             }
@@ -158,9 +160,11 @@ fun AddressSearchScreen(
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(viewModel) {
         onDispose {
             locationCancellationTokenSource?.cancel()
+            locationCancellationTokenSource = null
+            viewModel.reset()
         }
     }
 

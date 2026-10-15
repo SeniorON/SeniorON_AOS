@@ -18,6 +18,39 @@ import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ParentSettingsViewModelTest {
+    @Test fun accountReadFailureIsRetainedUntilRetrySucceeds() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        var fail = true
+        val vm = ParentSettingsViewModel(
+            stub<UserSettingsRepository> {
+                check(it == "getSettings")
+                if (fail) error("offline")
+                UserAccountSettings("부모", "PARENT", "parent@example.com", null, true)
+            },
+            stub<ParentSeniorProfileRepository> { 3L },
+            ParentSettingsRepository(FakeApi()),
+            stub<FamilyServerRepository> { error(it) },
+        ).also { store.put("settings", it) }
+        try {
+            advanceUntilIdle()
+            assertNotNull(vm.state.value.queryErrors["account"])
+            assertNull(vm.state.value.error)
+            vm.consumeError()
+            fail = false
+            vm.loadAccount()
+            assertNotNull(vm.state.value.queryErrors["account"])
+            advanceUntilIdle()
+            assertNull(vm.state.value.queryErrors["account"])
+            assertNotNull(vm.state.value.profile)
+            fail = true
+            vm.loadAccount()
+            advanceUntilIdle()
+            assertNotNull(vm.state.value.profile)
+            assertNotNull(vm.state.value.queryErrors["account"])
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
+
     @Test fun failedSavePreservesPermissionsAndDuplicateSaveIsIgnored() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()
@@ -55,7 +88,8 @@ class ParentSettingsViewModelTest {
             advanceUntilIdle()
             assertEquals(0, api.reads)
             assertNull(vm.state.value.permissions)
-            assertNotNull(vm.state.value.error)
+            assertNotNull(vm.state.value.queryErrors["permissions"])
+            assertNull(vm.state.value.error)
         } finally { store.clear(); Dispatchers.resetMain() }
     }
 

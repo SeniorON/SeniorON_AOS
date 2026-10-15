@@ -15,6 +15,7 @@ data class NotificationNavigationEvent(
     val title: String?,
     val seniorId: Long? = null,
     val parentUserId: Long? = null,
+    val familyPhotoId: Long? = null,
 )
 
 val NotificationNavigationEvent.isMedicationNotification: Boolean
@@ -23,6 +24,9 @@ val NotificationNavigationEvent.isMedicationNotification: Boolean
 
 val NotificationNavigationEvent.isHospitalNotification: Boolean
     get() = type == NotificationNavigationEventStore.HospitalReminderType
+
+val NotificationNavigationEvent.isFamilyPhotoNotification: Boolean
+    get() = type == "FAMILY_PHOTO_SHARED" && familyPhotoId != null
 
 object NotificationNavigationEventStore {
     private val _pendingEvent = MutableStateFlow<NotificationNavigationEvent?>(null)
@@ -48,7 +52,7 @@ object NotificationNavigationEventStore {
 
         val isEventNotification = type in EventNotificationTypes ||
             type in MedicationNotificationTypes ||
-            type == HospitalReminderType || notificationId != null ||
+            type == HospitalReminderType || type == "FAMILY_PHOTO_SHARED" || notificationId != null ||
             eventId != null || medicationLogId != null || hospitalId != null
         if (!openNotificationTab && !isEventNotification) {
             return
@@ -66,6 +70,7 @@ object NotificationNavigationEventStore {
             title = data.valueOf(TitleKey),
             seniorId = data.valueOf("seniorId")?.toLongOrNull()?.takeIf { it > 0 },
             parentUserId = data.valueOf("parentUserId")?.toLongOrNull()?.takeIf { it > 0 },
+            familyPhotoId = data.valueOf("familyPhotoId")?.toLongOrNull()?.takeIf { it > 0 },
         )
     }
 

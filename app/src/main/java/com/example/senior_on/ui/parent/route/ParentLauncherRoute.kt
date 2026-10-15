@@ -37,6 +37,7 @@ import com.example.senior_on.notification.MedicationReminderEventStore
 import com.example.senior_on.notification.NotificationNavigationEventStore
 import com.example.senior_on.notification.isMedicationNotification
 import com.example.senior_on.notification.isHospitalNotification
+import com.example.senior_on.notification.isFamilyPhotoNotification
 import com.example.senior_on.ui.onboarding.route.FamilyShareCodeInputRoute
 import com.example.senior_on.ui.parent.photo.ParentFamilyPhotoRoute
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
@@ -45,6 +46,7 @@ import com.example.senior_on.ui.parent.launcher.viewmodel.ParentFamilyMembership
 import com.example.senior_on.ui.parent.schedule.ParentScheduleRoute
 import com.example.senior_on.ui.parent.permission.ParentPermissionGuideRoute
 import com.example.senior_on.ui.parent.settings.ParentSettingsRoute
+import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
 
 private enum class ParentDestination {
     Home,
@@ -68,8 +70,10 @@ fun ParentLauncherRoute(
     val sessionExpirationEvent by
         SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
     var needsLogin by remember { mutableStateOf(AccessTokenStore.getBearerToken() == null) }
+    var leavingSession by remember { mutableStateOf(false) }
     val sessionContext = LocalContext.current
     fun onSessionEnded() {
+        leavingSession = true
         needsLogin = true
         com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(sessionContext)
         ParentDeviceStatusScheduler.cancel(sessionContext)
@@ -101,6 +105,10 @@ fun ParentLauncherRoute(
 
     // Also covers process recreation after credentials have already been cleared.
     // Access-token expiry alone stays on the normal refresh path in the authenticator.
+    if (leavingSession) {
+        ParentFamilyMembershipLoadingScreen(modifier)
+        return
+    }
     if (needsLogin || sessionExpirationEvent != null) {
         ParentSessionExpiredRoute(modifier)
         return
@@ -168,6 +176,32 @@ private fun ParentLauncherContent(
     homeRequest: Int = 0,
 ) {
     val context = LocalContext.current
+    // Keep session completion above all destinations: a device/home event must not
+    // expose Home or dispose the logout completion handler during cleanup.
+    val sessionActions: SettingsViewModel = viewModel(
+        key = "parent-settings-session-actions",
+        factory = SettingsViewModel.factory(
+            appContainer.authRepository,
+            appContainer.sessionRepository,
+            appContainer.deviceRegistrationRepository,
+        ),
+    )
+    val sessionState by sessionActions.uiState.collectAsStateWithLifecycle()
+    var destination by rememberSaveable { mutableStateOf(ParentDestination.Home) }
+    LaunchedEffect(sessionState.logoutCompleted, sessionState.withdrawCompleted) {
+        if (sessionState.logoutCompleted || sessionState.withdrawCompleted) {
+            onSessionEnded()
+            sessionActions.consumeLogoutCompleted()
+            sessionActions.consumeWithdrawCompleted()
+        }
+    }
+    if (sessionState.isLoggingOut || sessionState.isWithdrawing ||
+        sessionState.logoutCompleted || sessionState.withdrawCompleted
+    ) {
+        BackHandler { /* Do not navigate while ending the session. */ }
+        ParentFamilyMembershipLoadingScreen(modifier)
+        return
+    }
     val locationTrackingViewModel: ParentLocationTrackingViewModel = viewModel(
         factory = ParentLocationTrackingViewModel.factory(
             context = context,
@@ -199,26 +233,31 @@ private fun ParentLauncherContent(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val guidePreferences = remember(context) {
-        context.getSharedPreferences("parent_permission_guide", android.content.Context.MODE_PRIVATE)
-    }
+    // Preserve this guide across configuration changes, but never carry deferrals
+    // into the new launcher activity created after the next login.
+    var dismissedPermissionNames by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     val permissionController = remember(context) {
         com.example.senior_on.ui.parent.permission.AndroidParentPermissionController(context)
     }
-    var showPermissionGuide by rememberSaveable { mutableStateOf(false) }
     fun dismissedPermissions(): Set<com.example.senior_on.ui.parent.permission.ParentPermissionStep> {
-        val names = guidePreferences.getStringSet("dismissed_steps_v4", emptySet()).orEmpty()
         return com.example.senior_on.ui.parent.permission.ParentPermissionStep.entries
-            .filterTo(mutableSetOf()) { it.name in names }
+            .filterTo(mutableSetOf()) { it.name in dismissedPermissionNames }
+    }
+    var showPermissionGuide by rememberSaveable {
+        mutableStateOf(com.example.senior_on.ui.parent.permission.shouldOfferPermissionGuide(
+            com.example.senior_on.ui.parent.permission.remainingPermissionDismissals(
+                dismissedPermissions(), permissionController::status,
+            ),
+            permissionController::status,
+        ))
     }
     DisposableEffect(lifecycleOwner, permissionController) {
         fun checkSetup() {
-            // Ignore the legacy global dismissed_v3 flag: it cannot identify which step was refused.
+            // Only this guide's deferrals affect automatic presentation.
             val dismissed = com.example.senior_on.ui.parent.permission.remainingPermissionDismissals(
                 dismissedPermissions(), permissionController::status,
             )
-            guidePreferences.edit().remove("dismissed_v3")
-                .putStringSet("dismissed_steps_v4", dismissed.map { it.name }.toSet()).apply()
+            dismissedPermissionNames = ArrayList(dismissed.map { it.name })
             if (com.example.senior_on.ui.parent.permission.shouldOfferPermissionGuide(
                 dismissed, permissionController::status,
             )) showPermissionGuide = true
@@ -231,12 +270,10 @@ private fun ParentLauncherContent(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var destination by rememberSaveable {
-        mutableStateOf(ParentDestination.Home)
-    }
     var highlightedMedicationLogId by rememberSaveable {
         mutableStateOf<Long?>(null)
     }
+    var notificationPhotoId by rememberSaveable { mutableStateOf<Long?>(null) }
     var homeRefreshRequest by rememberSaveable { mutableStateOf(0) }
     val medicationReminder by MedicationReminderEventStore.pendingEvent
         .collectAsStateWithLifecycle()
@@ -247,6 +284,10 @@ private fun ParentLauncherContent(
         val event = notificationNavigationEvent ?: return@LaunchedEffect
         try {
             when {
+                event.isFamilyPhotoNotification -> {
+                    notificationPhotoId = event.familyPhotoId
+                    destination = ParentDestination.FamilyPhotos
+                }
                 event.isMedicationNotification -> {
                     highlightedMedicationLogId = event.medicationLogId
                     MedicationReminderEventStore.consume()
@@ -274,6 +315,7 @@ private fun ParentLauncherContent(
     )
 
     fun openHome() {
+        notificationPhotoId = null
         destination = ParentDestination.Home
         highlightedMedicationLogId = null
     }
@@ -295,9 +337,10 @@ private fun ParentLauncherContent(
     if (showPermissionGuide) {
         ParentPermissionGuideRoute(onExit = {
             showPermissionGuide = false
+        }, onBackExit = {
+            sessionActions.logout(clearLocalOnFailure = true)
         }, modifier = modifier, dismissedSteps = dismissedPermissions(), onPermissionDeclined = { step ->
-            guidePreferences.edit().putStringSet("dismissed_steps_v4",
-                (dismissedPermissions() + step).map { it.name }.toSet()).apply()
+            dismissedPermissionNames = ArrayList((dismissedPermissions() + step).map { it.name })
         })
     } else when (destination) {
         ParentDestination.Home,
@@ -323,7 +366,6 @@ private fun ParentLauncherContent(
 
         ParentDestination.Settings -> ParentSettingsRoute(
             appContainer = appContainer,
-            onSessionEnded = onSessionEnded,
             onBackClick = ::openHome,
             modifier = modifier,
         )
@@ -345,6 +387,7 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.Emergency -> ParentEmergencyRoute(
+            sharingGuard = appContainer.parentSharingGuard,
             repository = appContainer.eventRepository,
             locationRepository = appContainer.locationRepository,
             deviceRepository = appContainer.deviceRepository,
@@ -353,6 +396,8 @@ private fun ParentLauncherContent(
         )
 
         ParentDestination.FamilyPhotos -> ParentFamilyPhotoRoute(
+            notificationPhotoId = notificationPhotoId,
+            onNotificationPhotoClosed = { notificationPhotoId = null },
             repository = appContainer.familyServerRepository,
             profileRepository = appContainer.parentSeniorProfileRepository,
             onBackClick = ::openHome,

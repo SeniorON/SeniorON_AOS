@@ -83,6 +83,12 @@ fun ParentMedicationScreen(
                 )
             }
 
+            com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
+                error = uiState.queryError,
+                loading = uiState.isQueryLoading || uiState.content == ParentMedicationContent.Loading,
+                hasContent = uiState.content != ParentMedicationContent.Loading,
+                onRetry = onRefresh,
+            ) {
             PullToRefreshBox(
                 isRefreshing = uiState.isRefreshing,
                 onRefresh = onRefresh,
@@ -101,6 +107,7 @@ fun ParentMedicationScreen(
                         onTakenClick = onTakenClick,
                     )
                 }
+            }
             }
         }
 

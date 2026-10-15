@@ -73,6 +73,12 @@ fun ParentScheduleScreen(
             )
         }
 
+        com.example.senior_on.ui.parent.component.ParentQueryRetryContent(
+            error = uiState.errorMessage,
+            loading = uiState.isLoading || uiState.isRefreshing,
+            hasContent = !uiState.isLoading,
+            onRetry = onRefresh,
+        ) {
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = onRefresh,
@@ -82,6 +88,7 @@ fun ParentScheduleScreen(
                 uiState.isLoading -> ParentScheduleLoadingContent()
                 else -> ParentScheduleListContent(schedules = uiState.schedules)
             }
+        }
         }
     }
 }

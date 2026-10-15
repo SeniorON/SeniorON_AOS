@@ -20,6 +20,7 @@ data class ParentSettingsState(
     val error: String? = null,
     val completed: String? = null,
     val shareCode: String? = null,
+    val queryErrors: Map<String, String> = emptyMap(),
 )
 
 class ParentSettingsViewModel(
@@ -34,7 +35,7 @@ class ParentSettingsViewModel(
 
     init { loadAccount() }
 
-    fun loadAccount() = perform {
+    fun loadAccount() = perform(queryKey = "account") {
         val account = accounts.getSettings()
         mutableState.update { it.copy(profile = ParentSettingsProfile(account.name, account.email,
             account.profileImageUrl.takeUnless { account.isDefaultProfileImage })) }
@@ -56,13 +57,13 @@ class ParentSettingsViewModel(
         mutableState.update { it.copy(profile = it.profile?.copy(imageUrl = null, imageRevision = System.currentTimeMillis())) }
     }
 
-    fun loadPermissions() = perform {
+    fun loadPermissions() = perform(queryKey = "permissions") {
         val seniorId = profileRepository.getOwnSeniorId()
         val permissions = settings.getPermissions(seniorId)
         mutableState.update { it.copy(permissions = permissions) }
     }
 
-    fun loadShareCode() = perform {
+    fun loadShareCode() = perform(queryKey = "shareCode") {
         val seniorId = profileRepository.getOwnSeniorId()
         val code = family.getCode(seniorId).code
         check(code.isNotBlank()) { "공유 코드를 확인하지 못했어요." }
@@ -99,16 +100,22 @@ class ParentSettingsViewModel(
     fun consumeError() { mutableState.update { it.copy(error = null) } }
     fun consumeCompleted() { mutableState.update { it.copy(completed = null) } }
 
-    private fun perform(action: suspend () -> Unit) {
+    private fun perform(queryKey: String? = null, action: suspend () -> Unit) {
         if (mutableState.value.busy) return
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             try {
                 action()
+                if (queryKey != null) mutableState.update { it.copy(queryErrors = it.queryErrors - queryKey) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
-                mutableState.update { it.copy(error = failure.message ?: "요청에 실패했어요. 다시 시도해 주세요.") }
+                if (queryKey != null) {
+                    mutableState.update { it.copy(queryErrors = it.queryErrors +
+                        (queryKey to "정보를 불러오지 못했어요.\n인터넷 연결을 확인하고\n다시 시도해 주세요.")) }
+                } else {
+                    mutableState.update { it.copy(error = failure.message ?: "요청에 실패했어요. 다시 시도해 주세요.") }
+                }
             } finally {
                 mutableState.update { it.copy(busy = false) }
             }

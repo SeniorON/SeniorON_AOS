@@ -33,8 +33,12 @@ class FamilyViewModel(
     val uiState = _uiState.asStateFlow()
 
     private var homeLoadJob: Job? = null
+    private var memberLoadJob: Job? = null
+    private var memberMutationJob: Job? = null
     private var photoLoadJob: Job? = null
     private var detailLoadJob: Job? = null
+    private var photoMutationJob: Job? = null
+    private var activeSeniorId: Long? = null
     private var isPhotoGalleryLoaded = false
     private var loadedPhotoSeniorId: Long? = null
     private var nextPhotoCursorAt: String? = null
@@ -59,7 +63,7 @@ class FamilyViewModel(
 
     private fun loadFamilyOverview(seniorId: Long, isPullRefresh: Boolean) {
         require(seniorId > 0L) { "선택된 시니어 정보가 올바르지 않습니다." }
-        val isSeniorChanged = _uiState.value.seniorId != seniorId
+        val isSeniorChanged = activateSenior(seniorId)
         homeLoadJob?.cancel()
         homeLoadJob = viewModelScope.launch {
             _uiState.update {
@@ -77,6 +81,7 @@ class FamilyViewModel(
 
             try {
                 val home = repository.getHome(seniorId)
+                if (!isActiveSenior(seniorId)) return@launch
                 val members = home.members.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -108,6 +113,7 @@ class FamilyViewModel(
                     photo.toSharedFamilyPhotoUiModel()
                 }
                 _uiState.update { currentState ->
+                    if (!isActiveSenior(seniorId)) return@update currentState
                     currentState.copy(
                         seniorId = seniorId,
                         photoGroupId = home.photoGroupId,
@@ -127,6 +133,7 @@ class FamilyViewModel(
                 throw exception
             } catch (exception: Exception) {
                 _uiState.update {
+                    if (!isActiveSenior(seniorId)) return@update it
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
@@ -138,7 +145,10 @@ class FamilyViewModel(
     }
 
     fun loadFamilyMembers(seniorId: Long) {
-        viewModelScope.launch {
+        require(seniorId > 0L) { "선택된 시니어 정보가 올바르지 않습니다." }
+        activateSenior(seniorId)
+        memberLoadJob?.cancel()
+        memberLoadJob = viewModelScope.launch {
             _uiState.update { state ->
                 state.copy(
                     isLoading = state.members.isEmpty(),
@@ -147,6 +157,7 @@ class FamilyViewModel(
             }
             runCatching { repository.getMembers(seniorId) }
                 .onSuccess { serverMembers ->
+                    if (!isActiveSenior(seniorId)) return@onSuccess
                     val members = serverMembers.mapNotNull { member ->
                         if (
                             member.id <= 0L ||
@@ -183,6 +194,7 @@ class FamilyViewModel(
                 }
                 .onFailure { exception ->
                     if (exception is CancellationException) throw exception
+                    if (!isActiveSenior(seniorId)) return@onFailure
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -195,9 +207,9 @@ class FamilyViewModel(
     }
 
     fun changePrimaryMember(seniorId: Long, memberId: String) {
-        if (_uiState.value.isMemberMutationInProgress) return
+        if (!isActiveSenior(seniorId) || _uiState.value.isMemberMutationInProgress) return
 
-        viewModelScope.launch {
+        memberMutationJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     changingPrimaryMemberId = memberId,
@@ -209,6 +221,7 @@ class FamilyViewModel(
                     ?: error("잘못된 가족 구성원 정보입니다.")
                 repository.changePrimaryManager(userId, seniorId)
                 val serverMembers = repository.getMembers(seniorId)
+                if (!isActiveSenior(seniorId)) return@launch
                 val members = serverMembers.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -240,18 +253,23 @@ class FamilyViewModel(
                 throw exception
             } catch (exception: Exception) {
                 _uiState.update {
+                    if (!isActiveSenior(seniorId)) return@update it
                     it.copy(memberMutationErrorMessage = "주 담당자를 변경하지 못했어요.")
                 }
             } finally {
-                _uiState.update { it.copy(changingPrimaryMemberId = null) }
+                _uiState.update {
+                    if (isActiveSenior(seniorId)) {
+                        it.copy(changingPrimaryMemberId = null)
+                    } else it
+                }
             }
         }
     }
 
     fun deleteMember(seniorId: Long, memberId: String) {
-        if (_uiState.value.isMemberMutationInProgress) return
+        if (!isActiveSenior(seniorId) || _uiState.value.isMemberMutationInProgress) return
 
-        viewModelScope.launch {
+        memberMutationJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     deletingMemberId = memberId,
@@ -263,6 +281,7 @@ class FamilyViewModel(
                     ?: error("잘못된 가족 구성원 정보입니다.")
                 repository.deleteMember(userId, seniorId)
                 val serverMembers = repository.getMembers(seniorId)
+                if (!isActiveSenior(seniorId)) return@launch
                 val members = serverMembers.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -294,15 +313,22 @@ class FamilyViewModel(
                 throw exception
             } catch (exception: Exception) {
                 _uiState.update {
+                    if (!isActiveSenior(seniorId)) return@update it
                     it.copy(memberMutationErrorMessage = "구성원을 삭제하지 못했어요.")
                 }
             } finally {
-                _uiState.update { it.copy(deletingMemberId = null) }
+                _uiState.update {
+                    if (isActiveSenior(seniorId)) {
+                        it.copy(deletingMemberId = null)
+                    } else it
+                }
             }
         }
     }
 
     fun loadPhotoGallery(seniorId: Long, force: Boolean = false) {
+        require(seniorId > 0L) { "선택된 시니어 정보가 올바르지 않습니다." }
+        activateSenior(seniorId)
         if (photoLoadJob?.isActive == true) {
             if (!force && loadedPhotoSeniorId == seniorId) return
             photoLoadJob?.cancel()
@@ -322,6 +348,7 @@ class FamilyViewModel(
             runCatching {
                 repository.getPhotos(size = PHOTO_PAGE_SIZE, seniorId = seniorId)
             }.onSuccess { page ->
+                if (!isActiveSenior(seniorId)) return@onSuccess
                 val photos = page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
                     photo.toSharedFamilyPhotoUiModel()
@@ -342,6 +369,7 @@ class FamilyViewModel(
                 }
             }.onFailure { exception ->
                 if (exception is CancellationException) throw exception
+                if (!isActiveSenior(seniorId)) return@onFailure
                 _uiState.update {
                     it.copy(
                         isPhotoLoading = false,
@@ -353,6 +381,7 @@ class FamilyViewModel(
     }
 
     fun loadMorePhotos(seniorId: Long) {
+        if (!isActiveSenior(seniorId)) return
         if (!isPhotoGalleryLoaded || loadedPhotoSeniorId != seniorId || !hasNextPhotoPage) return
         if (photoLoadJob?.isActive == true) return
         val cursorAt = nextPhotoCursorAt ?: return
@@ -368,6 +397,7 @@ class FamilyViewModel(
                     seniorId = seniorId,
                 )
             }.onSuccess { page ->
+                if (!isActiveSenior(seniorId)) return@onSuccess
                 val photos = page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
                     photo.toSharedFamilyPhotoUiModel()
@@ -386,6 +416,7 @@ class FamilyViewModel(
                 }
             }.onFailure { exception ->
                 if (exception is CancellationException) throw exception
+                if (!isActiveSenior(seniorId)) return@onFailure
                 _uiState.update {
                     it.copy(
                         isPhotoLoading = false,
@@ -397,6 +428,7 @@ class FamilyViewModel(
     }
 
     fun ensurePhotoLoaded(photoId: String) {
+        val requestSeniorId = activeSeniorId ?: return
         if (_uiState.value.sharedPhotos.any { it.id == photoId }) return
         if (detailLoadJob?.isActive == true) return
         val serverPhotoId = photoId.toLongOrNull() ?: run {
@@ -422,6 +454,7 @@ class FamilyViewModel(
                 }
                 photo.toSharedFamilyPhotoUiModel()
             }.onSuccess { photo ->
+                if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update { state ->
                     state.copy(
                         sharedPhotos = (state.sharedPhotos + photo)
@@ -433,6 +466,7 @@ class FamilyViewModel(
                 }
             }.onFailure { exception ->
                 if (exception is CancellationException) throw exception
+                if (!isActiveSenior(requestSeniorId)) return@onFailure
                 _uiState.update {
                     it.copy(
                         loadingPhotoId = null,
@@ -462,6 +496,7 @@ class FamilyViewModel(
     }
 
     fun refreshPhotoUrlAfterLoadFailure(photoId: String, failedUrl: String) {
+        val requestSeniorId = activeSeniorId ?: return
         val normalizedPhotoId = photoId.trim()
         val normalizedFailedUrl = failedUrl.trim()
         if (normalizedPhotoId.isEmpty() || normalizedFailedUrl.isEmpty()) return
@@ -488,6 +523,7 @@ class FamilyViewModel(
                 }
                 photo.toSharedFamilyPhotoUiModel()
             }.onSuccess { refreshedPhoto ->
+                if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update { state ->
                     state.copy(
                         sharedPhotos = state.sharedPhotos.map { photo ->
@@ -497,6 +533,7 @@ class FamilyViewModel(
                 }
             }.onFailure { exception ->
                 if (exception is CancellationException) throw exception
+                if (!isActiveSenior(requestSeniorId)) return@onFailure
                 lastRetriedImageUrlByPhotoId.remove(
                     normalizedPhotoId,
                     normalizedFailedUrl,
@@ -510,10 +547,11 @@ class FamilyViewModel(
     }
 
     fun deletePhoto(photoId: String) {
+        val requestSeniorId = activeSeniorId ?: return
         if (_uiState.value.deletingPhotoId != null) return
         val serverPhotoId = photoId.toLongOrNull() ?: return
 
-        viewModelScope.launch {
+        photoMutationJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     deletingPhotoId = photoId,
@@ -523,6 +561,7 @@ class FamilyViewModel(
             }
             runCatching { repository.deletePhoto(serverPhotoId) }
                 .onSuccess {
+                    if (!isActiveSenior(requestSeniorId)) return@onSuccess
                     _uiState.update { state ->
                         state.copy(
                             sharedPhotos = state.sharedPhotos.filterNot {
@@ -535,6 +574,7 @@ class FamilyViewModel(
                 }
                 .onFailure { exception ->
                     if (exception is CancellationException) throw exception
+                    if (!isActiveSenior(requestSeniorId)) return@onFailure
                     _uiState.update {
                         it.copy(
                             deletingPhotoId = null,
@@ -546,6 +586,7 @@ class FamilyViewModel(
     }
 
     fun refreshAfterPhotoUpload(seniorId: Long) {
+        if (!isActiveSenior(seniorId)) return
         isPhotoGalleryLoaded = false
         loadedPhotoSeniorId = null
         nextPhotoCursorAt = null
@@ -555,6 +596,33 @@ class FamilyViewModel(
         loadFamilyOverview(seniorId)
         loadPhotoGallery(seniorId = seniorId, force = true)
     }
+
+    private fun activateSenior(seniorId: Long): Boolean {
+        if (activeSeniorId == seniorId) return false
+
+        activeSeniorId = seniorId
+        homeLoadJob?.cancel()
+        memberLoadJob?.cancel()
+        memberMutationJob?.cancel()
+        photoLoadJob?.cancel()
+        detailLoadJob?.cancel()
+        photoMutationJob?.cancel()
+        photoUrlRefreshJobs.values.forEach(Job::cancel)
+        photoUrlRefreshJobs.clear()
+        lastRetriedImageUrlByPhotoId.clear()
+        isPhotoGalleryLoaded = false
+        loadedPhotoSeniorId = null
+        nextPhotoCursorAt = null
+        nextPhotoCursorId = null
+        hasNextPhotoPage = false
+        _uiState.value = FamilyTabUiState(
+            seniorId = seniorId,
+            isLoading = true,
+        )
+        return true
+    }
+
+    private fun isActiveSenior(seniorId: Long): Boolean = activeSeniorId == seniorId
 
     companion object {
         private const val CHILD_ROLE = "CHILD"

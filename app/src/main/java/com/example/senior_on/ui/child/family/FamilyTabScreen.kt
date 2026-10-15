@@ -116,9 +116,9 @@ fun FamilyTabScreen(
         ) {
             FamilyTopBar()
 
-            if (uiState.isLoading && uiState.members.isEmpty()) {
+            if (uiState.isLoading) {
                 FamilyLoadingContent(modifier = Modifier.weight(1f))
-            } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
+            } else if (uiState.errorMessage != null) {
                 FamilyErrorContent(
                     message = uiState.errorMessage,
                     onRetryClick = onRetryClick,
@@ -163,7 +163,7 @@ fun FamilyTabScreen(
 
                     item {
                         SharedPhotoHeader(
-                            showSeniorConnection = uiState.canManagePhotoGroups,
+                            canManageConnections = uiState.canManageSeniorConnections,
                             onSeniorConnectionClick = onSeniorConnectionClick,
                         )
                     }
@@ -600,7 +600,7 @@ private fun FamilyManagementButtons(
 
 @Composable
 private fun SharedPhotoHeader(
-    showSeniorConnection: Boolean,
+    canManageConnections: Boolean,
     onSeniorConnectionClick: () -> Unit,
 ) {
     Row(
@@ -634,7 +634,7 @@ private fun SharedPhotoHeader(
             )
         }
 
-        if (showSeniorConnection) {
+        if (canManageConnections) {
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(22.dp))

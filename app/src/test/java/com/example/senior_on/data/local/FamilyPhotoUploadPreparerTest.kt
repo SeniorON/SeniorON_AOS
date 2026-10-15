@@ -38,4 +38,11 @@ class FamilyPhotoUploadPreparerTest {
 
         assertTrue(exception is IllegalArgumentException)
     }
+
+    @Test
+    fun `선택 직후 HEIC와 GIF는 지원하지 않는 형식으로 판정한다`() {
+        assertTrue(!isSupportedFamilyPhotoMimeType("image/heic", null))
+        assertTrue(!isSupportedFamilyPhotoMimeType("image/gif", null))
+        assertTrue(isSupportedFamilyPhotoMimeType("image/jpeg", null))
+    }
 }

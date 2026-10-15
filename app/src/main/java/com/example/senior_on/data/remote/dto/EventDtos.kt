@@ -1,6 +1,6 @@
 package com.example.senior_on.data.remote.dto
 
-data class SosEventRequest(val latitude: Double, val longitude: Double, val deviceBattery: Int?)
+data class SosEventRequest(val latitude: Double?, val longitude: Double?, val deviceBattery: Int?)
 data class SosEventResponse(
     val id: Long?, val latitude: Double?, val longitude: Double?,
     val address: String?, val deviceBattery: Int?,

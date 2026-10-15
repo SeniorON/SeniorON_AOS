@@ -50,6 +50,8 @@ data class ParentMedicationUiState(
     val message: String? = null,
     val messageType: ParentMedicationMessageType = ParentMedicationMessageType.Default,
     val isRefreshing: Boolean = false,
+    val queryError: String? = null,
+    val isQueryLoading: Boolean = false,
     val expiredMedicationIds: Set<String> = emptySet(),
 )
 
@@ -123,6 +125,7 @@ class ParentMedicationViewModel(
                 _uiState.update {
                     it.copy(
                         isRefreshing = visible,
+                        isQueryLoading = true,
                         message = null,
                         messageType = ParentMedicationMessageType.Default,
                     )
@@ -151,6 +154,8 @@ class ParentMedicationViewModel(
                                 ParentMedicationContent.List
                             },
                             medications = medications,
+                            queryError = null,
+                            isQueryLoading = false,
                             expiredMedicationIds = medications.filter { medication -> medication.isTakingDeadlineReached(now()) }
                                 .mapTo(mutableSetOf()) { medication -> medication.id },
                             isRefreshing = false,
@@ -161,7 +166,8 @@ class ParentMedicationViewModel(
                     _uiState.update {
                         it.copy(
                             content = if (it.content == ParentMedicationContent.Loading) ParentMedicationContent.Empty else it.content,
-                            message = "복약 정보를 불러오지 못했어요.",
+                            queryError = "복약 정보를 불러오지 못했어요.\n인터넷 연결을 확인하고\n다시 시도해 주세요.",
+                            isQueryLoading = false,
                             messageType = ParentMedicationMessageType.Default,
                             isRefreshing = false,
                         )

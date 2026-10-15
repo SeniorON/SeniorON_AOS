@@ -48,7 +48,10 @@ internal fun NotificationScreenUiState.canAccess(category: NotificationCategory)
 
 internal fun NotificationScreenUiState.visibleMessage(message: NotificationMessageUiState): NotificationMessageUiState {
     val visible = if (isParentPhoneRegistered && sharingStatusKnown && locationSharingEnabled && !isSeniorSharingRevoked) message
-    else message.copy(address = null, latitude = null, longitude = null,
+    else message.copy(
+        // SOS summaries may contain an address even before event details are loaded.
+        title = if (message.category == NotificationCategory.Sos) "긴급 도움 요청" else message.title,
+        address = null, latitude = null, longitude = null,
         lastLocationUpdatedAtMillis = null, detail = null, eventMessage = null)
     return if (canAccess(NotificationCategory.Inactivity)) visible else visible.copy(lastSeenAt = null)
 }

@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -48,6 +50,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
+import com.example.senior_on.data.local.isSupportedFamilyPhotoMimeType
 import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.model.parent.ParentInfo
@@ -302,7 +305,27 @@ fun ChildMainScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.let { navigateToPhotoShare(it.toString()) }
+        uri?.let {
+            val extensionMimeType = it.lastPathSegment
+                ?.substringAfterLast('.', missingDelimiterValue = "")
+                ?.takeIf(String::isNotEmpty)
+                ?.let { extension ->
+                    MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
+                }
+            if (isSupportedFamilyPhotoMimeType(
+                    reportedMimeType = context.contentResolver.getType(it),
+                    extensionMimeType = extensionMimeType,
+                )
+            ) {
+                navigateToPhotoShare(it.toString())
+            } else {
+                Toast.makeText(
+                    context,
+                    "JPG, PNG, WEBP 형식의 사진만 선택할 수 있어요.",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
     }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -352,6 +375,14 @@ fun ChildMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
+        if (!showSeniorManagement && selectedTab == ChildMainTab.Screen &&
+            seniorManagementUiState.managedSeniors.isNotEmpty() && seniorManagementUiState.listError != null) {
+            com.example.senior_on.ui.common.QueryRetryMessage(
+                message = seniorManagementUiState.listError!!,
+                loading = seniorManagementUiState.isLoading,
+                onRetry = seniorManagementViewModel::refreshSeniors,
+            )
+        }
         if (showSeniorManagement) {
             SeniorManagementRoute(
                 uiState = seniorManagementUiState,
@@ -366,6 +397,26 @@ fun ChildMainScreen(
                     .weight(1f)
                     .fillMaxSize(),
             )
+        } else if (selectedTab != ChildMainTab.Setting &&
+            seniorManagementUiState.managedSeniors.isEmpty() &&
+            (seniorManagementUiState.isLoading || seniorManagementUiState.listError != null)) {
+            com.example.senior_on.ui.common.QueryRetryContent(
+                error = seniorManagementUiState.listError,
+                loading = seniorManagementUiState.isLoading,
+                hasContent = false,
+                onRetry = seniorManagementViewModel::refreshSeniors,
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                placeholderHeader = {
+                    com.example.senior_on.ui.child.display.DisplayTopBar(
+                        title = when (selectedTab) {
+                            ChildMainTab.Screen -> "화면"
+                            ChildMainTab.Health -> "건강"
+                            ChildMainTab.Notification -> "알림"
+                            else -> "가족"
+                        },
+                    )
+                },
+            ) {}
         } else if (selectedTab == ChildMainTab.Family && activeSeniorId == null) {
             if (selectionState.isLoading) {
                 Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -750,6 +801,7 @@ private fun ChildMainTabContent(
             ChildFamilyDestination.SeniorConnection -> activeSeniorId?.let { seniorId ->
                 SeniorConnectionRoute(
                     seniorId = seniorId,
+                    canManageConnections = familyUiState.canManageSeniorConnections,
                     onBackClick = onFamilyBackClick,
                     viewModel = seniorConnectionViewModel,
                     modifier = modifier,

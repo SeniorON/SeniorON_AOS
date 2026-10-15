@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 fun ParentPermissionGuideRoute(
     onExit: () -> Unit,
+    onBackExit: () -> Unit,
     modifier: Modifier = Modifier,
     controller: ParentPermissionController? = null,
     dismissedSteps: Set<ParentPermissionStep> = emptySet(),
@@ -64,10 +65,7 @@ fun ParentPermissionGuideRoute(
     fun back() {
         if (pending != null) return
         message = null
-        ParentPermissionStep.entries.take(step.ordinal).lastOrNull {
-            it !in dismissedSteps && (platform.status(it) == ParentPermissionStatus.Required ||
-                platform.status(it) == ParentPermissionStatus.Manual)
-        }?.let { step = it } ?: deferCurrent()
+        step.previousRequired(platform::status)?.let { step = it } ?: onBackExit()
     }
     BackHandler(enabled = pending == null, onBack = ::back)
 

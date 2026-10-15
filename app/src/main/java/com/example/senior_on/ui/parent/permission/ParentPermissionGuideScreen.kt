@@ -35,8 +35,9 @@ fun ParentPermissionGuideScreen(
     statusMessage: String? = null,
     onLaterClick: (() -> Unit)? = null,
     onManualConfirmClick: (() -> Unit)? = null,
-    media: @Composable (ParentPermissionStep, Modifier) -> Unit = { _, mediaModifier ->
-        ParentPermissionMediaPlaceholder(mediaModifier)
+    media: @Composable (ParentPermissionStep, Modifier) -> Unit = { step, mediaModifier ->
+        if (androidx.compose.ui.platform.LocalInspectionMode.current) ParentPermissionMediaPlaceholder(mediaModifier)
+        else ParentPermissionVideo(step, mediaModifier)
     },
 ) {
     val content = step.guideContent()
@@ -70,11 +71,15 @@ fun ParentPermissionGuideScreen(
         },
     ) {
         key(step) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-                // A shared stage aligns the progress/title while allowing each media item its own size.
-                Box(Modifier.fillMaxWidth().heightIn(min = 270.dp).padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-                    media(step, Modifier.widthIn(max = content.mediaWidth.dp).fillMaxWidth().aspectRatio(content.mediaAspectRatio))
+            BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            val descriptionHeight = maxHeight * 0.45f
+            Column(Modifier.fillMaxSize()) {
+                // The video gets all space left after the explanation; VideoView keeps its aspect ratio.
+                Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                    media(step, Modifier.fillMaxSize())
                 }
+                // All steps reserve the same proportion for captions; long text cannot shrink the video.
+                Column(Modifier.fillMaxWidth().height(descriptionHeight).verticalScroll(rememberScrollState())) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(30.dp).background(SeniorOnColors.Primary600, CircleShape), contentAlignment = Alignment.Center) {
                         Text("${step.ordinal + 1}", color = SeniorOnColors.White, style = SeniorOnTextStyles.BodySMedium)
@@ -96,10 +101,20 @@ fun ParentPermissionGuideScreen(
                     content.description, style = SeniorOnTextStyles.BodySMedium, color = SeniorOnColors.Gray500,
                     modifier = Modifier.fillMaxWidth().background(SeniorOnColors.White, RoundedCornerShape(8.dp)).padding(16.dp),
                 )
+                if (step == ParentPermissionStep.SleepingApps) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("1단계에서 배터리를 ‘제한 없음’으로 설정했다면 이 단계는 건너뛰어도 괜찮아요.",
+                        style = SeniorOnTextStyles.BodySRegular, color = SeniorOnColors.Gray500)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("삼성 기기 기준 안내예요. 기기에 따라 설정 화면이 다를 수 있어요.",
+                    style = SeniorOnTextStyles.BodySRegular, color = SeniorOnColors.Gray500)
                 Spacer(Modifier.height(16.dp))
                 statusMessage?.let {
                     Text(it, style = SeniorOnTextStyles.BodySRegular, color = SeniorOnColors.Gray800)
                 }
+                }
+            }
             }
         }
     }
