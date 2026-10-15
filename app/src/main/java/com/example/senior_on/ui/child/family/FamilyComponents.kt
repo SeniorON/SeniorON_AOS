@@ -598,9 +598,15 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
 @Composable
 internal fun BoxScope.SharedFamilyPhotoImage(
     photo: SharedFamilyPhotoUiModel,
+    preferThumbnail: Boolean = true,
     onRemoteImageLoadError: (photoId: String, failedUrl: String) -> Unit = { _, _ -> },
 ) {
-    when (val imageSource = photo.imageSource) {
+    val displayedImageSource = if (preferThumbnail) {
+        photo.thumbnailSource ?: photo.imageSource
+    } else {
+        photo.imageSource
+    }
+    when (val imageSource = displayedImageSource) {
         is FamilyImageSource.Local -> Image(
             painter = painterResource(id = imageSource.drawableResId),
             contentDescription = null,
@@ -609,7 +615,9 @@ internal fun BoxScope.SharedFamilyPhotoImage(
         )
         is FamilyImageSource.Remote -> {
             val context = LocalContext.current
-            val cacheKey = remember(photo.id) { familyPhotoCacheKey(photo.id) }
+            val cacheKey = remember(photo.id, preferThumbnail) {
+                familyPhotoCacheKey(photo.id, isThumbnail = preferThumbnail)
+            }
             val imageRequest = remember(context, imageSource.url, cacheKey) {
                 ImageRequest.Builder(context)
                     .data(imageSource.url)
@@ -652,7 +660,10 @@ internal fun familyMemberImageCacheKey(
     return "family-member:${memberId.trim()}:$stableImagePath"
 }
 
-internal fun familyPhotoCacheKey(photoId: String): String = "family-photo:$photoId"
+internal fun familyPhotoCacheKey(
+    photoId: String,
+    isThumbnail: Boolean = false,
+): String = "family-photo:${if (isThumbnail) "thumbnail" else "original"}:$photoId"
 
 @Composable
 private fun BoxScope.SharedPhotoImagePlaceholder() {

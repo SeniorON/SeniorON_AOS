@@ -107,6 +107,30 @@ class FamilyServerRepositoryImplTest {
     }
 
     @Test
+    fun `family photos keep the thumbnail URL separately from the original`() = runBlocking {
+        val source = FakeRemoteFamilySource(
+            home = FamilyHomeResponse(
+                members = emptyList(),
+                recentUploaderProfileImageUrls = emptyList(),
+                recentPhotos = listOf(
+                    familyPhoto(id = 91, canDelete = false).copy(
+                        imageUrl = "https://example.com/original.jpg",
+                        thumbnailUrl = "https://example.com/thumbnail.jpg",
+                    ),
+                ),
+            ),
+        )
+
+        val photo = FamilyServerRepositoryImpl(source)
+            .getHome(seniorId = 7L)
+            .recentPhotos
+            .single()
+
+        assertEquals("https://example.com/original.jpg", photo.imageUrl)
+        assertEquals("https://example.com/thumbnail.jpg", photo.thumbnailUrl)
+    }
+
+    @Test
     fun `photo list keeps cursor metadata for the next request`() = runBlocking {
         val source = FakeRemoteFamilySource(
             photos = FamilyPhotoListResponse(
@@ -120,7 +144,10 @@ class FamilyServerRepositoryImplTest {
             ),
         )
 
-        val page = FamilyServerRepositoryImpl(source).getPhotos(size = 20)
+        val page = FamilyServerRepositoryImpl(source).getPhotos(
+            size = 20,
+            seniorId = 7L,
+        )
 
         assertEquals(31L, page.totalCount)
         assertEquals("2026-08-03T12:00:00", page.nextCursor?.createdAt)
@@ -293,7 +320,7 @@ class FamilyServerRepositoryImplTest {
         )
 
         val exception = runCatching {
-            FamilyServerRepositoryImpl(source).getHome()
+            FamilyServerRepositoryImpl(source).getHome(seniorId = 7L)
         }.exceptionOrNull()
 
         assertTrue(exception is IllegalArgumentException)
@@ -315,7 +342,10 @@ class FamilyServerRepositoryImplTest {
         )
 
         val exception = runCatching {
-            FamilyServerRepositoryImpl(source).getPhotos(size = 20)
+            FamilyServerRepositoryImpl(source).getPhotos(
+                size = 20,
+                seniorId = 7L,
+            )
         }.exceptionOrNull()
 
         assertTrue(exception is IllegalArgumentException)
@@ -388,14 +418,15 @@ private class FakeRemoteFamilySource(
     override suspend fun createCode() =
         FamilyCodeCreateResponse(familyId = 1, familyCode = "ABCD-1234")
 
-    override suspend fun getCode() =
+    override suspend fun getCode(seniorId: Long) =
         FamilyCodeResponse(familyCode = "ABCD-1234", familyMemberCount = 2)
 
-    override suspend fun getHome() = home
+    override suspend fun getHome(seniorId: Long) = home
 
-    override suspend fun getMembers(seniorId: Long?) = home.members.orEmpty()
+    override suspend fun getMembers(seniorId: Long) = home.members.orEmpty()
 
     override suspend fun changePrimaryManager(
+        seniorId: Long,
         request: FamilyPrimaryManagerUpdateRequest,
     ) = FamilyPrimaryManagerUpdateResponse(
         usersId = request.targetUserId,
@@ -403,7 +434,7 @@ private class FakeRemoteFamilySource(
         managerType = "PRIMARY",
     )
 
-    override suspend fun deleteMember(userId: Long) = Unit
+    override suspend fun deleteMember(userId: Long, seniorId: Long) = Unit
 
     override suspend fun getPhotoGroupConnections(
         seniorId: Long,
@@ -423,7 +454,7 @@ private class FakeRemoteFamilySource(
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-        seniorId: Long?,
+        seniorId: Long,
     ) = photos
 
     override suspend fun createPhotoUploadUrl(

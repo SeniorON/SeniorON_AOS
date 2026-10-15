@@ -33,6 +33,7 @@ data class SharedFamilyPhotoUiModel(
     val canDelete: Boolean,
     val imageSource: FamilyImageSource? = null,
     val message: String = "",
+    val thumbnailSource: FamilyImageSource? = null,
 ) {
     val relativeTime: String
         get() = createdAt.toRelativeTime()
@@ -83,6 +84,9 @@ data class FamilyTabUiState(
         get() = members.firstOrNull(FamilyMemberUiModel::isCurrentUser)?.role
 
     val canManageMembers: Boolean
+        get() = currentUserRole == FamilyCaregiverRole.Primary
+
+    val canManagePhotoGroups: Boolean
         get() = currentUserRole == FamilyCaregiverRole.Primary
 
     val isMemberMutationInProgress: Boolean

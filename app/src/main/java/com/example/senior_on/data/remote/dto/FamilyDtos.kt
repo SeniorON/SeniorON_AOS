@@ -51,7 +51,7 @@ data class FamilyPhotoUploadCompleteRequest(
 data class FamilyPhotoItemResponse(
     val familyPhotoId: Long?, val imageUrl: String?, val uploaderUserId: Long?,
     val uploaderName: String?, val description: String?, val canDelete: Boolean?,
-    val createdAt: String?, val newPhoto: Boolean?
+    val createdAt: String?, val newPhoto: Boolean?, val thumbnailUrl: String? = null,
 )
 data class FamilyPhotoCursorResponse(val createdAt: String?, val familyPhotoId: Long?)
 data class FamilyPhotoListResponse(

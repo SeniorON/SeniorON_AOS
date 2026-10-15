@@ -26,6 +26,35 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class FamilyViewModelPhotoUrlRefreshTest {
     @Test
+    fun `family photo list keeps thumbnail and original image sources separately`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(
+                    url = FRESH_URL,
+                    thumbnailUrl = THUMBNAIL_URL,
+                ),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+
+            val photo = viewModel.uiState.value.sharedPhotos.single()
+            assertEquals(
+                FRESH_URL,
+                (photo.imageSource as FamilyImageSource.Remote).url,
+            )
+            assertEquals(
+                THUMBNAIL_URL,
+                (photo.thumbnailSource as FamilyImageSource.Remote).url,
+            )
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun `family tab refresh requests the latest home after the initial load`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -191,10 +220,14 @@ class FamilyViewModelPhotoUrlRefreshTest {
         const val SENIOR_ID = 7L
         const val EXPIRED_URL = "https://example.com/expired.jpg"
         const val FRESH_URL = "https://example.com/fresh.jpg"
+        const val THUMBNAIL_URL = "https://example.com/thumbnail.jpg"
     }
 }
 
-private fun serverPhoto(url: String) = ServerFamilyPhoto(
+private fun serverPhoto(
+    url: String,
+    thumbnailUrl: String? = null,
+) = ServerFamilyPhoto(
     id = 91L,
     imageUrl = url,
     uploaderId = 11L,
@@ -203,6 +236,7 @@ private fun serverPhoto(url: String) = ServerFamilyPhoto(
     createdAt = "2026-08-07T12:00:00+09:00",
     canDelete = true,
     isNew = false,
+    thumbnailUrl = thumbnailUrl,
 )
 
 private class FakeFamilyServerRepository(
@@ -223,24 +257,23 @@ private class FakeFamilyServerRepository(
     var photoPageRequestCount = 0
         private set
 
-    override suspend fun hasFamily(): Boolean = true
     override suspend fun join(code: String) = FamilyCodeInfo(1L, code)
     override suspend fun createCode() = FamilyCodeInfo(1L, "ABCD-1234")
-    override suspend fun getCode() = FamilyCodeInfo(1L, "ABCD-1234")
-    override suspend fun getHome(): ServerFamilyHome {
+    override suspend fun getCode(seniorId: Long) = FamilyCodeInfo(1L, "ABCD-1234")
+    override suspend fun getHome(seniorId: Long): ServerFamilyHome {
         homeRequestCount++
         return home
     }
-    override suspend fun getMembers(seniorId: Long?): List<ServerFamilyMember> = emptyList()
-    override suspend fun changePrimaryManager(userId: Long) = Unit
-    override suspend fun deleteMember(userId: Long) = Unit
+    override suspend fun getMembers(seniorId: Long): List<ServerFamilyMember> = emptyList()
+    override suspend fun changePrimaryManager(userId: Long, seniorId: Long) = Unit
+    override suspend fun deleteMember(userId: Long, seniorId: Long) = Unit
     override suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum> = emptyList()
     override suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,
         cursorId: Long?,
         size: Int?,
-        seniorId: Long?,
+        seniorId: Long,
     ): ServerFamilyPhotoPage {
         photoPageRequestCount++
         return photoPageProvider?.invoke(photoPageRequestCount)
