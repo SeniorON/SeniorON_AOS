@@ -2,7 +2,6 @@ package com.example.senior_on.ui.child.display
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import com.example.senior_on.domain.model.display.DisplayHomeButton
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.ui.common.homebutton.findMatchingDefaultButton
@@ -29,59 +28,46 @@ private val AndroidPackageNamePattern = Regex(
     pattern = "^[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+$",
 )
 
-private fun createLaunchableAppIntent(): Intent {
+internal fun createInstalledAppPickerIntent(): Intent {
     val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
         addCategory(Intent.CATEGORY_LAUNCHER)
     }
-    return launcherIntent
-}
-
-@Suppress("DEPRECATION")
-internal fun loadLaunchableInstalledApps(context: Context): List<PickedInstalledApp> {
-    val packageManager = context.packageManager
-    val candidates = packageManager.queryIntentActivities(
-        createLaunchableAppIntent(),
-        PackageManager.MATCH_ALL,
-    ).mapNotNull { resolveInfo ->
-        val activityInfo = resolveInfo.activityInfo ?: return@mapNotNull null
-        val packageName = activityInfo.packageName
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?: return@mapNotNull null
-        val activityLabel = runCatching {
-            resolveInfo.loadLabel(packageManager)?.toString()
-        }.getOrNull()
-        val applicationLabel = runCatching {
-            packageManager.getApplicationLabel(activityInfo.applicationInfo).toString()
-        }.getOrNull()
-
-        PickedInstalledApp(
-            packageName = packageName,
-            label = selectInstalledAppDisplayName(
-                packageName,
-                activityLabel,
-                applicationLabel,
-            ),
-        )
+    return Intent(Intent.ACTION_PICK_ACTIVITY).apply {
+        putExtra(Intent.EXTRA_INTENT, launcherIntent)
+        putExtra(Intent.EXTRA_TITLE, "추가할 앱 선택")
     }
-
-    return normalizeLaunchableInstalledApps(
-        candidates = candidates,
-        excludedPackageName = context.packageName,
-    )
 }
 
-internal fun normalizeLaunchableInstalledApps(
-    candidates: List<PickedInstalledApp>,
-    excludedPackageName: String,
-): List<PickedInstalledApp> = candidates
-    .filterNot { it.packageName.equals(excludedPackageName, ignoreCase = true) }
-    .distinctBy { it.packageName.lowercase() }
-    .sortedWith(
-        compareBy<PickedInstalledApp> {
-            (it.label ?: it.packageName).lowercase()
-        }.thenBy { it.packageName.lowercase() },
+internal fun readPickedInstalledApp(
+    context: Context,
+    resultIntent: Intent?,
+): PickedInstalledApp? {
+    val selectedIntent = resultIntent ?: return null
+    val packageName = selectedIntent.component?.packageName
+        ?: selectedIntent.`package`
+        ?: selectedIntent.resolveActivity(context.packageManager)?.packageName
+        ?: return null
+    val packageManager = context.packageManager
+    val activityLabel = runCatching {
+        selectedIntent.component
+            ?.let { packageManager.getActivityInfo(it, 0) }
+            ?.loadLabel(packageManager)
+            ?.toString()
+    }.getOrNull()
+    val applicationLabel = runCatching {
+        val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+        packageManager.getApplicationLabel(applicationInfo).toString()
+    }.getOrNull()
+
+    return PickedInstalledApp(
+        packageName = packageName,
+        label = selectInstalledAppDisplayName(
+            packageName,
+            activityLabel,
+            applicationLabel,
+        ),
     )
+}
 
 internal fun PickedInstalledApp.toDisplayHomeButton(
     context: Context,

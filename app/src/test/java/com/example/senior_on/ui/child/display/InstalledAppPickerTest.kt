@@ -96,21 +96,4 @@ class InstalledAppPickerTest {
         assertNull(pickedApp.supportedMusicButtonTypeOrNull())
     }
 
-    @Test
-    fun `설치 앱 목록은 현재 앱과 중복 패키지를 제외하고 이름순으로 정렬한다`() {
-        val result = normalizeLaunchableInstalledApps(
-            candidates = listOf(
-                PickedInstalledApp("com.example.senior_on", "시니어온"),
-                PickedInstalledApp("com.example.youtube", "유튜브"),
-                PickedInstalledApp("com.example.netflix", "넷플릭스"),
-                PickedInstalledApp("COM.EXAMPLE.NETFLIX", "넷플릭스 실행"),
-            ),
-            excludedPackageName = "com.example.senior_on",
-        )
-
-        assertEquals(
-            listOf("com.example.netflix", "com.example.youtube"),
-            result.map(PickedInstalledApp::packageName),
-        )
-    }
 }

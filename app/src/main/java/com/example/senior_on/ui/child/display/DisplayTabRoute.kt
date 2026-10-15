@@ -2,8 +2,12 @@ package com.example.senior_on.ui.child.display
 
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,9 +31,6 @@ import com.example.senior_on.ui.common.seniorinfo.ParentInfoEditScreen
 import com.example.senior_on.ui.common.seniorinfo.toParentInfo
 import com.example.senior_on.ui.common.share.KakaoShareLauncher
 import com.example.senior_on.ui.common.share.ShareLaunchResult
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private enum class DisplayDestination {
     Overview,
@@ -85,12 +86,6 @@ fun DisplayTabRoute(
     var pendingAppNameInput by remember {
         mutableStateOf<PickedInstalledApp?>(null)
     }
-    var showInstalledAppPicker by remember { mutableStateOf(false) }
-    var installedApps by remember {
-        mutableStateOf<List<PickedInstalledApp>?>(null)
-    }
-    var installedAppLoadError by remember { mutableStateOf(false) }
-    var installedAppLoadRequest by remember { mutableIntStateOf(0) }
     var autoSelectKey by remember { mutableStateOf<String?>(null) }
     var autoSelectMusicButton by remember {
         mutableStateOf<SeniorHomeButtonType?>(null)
@@ -109,7 +104,6 @@ fun DisplayTabRoute(
         buttonAddEntryItems = emptyList()
         transientImportedButtons = emptyList()
         pendingAppNameInput = null
-        showInstalledAppPicker = false
         autoSelectKey = null
         autoSelectMusicButton = null
         DisplayDestination.entries
@@ -137,7 +131,6 @@ fun DisplayTabRoute(
     }
 
     fun selectInstalledApp(pickedApp: PickedInstalledApp) {
-        showInstalledAppPicker = false
         if (pickedApp.requiresManualNameInput) {
             pendingAppNameInput = pickedApp
             return
@@ -149,26 +142,19 @@ fun DisplayTabRoute(
         importedButton?.let(::importButton)
     }
 
-    LaunchedEffect(showInstalledAppPicker, installedAppLoadRequest) {
-        if (!showInstalledAppPicker || installedApps != null) return@LaunchedEffect
-        installedAppLoadError = false
-        try {
-            installedApps = withContext(Dispatchers.IO) {
-                loadLaunchableInstalledApps(context.applicationContext)
-            }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (_: Exception) {
-            installedAppLoadError = true
-        }
-    }
-
     val selectableDefaultButtons = uiState.availableButtonOptions
         .filter(DisplayHomeButton::isSelectableDefaultOption)
+    val appPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val pickedApp = readPickedInstalledApp(context, result.data)
+            ?: return@rememberLauncherForActivityResult
+        selectInstalledApp(pickedApp)
+    }
 
     fun navigateBack() {
         if (destination == DisplayDestination.ButtonAdd) {
-            showInstalledAppPicker = false
             buttonEditDraftItems = resolveButtonEditDraftAfterButtonAdd(
                 buttonsAtEntry = buttonAddEntryItems,
                 selectedButtons = buttonEditDraftItems,
@@ -212,7 +198,6 @@ fun DisplayTabRoute(
         buttonEditDraftItems = emptyList()
         buttonAddEntryItems = emptyList()
         transientImportedButtons = emptyList()
-        showInstalledAppPicker = false
         autoSelectKey = null
         autoSelectMusicButton = null
         listOf(
@@ -493,7 +478,15 @@ fun DisplayTabRoute(
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onImportAppClick = {
-                    showInstalledAppPicker = true
+                    try {
+                        appPickerLauncher.launch(createInstalledAppPickerIntent())
+                    } catch (_: ActivityNotFoundException) {
+                        Toast.makeText(
+                            context,
+                            "앱 선택 화면을 열 수 없어요.",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                 },
                 onSaveClick = { musicButton, appButtons ->
                     val currentDraftButtons = buttonEditDraftItems
@@ -545,20 +538,6 @@ fun DisplayTabRoute(
         ParentPhoneInternetRequiredDialog(
             onConfirmClick = { showInternetRequiredDialog = false },
             obscureBackgroundContent = true,
-        )
-    }
-
-    if (showInstalledAppPicker) {
-        InstalledAppPickerSheet(
-            apps = installedApps,
-            hasLoadError = installedAppLoadError,
-            onDismiss = { showInstalledAppPicker = false },
-            onRetry = {
-                installedApps = null
-                installedAppLoadError = false
-                installedAppLoadRequest += 1
-            },
-            onAppClick = ::selectInstalledApp,
         )
     }
 
