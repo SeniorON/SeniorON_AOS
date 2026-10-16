@@ -45,6 +45,29 @@ class FamilyApiContractTest {
         assertEquals(listOf("seniorId"), queryNames("deleteMember"))
     }
 
+    @Test
+    fun `required family scope uses a non-null senior id`() {
+        listOf(
+            "getCode",
+            "getHome",
+            "getMembers",
+            "changePrimaryManager",
+            "deleteMember",
+            "getPhotos",
+        ).forEach { methodName ->
+            val method = FamilyApi::class.java.methods.single { it.name == methodName }
+            val seniorIdIndex = method.parameterAnnotations.indexOfFirst { annotations ->
+                annotations.filterIsInstance<Query>().any { it.value == "seniorId" }
+            }
+
+            assertEquals(
+                "$methodName seniorId must be a required primitive long",
+                Long::class.javaPrimitiveType,
+                method.parameterTypes[seniorIdIndex],
+            )
+        }
+    }
+
     private fun queryNames(methodName: String): List<String> {
         val method = FamilyApi::class.java.methods.single { it.name == methodName }
         return method.parameterAnnotations

@@ -58,15 +58,14 @@ internal fun readPickedInstalledApp(
         val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
         packageManager.getApplicationLabel(applicationInfo).toString()
     }.getOrNull()
-    val label = selectInstalledAppDisplayName(
-        packageName = packageName,
-        activityLabel,
-        applicationLabel,
-    )
 
     return PickedInstalledApp(
         packageName = packageName,
-        label = label,
+        label = selectInstalledAppDisplayName(
+            packageName,
+            activityLabel,
+            applicationLabel,
+        ),
     )
 }
 

@@ -128,6 +128,7 @@ fun FamilyPhotoDetailRoute(
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(
                 photo = photo,
+                preferThumbnail = false,
                 onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
             )
         },

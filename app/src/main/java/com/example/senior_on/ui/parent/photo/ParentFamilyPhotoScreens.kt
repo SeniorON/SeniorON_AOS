@@ -300,7 +300,7 @@ private fun ParentPhotoGridItem(
             .clickable(onClick = onClick)
     ) {
         ParentPhotoImage(
-            imageSource = photo.imageSource,
+            imageSource = photo.thumbnailSource ?: photo.imageSource,
             contentDescription = "${photo.memberName}님이 올린 사진",
             modifier = Modifier.fillMaxSize()
         )

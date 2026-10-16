@@ -191,7 +191,6 @@ private class SwitchingSeniorRepository(
         }
     }
 
-    override suspend fun hasFamily() = error("Not used")
     override suspend fun join(code: String) = error("Not used")
     override suspend fun createCode() = error("Not used")
     override suspend fun getCode(seniorId: Long): FamilyCodeInfo = error("Not used")

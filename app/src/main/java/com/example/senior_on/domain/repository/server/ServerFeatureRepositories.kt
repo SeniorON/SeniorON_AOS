@@ -24,7 +24,6 @@ interface HomeServerRepository {
 }
 
 interface FamilyServerRepository {
-    suspend fun hasFamily(): Boolean
     suspend fun join(code: String): FamilyCodeInfo
     suspend fun createCode(): FamilyCodeInfo
     suspend fun getPendingCode(): FamilyCodeInfo? = null

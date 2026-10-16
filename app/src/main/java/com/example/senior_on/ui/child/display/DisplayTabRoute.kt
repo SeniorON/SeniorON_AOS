@@ -3,11 +3,13 @@ package com.example.senior_on.ui.child.display
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +50,7 @@ private enum class DisplayDestination {
 fun DisplayTabRoute(
     viewModel: DisplayViewModel,
     addressSearchViewModel: AddressSearchViewModel,
+    resetToOverviewEvent: Int = 0,
     modifier: Modifier = Modifier,
     onRefreshClick: () -> Unit = {},
     onInstallGuideClick: () -> Unit = {},
@@ -89,6 +92,25 @@ fun DisplayTabRoute(
     }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
 
+    LaunchedEffect(resetToOverviewEvent) {
+        if (resetToOverviewEvent <= 0) return@LaunchedEffect
+        destination = DisplayDestination.Overview
+        selectedAddress = ""
+        selectedAddressLatitude = null
+        selectedAddressLongitude = null
+        showInternetRequiredDialog = false
+        showLargePreview = false
+        buttonEditDraftItems = emptyList()
+        buttonAddEntryItems = emptyList()
+        transientImportedButtons = emptyList()
+        pendingAppNameInput = null
+        autoSelectKey = null
+        autoSelectMusicButton = null
+        DisplayDestination.entries
+            .filterNot { it == DisplayDestination.Overview }
+            .forEach { saveableStateHolder.removeState(it.name) }
+    }
+
     fun importButton(button: DisplayHomeButton) {
         val importedMusicButton = button.importedMusicButtonTypeOrNull()
         if (importedMusicButton != null) {
@@ -108,6 +130,18 @@ fun DisplayTabRoute(
         autoSelectEvent += 1
     }
 
+    fun selectInstalledApp(pickedApp: PickedInstalledApp) {
+        if (pickedApp.requiresManualNameInput) {
+            pendingAppNameInput = pickedApp
+            return
+        }
+        val importedButton = pickedApp.toDisplayHomeButton(
+            context = context,
+            defaultButtons = uiState.availableButtonOptions,
+        )
+        importedButton?.let(::importButton)
+    }
+
     val selectableDefaultButtons = uiState.availableButtonOptions
         .filter(DisplayHomeButton::isSelectableDefaultOption)
     val appPickerLauncher = rememberLauncherForActivityResult(
@@ -116,15 +150,7 @@ fun DisplayTabRoute(
         if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
         val pickedApp = readPickedInstalledApp(context, result.data)
             ?: return@rememberLauncherForActivityResult
-        if (pickedApp.requiresManualNameInput) {
-            pendingAppNameInput = pickedApp
-            return@rememberLauncherForActivityResult
-        }
-        val importedButton = pickedApp.toDisplayHomeButton(
-            context = context,
-            defaultButtons = uiState.availableButtonOptions,
-        )
-        importedButton?.let(::importButton)
+        selectInstalledApp(pickedApp)
     }
 
     fun navigateBack() {
@@ -452,15 +478,14 @@ fun DisplayTabRoute(
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onImportAppClick = {
-                    val pickerIntent = createInstalledAppPickerIntent()
-                    if (pickerIntent.resolveActivity(context.packageManager) == null) {
+                    try {
+                        appPickerLauncher.launch(createInstalledAppPickerIntent())
+                    } catch (_: ActivityNotFoundException) {
                         Toast.makeText(
                             context,
                             "앱 선택 화면을 열 수 없어요.",
                             Toast.LENGTH_SHORT,
                         ).show()
-                    } else {
-                        appPickerLauncher.launch(pickerIntent)
                     }
                 },
                 onSaveClick = { musicButton, appButtons ->

@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -161,6 +162,7 @@ fun ChildMainScreen(
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
+    var screenRootResetEvent by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(notificationNavigationEvent) {
         notificationNavigationEvent?.let { event ->
             if (event.isMedicationNotification || event.isHospitalNotification) {
@@ -431,6 +433,7 @@ fun ChildMainScreen(
         } else {
             ChildMainTabContent(
                 selectedTab = selectedTab,
+                screenRootResetEvent = screenRootResetEvent,
                 familyDestination = familyDestination,
                 selectedPhotoId = selectedPhotoId,
                 selectedPhotoUri = selectedPhotoUri,
@@ -531,6 +534,10 @@ fun ChildMainScreen(
                     if (childMainNavigationEnabled) {
                         val isScreenTabReentry =
                             tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
+                        screenRootResetEvent = resolveScreenRootResetEvent(
+                            targetTab = tab,
+                            currentResetEvent = screenRootResetEvent,
+                        )
                         selectedTab = tab
                         if (isScreenTabReentry) {
                             displayViewModel.refreshOnScreenTabReentry()
@@ -571,9 +578,19 @@ internal fun resolveChildFamilyPhotoUploadSuccessDestination(
 internal fun isChildMainNavigationEnabled(isFamilyPhotoUploading: Boolean): Boolean =
     !isFamilyPhotoUploading
 
+internal fun resolveScreenRootResetEvent(
+    targetTab: ChildMainTab,
+    currentResetEvent: Int,
+): Int = if (targetTab == ChildMainTab.Screen) {
+    currentResetEvent + 1
+} else {
+    currentResetEvent
+}
+
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
+    screenRootResetEvent: Int,
     familyDestination: ChildFamilyDestination,
     selectedPhotoId: String?,
     selectedPhotoUri: String?,
@@ -631,6 +648,7 @@ private fun ChildMainTabContent(
         DisplayTabRoute(
             viewModel = displayViewModel,
             addressSearchViewModel = addressSearchViewModel,
+            resetToOverviewEvent = screenRootResetEvent,
             seniorAccounts = seniorAccounts,
             isSeniorAccountsLoading = isSeniorAccountsLoading,
             onSeniorAccountClick = onSeniorAccountClick,

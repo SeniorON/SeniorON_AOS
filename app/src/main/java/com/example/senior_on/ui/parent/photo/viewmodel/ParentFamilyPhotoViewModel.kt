@@ -30,6 +30,7 @@ data class ParentFamilyPhotoUiModel(
     val imageSource: FamilyImageSource,
     val message: String,
     val isNew: Boolean,
+    val thumbnailSource: FamilyImageSource? = null,
 )
 
 data class ParentPhotoMemberUiModel(
@@ -324,6 +325,10 @@ private fun ServerFamilyPhoto.toParentUiModel() = ParentFamilyPhotoUiModel(
     imageSource = FamilyImageSource.Remote(imageUrl),
     message = description,
     isNew = isNew,
+    thumbnailSource = thumbnailUrl
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?.let(FamilyImageSource::Remote),
 )
 
 private fun String.toParentPhotoInstant(): Instant {

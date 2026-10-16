@@ -67,4 +67,24 @@ class ChildFamilyNavigationTest {
             ),
         )
     }
+
+    @Test
+    fun `선택 중인 하단 탭을 다시 누르면 루트 초기화 이벤트가 증가한다`() {
+        val result = resolveScreenRootResetEvent(
+            targetTab = ChildMainTab.Screen,
+            currentResetEvent = 3,
+        )
+
+        assertEquals(4, result)
+    }
+
+    @Test
+    fun `화면 외 하단 탭은 화면 탭 초기화 이벤트를 변경하지 않는다`() {
+        val result = resolveScreenRootResetEvent(
+            targetTab = ChildMainTab.Setting,
+            currentResetEvent = 7,
+        )
+
+        assertEquals(7, result)
+    }
 }

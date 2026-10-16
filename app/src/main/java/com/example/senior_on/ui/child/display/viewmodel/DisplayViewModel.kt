@@ -382,6 +382,7 @@ class DisplayViewModel(
                 "선택한 시니어의 프로필만 수정할 수 있습니다."
             }
             val savedParentInfo = displayRepository.updateSeniorProfile(parentInfo)
+            selectedRelationshipLabel = savedParentInfo.relationshipLabel
             shareParentInfo(savedParentInfo)
             _uiState.update {
                 it.copy(

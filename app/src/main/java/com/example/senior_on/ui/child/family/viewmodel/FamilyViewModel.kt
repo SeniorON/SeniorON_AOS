@@ -12,6 +12,7 @@ import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.domain.model.family.FamilyOverview
 import com.example.senior_on.domain.model.family.SharedFamilyPhoto
+import com.example.senior_on.domain.model.server.ServerFamilyPhoto
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
 import java.time.Instant
 import java.time.LocalDateTime
@@ -109,17 +110,7 @@ class FamilyViewModel(
                 }
                 val recentPhotos = home.recentPhotos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
-                    SharedFamilyPhotoUiModel(
-                        id = photo.id.toString(),
-                        authorName = photo.uploaderName,
-                        createdAt = photo.createdAt.toFamilyPhotoInstant(),
-                        canDelete = photo.canDelete,
-                        imageSource = photo.imageUrl
-                            .trim()
-                            .takeIf(String::isNotEmpty)
-                            ?.let(FamilyImageSource::Remote),
-                        message = photo.description,
-                    )
+                    photo.toSharedFamilyPhotoUiModel()
                 }
                 _uiState.update { currentState ->
                     if (!isActiveSenior(seniorId)) return@update currentState
@@ -360,17 +351,7 @@ class FamilyViewModel(
                 if (!isActiveSenior(seniorId)) return@onSuccess
                 val photos = page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
-                    SharedFamilyPhotoUiModel(
-                        id = photo.id.toString(),
-                        authorName = photo.uploaderName,
-                        createdAt = photo.createdAt.toFamilyPhotoInstant(),
-                        canDelete = photo.canDelete,
-                        imageSource = photo.imageUrl
-                            .trim()
-                            .takeIf(String::isNotEmpty)
-                            ?.let(FamilyImageSource::Remote),
-                        message = photo.description,
-                    )
+                    photo.toSharedFamilyPhotoUiModel()
                 }
                 isPhotoGalleryLoaded = true
                 loadedPhotoSeniorId = seniorId
@@ -419,17 +400,7 @@ class FamilyViewModel(
                 if (!isActiveSenior(seniorId)) return@onSuccess
                 val photos = page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
-                    SharedFamilyPhotoUiModel(
-                        id = photo.id.toString(),
-                        authorName = photo.uploaderName,
-                        createdAt = photo.createdAt.toFamilyPhotoInstant(),
-                        canDelete = photo.canDelete,
-                        imageSource = photo.imageUrl
-                            .trim()
-                            .takeIf(String::isNotEmpty)
-                            ?.let(FamilyImageSource::Remote),
-                        message = photo.description,
-                    )
+                    photo.toSharedFamilyPhotoUiModel()
                 }
                 nextPhotoCursorAt = page.nextCursor?.createdAt
                 nextPhotoCursorId = page.nextCursor?.photoId
@@ -481,17 +452,7 @@ class FamilyViewModel(
                 require(photo.id == serverPhotoId) {
                     "Family photo response id must match the requested id"
                 }
-                SharedFamilyPhotoUiModel(
-                    id = photo.id.toString(),
-                    authorName = photo.uploaderName,
-                    createdAt = photo.createdAt.toFamilyPhotoInstant(),
-                    canDelete = photo.canDelete,
-                    imageSource = photo.imageUrl
-                        .trim()
-                        .takeIf(String::isNotEmpty)
-                        ?.let(FamilyImageSource::Remote),
-                    message = photo.description,
-                )
+                photo.toSharedFamilyPhotoUiModel()
             }.onSuccess { photo ->
                 if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update { state ->
@@ -544,11 +505,11 @@ class FamilyViewModel(
         val currentPhoto = _uiState.value.sharedPhotos
             .firstOrNull { it.id == normalizedPhotoId }
             ?: return
-        val currentUrl = (currentPhoto.imageSource as? FamilyImageSource.Remote)
-            ?.url
-            ?.trim()
-            ?: return
-        if (currentUrl != normalizedFailedUrl) return
+        val currentUrls = listOfNotNull(
+            currentPhoto.thumbnailSource as? FamilyImageSource.Remote,
+            currentPhoto.imageSource as? FamilyImageSource.Remote,
+        ).map { it.url.trim() }
+        if (normalizedFailedUrl !in currentUrls) return
         if (lastRetriedImageUrlByPhotoId[normalizedPhotoId] == normalizedFailedUrl) return
 
         val serverPhotoId = normalizedPhotoId.toLongOrNull() ?: return
@@ -560,17 +521,7 @@ class FamilyViewModel(
                 require(photo.id == serverPhotoId) {
                     "Family photo response id must match the requested id"
                 }
-                SharedFamilyPhotoUiModel(
-                    id = photo.id.toString(),
-                    authorName = photo.uploaderName,
-                    createdAt = photo.createdAt.toFamilyPhotoInstant(),
-                    canDelete = photo.canDelete,
-                    imageSource = photo.imageUrl
-                        .trim()
-                        .takeIf(String::isNotEmpty)
-                        ?.let(FamilyImageSource::Remote),
-                    message = photo.description,
-                )
+                photo.toSharedFamilyPhotoUiModel()
             }.onSuccess { refreshedPhoto ->
                 if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update { state ->
@@ -717,6 +668,21 @@ internal fun SharedFamilyPhoto.toFamilyPhotoUiModel(): SharedFamilyPhotoUiModel 
         imageSource = imageSource,
         message = message,
     )
+
+private fun ServerFamilyPhoto.toSharedFamilyPhotoUiModel() = SharedFamilyPhotoUiModel(
+    id = id.toString(),
+    authorName = uploaderName,
+    createdAt = createdAt.toFamilyPhotoInstant(),
+    canDelete = canDelete,
+    imageSource = imageUrl.toRemoteFamilyImageSource(),
+    message = description,
+    thumbnailSource = thumbnailUrl.toRemoteFamilyImageSource(),
+)
+
+private fun String?.toRemoteFamilyImageSource(): FamilyImageSource.Remote? =
+    this?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?.let(FamilyImageSource::Remote)
 
 private fun String.toFamilyPhotoInstant(): Instant {
     val value = trim()

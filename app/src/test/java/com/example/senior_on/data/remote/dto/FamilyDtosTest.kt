@@ -53,6 +53,17 @@ class FamilyDtosTest {
     }
 
     @Test
+    fun `family photo reads the thumbnail URL separately from the original`() {
+        val response = gson.fromJson(
+            """{"familyPhotoId":91,"imageUrl":"https://example.com/original.jpg","thumbnailUrl":"https://example.com/thumbnail.jpg"}""",
+            FamilyPhotoItemResponse::class.java,
+        )
+
+        assertEquals("https://example.com/original.jpg", response.imageUrl)
+        assertEquals("https://example.com/thumbnail.jpg", response.thumbnailUrl)
+    }
+
+    @Test
     fun `photo completion sends selected photo groups`() {
         val json = gson.toJsonTree(
             FamilyPhotoUploadCompleteRequest(

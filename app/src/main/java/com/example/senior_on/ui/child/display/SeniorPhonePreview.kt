@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
@@ -137,6 +138,7 @@ private fun SeniorPhoneDesign(
 
         val contentModifier = Modifier
             .weight(1f)
+            .clipToBounds()
             .verticalScroll(
                 state = rememberScrollState(),
                 enabled = scrollEnabled,

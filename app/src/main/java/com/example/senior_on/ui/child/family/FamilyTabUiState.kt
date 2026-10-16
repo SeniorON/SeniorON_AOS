@@ -33,6 +33,7 @@ data class SharedFamilyPhotoUiModel(
     val canDelete: Boolean,
     val imageSource: FamilyImageSource? = null,
     val message: String = "",
+    val thumbnailSource: FamilyImageSource? = null,
 ) {
     val relativeTime: String
         get() = createdAt.toRelativeTime()
