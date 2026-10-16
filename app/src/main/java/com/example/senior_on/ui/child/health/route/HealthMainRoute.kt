@@ -2,6 +2,9 @@ package com.example.senior_on.ui.child.health.route
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +51,7 @@ fun HealthMainRoute(
     hospitalSpecialtyRepository: HospitalSpecialtyRepository,
     navigationEvent: NotificationNavigationEvent? = null,
     onNavigationEventConsumed: () -> Unit = {},
+    onSavingChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scopedOwner = com.example.senior_on.ui.child.rememberSeniorScopedViewModelStoreOwner("health:$sessionKey:$seniorId")
@@ -71,6 +75,13 @@ fun HealthMainRoute(
     )
     val medicationUiState by medicationViewModel.uiState.collectAsStateWithLifecycle()
     val hospitalUiState by hospitalViewModel.uiState.collectAsStateWithLifecycle()
+    val currentOnSavingChanged by rememberUpdatedState(onSavingChanged)
+    SideEffect {
+        currentOnSavingChanged(medicationUiState.isSaving || hospitalUiState.isSaving)
+    }
+    DisposableEffect(Unit) {
+        onDispose { currentOnSavingChanged(false) }
+    }
     val medicationCheckedEvent by MedicationCheckedEventStore.pendingEvent
         .collectAsStateWithLifecycle()
     var selectedSection by rememberSaveable(seniorId, sessionKey) { mutableStateOf(HealthSection.Health) }

@@ -205,8 +205,9 @@ fun ChildMainScreen(
         familyDestination == ChildFamilyDestination.PhotoShare &&
             familyPhotoUploadUiState.sessionId == selectedPhotoSessionId &&
             familyPhotoUploadUiState.isUploading
+    var isHealthSaving by remember { mutableStateOf(false) }
     val childMainNavigationEnabled =
-        isChildMainNavigationEnabled(isFamilyPhotoUploading)
+        isChildMainNavigationEnabled(isFamilyPhotoUploading, isHealthSaving)
     val selectionRepository = remember(context.applicationContext) {
         com.example.senior_on.data.repository.impl.SelectedSeniorRepositoryImpl(context)
     }
@@ -440,6 +441,7 @@ fun ChildMainScreen(
         } else {
             ChildMainTabContent(
                 selectedTab = selectedTab,
+                onHealthSavingChanged = { isHealthSaving = it },
                 familyDestination = familyDestination,
                 selectedPhotoId = selectedPhotoId,
                 selectedPhotoUri = selectedPhotoUri,
@@ -605,12 +607,15 @@ internal fun resolveChildFamilyPhotoUploadSuccessDestination(
     else -> ChildFamilyDestination.Overview
 }
 
-internal fun isChildMainNavigationEnabled(isFamilyPhotoUploading: Boolean): Boolean =
-    !isFamilyPhotoUploading
+internal fun isChildMainNavigationEnabled(
+    isFamilyPhotoUploading: Boolean,
+    isHealthSaving: Boolean = false,
+): Boolean = !isFamilyPhotoUploading && !isHealthSaving
 
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
+    onHealthSavingChanged: (Boolean) -> Unit,
     familyDestination: ChildFamilyDestination,
     selectedPhotoId: String?,
     selectedPhotoUri: String?,
@@ -697,6 +702,7 @@ private fun ChildMainTabContent(
             hospitalSpecialtyRepository != null
         ) {
             HealthMainRoute(
+                onSavingChanged = onHealthSavingChanged,
                 tabReselectionToken = tabReselectionToken,
                 seniorId = selectedSeniorId,
                 sessionKey = settingsSessionKey,
