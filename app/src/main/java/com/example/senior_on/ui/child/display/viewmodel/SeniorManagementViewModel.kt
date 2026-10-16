@@ -35,6 +35,8 @@ class SeniorManagementViewModel(
     private val familyRepository: FamilyServerRepository,
 ) : ViewModel() {
     private var refreshJob: Job? = null
+    private var profileRevision = 0L
+    private val savedProfiles = mutableMapOf<Long, Pair<Long, com.example.senior_on.domain.model.parent.ParentInfo>>()
     private var familyCodeJob: Job? = null
     private var pendingDisconnectRefresh: (suspend () -> Unit)? = null
     private val _uiState = MutableStateFlow(SeniorManagementUiState())
@@ -44,6 +46,18 @@ class SeniorManagementViewModel(
         refreshSeniors()
     }
 
+    fun updateSavedProfile(profile: com.example.senior_on.domain.model.parent.ParentInfo) {
+        savedProfiles[profile.seniorId] = ++profileRevision to profile
+        _uiState.update { state ->
+            state.copy(managedSeniors = state.managedSeniors.map { senior ->
+                if (senior.seniorId == profile.seniorId) senior.withProfile(profile) else senior
+            })
+        }
+    }
+
+    private fun ManagedSenior.withProfile(profile: com.example.senior_on.domain.model.parent.ParentInfo) =
+        copy(name = profile.name, relationship = CaregiverRelationship.fromDisplayLabel(profile.relationshipLabel))
+
     fun refreshSeniors() {
         if (pendingDisconnectRefresh != null) {
             retryDisconnectRefresh()
@@ -52,6 +66,7 @@ class SeniorManagementViewModel(
         if (refreshJob?.isActive == true || _uiState.value.isDisconnecting) return
 
         refreshJob = viewModelScope.launch {
+            val requestRevision = profileRevision
             _uiState.update {
                 it.copy(
                     isLoading = true,
@@ -63,7 +78,12 @@ class SeniorManagementViewModel(
                 val managedSeniors = seniorRepository.getManagedSeniors()
                 _uiState.update {
                     it.copy(
-                        managedSeniors = managedSeniors,
+                        // A list request started before a successful edit must not restore the old label.
+                        managedSeniors = managedSeniors.map { senior ->
+                            val saved = savedProfiles[senior.seniorId]
+                            if (saved != null && saved.first > requestRevision) senior.withProfile(saved.second)
+                            else senior
+                        },
                         listError = null,
                         isLoading = false,
                     )

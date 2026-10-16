@@ -442,6 +442,7 @@ fun ChildMainScreen(
             ChildMainTabContent(
                 selectedTab = selectedTab,
                 onHealthSavingChanged = { isHealthSaving = it },
+                onProfileSaved = seniorManagementViewModel::updateSavedProfile,
                 familyDestination = familyDestination,
                 selectedPhotoId = selectedPhotoId,
                 selectedPhotoUri = selectedPhotoUri,
@@ -540,6 +541,7 @@ fun ChildMainScreen(
                 onParentInfoSave = { updatedParentInfo, onSuccess ->
                     displayViewModel.saveParentInfo(
                         parentInfo = updatedParentInfo,
+                        onProfileSaved = seniorManagementViewModel::updateSavedProfile,
                         onSuccess = onSuccess,
                     )
                 },
@@ -616,6 +618,7 @@ internal fun isChildMainNavigationEnabled(
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
     onHealthSavingChanged: (Boolean) -> Unit,
+    onProfileSaved: (ParentInfo) -> Unit,
     familyDestination: ChildFamilyDestination,
     selectedPhotoId: String?,
     selectedPhotoUri: String?,
@@ -674,6 +677,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Screen) {
         DisplayTabRoute(
+            onProfileSaved = onProfileSaved,
             tabReselectionToken = tabReselectionToken,
             viewModel = displayViewModel,
             isDisconnectingRelationship = isDisconnectingRelationship,
@@ -809,6 +813,7 @@ private fun ChildMainTabContent(
                         onShareSuccess = onPhotoShared,
                         seniorId = seniorId,
                         currentSeniorRecipient = currentSeniorRecipient,
+                        managedSeniors = seniorAccounts,
                         modifier = modifier,
                         viewModel = familyPhotoUploadViewModel,
                         seniorConnectionViewModel = seniorConnectionViewModel,

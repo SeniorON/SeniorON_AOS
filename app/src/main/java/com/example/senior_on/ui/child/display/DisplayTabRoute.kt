@@ -62,6 +62,7 @@ fun DisplayTabRoute(
     onAddSeniorAccountClick: () -> Unit = {},
     isDisconnectingRelationship: Boolean = false,
     onDisconnectRelationship: (() -> Unit) -> Unit = {},
+    onProfileSaved: (com.example.senior_on.domain.model.parent.ParentInfo) -> Unit = {},
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -367,6 +368,7 @@ fun DisplayTabRoute(
                     val seniorId = requireNotNull(uiState.parentInfo).seniorId
                     viewModel.saveParentInfo(
                         parentInfo = inputState.toParentInfo(seniorId = seniorId),
+                        onProfileSaved = onProfileSaved,
                         onSuccess = {
                             saveableStateHolder.removeState(
                                 DisplayDestination.ParentInfoEdit.name

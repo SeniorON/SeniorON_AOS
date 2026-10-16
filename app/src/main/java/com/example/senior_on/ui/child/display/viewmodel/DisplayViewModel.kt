@@ -376,6 +376,7 @@ class DisplayViewModel(
     fun saveParentInfo(
         parentInfo: ParentInfo,
         onSuccess: () -> Unit = {},
+        onProfileSaved: (ParentInfo) -> Unit = {},
     ) {
         launchMutation(onSuccess) { selectedSeniorId ->
             require(parentInfo.seniorId == selectedSeniorId) {
@@ -390,6 +391,7 @@ class DisplayViewModel(
                     relationshipLabel = savedParentInfo.relationshipLabel,
                 )
             }
+            onProfileSaved(savedParentInfo)
         }
     }
 

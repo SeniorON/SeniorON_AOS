@@ -33,6 +33,26 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorManagementViewModelTest {
     @Test
+    fun `saved profile updates only matching senior without clearing the list`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeSeniorRepository(listOf(managedSenior(3L), managedSenior(4L)))
+            val vm = SeniorManagementViewModel(repository, FakeFamilyRepository())
+            advanceUntilIdle()
+            val other = vm.uiState.value.managedSeniors[1]
+            val profile = com.example.senior_on.data.source.mock.fixtures.MockSeniorFixtures.mother.copy(
+                seniorId = 3L, name = "수정한 이름", relationshipLabel = "이모",
+            )
+            vm.updateSavedProfile(profile)
+            assertEquals(listOf(3L, 4L), vm.uiState.value.managedSeniors.map { it.seniorId })
+            assertEquals("이모", vm.uiState.value.managedSeniors[0].relationship.displayLabel)
+            assertEquals("수정한 이름", vm.uiState.value.managedSeniors[0].name)
+            assertEquals(other, vm.uiState.value.managedSeniors[1])
+            assertFalse(vm.uiState.value.isLoading)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
     fun `failed post deletion refresh retries reads without repeating delete`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
