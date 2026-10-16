@@ -77,9 +77,11 @@ class DisplayViewModelRefreshTest {
                 relationshipLabel = "이모",
             )
 
-            viewModel.saveParentInfo(updatedParentInfo)
+            var publishedProfile: ParentInfo? = null
+            viewModel.saveParentInfo(updatedParentInfo, onProfileSaved = { publishedProfile = it })
             advanceUntilIdle()
 
+            assertEquals(updatedParentInfo, publishedProfile)
             assertEquals("이모", viewModel.uiState.value.relationshipLabel)
             assertEquals(updatedParentInfo, viewModel.uiState.value.parentInfo)
             assertEquals(updatedParentInfo, parentInfoRepository.parentInfo.value)

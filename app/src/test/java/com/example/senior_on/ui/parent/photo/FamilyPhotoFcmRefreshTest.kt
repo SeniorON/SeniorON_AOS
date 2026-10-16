@@ -14,6 +14,38 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FamilyPhotoFcmRefreshTest {
+    @Test fun onlyConfirmedNotFoundCountsAsDeletedOnResume() = runTest {
+        var failure: Exception = java.io.IOException("offline")
+        val repository = Proxy.newProxyInstance(
+            FamilyServerRepository::class.java.classLoader,
+            arrayOf(FamilyServerRepository::class.java),
+        ) { _, _, _ -> throw failure } as FamilyServerRepository
+        val vm = ParentFamilyPhotoViewModel(repository, ParentSeniorProfileRepository { 42L })
+        assertFalse(vm.isPhotoMissing(123L))
+        failure = com.example.senior_on.domain.model.auth.RemoteRequestException(
+            404, "FAMILY_PHOTO404", null, "deleted", IllegalStateException(),
+        )
+        assertTrue(vm.isPhotoMissing(123L))
+        failure = com.example.senior_on.domain.model.auth.RemoteRequestException(
+            500, "ERROR", null, "failed", IllegalStateException(),
+        )
+        assertFalse(vm.isPhotoMissing(123L))
+    }
+
+    @Test fun deletionInvalidatesAndIsSilentEvenWithMissingId() {
+        val before = FamilyPhotoSharedEventStore.revision.value
+        val deletion = mapOf("type" to "FAMILY_PHOTO_DELETED", "familyPhotoId" to "987654")
+        assertTrue(com.example.senior_on.notification.isFamilyPhotoDeletion(deletion))
+        FamilyPhotoSharedEventStore.publish(deletion)
+        assertEquals(before + 1, FamilyPhotoSharedEventStore.revision.value)
+        assertTrue(987654L in FamilyPhotoSharedEventStore.deletedPhotoIds.value)
+        val invalid = mapOf("type" to "FAMILY_PHOTO_DELETED")
+        assertTrue(com.example.senior_on.notification.isFamilyPhotoDeletion(invalid))
+        FamilyPhotoSharedEventStore.publish(invalid)
+        assertEquals(before + 1, FamilyPhotoSharedEventStore.revision.value)
+        assertFalse(com.example.senior_on.notification.isFamilyPhotoDeletion(mapOf("type" to "FAMILY_PHOTO_SHARED")))
+    }
+
     @Test fun photoClickCarriesPositivePhotoId() {
         val events = com.example.senior_on.notification.NotificationNavigationEventStore
         try {
@@ -63,7 +95,13 @@ class FamilyPhotoFcmRefreshTest {
             assertNull(vm.uiState.value.notificationPhoto)
             advanceUntilIdle()
             assertEquals("124", vm.uiState.value.notificationPhoto?.id)
-            assertEquals(listOf(123L, 123L, 124L), requested)
+            vm.applyDeletedPhotos(setOf(124L))
+            assertNull(vm.uiState.value.notificationPhoto)
+            vm.openNotificationPhoto(124)
+            advanceUntilIdle()
+            assertNull(vm.uiState.value.notificationPhoto)
+            assertNotNull(vm.uiState.value.notificationPhotoError)
+            assertEquals(listOf(123L, 123L, 124L, 124L), requested)
             vm.closeNotificationPhoto()
             assertNull(vm.uiState.value.notificationPhoto)
         } finally { Dispatchers.resetMain() }
@@ -120,12 +158,17 @@ class FamilyPhotoFcmRefreshTest {
             assertEquals("2", vm.uiState.value.members.single().photos.single().id)
             assertEquals(2, albumCalls)
             assertEquals(2, photoCalls)
+            vm.applyDeletedPhotos(setOf(2L))
+            assertTrue(vm.uiState.value.members.single().photos.isEmpty())
+            vm.refreshFromNotification(true)
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.members.single().photos.isEmpty())
             photoId = 3L
             vm.refreshFromNotification(false)
             advanceUntilIdle()
             assertEquals(3L, vm.uiState.value.members.single().photoCount)
-            assertEquals("2", vm.uiState.value.members.single().photos.single().id)
-            assertEquals(2, photoCalls)
+            assertTrue(vm.uiState.value.members.single().photos.isEmpty())
+            assertEquals(3, photoCalls)
         } finally {
             Dispatchers.resetMain()
         }

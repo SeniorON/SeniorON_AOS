@@ -69,6 +69,28 @@ class ParentFamilyPhotoViewModel(
     private var photoLoadJob: Job? = null
     private var notificationPhotoJob: Job? = null
     private var notificationViewedJob: Job? = null
+    private val deletedPhotoIds = mutableSetOf<Long>()
+
+    suspend fun isPhotoMissing(photoId: Long): Boolean = try {
+        repository.getPhoto(photoId)
+        false
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        // Offline/authorization/server failures are not evidence of deletion.
+        error is com.example.senior_on.domain.model.auth.RemoteRequestException &&
+            error.status == 404 && error.code == "FAMILY_PHOTO404"
+    }
+
+    fun applyDeletedPhotos(ids: Set<Long>) {
+        deletedPhotoIds.addAll(ids)
+        if (_uiState.value.notificationPhoto?.id?.toLongOrNull() in ids) closeNotificationPhoto()
+        _uiState.update { state ->
+            state.copy(members = state.members.map { member ->
+                member.copy(photos = member.photos.filterNot { it.id.toLongOrNull() in deletedPhotoIds })
+            })
+        }
+    }
 
     fun openNotificationPhoto(photoId: Long) {
         notificationPhotoJob?.cancel()
@@ -79,6 +101,7 @@ class ParentFamilyPhotoViewModel(
                 require(photoId > 0)
                 val photo = repository.getPhoto(photoId)
                 check(photo.id == photoId)
+                check(photoId !in deletedPhotoIds) { "Deleted photo" }
                 _uiState.update { it.copy(notificationPhoto = photo.toParentUiModel(), notificationPhotoLoading = false) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -279,7 +302,7 @@ class ParentFamilyPhotoViewModel(
                 )
             }.onSuccess { page ->
                 nextCursor = page.nextCursor
-                val mapped = page.photos.map(ServerFamilyPhoto::toParentUiModel)
+                val mapped = page.photos.filterNot { it.id in deletedPhotoIds }.map(ServerFamilyPhoto::toParentUiModel)
                 _uiState.update { state ->
                     state.copy(
                         members = state.members.map { member ->

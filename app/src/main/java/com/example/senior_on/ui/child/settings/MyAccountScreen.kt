@@ -121,11 +121,13 @@ fun ChangeNameRoute(
     onBackClick: () -> Unit,
     onNameChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onBusyChanged: (Boolean) -> Unit = {},
 ) {
     val viewModel: ChangeNameViewModel = viewModel(
         factory = ChangeNameViewModel.factory(userSettingsRepository),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.compose.runtime.SideEffect { onBusyChanged(uiState.isSaving) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -268,11 +270,13 @@ fun ChangePasswordRoute(
     onBackClick: () -> Unit,
     onPasswordChanged: () -> Unit,
     modifier: Modifier = Modifier,
+    onBusyChanged: (Boolean) -> Unit = {},
 ) {
     val viewModel: ChangePasswordViewModel = viewModel(
         factory = ChangePasswordViewModel.factory(userSettingsRepository),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.compose.runtime.SideEffect { onBusyChanged(uiState.isSaving) }
     val context = LocalContext.current
 
     LaunchedEffect(uiState.saveErrorMessage) {

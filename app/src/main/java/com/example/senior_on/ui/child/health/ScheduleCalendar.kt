@@ -65,31 +65,10 @@ internal fun ScheduleCalendar(
         ScheduleCalendarMode.BottomSheet -> BottomSheetCalendarLayout
     }
 
-    val previousMonth by rememberUpdatedState(onPreviousMonthClick)
-    val nextMonth by rememberUpdatedState(onNextMonthClick)
-    val swipeThreshold = with(LocalDensity.current) { 48.dp.toPx() }
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .pointerInput(displayedMonth, swipeThreshold) {
-                var dragDistance = 0f
-                detectHorizontalDragGestures(
-                    onDragStart = { dragDistance = 0f },
-                    onHorizontalDrag = { change, amount ->
-                        change.consume()
-                        dragDistance += amount
-                    },
-                    onDragCancel = { dragDistance = 0f },
-                    onDragEnd = {
-                        when (calendarSwipeMonthDelta(dragDistance, swipeThreshold)) {
-                            -1 -> previousMonth()
-                            1 -> nextMonth()
-                        }
-                        dragDistance = 0f
-                    },
-                )
-            },
+            .calendarSwipe("month", onPreviousMonthClick, onNextMonthClick),
     ) {
         CalendarMonthHeader(
             displayedMonth = displayedMonth,
@@ -144,6 +123,40 @@ internal fun calendarSwipeMonthDelta(distance: Float, threshold: Float): Int = w
     distance <= -threshold -> 1
     distance >= threshold -> -1
     else -> 0
+}
+
+/** Keep callbacks current without cancelling a gesture on recomposition. */
+@Composable
+internal fun Modifier.calendarSwipe(
+    scope: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+): Modifier {
+    val previous by rememberUpdatedState(onPrevious)
+    val next by rememberUpdatedState(onNext)
+    val threshold = with(LocalDensity.current) { 24.dp.toPx() }
+    return pointerInput(scope, threshold) {
+        var distance = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { distance = 0f },
+            onHorizontalDrag = { change, amount ->
+                change.consume()
+                distance += amount
+            },
+            onDragCancel = { distance = 0f },
+            onDragEnd = {
+                val delta = calendarSwipeMonthDelta(distance, threshold)
+                if (com.example.senior_on.BuildConfig.DEBUG) {
+                    android.util.Log.d("HealthCalendarSwipe", "scope=$scope distance=$distance threshold=$threshold delta=$delta")
+                }
+                when (delta) {
+                    -1 -> previous()
+                    1 -> next()
+                }
+                distance = 0f
+            },
+        )
+    }
 }
 
 @Composable

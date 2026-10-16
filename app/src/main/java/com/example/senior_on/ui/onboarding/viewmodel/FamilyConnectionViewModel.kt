@@ -5,10 +5,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.senior_on.domain.model.server.FamilyCodeInfo
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 data class FamilyConnectionUiState(
     val isLoading: Boolean = false,
@@ -22,20 +26,30 @@ class FamilyConnectionViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FamilyConnectionUiState())
     val uiState: StateFlow<FamilyConnectionUiState> = _uiState.asStateFlow()
+    private var requestJob: Job? = null
+
+    fun cancelPendingRequest() {
+        requestJob?.cancel()
+        requestJob = null
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
 
     fun joinFamily(
         familyCode: String,
         onSuccess: (FamilyCodeInfo) -> Unit
     ) {
         if (_uiState.value.isLoading) return
-        viewModelScope.launch {
+        requestJob = viewModelScope.launch {
             _uiState.value = FamilyConnectionUiState(isLoading = true)
             runCatching { repository.join(familyCode) }
                 .onSuccess { result ->
+                    currentCoroutineContext().ensureActive()
                     _uiState.value = FamilyConnectionUiState()
                     onSuccess(result)
                 }
                 .onFailure {
+                    currentCoroutineContext().ensureActive()
+                    if (it is CancellationException) throw it
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = it.message ?: INVALID_FAMILY_CODE_MESSAGE
@@ -46,16 +60,19 @@ class FamilyConnectionViewModel(
 
     fun createFamilyCode() {
         if (_uiState.value.isLoading || _uiState.value.familyCode != null) return
-        viewModelScope.launch {
+        requestJob = viewModelScope.launch {
             _uiState.value = FamilyConnectionUiState(isLoading = true)
             runCatching { repository.createCode() }
                 .onSuccess { result ->
+                    currentCoroutineContext().ensureActive()
                     _uiState.value = FamilyConnectionUiState(
                         familyId = result.familyId,
                         familyCode = result.code
                     )
                 }
                 .onFailure {
+                    currentCoroutineContext().ensureActive()
+                    if (it is CancellationException) throw it
                     _uiState.value = FamilyConnectionUiState(
                         errorMessage = it.message ?: CREATE_FAMILY_CODE_ERROR_MESSAGE
                     )

@@ -46,66 +46,69 @@ fun FindAccountScreen(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
     var name by rememberSaveable { mutableStateOf(initialName) }
+    var passwordName by rememberSaveable { mutableStateOf(initialName) }
     var email by rememberSaveable { mutableStateOf(initialEmail) }
     var userId by rememberSaveable { mutableStateOf(initialUserId) }
-    var isUserIdError by rememberSaveable { mutableStateOf(false) }
-    var isSubmitting by rememberSaveable { mutableStateOf(false) }
-    val requestUi = rememberVerificationRequestUi(VerificationRequestGate.recoveryKey(userId))
+    var isSubmitting by androidx.compose.runtime.remember { mutableStateOf(false) }
 
     LaunchedEffect(initialTab) {
         selectedTab = initialTab
     }
 
     val isFindIdNextEnabled = name.isNotBlank() && email.isNotBlank()
-    val isFindPasswordNextEnabled = name.isNotBlank() && userId.isNotBlank()
+    val isFindPasswordNextEnabled = passwordName.isNotBlank() && userId.isNotBlank()
+
+    fun invalidateResult() {
+        isSubmitting = false
+        onInputChange()
+    }
 
     FindAccountScaffold(
         modifier = modifier.systemBarsPadding(),
         onBackClick = onBackClick,
         selectedTab = selectedTab,
-        onTabSelected = { selectedTab = it },
+        onTabSelected = {
+            if (selectedTab != it) {
+                invalidateResult()
+                selectedTab = it
+            }
+        },
         bottomBar = {
             when (selectedTab) {
                 FindAccountTab.Id -> {
-                    FindAccountPrimaryButton(
-                        text = "다음",
-                        enabled = isFindIdNextEnabled && !isSubmitting,
-                        isLoading = isSubmitting,
-                        onClick = {
-                            isSubmitting = true
-                            onFindIdNextClick(name.trim(), email.trim()) {
-                                isSubmitting = false
+                    Column {
+                        FindAccountPrimaryButton(
+                            text = "다음",
+                            enabled = isFindIdNextEnabled && !isSubmitting,
+                            isLoading = isSubmitting,
+                            onClick = {
+                                isSubmitting = true
+                                onFindIdNextClick(name.trim(), email.trim()) {
+                                    isSubmitting = false
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
                 FindAccountTab.Password -> {
                     Column {
-                        val notice = requestUi.notice ?: requestErrorMessage
-                        if (notice != null) Text(
-                            notice,
-                            style = com.example.senior_on.ui.theme.SeniorOnTextStyles.CaptionRegular,
-                            color = SeniorOnColors.Red300,
-                        )
                         FindAccountInfoBanner(
-                            text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
+                            text = "가입한 이메일로 인증번호를 보내드려요."
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
                         FindAccountPrimaryButton(
                             text = "다음",
-                            enabled = isFindPasswordNextEnabled && !isSubmitting && !requestUi.locked,
+                            enabled = isFindPasswordNextEnabled && !isSubmitting,
                             isLoading = isSubmitting,
                             onClick = {
                                 isSubmitting = true
                                 onFindPasswordNextClick(
-                                    name.trim(),
+                                    passwordName.trim(),
                                     userId.trim()
-                                ) { found ->
+                                ) { _ ->
                                     isSubmitting = false
-                                    // Server failures (including throttling) are shown separately.
-                                    isUserIdError = false
                                 }
                             }
                         )
@@ -117,24 +120,23 @@ fun FindAccountScreen(
         when (selectedTab) {
             FindAccountTab.Id -> FindIdInputContent(
                 name = name,
-                onNameChange = { name = it },
+                onNameChange = { name = it; invalidateResult() },
                 email = email,
-                onEmailChange = { email = it }
+                errorMessage = requestErrorMessage,
+                onEmailChange = { email = it; invalidateResult() }
             )
             FindAccountTab.Password -> FindPasswordInputContent(
-                name = name,
+                name = passwordName,
                 onNameChange = {
-                    name = it
-                    onInputChange()
-                    isUserIdError = false
+                    passwordName = it
+                    invalidateResult()
                 },
                 userId = userId,
                 onUserIdChange = {
                     userId = it
-                    onInputChange()
-                    isUserIdError = false
+                    invalidateResult()
                 },
-                isUserIdError = isUserIdError
+                errorMessage = requestErrorMessage,
             )
         }
     }
@@ -146,6 +148,7 @@ private fun FindIdInputContent(
     onNameChange: (String) -> Unit,
     email: String,
     onEmailChange: (String) -> Unit,
+    errorMessage: String?,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -168,6 +171,8 @@ private fun FindIdInputContent(
             value = email,
             onValueChange = onEmailChange,
             placeholder = "이메일 입력",
+            isError = errorMessage != null,
+            errorMessage = errorMessage,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
             )
@@ -181,7 +186,7 @@ private fun FindPasswordInputContent(
     onNameChange: (String) -> Unit,
     userId: String,
     onUserIdChange: (String) -> Unit,
-    isUserIdError: Boolean,
+    errorMessage: String?,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -204,12 +209,8 @@ private fun FindPasswordInputContent(
             value = userId,
             onValueChange = onUserIdChange,
             placeholder = "아이디 입력",
-            isError = isUserIdError,
-            errorMessage = if (isUserIdError) {
-                "일치하는 계정 정보를 찾을 수 없어요."
-            } else {
-                null
-            },
+            isError = errorMessage != null,
+            errorMessage = errorMessage,
         )
     }
 }

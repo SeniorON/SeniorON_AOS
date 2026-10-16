@@ -10,6 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -27,13 +31,36 @@ data class AccountRecoveryUiState(
 )
 
 class AccountRecoveryViewModel(
-    private val repository: AccountRecoveryRepository
+    private val repository: AccountRecoveryRepository,
+    private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000 },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AccountRecoveryUiState())
     val uiState: StateFlow<AccountRecoveryUiState> = _uiState.asStateFlow()
 
     private var passwordResetName: String = ""
     private var passwordResetLoginId: String = ""
+    private var requestJob: Job? = null
+    // Delivery metadata only: never retain the entered code, password or verified state.
+    private data class PendingDelivery(
+        val name: String,
+        val loginId: String,
+        val verificationId: Long,
+        val expiresAt: Long,
+    )
+    private var pendingDelivery: PendingDelivery? = null
+
+    fun cancelPendingRequest() {
+        requestJob?.cancel()
+        requestJob = null
+        _uiState.value = _uiState.value.copy(isLoading = false)
+    }
+
+    fun resetFlow() {
+        cancelPendingRequest()
+        passwordResetName = ""
+        passwordResetLoginId = ""
+        _uiState.value = AccountRecoveryUiState()
+    }
 
     fun clearRequestError() {
         _uiState.value = _uiState.value.copy(errorMessage = null, errorCode = null)
@@ -44,8 +71,10 @@ class AccountRecoveryViewModel(
         email: String,
         onResult: (FoundLoginId?) -> Unit
     ) {
-        launchRequest(onFailure = { onResult(null) }) {
+        _uiState.value = _uiState.value.copy(foundLoginId = "", foundJoinDate = "", recoveryName = "")
+        launchRequest(onFailure = { onResult(null) }, errorText = { recoveryLookupErrorText(it, false) }) {
             val result = repository.findLoginId(name = name, email = email)
+            currentCoroutineContext().ensureActive()
             _uiState.value = _uiState.value.copy(
                 foundLoginId = result.loginId,
                 foundJoinDate = result.createdAt.toJoinDate(),
@@ -55,19 +84,54 @@ class AccountRecoveryViewModel(
         }
     }
 
+    fun continuePasswordRecovery(name: String, loginId: String, onResult: (Boolean) -> Unit) {
+        val pending = pendingDelivery?.takeIf { it.expiresAt > nowMillis() }
+        if (pending == null) pendingDelivery = null
+        // A new UI flow can still use an unexpired email sent for exactly this identity.
+        if (pending != null && pending.name == name.trim() && pending.loginId == loginId.trim()) {
+            cancelPendingRequest()
+            passwordResetName = pending.name
+            passwordResetLoginId = pending.loginId
+            _uiState.value = AccountRecoveryUiState(
+                requestLoginId = pending.loginId,
+                verificationId = pending.verificationId,
+            )
+            onResult(true)
+        } else {
+            sendPasswordResetVerificationCode(name, loginId, onResult)
+        }
+    }
+
     fun sendPasswordResetVerificationCode(
         name: String,
         loginId: String,
         onResult: (Boolean) -> Unit
     ) {
-        _uiState.value = _uiState.value.copy(requestLoginId = loginId.trim())
-        launchRequest(onFailure = { onResult(false) }) {
+        passwordResetName = ""
+        passwordResetLoginId = ""
+        _uiState.value = _uiState.value.copy(
+            requestLoginId = loginId.trim(), verificationId = null,
+            passwordResetVerified = false, passwordResetComplete = false,
+        )
+        launchRequest(onFailure = { onResult(false) }, errorText = { recoveryLookupErrorText(it, true) }) {
             val result = repository.sendPasswordResetVerificationCode(
                 name = name,
                 loginId = loginId
             )
+            currentCoroutineContext().ensureActive()
+            if (!result.sent) {
+                onResult(false)
+                return@launchRequest
+            }
             passwordResetName = name.trim()
             passwordResetLoginId = loginId.trim()
+            pendingDelivery = PendingDelivery(
+                name = passwordResetName,
+                loginId = passwordResetLoginId,
+                verificationId = result.verificationId,
+                // Matches the five-minute delivery lifetime in VerificationRequestGate.
+                expiresAt = nowMillis() + 300_000,
+            )
             _uiState.value = _uiState.value.copy(
                 verificationId = result.verificationId,
                 passwordResetVerified = false,
@@ -101,11 +165,13 @@ class AccountRecoveryViewModel(
             return
         }
 
-        launchRequest(onFailure = { onResult(false) }) {
+        _uiState.value = _uiState.value.copy(passwordResetVerified = false)
+        launchRequest(onFailure = { onResult(false) }, errorText = ::recoveryVerificationErrorText) {
             val verified = repository.verifyPasswordResetVerificationCode(
                 verificationId = verificationId,
                 verificationCode = verificationCode
             )
+            currentCoroutineContext().ensureActive()
             _uiState.value = _uiState.value.copy(
                 passwordResetVerified = verified
             )
@@ -130,16 +196,24 @@ class AccountRecoveryViewModel(
                 newPassword = newPassword,
                 newPasswordCheck = newPasswordCheck
             )
-            _uiState.value = _uiState.value.copy(passwordResetComplete = reset)
+            currentCoroutineContext().ensureActive()
+            if (reset) pendingDelivery = null
+            _uiState.value = _uiState.value.copy(
+                passwordResetComplete = reset,
+                verificationId = if (reset) null else verificationId,
+                passwordResetVerified = !reset && _uiState.value.passwordResetVerified,
+            )
             onResult(reset)
         }
     }
 
     private fun launchRequest(
         onFailure: () -> Unit,
+        errorText: (Throwable) -> String = { it.message ?: DEFAULT_ERROR_MESSAGE },
         request: suspend () -> Unit
     ) {
-        viewModelScope.launch {
+        cancelPendingRequest()
+        requestJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null,
@@ -147,13 +221,15 @@ class AccountRecoveryViewModel(
             )
             runCatching { request() }
                 .onSuccess {
+                    currentCoroutineContext().ensureActive()
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }
                 .onFailure { throwable ->
+                    currentCoroutineContext().ensureActive()
+                    if (throwable is CancellationException) throw throwable
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = throwable.message
-                            ?: DEFAULT_ERROR_MESSAGE,
+                        errorMessage = errorText(throwable),
                         errorCode = (throwable as? RemoteRequestException)?.code,
                     )
                     onFailure()

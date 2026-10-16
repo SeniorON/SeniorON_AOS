@@ -146,7 +146,7 @@ fun ParentSettingsRoute(
     when (destination) {
         ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back,
             { if (!isBusy) { destination = it; if (it == ParentSettingsDestination.Account) profileViewModel.loadAccount() } },
-            { if (!isBusy) confirmation = it }, {}, modifier, onPhotoClick = editPhoto)
+            { if (!isBusy) confirmation = it }, modifier, onPhotoClick = editPhoto)
         ParentSettingsDestination.Account -> ParentAccountScreen(profile, ::back,
             { if (!isBusy && profileState.profile != null) destination = ParentSettingsDestination.ChangeName },
             { if (!isBusy) destination = ParentSettingsDestination.ChangePassword }, modifier, onPhotoClick = editPhoto)

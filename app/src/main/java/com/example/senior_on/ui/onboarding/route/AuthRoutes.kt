@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.onboarding.route
 
+import kotlinx.coroutines.ensureActive
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,13 +79,14 @@ fun LoginRoute(
                 runCatching {
                     SocialLoginTokenProvider.getKakaoAccessToken(context)
                 }.onSuccess { kakaoAccessToken ->
+                    coroutineContext.ensureActive()
                     viewModel.loginWithKakao(
                         kakaoAccessToken = kakaoAccessToken,
                         mode = selectedMode,
                         keepLoggedIn = keepLoggedIn,
                         onResult = onResult,
                     )
-                }.onFailure { onResult(null) }
+                }.onFailure { coroutineContext.ensureActive(); onResult(null) }
             }
         },
         onGoogleLoginRequest = { keepLoggedIn, onResult ->
@@ -91,13 +94,14 @@ fun LoginRoute(
                 runCatching {
                     SocialLoginTokenProvider.getGoogleFirebaseIdToken(context)
                 }.onSuccess { firebaseIdToken ->
+                    coroutineContext.ensureActive()
                     viewModel.loginWithGoogle(
                         firebaseIdToken = firebaseIdToken,
                         mode = selectedMode,
                         keepLoggedIn = keepLoggedIn,
                         onResult = onResult,
                     )
-                }.onFailure { onResult(null) }
+                }.onFailure { coroutineContext.ensureActive(); onResult(null) }
             }
         },
         onSocialSignupRequired = onSocialSignupRequired,

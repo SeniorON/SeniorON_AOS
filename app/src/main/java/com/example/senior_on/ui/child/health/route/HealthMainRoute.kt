@@ -2,6 +2,9 @@ package com.example.senior_on.ui.child.health.route
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +42,7 @@ import java.time.LocalDate
 
 @Composable
 fun HealthMainRoute(
+    tabReselectionToken: Int = 0,
     seniorId: Long? = null,
     sessionKey: String = "",
     medicationRepository: MedicationRepository,
@@ -47,6 +51,7 @@ fun HealthMainRoute(
     hospitalSpecialtyRepository: HospitalSpecialtyRepository,
     navigationEvent: NotificationNavigationEvent? = null,
     onNavigationEventConsumed: () -> Unit = {},
+    onSavingChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scopedOwner = com.example.senior_on.ui.child.rememberSeniorScopedViewModelStoreOwner("health:$sessionKey:$seniorId")
@@ -70,6 +75,13 @@ fun HealthMainRoute(
     )
     val medicationUiState by medicationViewModel.uiState.collectAsStateWithLifecycle()
     val hospitalUiState by hospitalViewModel.uiState.collectAsStateWithLifecycle()
+    val currentOnSavingChanged by rememberUpdatedState(onSavingChanged)
+    SideEffect {
+        currentOnSavingChanged(medicationUiState.isSaving || hospitalUiState.isSaving)
+    }
+    DisposableEffect(Unit) {
+        onDispose { currentOnSavingChanged(false) }
+    }
     val medicationCheckedEvent by MedicationCheckedEventStore.pendingEvent
         .collectAsStateWithLifecycle()
     var selectedSection by rememberSaveable(seniorId, sessionKey) { mutableStateOf(HealthSection.Health) }
@@ -154,6 +166,18 @@ fun HealthMainRoute(
         }
     }
 
+    com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
+        if (!medicationUiState.isSaving && !hospitalUiState.isSaving &&
+            (medicationUiState.editorMode != null || hospitalUiState.editorMode != null || appointmentToDelete != null)) {
+            medicationViewModel.backFromMedicationEditor()
+            hospitalViewModel.closeEditor()
+            appointmentToDelete = null
+            pendingHospitalId = null
+            if (selectedSection == HealthSection.Health) medicationViewModel.loadLatestMedicationData()
+            else hospitalViewModel.loadLatestHospitalData()
+        }
+    }
+
     when {
         selectedSection == HealthSection.Health && medicationUiState.editorMode != null -> {
             MedicationEditorRoute(
@@ -189,6 +213,7 @@ fun HealthMainRoute(
                 hospitalViewModel.closeEditor()
             },
             onMedicationDateSelected = medicationViewModel::selectDate,
+            onMedicationMonthSelected = medicationViewModel::loadCalendarMonth,
             onAddTodayMedicationClick = medicationViewModel::openAddTodayMedication,
             onAddRegisteredMedicationClick = medicationViewModel::openAddMedication,
             onMedicationClick = medicationViewModel::openMedication,

@@ -29,6 +29,7 @@ fun FamilyPhotoShareRoute(
     onShareSuccess: () -> Unit,
     seniorId: Long,
     currentSeniorRecipient: ServerConnectedSenior?,
+    managedSeniors: List<com.example.senior_on.domain.model.senior.ManagedSenior> = emptyList(),
     modifier: Modifier = Modifier,
     viewModel: FamilyPhotoUploadViewModel,
     seniorConnectionViewModel: SeniorConnectionViewModel,
@@ -56,7 +57,13 @@ fun FamilyPhotoShareRoute(
     val connectionUiState by seniorConnectionViewModel.uiState.collectAsStateWithLifecycle()
     val recipients = familyPhotoRecipients(
         currentSenior = currentSeniorRecipient,
-        connectedSeniors = connectionUiState.connectedSeniors,
+        connectedSeniors = connectionUiState.connectedSeniors.map { recipient ->
+            val managed = managedSeniors.firstOrNull { it.seniorId == recipient.seniorId }
+            if (managed == null) recipient else recipient.copy(
+                name = managed.name,
+                relationshipLabel = managed.relationship.displayLabel,
+            )
+        },
     )
     val isCurrentUploadSession = uploadUiState.sessionId == uploadSessionId
 

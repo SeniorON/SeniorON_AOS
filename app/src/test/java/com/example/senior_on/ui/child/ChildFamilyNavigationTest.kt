@@ -7,6 +7,18 @@ import org.junit.Test
 
 class ChildFamilyNavigationTest {
     @Test
+    fun `건강 일정 저장 중에는 탭 이동을 비활성화한다`() {
+        assertFalse(isChildMainNavigationEnabled(false, true))
+        assertFalse(isChildMainNavigationEnabled(true, true))
+    }
+
+    @Test
+    fun `저장 성공 또는 실패 후 저장 상태가 해제되면 이동을 허용한다`() {
+        assertTrue(isChildMainNavigationEnabled(false, false))
+        assertFalse(isChildMainNavigationEnabled(true, false))
+    }
+
+    @Test
     fun `메인에서 선택한 사진 공유 화면은 뒤로가기 시 가족 메인으로 돌아간다`() {
         assertEquals(
             ChildFamilyDestination.Overview,
@@ -68,23 +80,4 @@ class ChildFamilyNavigationTest {
         )
     }
 
-    @Test
-    fun `선택 중인 하단 탭을 다시 누르면 루트 초기화 이벤트가 증가한다`() {
-        val result = resolveScreenRootResetEvent(
-            targetTab = ChildMainTab.Screen,
-            currentResetEvent = 3,
-        )
-
-        assertEquals(4, result)
-    }
-
-    @Test
-    fun `화면 외 하단 탭은 화면 탭 초기화 이벤트를 변경하지 않는다`() {
-        val result = resolveScreenRootResetEvent(
-            targetTab = ChildMainTab.Setting,
-            currentResetEvent = 7,
-        )
-
-        assertEquals(7, result)
-    }
 }

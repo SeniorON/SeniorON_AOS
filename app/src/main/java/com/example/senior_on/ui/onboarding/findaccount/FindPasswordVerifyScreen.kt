@@ -45,15 +45,23 @@ fun FindPasswordVerifyScreen(
     onTabSelected: (FindAccountTab) -> Unit = {},
     modifier: Modifier = Modifier,
     requestLoginId: String = "",
+    verificationId: Long? = null,
     requestErrorMessage: String? = null,
+    onInputChange: () -> Unit = {},
 ) {
-    var verificationCode by rememberSaveable { mutableStateOf("") }
-    var isVerificationError by rememberSaveable { mutableStateOf(false) }
-    var isVerifying by rememberSaveable { mutableStateOf(false) }
-    var isResending by rememberSaveable { mutableStateOf(false) }
+    var verificationCode by rememberSaveable(requestLoginId, verificationId) { mutableStateOf("") }
+    var isVerificationError by rememberSaveable(requestLoginId, verificationId) { mutableStateOf(false) }
+    var isVerifying by androidx.compose.runtime.remember { mutableStateOf(false) }
+    var isResending by androidx.compose.runtime.remember { mutableStateOf(false) }
 
     val requestUi = rememberVerificationRequestUi(VerificationRequestGate.recoveryKey(requestLoginId))
     val isVerifyEnabled = verificationCode.length == 6 && !isVerifying && !isResending && requestUi.remainingCodeSeconds > 0
+    val verificationError = requestErrorMessage ?: when {
+        isVerificationError -> "인증번호가 일치하지 않아요."
+        verificationId != null && requestUi.remainingCodeSeconds <= 0 ->
+            "인증 시간이 만료됐어요. 재전송해 주세요."
+        else -> null
+    }
 
     FindAccountScaffold(
         modifier = modifier.systemBarsPadding(),
@@ -110,7 +118,7 @@ fun FindPasswordVerifyScreen(
                             fontWeight = FontWeight.Bold
                         )
                     ) {
-                        append("으로\n")
+                        append(if (maskedEmail.contains('@')) "으로\n" else "로\n")
                     }
                     withStyle(
                         SpanStyle(
@@ -135,14 +143,16 @@ fun FindPasswordVerifyScreen(
                         label = null,
                         value = verificationCode,
                         onValueChange = {
+                            if (isVerifying || isResending) return@FindAccountTextField
                             verificationCode = it.filter(Char::isDigit).take(6)
                             isVerificationError = false
+                            onInputChange()
                         },
                         placeholder = "인증번호 6자리 입력",
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        isError = isVerificationError,
-                        errorMessage = null
+                        isError = verificationError != null,
+                        errorMessage = verificationError,
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -152,6 +162,8 @@ fun FindPasswordVerifyScreen(
                         enabled = !isVerifying && !isResending && !requestUi.locked,
                         isLoading = isResending,
                         onClick = {
+                            isVerificationError = false
+                            onInputChange()
                             isResending = true
                             onResendCode { sent ->
                                 isResending = false
@@ -164,19 +176,13 @@ fun FindPasswordVerifyScreen(
                     )
                 }
 
-                val notice = requestErrorMessage ?: requestUi.notice
-                if (notice != null) Text(notice, color = SeniorOnColors.Red300)
-                Text(
-                    if (requestUi.remainingCodeSeconds > 0) "인증 유효시간 ${requestUi.remainingCodeSeconds / 60}:${(requestUi.remainingCodeSeconds % 60).toString().padStart(2, '0')}"
-                    else "인증 시간이 만료됐어요. 새 코드를 요청해 주세요.",
-                    style = SeniorOnTextStyles.CaptionRegular,
-                )
-                if (isVerificationError && requestErrorMessage == null) {
+                if (requestUi.remainingRequestSeconds > 0) {
+                    val seconds = requestUi.remainingRequestSeconds
                     Text(
-                        text = "인증번호가 일치하지 않아요.",
+                        text = "잠시 후 다시 요청해 주세요. (${(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')})",
                         modifier = Modifier.padding(top = 6.dp),
                         style = SeniorOnTextStyles.CaptionRegular,
-                        color = SeniorOnColors.Red300
+                        color = SeniorOnColors.Gray400,
                     )
                 }
             }

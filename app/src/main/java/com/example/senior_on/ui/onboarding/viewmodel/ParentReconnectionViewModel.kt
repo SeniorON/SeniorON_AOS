@@ -12,6 +12,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 data class ParentReconnectionState(val busy: Boolean = false, val error: String? = null)
 
@@ -23,11 +26,19 @@ class ParentReconnectionViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ParentReconnectionState())
     val state = mutableState.asStateFlow()
+    private var requestJob: Job? = null
+
+    fun cancelPendingRequest() {
+        requestJob?.cancel()
+        requestJob = null
+        mutableState.value = ParentReconnectionState()
+    }
 
     fun check(onResult: (ParentConnectionDestination) -> Unit, onFailure: (String) -> Unit) {
         run(onFailure) {
             val version = ParentConnectionGate.hold()
             val destination = repository.destination()
+            currentCoroutineContext().ensureActive()
             if (destination == ParentConnectionDestination.Home && !ParentConnectionGate.approve(version)) return@run
             onResult(destination)
         }
@@ -37,7 +48,9 @@ class ParentReconnectionViewModel(
         run {
             val version = ParentConnectionGate.hold()
             repository.reconnect()
+            currentCoroutineContext().ensureActive()
             check(repository.destination() == ParentConnectionDestination.Home) { "재연결 상태를 확인하지 못했어요. 다시 시도해 주세요." }
+            currentCoroutineContext().ensureActive()
             if (ParentConnectionGate.approve(version)) onConnected()
         }
     }
@@ -54,6 +67,7 @@ class ParentReconnectionViewModel(
             } finally {
                 sessions.clearSession()
             }
+            currentCoroutineContext().ensureActive()
             onLoggedOut()
         }
     }
@@ -61,13 +75,14 @@ class ParentReconnectionViewModel(
     private fun run(onFailure: (String) -> Unit = {}, action: suspend () -> Unit) {
         if (mutableState.value.busy) return
         mutableState.value = ParentReconnectionState(busy = true)
-        viewModelScope.launch {
+        requestJob = viewModelScope.launch {
             try {
                 action()
                 mutableState.value = ParentReconnectionState()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
+                currentCoroutineContext().ensureActive()
                 val message = error.message ?: "연결 상태를 확인하지 못했어요. 다시 시도해 주세요."
                 mutableState.value = ParentReconnectionState(error = message)
                 onFailure(message)

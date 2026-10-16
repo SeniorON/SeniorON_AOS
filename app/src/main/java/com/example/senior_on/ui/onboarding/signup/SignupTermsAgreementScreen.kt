@@ -63,7 +63,7 @@ fun SignupTermsAgreementScreen(
     var isTermsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var hasOpenedTermsSheet by rememberSaveable { mutableStateOf(false) }
     var termsSheetInitialIndex by rememberSaveable { mutableStateOf(0) }
-    var isSubmitting by rememberSaveable { mutableStateOf(false) }
+    var isSubmitting by androidx.compose.runtime.remember { mutableStateOf(false) }
     val isRequiredAgreed = isServiceTermsAgreed && isPrivacyAgreed && isAgeAgreed
     val isAllAgreed = isRequiredAgreed && isMarketingAgreed
 

@@ -44,6 +44,9 @@ fun FamilyShareCodeInputRoute(
         )
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.compose.runtime.DisposableEffect(viewModel) {
+        onDispose { viewModel.cancelPendingRequest() }
+    }
 
     FamilyShareCodeInputScreen(
         onBackClick = {
@@ -53,7 +56,10 @@ fun FamilyShareCodeInputRoute(
         onLoginClick = { code -> viewModel.joinFamily(code, onJoinSuccess) },
         isLoading = uiState.isLoading,
         errorMessage = uiState.errorMessage,
-        onFamilyShareCodeChange = viewModel::clearError
+        onFamilyShareCodeChange = {
+            viewModel.cancelPendingRequest()
+            viewModel.clearError()
+        }
     )
 }
 
@@ -71,6 +77,9 @@ fun FamilyShareCodeCreatedRoute(
         )
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.compose.runtime.DisposableEffect(viewModel) {
+        onDispose { viewModel.cancelPendingRequest() }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.createFamilyCode()

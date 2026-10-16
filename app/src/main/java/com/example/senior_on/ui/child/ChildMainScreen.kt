@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -162,7 +161,7 @@ fun ChildMainScreen(
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
-    var screenRootResetEvent by rememberSaveable { mutableIntStateOf(0) }
+    var tabReselectionToken by remember { mutableStateOf(0) }
     LaunchedEffect(notificationNavigationEvent) {
         notificationNavigationEvent?.let { event ->
             if (event.isMedicationNotification || event.isHospitalNotification) {
@@ -206,8 +205,9 @@ fun ChildMainScreen(
         familyDestination == ChildFamilyDestination.PhotoShare &&
             familyPhotoUploadUiState.sessionId == selectedPhotoSessionId &&
             familyPhotoUploadUiState.isUploading
+    var isHealthSaving by remember { mutableStateOf(false) }
     val childMainNavigationEnabled =
-        isChildMainNavigationEnabled(isFamilyPhotoUploading)
+        isChildMainNavigationEnabled(isFamilyPhotoUploading, isHealthSaving)
     val selectionRepository = remember(context.applicationContext) {
         com.example.senior_on.data.repository.impl.SelectedSeniorRepositoryImpl(context)
     }
@@ -375,7 +375,7 @@ fun ChildMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
-        if (!showSeniorManagement && selectedTab == ChildMainTab.Screen &&
+        if (!seniorManagementUiState.disconnectRefreshPending && !showSeniorManagement && selectedTab == ChildMainTab.Screen &&
             seniorManagementUiState.managedSeniors.isNotEmpty() && seniorManagementUiState.listError != null) {
             com.example.senior_on.ui.common.QueryRetryMessage(
                 message = seniorManagementUiState.listError!!,
@@ -383,7 +383,15 @@ fun ChildMainScreen(
                 onRetry = seniorManagementViewModel::refreshSeniors,
             )
         }
-        if (showSeniorManagement) {
+        if (seniorManagementUiState.disconnectRefreshPending) {
+            com.example.senior_on.ui.common.QueryRetryContent(
+                error = seniorManagementUiState.disconnectRefreshError,
+                loading = seniorManagementUiState.isDisconnecting,
+                hasContent = false,
+                onRetry = seniorManagementViewModel::retryDisconnectRefresh,
+                modifier = Modifier.weight(1f).fillMaxSize(),
+            ) {}
+        } else if (showSeniorManagement) {
             SeniorManagementRoute(
                 uiState = seniorManagementUiState,
                 viewModel = seniorManagementViewModel,
@@ -433,7 +441,8 @@ fun ChildMainScreen(
         } else {
             ChildMainTabContent(
                 selectedTab = selectedTab,
-                screenRootResetEvent = screenRootResetEvent,
+                onHealthSavingChanged = { isHealthSaving = it },
+                onProfileSaved = seniorManagementViewModel::updateSavedProfile,
                 familyDestination = familyDestination,
                 selectedPhotoId = selectedPhotoId,
                 selectedPhotoUri = selectedPhotoUri,
@@ -442,9 +451,36 @@ fun ChildMainScreen(
                 familyPhotoUploadViewModel = familyPhotoUploadViewModel,
                 seniorConnectionViewModel = seniorConnectionViewModel,
                 activeSeniorId = activeSeniorId,
+                tabReselectionToken = tabReselectionToken,
                 familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
                 settingsSessionKey = childSessionViewModelKey,
                 displayViewModel = displayViewModel,
+                isDisconnectingRelationship = seniorManagementUiState.isDisconnecting,
+                onDisconnectRelationship = { finished ->
+                    activeSeniorId?.let { seniorId ->
+                        seniorManagementViewModel.disconnectRelationship(
+                            seniorId = seniorId,
+                            isPrimary = { id ->
+                                val member = familyServerRepository.getMembers(id).firstOrNull { it.isMe }
+                                    ?: error("담당자 정보를 확인하지 못했어요. 다시 시도해 주세요.")
+                                require(member.managerType.equals("PRIMARY", true) || member.managerType.equals("SUB", true)) {
+                                    "담당자 정보를 확인하지 못했어요."
+                                }
+                                member.managerType.equals("PRIMARY", true)
+                            },
+                            saveSelection = selectionViewModel::replaceAfterDisconnect,
+                            removeRelationship = { id ->
+                                requireNotNull(deviceRepository) { "연결 해제 서비스를 사용할 수 없어요." }
+                                    .disconnect(id)
+                            },
+                            onMessage = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
+                            onSuccess = {
+                                finished()
+                                selectedTab = ChildMainTab.Screen
+                            },
+                        )
+                    }
+                },
                 seniorAccounts = seniorManagementUiState.managedSeniors,
                 isSeniorAccountsLoading = seniorManagementUiState.isLoading,
                 onSeniorAccountClick = { senior ->
@@ -505,6 +541,7 @@ fun ChildMainScreen(
                 onParentInfoSave = { updatedParentInfo, onSuccess ->
                     displayViewModel.saveParentInfo(
                         parentInfo = updatedParentInfo,
+                        onProfileSaved = seniorManagementViewModel::updateSavedProfile,
                         onSuccess = onSuccess,
                     )
                 },
@@ -532,12 +569,9 @@ fun ChildMainScreen(
                 enabled = childMainNavigationEnabled,
                 onTabClick = { tab ->
                     if (childMainNavigationEnabled) {
+                        if (selectedTab == tab) tabReselectionToken++
                         val isScreenTabReentry =
                             tab == ChildMainTab.Screen && selectedTab != ChildMainTab.Screen
-                        screenRootResetEvent = resolveScreenRootResetEvent(
-                            targetTab = tab,
-                            currentResetEvent = screenRootResetEvent,
-                        )
                         selectedTab = tab
                         if (isScreenTabReentry) {
                             displayViewModel.refreshOnScreenTabReentry()
@@ -575,22 +609,16 @@ internal fun resolveChildFamilyPhotoUploadSuccessDestination(
     else -> ChildFamilyDestination.Overview
 }
 
-internal fun isChildMainNavigationEnabled(isFamilyPhotoUploading: Boolean): Boolean =
-    !isFamilyPhotoUploading
-
-internal fun resolveScreenRootResetEvent(
-    targetTab: ChildMainTab,
-    currentResetEvent: Int,
-): Int = if (targetTab == ChildMainTab.Screen) {
-    currentResetEvent + 1
-} else {
-    currentResetEvent
-}
+internal fun isChildMainNavigationEnabled(
+    isFamilyPhotoUploading: Boolean,
+    isHealthSaving: Boolean = false,
+): Boolean = !isFamilyPhotoUploading && !isHealthSaving
 
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
-    screenRootResetEvent: Int,
+    onHealthSavingChanged: (Boolean) -> Unit,
+    onProfileSaved: (ParentInfo) -> Unit,
     familyDestination: ChildFamilyDestination,
     selectedPhotoId: String?,
     selectedPhotoUri: String?,
@@ -599,9 +627,12 @@ private fun ChildMainTabContent(
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     seniorConnectionViewModel: SeniorConnectionViewModel,
     activeSeniorId: Long?,
+    tabReselectionToken: Int,
     familyInvitationViewModelKey: String,
     settingsSessionKey: String,
     displayViewModel: DisplayViewModel,
+    isDisconnectingRelationship: Boolean,
+    onDisconnectRelationship: (() -> Unit) -> Unit,
     seniorAccounts: List<ManagedSenior>,
     isSeniorAccountsLoading: Boolean,
     onSeniorAccountClick: (ManagedSenior) -> Unit,
@@ -646,9 +677,12 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Screen) {
         DisplayTabRoute(
+            onProfileSaved = onProfileSaved,
+            tabReselectionToken = tabReselectionToken,
             viewModel = displayViewModel,
+            isDisconnectingRelationship = isDisconnectingRelationship,
+            onDisconnectRelationship = onDisconnectRelationship,
             addressSearchViewModel = addressSearchViewModel,
-            resetToOverviewEvent = screenRootResetEvent,
             seniorAccounts = seniorAccounts,
             isSeniorAccountsLoading = isSeniorAccountsLoading,
             onSeniorAccountClick = onSeniorAccountClick,
@@ -672,6 +706,8 @@ private fun ChildMainTabContent(
             hospitalSpecialtyRepository != null
         ) {
             HealthMainRoute(
+                onSavingChanged = onHealthSavingChanged,
+                tabReselectionToken = tabReselectionToken,
                 seniorId = selectedSeniorId,
                 sessionKey = settingsSessionKey,
                 medicationRepository = medicationRepository,
@@ -777,6 +813,7 @@ private fun ChildMainTabContent(
                         onShareSuccess = onPhotoShared,
                         seniorId = seniorId,
                         currentSeniorRecipient = currentSeniorRecipient,
+                        managedSeniors = seniorAccounts,
                         modifier = modifier,
                         viewModel = familyPhotoUploadViewModel,
                         seniorConnectionViewModel = seniorConnectionViewModel,
@@ -813,6 +850,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Notification) {
         NotificationRoute(
+            tabReselectionToken = tabReselectionToken,
             repository = notificationRepository,
             seniorId = selectedSeniorId,
             sessionKey = settingsSessionKey,
@@ -829,7 +867,10 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            tabReselectionToken = tabReselectionToken,
             sessionKey = settingsSessionKey,
+            isDisconnectingRelationship = isDisconnectingRelationship,
+            onDisconnectRelationship = onDisconnectRelationship,
             parentInfo = parentInfo,
             connectedDevice = connectedDevice,
             displayViewModel = displayViewModel,

@@ -108,11 +108,13 @@ fun OneOnOneInquiryRoute(
     inquiryRepository: InquiryRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onBusyChanged: (Boolean) -> Unit = {},
 ) {
     val viewModel: InquiryViewModel = viewModel(
         factory = InquiryViewModel.factory(inquiryRepository),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.compose.runtime.SideEffect { onBusyChanged(uiState.isSubmitting) }
     val context = LocalContext.current
 
     LaunchedEffect(uiState.historyErrorMessage) {

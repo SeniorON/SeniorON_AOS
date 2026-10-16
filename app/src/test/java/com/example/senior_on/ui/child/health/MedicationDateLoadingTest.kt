@@ -46,6 +46,15 @@ class MedicationDateLoadingTest {
             assertEquals("테스트", vm.uiState.value.registeredMedications.single().name)
             assertEquals("서버 성분", vm.uiState.value.todayMedications.single().name)
             val originalDate = vm.uiState.value.selectedDate
+            val originalSchedules = vm.uiState.value.todayMedications
+            vm.loadCalendarMonth(java.time.YearMonth.from(originalDate).plusMonths(1))
+            assertTrue(vm.uiState.value.calendarLoading)
+            assertFalse(vm.uiState.value.isLoading)
+            assertTrue(vm.uiState.value.hasLoadedSelectedDate)
+            assertEquals(originalSchedules, vm.uiState.value.todayMedications)
+            advanceUntilIdle()
+            assertEquals(originalDate, vm.uiState.value.selectedDate)
+            assertFalse(vm.uiState.value.calendarLoading)
             missed = true
             vm.refreshFromSocket()
             assertEquals(originalDate, vm.uiState.value.selectedDate)

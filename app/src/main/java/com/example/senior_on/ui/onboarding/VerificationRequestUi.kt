@@ -8,6 +8,7 @@ data class VerificationRequestUi(
     val locked: Boolean,
     val remainingCodeSeconds: Int,
     val notice: String?,
+    val remainingRequestSeconds: Int = 0,
 )
 
 @Composable
@@ -25,6 +26,7 @@ fun rememberVerificationRequestUi(key: String): VerificationRequestUi {
     val seconds = ((state.blockedUntil - now + 999) / 1000).coerceAtLeast(0)
     return VerificationRequestUi(
         locked = state.sending || seconds > 0,
+        remainingRequestSeconds = seconds.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
         remainingCodeSeconds = ((state.expiresAt - now + 999) / 1000).coerceAtLeast(0).toInt(),
         notice = if (seconds > 0) "${state.reason.orEmpty()} ${seconds / 60}분 ${seconds % 60}초 후 다시 요청할 수 있어요." else null,
     )

@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.onboarding.route
 
+import kotlinx.coroutines.ensureActive
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,6 +48,7 @@ fun SignupEntryRoute(
                 runCatching {
                     SocialLoginTokenProvider.getKakaoAccessToken(context)
                 }.onSuccess { token ->
+                    coroutineContext.ensureActive()
                     viewModel.loginWithKakao(
                         kakaoAccessToken = token,
                         mode = selectedMode,
@@ -60,6 +63,7 @@ fun SignupEntryRoute(
                 runCatching {
                     SocialLoginTokenProvider.getGoogleFirebaseIdToken(context)
                 }.onSuccess { token ->
+                    coroutineContext.ensureActive()
                     viewModel.loginWithGoogle(
                         firebaseIdToken = token,
                         mode = selectedMode,

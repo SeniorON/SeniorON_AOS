@@ -9,7 +9,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,9 +47,9 @@ private enum class DisplayDestination {
 
 @Composable
 fun DisplayTabRoute(
+    tabReselectionToken: Int = 0,
     viewModel: DisplayViewModel,
     addressSearchViewModel: AddressSearchViewModel,
-    resetToOverviewEvent: Int = 0,
     modifier: Modifier = Modifier,
     onRefreshClick: () -> Unit = {},
     onInstallGuideClick: () -> Unit = {},
@@ -61,6 +60,9 @@ fun DisplayTabRoute(
     isSeniorAccountsLoading: Boolean = false,
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
+    isDisconnectingRelationship: Boolean = false,
+    onDisconnectRelationship: (() -> Unit) -> Unit = {},
+    onProfileSaved: (com.example.senior_on.domain.model.parent.ParentInfo) -> Unit = {},
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -91,24 +93,17 @@ fun DisplayTabRoute(
         mutableStateOf<SeniorHomeButtonType?>(null)
     }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(resetToOverviewEvent) {
-        if (resetToOverviewEvent <= 0) return@LaunchedEffect
-        destination = DisplayDestination.Overview
-        selectedAddress = ""
-        selectedAddressLatitude = null
-        selectedAddressLongitude = null
-        showInternetRequiredDialog = false
-        showLargePreview = false
-        buttonEditDraftItems = emptyList()
-        buttonAddEntryItems = emptyList()
-        transientImportedButtons = emptyList()
-        pendingAppNameInput = null
-        autoSelectKey = null
-        autoSelectMusicButton = null
-        DisplayDestination.entries
-            .filterNot { it == DisplayDestination.Overview }
-            .forEach { saveableStateHolder.removeState(it.name) }
+    com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
+        if (!uiState.isSaving && !isDisconnectingRelationship &&
+            (destination != DisplayDestination.Overview || showLargePreview)) {
+            destination = DisplayDestination.Overview
+            showLargePreview = false
+            pendingAppNameInput = null
+            buttonEditDraftItems = emptyList()
+            buttonAddEntryItems = emptyList()
+            transientImportedButtons = emptyList()
+            viewModel.refreshOnScreenTabReentry()
+        }
     }
 
     fun importButton(button: DisplayHomeButton) {
@@ -306,7 +301,7 @@ fun DisplayTabRoute(
                 device = uiState.device,
                 relationshipLabel = uiState.relationshipLabel ?: "부모님",
                 isRefreshing = uiState.isRefreshingDevice,
-                isDisconnecting = uiState.isSaving,
+                isDisconnecting = isDisconnectingRelationship,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
                 onRefreshClick = {
@@ -314,14 +309,10 @@ fun DisplayTabRoute(
                     onRefreshClick()
                 },
                 onDisconnectClick = {
-                    viewModel.disconnectDevice(
-                        onSuccess = {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.DeviceConnection.name
-                            )
-                            destination = DisplayDestination.Overview
-                        },
-                    )
+                    onDisconnectRelationship {
+                        saveableStateHolder.removeState(DisplayDestination.DeviceConnection.name)
+                        destination = DisplayDestination.Overview
+                    }
                 },
                 onInstallGuideClick = onInstallGuideClick,
             )
@@ -377,6 +368,7 @@ fun DisplayTabRoute(
                     val seniorId = requireNotNull(uiState.parentInfo).seniorId
                     viewModel.saveParentInfo(
                         parentInfo = inputState.toParentInfo(seniorId = seniorId),
+                        onProfileSaved = onProfileSaved,
                         onSuccess = {
                             saveableStateHolder.removeState(
                                 DisplayDestination.ParentInfoEdit.name
