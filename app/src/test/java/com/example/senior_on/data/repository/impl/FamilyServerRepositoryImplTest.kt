@@ -107,6 +107,30 @@ class FamilyServerRepositoryImplTest {
     }
 
     @Test
+    fun `family photos keep the thumbnail URL separately from the original`() = runBlocking {
+        val source = FakeRemoteFamilySource(
+            home = FamilyHomeResponse(
+                members = emptyList(),
+                recentUploaderProfileImageUrls = emptyList(),
+                recentPhotos = listOf(
+                    familyPhoto(id = 91, canDelete = false).copy(
+                        imageUrl = "https://example.com/original.jpg",
+                        thumbnailUrl = "https://example.com/thumbnail.jpg",
+                    ),
+                ),
+            ),
+        )
+
+        val photo = FamilyServerRepositoryImpl(source)
+            .getHome(seniorId = 7L)
+            .recentPhotos
+            .single()
+
+        assertEquals("https://example.com/original.jpg", photo.imageUrl)
+        assertEquals("https://example.com/thumbnail.jpg", photo.thumbnailUrl)
+    }
+
+    @Test
     fun `photo list keeps cursor metadata for the next request`() = runBlocking {
         val source = FakeRemoteFamilySource(
             photos = FamilyPhotoListResponse(
@@ -120,7 +144,10 @@ class FamilyServerRepositoryImplTest {
             ),
         )
 
-        val page = FamilyServerRepositoryImpl(source).getPhotos(size = 20, seniorId = 7L)
+        val page = FamilyServerRepositoryImpl(source).getPhotos(
+            size = 20,
+            seniorId = 7L,
+        )
 
         assertEquals(31L, page.totalCount)
         assertEquals("2026-08-03T12:00:00", page.nextCursor?.createdAt)
@@ -315,7 +342,10 @@ class FamilyServerRepositoryImplTest {
         )
 
         val exception = runCatching {
-            FamilyServerRepositoryImpl(source).getPhotos(size = 20, seniorId = 7L)
+            FamilyServerRepositoryImpl(source).getPhotos(
+                size = 20,
+                seniorId = 7L,
+            )
         }.exceptionOrNull()
 
         assertTrue(exception is IllegalArgumentException)

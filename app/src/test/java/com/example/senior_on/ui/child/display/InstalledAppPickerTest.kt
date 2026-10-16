@@ -95,4 +95,5 @@ class InstalledAppPickerTest {
 
         assertNull(pickedApp.supportedMusicButtonTypeOrNull())
     }
+
 }

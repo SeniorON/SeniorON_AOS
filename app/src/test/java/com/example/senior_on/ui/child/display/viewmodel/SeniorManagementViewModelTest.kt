@@ -331,7 +331,6 @@ private class FakeFamilyRepository(
         return createResult
     }
 
-    override suspend fun hasFamily(): Boolean = error("unused")
     override suspend fun join(code: String): FamilyCodeInfo = error("unused")
     override suspend fun getCode(seniorId: Long): FamilyCodeInfo = error("unused")
     override suspend fun getHome(seniorId: Long): ServerFamilyHome = error("unused")

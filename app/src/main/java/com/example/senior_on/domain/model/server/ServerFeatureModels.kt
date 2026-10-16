@@ -77,7 +77,7 @@ data class ServerConnectedSenior(
 data class ServerFamilyPhoto(
     val id: Long, val imageUrl: String, val uploaderId: Long,
     val uploaderName: String, val description: String, val createdAt: String,
-    val canDelete: Boolean, val isNew: Boolean
+    val canDelete: Boolean, val isNew: Boolean, val thumbnailUrl: String? = null,
 )
 data class ServerFamilyPhotoAlbum(
     val uploaderId: Long,

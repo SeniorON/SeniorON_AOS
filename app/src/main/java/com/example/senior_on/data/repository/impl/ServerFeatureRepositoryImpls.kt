@@ -163,10 +163,6 @@ class FamilyServerRepositoryImpl(
     private val photoUploadMutex = Mutex()
     private val pendingPhotoUploads = mutableMapOf<String, PendingFamilyPhotoUpload>()
 
-    override suspend fun hasFamily(): Boolean = error(
-        "Family membership must be checked through onboarding status",
-    )
-
     override suspend fun join(code: String) = source.join(
         FamilyJoinRequest(normalizeFamilyCodeForRequest(code))
     ).let {
@@ -486,6 +482,7 @@ private fun FamilyPhotoItemResponse.toServerFamilyPhoto() = ServerFamilyPhoto(
     createdAt = createdAt.orEmpty(),
     canDelete = canDelete == true,
     isNew = newPhoto == true,
+    thumbnailUrl = thumbnailUrl?.trim()?.takeIf(String::isNotEmpty),
 )
 
 private fun Long?.requirePositiveFamilyId(fieldName: String): Long {
