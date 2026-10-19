@@ -17,6 +17,18 @@ import com.example.senior_on.ui.theme.SENIOR_ONTheme
 class ParentLauncherActivity : ComponentActivity() {
     private val homeRequest = mutableIntStateOf(0)
     private val activityStateStore by lazy { ParentInactivityStateStore(this) }
+    private val sessionStore by lazy { com.example.senior_on.data.source.auth.PersistedSessionStore(this) }
+    private val activityRecorder by lazy {
+        com.example.senior_on.device.ParentActivityRecorder(
+            isLoggedInParent = {
+                com.example.senior_on.data.local.AccessTokenStore.getBearerToken() != null &&
+                    sessionStore.getSession()?.role == com.example.senior_on.data.remote.dto.UserRole.PARENT
+            },
+            isDeviceConnectionReady = { com.example.senior_on.data.local.ParentConnectionGate.isReady() },
+            initializeIfMissing = { activityStateStore.initializeIfMissing() },
+            recordActivity = { activityStateStore.recordActivity() },
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +46,7 @@ class ParentLauncherActivity : ComponentActivity() {
                     ParentLauncherRoute(
                         appContainer = (application as SeniorOnApplication).appContainer,
                         homeRequest = homeRequest.intValue,
+                        onActivityRecordingEligibilityChanged = activityRecorder::onFamilyConnectionChanged,
                     )
                 }
             }
@@ -53,14 +66,8 @@ class ParentLauncherActivity : ComponentActivity() {
         super.onSaveInstanceState(outState)
     }
 
-    override fun onResume() {
-        super.onResume()
-        // 기본 홈 화면이 잠금 해제 후 다시 보이는 것도 사용자 활동으로 본다.
-        activityStateStore.recordActivity()
-    }
-
     override fun onUserInteraction() {
         super.onUserInteraction()
-        activityStateStore.recordActivity()
+        activityRecorder.onUserInteraction()
     }
 }
