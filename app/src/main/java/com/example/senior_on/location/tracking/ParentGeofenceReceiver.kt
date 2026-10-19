@@ -17,7 +17,8 @@ class ParentGeofenceReceiver : BroadcastReceiver() {
             try {
                 withTimeout(8_000) {
                     if (event.hasError()) {
-                        Log.w("SeniorOnGeofence", "Geofence unavailable: ${event.errorCode}")
+                        if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "Geofence unavailable: ${event.errorCode}")
+                        else Log.w("SeniorOnGeofence", "GEOFENCE_UNAVAILABLE")
                         OutingTrackingStateStore(context).markNeedsRecheck()
                         OutingRecoveryScheduler.enqueue(context)
                         return@withTimeout
@@ -28,12 +29,14 @@ class ParentGeofenceReceiver : BroadcastReceiver() {
                 try { OutingTrackingStateStore(context).markNeedsRecheck() }
                 catch (error: Exception) {
                     if (error is CancellationException) throw error
-                    Log.w("SeniorOnGeofence", "Failed to persist recheck flag", error)
+                    if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "Failed to persist recheck flag", error)
+                    else Log.e("SeniorOnGeofence", "GEOFENCE_RECHECK_SAVE_FAILED")
                 }
                 finally { OutingRecoveryScheduler.enqueue(context) }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-                Log.w("SeniorOnGeofence", "State persistence/check failed", error)
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "State persistence/check failed", error)
+                else Log.w("SeniorOnGeofence", "GEOFENCE_CHECK_DEFERRED")
                 OutingRecoveryScheduler.enqueue(context)
             } finally { result.finish() }
         }

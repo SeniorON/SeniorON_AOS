@@ -44,17 +44,16 @@ class AndroidLocationDataSource(
 
         val currentLocation = runCatching { requestCurrentLocation() }
             .onFailure { throwable ->
-                Log.w(LOG_TAG, "Fresh location request failed", throwable)
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.w(LOG_TAG, "Fresh location request failed", throwable)
             }
             .getOrElse { throwable ->
                 if (throwable is SecurityException) throw throwable
                 null
             }
         if (currentLocation != null) {
-            Log.d(
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.d(
                 LOG_TAG,
-                "Using fresh location=${currentLocation.latitude},${currentLocation.longitude}, " +
-                    "accuracy=${currentLocation.accuracy}m, provider=${currentLocation.provider}, " +
+                "Using fresh location; " +
                     "age=${currentLocation.ageMillis()}ms, mock=${currentLocation.isMockLocation()}",
             )
             return currentLocation.toDomain()
@@ -62,7 +61,7 @@ class AndroidLocationDataSource(
 
         val lastLocation = runCatching { requestLastLocation() }
             .onFailure { throwable ->
-                Log.w(LOG_TAG, "Last location request failed", throwable)
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.w(LOG_TAG, "Last location request failed", throwable)
             }
             .getOrElse { throwable ->
                 if (throwable is SecurityException) throw throwable
@@ -70,18 +69,16 @@ class AndroidLocationDataSource(
             }
             ?.takeIf { it.ageMillis() <= MAX_FALLBACK_LOCATION_AGE_MILLIS }
         if (lastLocation != null) {
-            Log.w(
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.w(
                 LOG_TAG,
                 "Using recent cached location, age=${lastLocation.ageMillis()}ms, " +
-                    "location=${lastLocation.latitude},${lastLocation.longitude}, " +
-                    "accuracy=${lastLocation.accuracy}m, provider=${lastLocation.provider}, " +
                     "mock=${lastLocation.isMockLocation()}",
             )
             return lastLocation.toDomain()
         }
 
         if (runningOnEmulator) {
-            Log.w(
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.w(
                 LOG_TAG,
                 "No emulator location was configured; using Seongdong-gu Office fallback",
             )
@@ -91,7 +88,7 @@ class AndroidLocationDataSource(
             )
         }
 
-        Log.e(LOG_TAG, "No recent location is available")
+        Log.e(LOG_TAG, "LOCATION_UNAVAILABLE")
         error("현재 위치를 확인할 수 없습니다.")
     }
 

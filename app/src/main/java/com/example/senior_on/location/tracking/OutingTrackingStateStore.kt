@@ -111,7 +111,10 @@ internal class OutingTrackingStateStore internal constructor(
         cleanupScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             try { clearAndAwait() }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch (error: Exception) { android.util.Log.e("SeniorOnOutingStore", "Failed to clear outing state", error) }
+            catch (error: Exception) {
+                if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.e("SeniorOnOutingStore", "Failed to clear outing state", error)
+                else android.util.Log.e("SeniorOnOutingStore", "OUTING_STATE_CLEAR_FAILED")
+            }
         }
     }
 

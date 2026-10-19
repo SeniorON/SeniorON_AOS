@@ -115,7 +115,8 @@ internal object OutingReconciliation {
                 if (!observationStored && store.accountKey() == account) store.markNeedsRecheck()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (storageError: Exception) { error.addSuppressed(storageError) }
-            android.util.Log.w("SeniorOnOutingSync", "Outing confirmation/send deferred", error)
+            if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.w("SeniorOnOutingSync", "Outing confirmation/send deferred", error)
+            else android.util.Log.w("SeniorOnOutingSync", "OUTING_SYNC_DEFERRED")
             false
         }
     }
@@ -175,7 +176,8 @@ object OutingNetworkObserver {
                         try { checkNetwork() }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (error: Exception) {
-                            android.util.Log.w("SeniorOnOutingSync", "Network state persistence failed", error)
+                            if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.w("SeniorOnOutingSync", "Network state persistence failed", error)
+                            else android.util.Log.e("SeniorOnOutingSync", "OUTING_NETWORK_STATE_SAVE_FAILED")
                             OutingRecoveryScheduler.enqueue(app)
                         }
                     }
