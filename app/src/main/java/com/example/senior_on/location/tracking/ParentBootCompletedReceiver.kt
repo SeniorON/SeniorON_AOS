@@ -37,6 +37,8 @@ class ParentBootCompletedReceiver : BroadcastReceiver() {
 
                 if (hasToken && isParentSession) {
                     val stateStore = OutingTrackingStateStore(context)
+                    stateStore.markNeedsRecheck()
+                    OutingRecoveryScheduler.enqueue(context)
                     val home = stateStore.getHomeLocation()
                     if (home != null && context.hasRequiredGeofencePermissions()) {
                         ParentGeofenceManager(context).register(

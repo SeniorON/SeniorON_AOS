@@ -57,12 +57,14 @@ class ParentLocationTrackingViewModel(
                     )
                 }
                 val saved = stateStore.saveHomeLocation(home.latitude, home.longitude)
+                check(saved) { "외출·귀가 상태를 저장하지 못했어요." }
                 Log.d(LogTag, "Saved encrypted home location=$saved")
                 geofenceManager.register(
                     home = home,
                     origin = "parent_launcher_initialization",
                 )
                 Log.d(LogTag, "Parent home geofence registration completed")
+                com.example.senior_on.location.tracking.OutingRecoveryScheduler.enqueue(applicationContext)
                 // 에뮬레이터에서 Extended Controls의 좌표가 Fused Location에 반영되는지
                 // 10초 간격으로 확인해야 할 때만 아래 호출의 주석을 해제한다.
                 // startDebugLocationProbe(home)

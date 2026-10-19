@@ -11,5 +11,6 @@ object ParentOutingTrackingController {
             Intent(applicationContext, OutingLocationService::class.java),
         )
         OutingTrackingStateStore(applicationContext).clear()
+        OutingRecoveryScheduler.cancel(applicationContext)
     }
 }

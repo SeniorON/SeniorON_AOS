@@ -46,6 +46,8 @@ class ParentDeviceStatusWorker(
             if (!gate.approve(version)) return Result.retry()
         }
         val repository = appContainer.deviceRepository
+        // Durable fallback when the process/network callback wasn't alive at reconnection.
+        com.example.senior_on.location.tracking.OutingRecoveryScheduler.enqueue(applicationContext)
         val inactivityMonitor = ParentInactivityMonitor(
             context = applicationContext,
             notificationRepository = appContainer.notificationRepository,

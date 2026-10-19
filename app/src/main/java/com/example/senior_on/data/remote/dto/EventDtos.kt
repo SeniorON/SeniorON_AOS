@@ -11,7 +11,8 @@ data class RiskLinkResponse(
     val id: Long?, val linkUrl: String?, val riskLevel: String?, val detectedAt: String?
 )
 data class OutingReturnRequest(
-    val phase: String, val latitude: Double, val longitude: Double, val deviceBattery: Int
+    val phase: String, val latitude: Double, val longitude: Double, val deviceBattery: Int,
+    val detectionType: String = "TRANSITION",
 )
 data class OutingReturnResponse(
     val id: Long?, val phase: String?, val occurredAt: String?,

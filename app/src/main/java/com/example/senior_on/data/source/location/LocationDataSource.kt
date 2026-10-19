@@ -20,12 +20,21 @@ import kotlin.coroutines.resumeWithException
 
 interface LocationDataSource {
     suspend fun getCurrentLocation(): GeoLocation
+    suspend fun getFreshLocation(): GeoLocation = getCurrentLocation()
 }
 
 class AndroidLocationDataSource(
     private val context: Context,
     private val locationClient: FusedLocationProviderClient,
 ) : LocationDataSource {
+    override suspend fun getFreshLocation(): GeoLocation {
+        check(context.hasLocationPermission()) { "위치 권한이 필요합니다." }
+        val location = requestCurrentLocation(maxAgeMillis = 0)
+            ?: error("현재 위치를 확인할 수 없습니다.")
+        check(location.hasAccuracy() && location.accuracy <= 200f) { "위치 정확도가 부족합니다." }
+        return location.toDomain()
+    }
+
     override suspend fun getCurrentLocation(): GeoLocation {
         val runningOnEmulator = isEmulator()
 
@@ -87,7 +96,7 @@ class AndroidLocationDataSource(
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun requestCurrentLocation(): Location? =
+    private suspend fun requestCurrentLocation(maxAgeMillis: Long = MAX_LOCATION_AGE_MILLIS): Location? =
         suspendCancellableCoroutine { continuation ->
             if (!context.hasLocationPermission()) {
                 continuation.resumeWithException(
@@ -99,7 +108,7 @@ class AndroidLocationDataSource(
             val cancellationTokenSource = CancellationTokenSource()
             val request = CurrentLocationRequest.Builder()
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                .setMaxUpdateAgeMillis(MAX_LOCATION_AGE_MILLIS)
+                .setMaxUpdateAgeMillis(maxAgeMillis)
                 .setDurationMillis(LOCATION_TIMEOUT_MILLIS)
                 .build()
 

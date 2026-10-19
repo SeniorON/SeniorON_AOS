@@ -7,4 +7,5 @@ class LocationRepositoryImpl(
     private val source: LocationDataSource,
 ) : LocationRepository {
     override suspend fun getCurrentLocation() = source.getCurrentLocation()
+    override suspend fun getFreshLocation() = source.getFreshLocation()
 }
