@@ -14,6 +14,7 @@ import com.example.senior_on.ui.child.health.viewmodel.MedicationUiState
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.common.InitialContentLoading
+import com.example.senior_on.ui.common.QueryRetryContent
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -70,7 +71,7 @@ fun HealthMainScreen(
         }
 
         val medicationSelected = selectedSection == HealthSection.Health
-        com.example.senior_on.ui.common.QueryRetryContent(
+        QueryRetryContent(
             error = if (medicationSelected) medicationUiState.queryError else hospitalUiState.queryError,
             loading = if (medicationSelected) medicationUiState.isLoading || medicationUiState.isRefreshing
                 else hospitalUiState.isLoading || hospitalUiState.isRefreshing,
