@@ -60,7 +60,10 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val socialAuthRepository: SocialAuthRepository,
     private val sessionRepository: SessionRepository,
-    private val deviceRegistrationRepository: DeviceRegistrationRepository
+    private val deviceRegistrationRepository: DeviceRegistrationRepository,
+    private val currentAccessToken: () -> String? = {
+        com.example.senior_on.data.local.AccessTokenStore.getBearerToken()?.removePrefix("Bearer ")
+    },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -86,6 +89,8 @@ class AuthViewModel(
             val session = sessionRepository.validateSavedSession()
             currentCoroutineContext().ensureActive()
             authenticatedUsersId = session?.usersId
+            // Post-login registration routes also check this ViewModel's token before saving.
+            accessToken = if (session != null) currentAccessToken() else null
             onResult(session)
         }
     }
