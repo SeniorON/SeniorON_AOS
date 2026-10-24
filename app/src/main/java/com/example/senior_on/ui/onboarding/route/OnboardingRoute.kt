@@ -146,6 +146,24 @@ fun OnboardingRoute(
     startAtParentLogin: Boolean = false,
     startFromPhotoNotification: Boolean = false,
 ) {
+    OnboardingProcessScope { restoredFromAnotherProcess ->
+        OnboardingContent(
+            appContainer = appContainer,
+            onAuthenticated = onAuthenticated,
+            // A restored flow must validate the saved session through Splash, not skip to login.
+            startAtParentLogin = startAtParentLogin && !restoredFromAnotherProcess,
+            startFromPhotoNotification = startFromPhotoNotification,
+        )
+    }
+}
+
+@Composable
+private fun OnboardingContent(
+    appContainer: AppContainer,
+    onAuthenticated: (mode: AppUserMode, userId: String) -> Unit,
+    startAtParentLogin: Boolean,
+    startFromPhotoNotification: Boolean,
+) {
     var currentRoute by rememberSaveable { mutableStateOf(if (startAtParentLogin) SeniorOnRoute.Login else InitialRoute) }
     var selectedUserMode by rememberSaveable { mutableStateOf(if (startAtParentLogin) AppUserMode.Senior else AppUserMode.Child) }
     var authenticatedUserId by rememberSaveable {

@@ -65,6 +65,7 @@ fun ParentLauncherRoute(
     onExitToOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier,
     homeRequest: Int = 0,
+    onActivityRecordingEligibilityChanged: (Boolean) -> Unit = {},
 ) {
 
     val sessionExpirationEvent by
@@ -137,6 +138,12 @@ fun ParentLauncherRoute(
     )
     val familyMembershipUiState by familyMembershipViewModel.uiState
         .collectAsStateWithLifecycle()
+
+    val recordingCallback by androidx.compose.runtime.rememberUpdatedState(onActivityRecordingEligibilityChanged)
+    DisposableEffect(familyMembershipUiState.status) {
+        recordingCallback(familyMembershipUiState.status == ParentFamilyMembershipStatus.Connected)
+        onDispose { recordingCallback(false) }
+    }
 
     when (familyMembershipUiState.status) {
         ParentFamilyMembershipStatus.Checking ->

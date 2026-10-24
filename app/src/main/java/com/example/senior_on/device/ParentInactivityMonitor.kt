@@ -23,49 +23,107 @@ class ParentInactivityMonitor(
     private val sharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard? = null,
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
+    private val appContext = context.applicationContext
     private val stateStore = ParentInactivityStateStore(context)
+    private val outbox = InactivityOutbox(context)
+    private val sessions = com.example.senior_on.data.source.auth.PersistedSessionStore(context)
+
+    private fun account(): String? = sessions.getSession()?.takeIf {
+        it.role == com.example.senior_on.data.remote.dto.UserRole.PARENT &&
+            com.example.senior_on.data.local.AccessTokenStore.getBearerToken() != null
+    }?.let { "${it.role}:${it.usersId}:${it.userId}" }
 
     suspend fun refreshSettingAndCheck() = CheckMutex.withLock {
-        val permissions = sharingGuard?.refresh()
-        if (permissions?.inactivityDetectionEnabled == false) return@withLock
-        refreshSetting()
-
-        var state = stateStore.snapshot()
-        if (state.lastActiveAtMillis == null) {
-            stateStore.recordActivity(nowMillis())
-            Log.d(LogTag, "Initialized last activity timestamp")
-            return@withLock
+        val owner = account() ?: return@withLock
+        if (!com.example.senior_on.data.local.ParentConnectionGate.isReady()) return@withLock
+        var pending = outbox.read()
+        if (pending != null && !pending.isCurrent(owner, stateStore.snapshot())) {
+            outbox.clear()
+            pending = null
         }
+        // Persist before any network request, including the permission lookup.
+        val cached = stateStore.snapshot()
+        if (pending == null && ParentInactivityPolicy.shouldCreateEvent(cached, nowMillis())) {
+            pending = PendingInactivity(owner, checkNotNull(cached.lastActiveAtMillis), nowMillis())
+            outbox.save(pending)
+            InactivityRetryScheduler.enqueue(appContext)
+        }
+        try {
+            // Settings synchronization is independent of duplicate notification suppression.
+            // Keep terminal markers so a threshold/permission change cannot revive this episode.
+            refreshSetting()
+            if (account() != owner || !com.example.senior_on.data.local.ParentConnectionGate.isReady()) {
+                return@withLock
+            }
+            if (pending != null && !pending.isCurrent(owner, stateStore.snapshot())) {
+                outbox.clear()
+                pending = null
+            }
+            if (pending?.status != null && pending.status != "pending") return@withLock
+            if (pending?.isExpired(nowMillis()) == true) {
+                outbox.save(pending.copy(status = "expired"))
+                return@withLock
+            }
+            val permissions = sharingGuard?.refresh()
+            if (permissions?.inactivityDetectionEnabled == false) {
+                outbox.clear()
+                return@withLock
+            }
 
-        val currentTime = nowMillis()
-        if (!ParentInactivityPolicy.shouldCreateEvent(state, currentTime)) {
-            Log.d(
-                LogTag,
-                "Inactivity check skipped; enabled=${state.enabled}, " +
-                    "thresholdHours=${state.thresholdHours}, " +
-                    "alreadyAlerted=${state.alertedForActivityAtMillis == state.lastActiveAtMillis}",
+            var state = stateStore.snapshot()
+            if (state.lastActiveAtMillis == null) {
+                Log.d(LogTag, "Inactivity check skipped: no user activity baseline")
+                return@withLock
+            }
+
+            val currentTime = nowMillis()
+            if (!ParentInactivityPolicy.shouldCreateEvent(state, currentTime)) {
+                outbox.clear()
+                Log.d(
+                    LogTag,
+                    "Inactivity check skipped; enabled=${state.enabled}, " +
+                        "thresholdHours=${state.thresholdHours}, " +
+                        "alreadyAlerted=${state.alertedForActivityAtMillis == state.lastActiveAtMillis}",
+                )
+                return@withLock
+            }
+
+            // The mutex prevents the foreground loop and WorkManager from creating the same event.
+            state = stateStore.snapshot()
+            if (!ParentInactivityPolicy.shouldCreateEvent(state, currentTime)) return@withLock
+
+            val lastActiveAt = checkNotNull(state.lastActiveAtMillis)
+            val event = pending ?: PendingInactivity(owner, lastActiveAt, currentTime).also {
+                outbox.save(it)
+                InactivityRetryScheduler.enqueue(appContext)
+            }
+            val location = if (permissions?.locationEnabled != false) resolveLocation() else null
+            // Location and permission requests may suspend while the user resumes activity.
+            if (account() != owner || !com.example.senior_on.data.local.ParentConnectionGate.isReady() ||
+                !event.isCurrent(owner, stateStore.snapshot()) ||
+                !ParentInactivityPolicy.shouldCreateEvent(stateStore.snapshot(), nowMillis())
+            ) return@withLock
+            eventRepository.createInactivity(
+                latitude = location?.latitude,
+                longitude = location?.longitude,
+                battery = deviceRepository.getBatteryLevel(),
+                lastSeenAt = lastActiveAt.toLocalDateTimeText(),
             )
-            return@withLock
+            outbox.save(event.copy(status = "sent"))
+            if (account() == owner && stateStore.snapshot().lastActiveAtMillis == lastActiveAt) {
+                stateStore.markAlertSentFor(lastActiveAt)
+            }
+            Log.i(
+                LogTag,
+                "Inactivity event created; thresholdHours=${state.thresholdHours}, " +
+                    "lastActiveAt=${lastActiveAt.toLocalDateTimeText()}",
+            )
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            InactivityRetryScheduler.enqueue(appContext)
+            throw error
         }
-
-        // The mutex prevents the foreground loop and WorkManager from creating the same event.
-        state = stateStore.snapshot()
-        if (!ParentInactivityPolicy.shouldCreateEvent(state, currentTime)) return@withLock
-
-        val lastActiveAt = checkNotNull(state.lastActiveAtMillis)
-        val location = if (permissions?.locationEnabled != false) resolveLocation() else null
-        eventRepository.createInactivity(
-            latitude = location?.latitude,
-            longitude = location?.longitude,
-            battery = deviceRepository.getBatteryLevel(),
-            lastSeenAt = lastActiveAt.toLocalDateTimeText(),
-        )
-        stateStore.markAlertSentFor(lastActiveAt)
-        Log.i(
-            LogTag,
-            "Inactivity event created; thresholdHours=${state.thresholdHours}, " +
-                "lastActiveAt=${lastActiveAt.toLocalDateTimeText()}",
-        )
     }
 
     private suspend fun refreshSetting() {
@@ -83,19 +141,20 @@ class ParentInactivityMonitor(
             }
             .onFailure { throwable ->
                 if (throwable is kotlinx.coroutines.CancellationException) throw throwable
-                Log.w(LogTag, "Using cached inactivity setting because refresh failed", throwable)
+                Log.w(LogTag, "Deferring inactivity transmission: settings unavailable", throwable)
+                // Cached values may queue an episode, but must not authorize transmission.
+                throw throwable
             }
     }
 
-    private suspend fun resolveLocation(): GeoLocation =
-        runCatching { locationRepository.getCurrentLocation() }
-            .getOrElse { locationFailure ->
-                if (locationFailure is kotlinx.coroutines.CancellationException) throw locationFailure
-                Log.w(LogTag, "Using registered home as inactivity location", locationFailure)
-                deviceRepository.getHomeLocation().let { home ->
-                    GeoLocation(home.latitude, home.longitude)
-                }
-            }
+    private suspend fun resolveLocation(): GeoLocation? = try {
+        kotlinx.coroutines.withTimeoutOrNull(10_000) { locationRepository.getFreshLocation() }
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Log.w(LogTag, "Location unavailable; sending inactivity without coordinates", error)
+        null
+    }
 
     private fun Long.toLocalDateTimeText(): String = LocalDateTime.ofInstant(
         Instant.ofEpochMilli(this),

@@ -38,6 +38,52 @@ import org.junit.Test
 private const val TEST_SENIOR_ID = 77L
 
 class DisplayRepositoryImplTest {
+    private fun profileHome() = homeResponse(null).copy(
+        senior_profile = SeniorProfileResponse(
+            TEST_SENIOR_ID, "테스트", "MOTHER", "1960-01-02", 66,
+            "이전 주소", "01012345678", "이전 상세",
+        ),
+    )
+
+    @Test fun serverCoordinatesAreRestoredWithoutMemoryAndSentOnNameEdit() = runBlocking {
+        val source = FakeHomeDataSource(homeResponse = profileHome())
+        val repository = DisplayRepositoryImpl(source, FakeDeviceDataSource(),
+            homeAddressLoader = { id ->
+                assertEquals(TEST_SENIOR_ID, id)
+                com.example.senior_on.data.remote.dto.SeniorFamilyResponse(id, "현재 주소", "상세", 37.5, 127.0)
+            })
+        val profile = requireNotNull(repository.getOverview(TEST_SENIOR_ID, null).parentInfo)
+        assertEquals("현재 주소", profile.address)
+        repository.updateSeniorProfile(profile.copy(name = "변경 이름"))
+        assertEquals(37.5, source.profileRequests.single().latitude)
+        assertEquals(127.0, source.profileRequests.single().longitude)
+    }
+
+    @Test fun missingServerCoordinatesDoNotReuseCachedCoordinatesOrAllowSaving() = runBlocking {
+        val source = FakeHomeDataSource(homeResponse = profileHome())
+        val repository = DisplayRepositoryImpl(source, FakeDeviceDataSource(),
+            homeAddressLoader = { id ->
+                com.example.senior_on.data.remote.dto.SeniorFamilyResponse(id, "주소", "", null, null)
+            })
+        val cached = ParentInfo(TEST_SENIOR_ID, "테스트", "어머니", LocalDate.of(1960, 1, 2),
+            "01012345678", "주소", "", 37.5, 127.0)
+        val profile = requireNotNull(repository.getOverview(TEST_SENIOR_ID, cached).parentInfo)
+        assertNull(profile.addressLatitude)
+        assertNull(profile.addressLongitude)
+        assertTrue(runCatching { repository.updateSeniorProfile(profile) }.isFailure)
+        assertTrue(source.profileRequests.isEmpty())
+        repository.updateSeniorProfile(profile.copy(addressLatitude = 37.6, addressLongitude = 127.1))
+        assertEquals(37.6, source.profileRequests.single().latitude)
+    }
+
+    @Test fun addressReadFailureDoesNotBecomeMissingCoordinates() = runBlocking {
+        val repository = DisplayRepositoryImpl(
+            FakeHomeDataSource(homeResponse = profileHome()), FakeDeviceDataSource(),
+            homeAddressLoader = { throw java.io.IOException("offline") },
+        )
+        assertTrue(runCatching { repository.getOverview(TEST_SENIOR_ID, null) }.exceptionOrNull() is java.io.IOException)
+    }
+
     @Test fun sharingFlagsAreSeniorScopedAndDoNotChangeConnectionOrOsPermissions() = runBlocking {
         val repository = DisplayRepositoryImpl(
             homeDataSource = FakeHomeDataSource(deviceResponse = deviceDetailResponse(connectionStatus = "ONLINE")

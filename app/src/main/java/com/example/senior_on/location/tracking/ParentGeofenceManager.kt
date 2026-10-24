@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
-import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.Geofence
@@ -25,11 +24,10 @@ internal class ParentGeofenceManager(context: Context) {
         origin: String,
     ) {
         val stateStore = OutingTrackingStateStore(applicationContext)
-        Log.d(
+        if (com.example.senior_on.BuildConfig.DEBUG) Log.d(
             LogTag,
             "Registering home geofence; origin=$origin, " +
                 "requestId=$HomeGeofenceRequestId, " +
-                "center=${home.latitude},${home.longitude}, " +
                 "radius=${OutingBoundaryMeters.toInt()}m, " +
                 "trackingState=${stateStore.getState()}, " +
                 "foregroundPermission=${applicationContext.hasForegroundLocationPermission()}, " +
@@ -37,7 +35,7 @@ internal class ParentGeofenceManager(context: Context) {
                 applicationContext.locationSettingsSummary(),
         )
         if (!applicationContext.hasRequiredGeofencePermissions()) {
-            Log.w(LogTag, "Skipping geofence registration because location permission is missing")
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.w(LogTag, "Skipping geofence registration because location permission is missing")
             return
         }
 
@@ -62,94 +60,42 @@ internal class ParentGeofenceManager(context: Context) {
             .addGeofence(geofence)
             .build()
 
-        logFusedLocationSnapshot(stage = "before-registration", home = home)
         try {
             client.addGeofences(request, geofencePendingIntent()).awaitResult()
         } catch (securityException: SecurityException) {
-            Log.w(
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.w(
                 LogTag,
                 "Geofence registration stopped because location permission was revoked",
                 securityException,
             )
             return
         } catch (throwable: Throwable) {
-            Log.e(
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.e(
                 LogTag,
                 "GeofencingClient rejected registration; origin=$origin, " +
                     "requestId=$HomeGeofenceRequestId",
                 throwable,
             )
+            else Log.e(LogTag, "GEOFENCE_REGISTRATION_FAILED")
             throw throwable
         }
-        Log.d(
+        if (com.example.senior_on.BuildConfig.DEBUG) Log.d(
             LogTag,
             "GeofencingClient accepted registration; origin=$origin, " +
                 "requestId=$HomeGeofenceRequestId",
         )
-        logFusedLocationSnapshot(stage = "after-registration", home = home)
     }
 
     fun unregister() {
-        Log.d(LogTag, "Removing home geofence; requestId=$HomeGeofenceRequestId")
+        if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Removing home geofence; requestId=$HomeGeofenceRequestId")
         client.removeGeofences(geofencePendingIntent())
             .addOnSuccessListener {
-                Log.d(LogTag, "Home geofence removal accepted")
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Home geofence removal accepted")
             }
             .addOnFailureListener { throwable ->
-                Log.e(LogTag, "Home geofence removal failed", throwable)
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.e(LogTag, "Home geofence removal failed", throwable)
+                else Log.e(LogTag, "GEOFENCE_REMOVAL_FAILED")
             }
-    }
-
-    @SuppressLint("MissingPermission")
-    private suspend fun logFusedLocationSnapshot(
-        stage: String,
-        home: StoredHomeLocation,
-    ) {
-        if (!applicationContext.hasForegroundLocationPermission()) {
-            Log.d(LogTag, "$stage: location snapshot skipped because permission is missing")
-            return
-        }
-
-        val availability = runCatching {
-            LocationServices.getFusedLocationProviderClient(applicationContext)
-                .locationAvailability
-                .awaitResult()
-        }.getOrNull()
-        val location = runCatching {
-            LocationServices.getFusedLocationProviderClient(applicationContext)
-                .lastLocation
-                .awaitResult()
-        }.onFailure { throwable ->
-            Log.w(LogTag, "$stage: failed to read Fused lastLocation", throwable)
-        }.getOrNull()
-
-        if (location == null) {
-            Log.w(
-                LogTag,
-                "$stage: Fused lastLocation=null, " +
-                    "locationAvailable=${availability?.isLocationAvailable}",
-            )
-            return
-        }
-
-        val ageMillis = (
-            (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
-                1_000_000L
-            ).coerceAtLeast(0L)
-        val distance = distanceMeters(
-            home.latitude,
-            home.longitude,
-            location.latitude,
-            location.longitude,
-        )
-        Log.d(
-            LogTag,
-            "$stage: Fused lastLocation=${location.latitude},${location.longitude}, " +
-                "distanceFromHome=${distance.toInt()}m, accuracy=${location.accuracy}m, " +
-                "age=${ageMillis}ms, provider=${location.provider}, " +
-                "mock=${location.isMockLocation()}, " +
-                "locationAvailable=${availability?.isLocationAvailable}",
-        )
     }
 
     private fun geofencePendingIntent(): PendingIntent = PendingIntent.getBroadcast(
@@ -178,10 +124,6 @@ private fun Context.locationSettingsSummary(): String {
         "gpsEnabled=${manager.isProviderEnabled(LocationManager.GPS_PROVIDER)}, " +
         "networkEnabled=${manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)}"
 }
-
-@Suppress("DEPRECATION")
-private fun android.location.Location.isMockLocation(): Boolean =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isMock else isFromMockProvider
 
 internal fun Context.hasForegroundLocationPermission(): Boolean =
     ContextCompat.checkSelfPermission(

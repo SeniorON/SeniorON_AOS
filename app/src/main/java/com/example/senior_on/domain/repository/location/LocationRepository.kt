@@ -4,4 +4,5 @@ import com.example.senior_on.domain.model.location.GeoLocation
 
 interface LocationRepository {
     suspend fun getCurrentLocation(): GeoLocation
+    suspend fun getFreshLocation(): GeoLocation = getCurrentLocation()
 }

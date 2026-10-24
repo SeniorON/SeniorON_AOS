@@ -34,6 +34,7 @@ class SeniorOnApplication : Application() {
                 com.example.senior_on.data.remote.dto.UserRole.PARENT
         )
         FcmTokenSyncScheduler.enqueueIfLoggedIn(this)
+        com.example.senior_on.location.tracking.OutingNetworkObserver.register(this)
         SeniorOnNotificationManager.createAlertChannel(this)
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank()) {
             KakaoSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)

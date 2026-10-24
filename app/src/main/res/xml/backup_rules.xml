@@ -6,6 +6,9 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
+    <exclude domain="file" path="datastore/outing_tracking.preferences_pb"/>
+    <exclude domain="file" path="datastore/inactivity_outbox.preferences_pb"/>
+    <exclude domain="sharedpref" path="parent_activity_state.xml"/>
     <exclude domain="sharedpref" path="parent_permission_guide.xml"/>
     <exclude domain="sharedpref" path="parent_permission_requests.xml"/>
     <exclude domain="sharedpref" path="device_registration.xml"/>

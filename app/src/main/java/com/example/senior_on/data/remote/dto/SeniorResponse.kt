@@ -42,3 +42,11 @@ enum class SeniorRelation {
     @SerializedName("OTHER")
     OTHER
 }
+
+data class SeniorFamilyResponse(
+    val seniorId: Long,
+    val address: String?,
+    val detailAddress: String?,
+    val latitude: Double?,
+    val longitude: Double?,
+)

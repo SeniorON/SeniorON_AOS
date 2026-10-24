@@ -138,10 +138,13 @@ fun ParentInfoInputScreen(
     }
     val phoneDigitCount = phoneNumber.text.count(Char::isDigit)
     val isPhoneNumberValid = phoneDigitCount == RequiredPhoneNumberLength
+    val needsAddressSearch = mode == ParentInfoScreenMode.Edit && address.isNotBlank() &&
+        (addressLatitude == null || addressLongitude == null)
     val isSaveEnabled = name.isNotBlank() &&
         isRelationshipValid &&
         parseBirthDate(birthDate) != null &&
         isPhoneNumberValid &&
+        !needsAddressSearch &&
         !isSubmitting
 
     if (showCustomRelationshipSheet) {
@@ -237,6 +240,7 @@ fun ParentInfoInputScreen(
             },
             onSearchAddressClick = onSearchAddressClick,
             showIntro = mode == ParentInfoScreenMode.Input,
+            needsAddressSearch = needsAddressSearch,
             isPhoneNumberRequired = true,
             modifier = Modifier.weight(1f)
         )
@@ -304,6 +308,7 @@ private fun SeniorInfoFormContent(
     onSearchAddressClick: () -> Unit,
     showIntro: Boolean,
     isPhoneNumberRequired: Boolean,
+    needsAddressSearch: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -385,9 +390,10 @@ private fun SeniorInfoFormContent(
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "외출·귀가 알림 기준 위치로 사용돼요.",
+            text = if (needsAddressSearch) "위치 정보를 확인할 수 없어요. 주소를 다시 검색해 주세요."
+                else "외출·귀가 알림 기준 위치로 사용돼요.",
             style = SeniorOnTextStyles.CaptionMedium,
-            color = SeniorOnColors.Gray400
+            color = if (needsAddressSearch) SeniorOnColors.Red500 else SeniorOnColors.Gray400
         )
 
         Spacer(modifier = Modifier.height(if (showIntro) 30.dp else 0.dp))

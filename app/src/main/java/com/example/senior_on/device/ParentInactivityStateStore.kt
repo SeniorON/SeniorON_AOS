@@ -15,11 +15,15 @@ class ParentInactivityStateStore(context: Context) {
         Context.MODE_PRIVATE,
     )
 
-    fun recordActivity(atMillis: Long = System.currentTimeMillis()) {
+    fun recordActivity(atMillis: Long = System.currentTimeMillis()) = synchronized(ActivityLock) {
         preferences.edit()
             .putLong(LastActiveAtKey, atMillis)
             .remove(AlertedForActivityAtKey)
             .apply()
+    }
+
+    fun initializeIfMissing(atMillis: Long = System.currentTimeMillis()) = synchronized(ActivityLock) {
+        if (preferences.optionalLong(LastActiveAtKey) == null) recordActivity(atMillis)
     }
 
     fun updateSetting(thresholdHours: Int, enabled: Boolean) {
@@ -47,6 +51,7 @@ class ParentInactivityStateStore(context: Context) {
         getLong(key, MissingTimestamp).takeUnless { it == MissingTimestamp }
 
     private companion object {
+        val ActivityLock = Any()
         const val PreferencesName = "parent_activity_state"
         const val LastActiveAtKey = "last_active_at"
         const val ThresholdHoursKey = "inactivity_threshold_hours"

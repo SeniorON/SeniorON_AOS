@@ -37,6 +37,8 @@ class ParentBootCompletedReceiver : BroadcastReceiver() {
 
                 if (hasToken && isParentSession) {
                     val stateStore = OutingTrackingStateStore(context)
+                    stateStore.markNeedsRecheck()
+                    OutingRecoveryScheduler.enqueue(context)
                     val home = stateStore.getHomeLocation()
                     if (home != null && context.hasRequiredGeofencePermissions()) {
                         ParentGeofenceManager(context).register(
@@ -49,7 +51,8 @@ class ParentBootCompletedReceiver : BroadcastReceiver() {
                     }
                 }
             } catch (throwable: Throwable) {
-                Log.e(LogTag, "Failed to restore outing tracking after boot", throwable)
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.e(LogTag, "Failed to restore outing tracking after boot", throwable)
+                else Log.e(LogTag, "OUTING_BOOT_RESTORE_FAILED")
             } finally {
                 pendingResult.finish()
             }

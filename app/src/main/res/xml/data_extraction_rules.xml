@@ -5,6 +5,9 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="file" path="datastore/outing_tracking.preferences_pb"/>
+        <exclude domain="file" path="datastore/inactivity_outbox.preferences_pb"/>
+        <exclude domain="sharedpref" path="parent_activity_state.xml"/>
         <exclude domain="sharedpref" path="parent_permission_guide.xml"/>
         <exclude domain="sharedpref" path="parent_permission_requests.xml"/>
         <exclude domain="sharedpref" path="device_registration.xml"/>
@@ -18,6 +21,9 @@
         -->
     </cloud-backup>
     <device-transfer>
+        <exclude domain="file" path="datastore/outing_tracking.preferences_pb"/>
+        <exclude domain="file" path="datastore/inactivity_outbox.preferences_pb"/>
+        <exclude domain="sharedpref" path="parent_activity_state.xml"/>
         <exclude domain="sharedpref" path="parent_permission_guide.xml"/>
         <exclude domain="sharedpref" path="parent_permission_requests.xml"/>
         <exclude domain="sharedpref" path="device_registration.xml"/>

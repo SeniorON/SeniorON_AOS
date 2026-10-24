@@ -52,19 +52,20 @@ fun ParentPermissionGuideScreen(
             )
         },
         bottomBar = {
-            Column {
+            Column(Modifier.fillMaxWidth()) {
                 onManualConfirmClick?.let { confirm ->
-                    androidx.compose.material3.TextButton(onClick = confirm, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    androidx.compose.material3.TextButton(onClick = confirm, modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 48.dp)) {
                         Text("직접 설정한 내용 확인")
                     }
                 }
                 onLaterClick?.let { later ->
-                    androidx.compose.material3.TextButton(onClick = later, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    androidx.compose.material3.TextButton(onClick = later, modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 48.dp)) {
                         Text("나중에 설정하기")
                     }
                 }
                 SeniorOnActionButton(
                     text = buttonText, onClick = onSettingClick, enabled = !requestInFlight,
+                    minHeight = 56.dp,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 34.dp),
                 )
             }
@@ -72,14 +73,15 @@ fun ParentPermissionGuideScreen(
     ) {
         key(step) {
             BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            val descriptionHeight = maxHeight * 0.45f
-            Column(Modifier.fillMaxSize()) {
-                // The video gets all space left after the explanation; VideoView keeps its aspect ratio.
-                Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+            // This viewport excludes the fixed bottom bar. Keep at least 200dp of
+            // usable video height (+16dp padding); overflow scrolls with the text.
+            val videoHeight = (maxHeight * 0.55f).coerceAtLeast(216.dp)
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                Box(Modifier.fillMaxWidth().height(videoHeight).padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
                     media(step, Modifier.fillMaxSize())
                 }
-                // All steps reserve the same proportion for captions; long text cannot shrink the video.
-                Column(Modifier.fillMaxWidth().height(descriptionHeight).verticalScroll(rememberScrollState())) {
+                // A single scroll container prevents nested scrolling and clipped captions.
+                Column(Modifier.fillMaxWidth().heightIn(min = 200.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(30.dp).background(SeniorOnColors.Primary600, CircleShape), contentAlignment = Alignment.Center) {
                         Text("${step.ordinal + 1}", color = SeniorOnColors.White, style = SeniorOnTextStyles.BodySMedium)
@@ -142,4 +144,14 @@ private fun PermissionGuidePreview() {
 @Composable
 private fun AccessibilityGuidePreview() {
     SENIOR_ONTheme { ParentPermissionGuideScreen(ParentPermissionStep.SleepingApps, {}, {}) }
+}
+
+@Preview(widthDp = 320, heightDp = 568, showBackground = true)
+@Composable
+private fun CompactPermissionGuidePreview() {
+    SENIOR_ONTheme {
+        ParentPermissionGuideScreen(
+            ParentPermissionStep.BackgroundLocation, {}, {}, onLaterClick = {},
+        )
+    }
 }

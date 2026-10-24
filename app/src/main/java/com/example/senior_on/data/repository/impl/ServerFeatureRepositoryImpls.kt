@@ -738,11 +738,11 @@ class EventRepositoryImpl(
             )
         }
     override suspend fun createOutingReturn(
-        phase: String, latitude: Double, longitude: Double, battery: Int
+        phase: String, latitude: Double, longitude: Double, battery: Int, detectionType: String
     ) = withSharing { permissions ->
         check(permissions?.locationEnabled != false) { "위치 정보 공유가 중단되었어요." }
         source.createOutingReturn(
-            OutingReturnRequest(phase.trim().uppercase(), latitude, longitude, battery)
+            OutingReturnRequest(phase.trim().uppercase(), latitude, longitude, battery, detectionType)
         ).let {
             SafetyEvent(it.id, "OUTING_RETURN", it.occurredAt, it.address, it.latitude, it.longitude, it.deviceBattery, phase = it.phase)
         }

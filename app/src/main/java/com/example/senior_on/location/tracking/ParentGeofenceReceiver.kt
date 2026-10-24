@@ -4,149 +4,41 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.example.senior_on.SeniorOnApplication
 import com.google.android.gms.location.Geofence
-import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 class ParentGeofenceReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(
-            LogTag,
-            "Receiver invoked; action=${intent.action}, data=${intent.data}, " +
-                "trackingState=${OutingTrackingStateStore(context).getState()}",
-        )
-        val geofencingEvent = GeofencingEvent.fromIntent(intent)
-        if (geofencingEvent == null) {
-            Log.e(LogTag, "GeofencingEvent.fromIntent returned null")
-            return
-        }
-        if (geofencingEvent.hasError()) {
-            Log.e(
-                LogTag,
-                "Geofence error code=${geofencingEvent.errorCode}, " +
-                    "message=${GeofenceStatusCodes.getStatusCodeString(geofencingEvent.errorCode)}",
-            )
-            return
-        }
-
-        val triggeringLocation = geofencingEvent.triggeringLocation
-        Log.d(
-            LogTag,
-            "Received transition=${geofencingEvent.geofenceTransition}, " +
-                "requestIds=${geofencingEvent.triggeringGeofences?.joinToString { it.requestId }}, " +
-                "triggeringLocation=${triggeringLocation?.latitude},${triggeringLocation?.longitude}, " +
-                "accuracy=${triggeringLocation?.accuracy}m, provider=${triggeringLocation?.provider}",
-        )
-
-        when (geofencingEvent.geofenceTransition) {
-            Geofence.GEOFENCE_TRANSITION_EXIT -> handleExit(context)
-            Geofence.GEOFENCE_TRANSITION_ENTER -> handleEnter(context)
-            else -> Log.w(
-                LogTag,
-                "Ignoring unsupported transition=${geofencingEvent.geofenceTransition}",
-            )
-        }
-    }
-
-    private fun handleExit(context: Context) {
-        val pendingResult = goAsync()
+        val event = GeofencingEvent.fromIntent(intent) ?: return
+        if (!event.hasError() && event.geofenceTransition !in listOf(Geofence.GEOFENCE_TRANSITION_EXIT, Geofence.GEOFENCE_TRANSITION_ENTER)) return
+        val result = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val application = context.applicationContext as SeniorOnApplication
-                val container = application.appContainer
-                if (container.parentSharingGuard?.refresh()?.locationEnabled == false) {
-                    ParentOutingTrackingController.reset(context)
-                    return@launch
+                withTimeout(8_000) {
+                    if (event.hasError()) {
+                        if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "Geofence unavailable: ${event.errorCode}")
+                        else Log.w("SeniorOnGeofence", "GEOFENCE_UNAVAILABLE")
+                        OutingTrackingStateStore(context).markNeedsRecheck()
+                        OutingRecoveryScheduler.enqueue(context)
+                        return@withTimeout
+                    }
+                    if (!OutingReconciliation.check(context)) OutingRecoveryScheduler.enqueue(context)
                 }
-                val stateStore = OutingTrackingStateStore(context)
-                val home = stateStore.getHomeLocation()
-                if (home == null) {
-                    Log.e(LogTag, "EXIT ignored because stored home location is missing")
-                    return@launch
+            } catch (_: TimeoutCancellationException) {
+                try { OutingTrackingStateStore(context).markNeedsRecheck() }
+                catch (error: Exception) {
+                    if (error is CancellationException) throw error
+                    if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "Failed to persist recheck flag", error)
+                    else Log.e("SeniorOnGeofence", "GEOFENCE_RECHECK_SAVE_FAILED")
                 }
-                val current = container.locationRepository.getCurrentLocation()
-                val distance = distanceMeters(
-                    home.latitude,
-                    home.longitude,
-                    current.latitude,
-                    current.longitude,
-                )
-                Log.d(
-                    LogTag,
-                    "Exit candidate verified: distance=${distance.toInt()}m, " +
-                        "current=${current.latitude},${current.longitude}",
-                )
-                if (distance < OutingBoundaryMeters) {
-                    Log.w(
-                        LogTag,
-                        "EXIT rejected by distance verification; " +
-                            "distance=${distance.toInt()}m < ${OutingBoundaryMeters.toInt()}m",
-                    )
-                    return@launch
-                }
-                if (!stateStore.transition(
-                        OutingTrackingState.Home,
-                        OutingTrackingState.Outing,
-                    )
-                ) {
-                    Log.w(
-                        LogTag,
-                        "EXIT ignored because state transition Home -> Outing failed; " +
-                            "currentState=${stateStore.getState()}",
-                    )
-                    return@launch
-                }
-                Log.d(LogTag, "Tracking state changed Home -> Outing")
-
-                runCatching {
-                    container.deviceRepository.updateLocation(
-                        current.latitude,
-                        current.longitude,
-                    )
-                }
-                runCatching {
-                    container.eventRepository.createOutingReturn(
-                        phase = OutingPhase,
-                        latitude = current.latitude,
-                        longitude = current.longitude,
-                        battery = container.deviceRepository.getBatteryLevel(),
-                    )
-                }.onSuccess {
-                    Log.d(LogTag, "OUTING event created; starting location service")
-                    OutingLocationService.start(context)
-                }.onFailure { throwable ->
-                    stateStore.setState(OutingTrackingState.Home)
-                    Log.e(LogTag, "Failed to create outing event", throwable)
-                }
-            } catch (throwable: Throwable) {
-                Log.e(LogTag, "Failed to handle geofence exit", throwable)
-            } finally {
-                pendingResult.finish()
-            }
+                finally { OutingRecoveryScheduler.enqueue(context) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "State persistence/check failed", error)
+                else Log.w("SeniorOnGeofence", "GEOFENCE_CHECK_DEFERRED")
+                OutingRecoveryScheduler.enqueue(context)
+            } finally { result.finish() }
         }
-    }
-
-    private fun handleEnter(context: Context) {
-        val state = OutingTrackingStateStore(context).getState()
-        Log.d(
-            LogTag,
-            "Home ENTER received; trackingState=$state",
-        )
-        if (state == OutingTrackingState.Outing) {
-            Log.d(LogTag, "Starting outing service to verify RETURN with hysteresis")
-            OutingLocationService.start(context)
-        } else {
-            Log.d(LogTag, "ENTER requires no action because tracking state is Home")
-        }
-    }
-
-    private companion object {
-        const val LogTag = "SeniorOnGeofence"
-        const val OutingPhase = "OUTING"
     }
 }
