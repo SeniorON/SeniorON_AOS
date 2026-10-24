@@ -1,7 +1,10 @@
 package com.example.senior_on.ui.parent.permission
 
 import android.net.Uri
+import android.graphics.Outline
 import android.view.Gravity
+import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import android.widget.VideoView
 import androidx.compose.foundation.layout.*
@@ -32,7 +35,26 @@ internal fun ParentPermissionVideo(step: ParentPermissionStep, modifier: Modifie
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var failed by remember(step) { mutableStateOf(false) }
-    val video = remember(context, step) { VideoView(context) }
+    val video = remember(context, step) {
+        VideoView(context).apply {
+            // Clip the actual aspect-fitted video, not its larger outer container.
+            // MP4 is opaque; this removes the recorded background at modal corners.
+            if (step == ParentPermissionStep.Notification ||
+                step == ParentPermissionStep.ForegroundLocation ||
+                step == ParentPermissionStep.DefaultHome
+            ) {
+                outlineProvider = object : ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, view.width * 0.075f)
+                    }
+                }
+                clipToOutline = true
+                addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
+                    view.invalidateOutline()
+                }
+            }
+        }
+    }
     DisposableEffect(video, lifecycle) {
         video.setOnPreparedListener { player ->
             player.isLooping = true
