@@ -242,6 +242,11 @@ class DefaultAppContainer(
     }
     override val displayRepository: DisplayRepository =
         DisplayRepositoryImpl(
+            homeAddressLoader = { seniorId ->
+                com.example.senior_on.data.source.senior.SeniorHomeAddressLoader(
+                    SeniorOnNetwork.seniorApi,
+                ).load(seniorId)
+            },
             permissionsLoader = { seniorId -> parentSettingsRepository.getPermissions(seniorId) },
             homeDataSource = homeDataSource,
             deviceDataSource = deviceDataSource,

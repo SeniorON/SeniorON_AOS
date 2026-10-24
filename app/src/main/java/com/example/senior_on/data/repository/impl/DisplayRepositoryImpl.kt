@@ -38,18 +38,21 @@ class DisplayRepositoryImpl private constructor(
     private val familyDataSource: RemoteFamilySource?,
     private val mockDataSource: DisplayDataSource?,
     private val permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)?,
+    private val homeAddressLoader: (suspend (Long) -> com.example.senior_on.data.remote.dto.SeniorFamilyResponse)?,
 ) : DisplayRepository {
     constructor(
         homeDataSource: HomeDataSource,
         deviceDataSource: DeviceDataSource,
         familyDataSource: RemoteFamilySource? = null,
         permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)? = null,
+        homeAddressLoader: (suspend (Long) -> com.example.senior_on.data.remote.dto.SeniorFamilyResponse)? = null,
     ) : this(
         homeDataSource = homeDataSource,
         deviceDataSource = deviceDataSource,
         familyDataSource = familyDataSource,
         mockDataSource = null,
         permissionsLoader = permissionsLoader,
+        homeAddressLoader = homeAddressLoader,
     )
 
     constructor(dataSource: DisplayDataSource) : this(
@@ -58,6 +61,7 @@ class DisplayRepositoryImpl private constructor(
         familyDataSource = null,
         mockDataSource = dataSource,
         permissionsLoader = null,
+        homeAddressLoader = null,
     )
 
     override suspend fun canCurrentUserEditScreen(seniorId: Long): Boolean {
@@ -105,7 +109,19 @@ class DisplayRepositoryImpl private constructor(
             onSuccess = { device -> overview.copy(device = device) },
             onFailure = { overview },
         )
-        return result.copy(device = withSharing(seniorId, result.device))
+        // Never restore coordinates from an old in-memory profile when the server says null.
+        // A failed read must remain a read failure, not an address with missing coordinates.
+        val address = if (result.parentInfo != null) homeAddressLoader?.invoke(seniorId) else null
+        require(address == null || address.seniorId == seniorId)
+        return result.copy(
+            device = withSharing(seniorId, result.device),
+            parentInfo = if (address == null) result.parentInfo else result.parentInfo?.copy(
+                address = address.address.orEmpty(),
+                addressDetail = address.detailAddress.orEmpty(),
+                addressLatitude = address.latitude,
+                addressLongitude = address.longitude,
+            ),
+        )
     }
 
     override suspend fun getSeniorScreenConfiguration(): SeniorScreenConfiguration {
@@ -137,6 +153,10 @@ class DisplayRepositoryImpl private constructor(
     }
 
     override suspend fun updateSeniorProfile(parentInfo: ParentInfo): ParentInfo {
+        require(parentInfo.address.isBlank() ||
+            (parentInfo.addressLatitude != null && parentInfo.addressLongitude != null)) {
+            "위치 정보를 확인할 수 없어요. 주소를 다시 검색해 주세요."
+        }
         if (mockDataSource != null) {
             return parentInfo
         }

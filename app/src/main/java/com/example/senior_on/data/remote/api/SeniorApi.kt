@@ -26,6 +26,11 @@ interface SeniorApi {
     @GET("api/seniors/me")
     suspend fun getManagedSeniors(): ApiResponse<List<ManagedSeniorResponse>>
 
+    @GET("api/seniors/family/{familyId}")
+    suspend fun getFamilySeniors(
+        @Path("familyId") familyId: Long,
+    ): ApiResponse<List<com.example.senior_on.data.remote.dto.SeniorFamilyResponse>>
+
     @PATCH("api/seniors/{seniorId}/relation")
     suspend fun updateSeniorRelation(
         @Header("Authorization") authorization: String,
