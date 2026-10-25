@@ -47,6 +47,7 @@ private enum class DisplayDestination {
 
 @Composable
 fun DisplayTabRoute(
+    expectedSeniorId: Long? = null,
     tabReselectionToken: Int = 0,
     viewModel: DisplayViewModel,
     addressSearchViewModel: AddressSearchViewModel,
@@ -213,6 +214,15 @@ fun DisplayTabRoute(
     saveableStateHolder.SaveableStateProvider(destination.name) {
         when (destination) {
             DisplayDestination.Overview -> when {
+                isDisplaySeniorContextPending(expectedSeniorId, uiState) ->
+                    DisplayTabLoadingScreen(
+                        topBarTitle = seniorAccounts
+                            .firstOrNull { it.seniorId == expectedSeniorId }
+                            ?.relationship
+                            ?.displayLabel,
+                        modifier = modifier,
+                    )
+
                 uiState.queryError != null ->
                     DisplayTabErrorScreen(
                         message = uiState.queryError.orEmpty(),
@@ -556,6 +566,11 @@ fun DisplayTabRoute(
         )
     }
 }
+
+internal fun isDisplaySeniorContextPending(
+    expectedSeniorId: Long?,
+    uiState: DisplayTabUiState,
+): Boolean = expectedSeniorId != null && uiState.selectedSeniorId != expectedSeniorId
 
 internal fun shouldShowDisplayInitialLoading(
     uiState: DisplayTabUiState,

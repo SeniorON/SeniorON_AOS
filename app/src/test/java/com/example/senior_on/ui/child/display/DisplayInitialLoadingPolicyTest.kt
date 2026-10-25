@@ -6,6 +6,28 @@ import org.junit.Test
 
 class DisplayInitialLoadingPolicyTest {
     @Test
+    fun `선택된 시니어가 바뀌면 이전 시니어 화면을 노출하지 않는다`() {
+        assertTrue(
+            isDisplaySeniorContextPending(
+                expectedSeniorId = 2L,
+                uiState = DisplayTabUiState(
+                    selectedSeniorId = 1L,
+                    hasLoadedOverview = true,
+                ),
+            )
+        )
+        assertFalse(
+            isDisplaySeniorContextPending(
+                expectedSeniorId = 2L,
+                uiState = DisplayTabUiState(
+                    selectedSeniorId = 2L,
+                    hasLoadedOverview = true,
+                ),
+            )
+        )
+    }
+
+    @Test
     fun `시니어 목록을 조회하는 동안 초기 로딩을 표시한다`() {
         assertTrue(
             shouldShowDisplayInitialLoading(

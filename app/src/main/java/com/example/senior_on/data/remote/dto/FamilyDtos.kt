@@ -32,6 +32,13 @@ data class FamilyPhotoGroupConnectionResponse(
     val customRelation: String?,
     val connectedAt: String?,
 )
+data class FamilyPhotoTargetResponse(
+    val photoGroupId: Long?,
+    val seniorId: Long?,
+    val name: String?,
+    val relation: String?,
+    val customRelation: String?,
+)
 data class FamilyPhotoUploadUrlRequest(
     val contentType: String,
     val fileSize: Long,

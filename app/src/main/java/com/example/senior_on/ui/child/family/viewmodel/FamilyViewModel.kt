@@ -73,7 +73,7 @@ class FamilyViewModel(
                         isLoading = true,
                     )
                 } else it.copy(
-                    isLoading = !isPullRefresh,
+                    isLoading = !isPullRefresh && !it.hasLoadedOverview,
                     isRefreshing = isPullRefresh,
                     errorMessage = null
                 )
@@ -126,6 +126,7 @@ class FamilyViewModel(
                         },
                         isLoading = false,
                         isRefreshing = false,
+                        hasLoadedOverview = true,
                         errorMessage = null,
                     )
                 }
@@ -327,6 +328,19 @@ class FamilyViewModel(
     }
 
     fun loadPhotoGallery(seniorId: Long, force: Boolean = false) {
+        loadPhotoGallery(seniorId = seniorId, force = force, isPullRefresh = false)
+    }
+
+    fun refreshPhotoGallery(seniorId: Long) {
+        if (photoLoadJob?.isActive == true && loadedPhotoSeniorId == seniorId) return
+        loadPhotoGallery(seniorId = seniorId, force = true, isPullRefresh = true)
+    }
+
+    private fun loadPhotoGallery(
+        seniorId: Long,
+        force: Boolean,
+        isPullRefresh: Boolean,
+    ) {
         require(seniorId > 0L) { "선택된 시니어 정보가 올바르지 않습니다." }
         activateSenior(seniorId)
         if (photoLoadJob?.isActive == true) {
@@ -343,7 +357,11 @@ class FamilyViewModel(
 
         photoLoadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(isPhotoLoading = true, photoErrorMessage = null)
+                it.copy(
+                    isPhotoLoading = !isPullRefresh,
+                    isPhotoRefreshing = isPullRefresh,
+                    photoErrorMessage = null,
+                )
             }
             runCatching {
                 repository.getPhotos(size = PHOTO_PAGE_SIZE, seniorId = seniorId)
@@ -362,6 +380,7 @@ class FamilyViewModel(
                     it.copy(
                         sharedPhotos = photos,
                         isPhotoLoading = false,
+                        isPhotoRefreshing = false,
                         hasLoadedPhotoGallery = true,
                         photoErrorMessage = null,
                         hasMorePhotos = hasNextPhotoPage,
@@ -373,6 +392,7 @@ class FamilyViewModel(
                 _uiState.update {
                     it.copy(
                         isPhotoLoading = false,
+                        isPhotoRefreshing = false,
                         photoErrorMessage = "가족 사진을 불러오지 못했어요.",
                     )
                 }
@@ -443,6 +463,7 @@ class FamilyViewModel(
             _uiState.update {
                 it.copy(
                     isPhotoLoading = false,
+                    isPhotoRefreshing = false,
                     loadingPhotoId = photoId,
                     photoMutationErrorMessage = null,
                 )
@@ -587,14 +608,34 @@ class FamilyViewModel(
 
     fun refreshAfterPhotoUpload(seniorId: Long) {
         if (!isActiveSenior(seniorId)) return
+        invalidatePhotoGallery(clearPhotos = false)
+        loadFamilyOverview(seniorId)
+        loadPhotoGallery(seniorId = seniorId, force = true)
+    }
+
+    fun refreshAfterConnectionChange(seniorId: Long) {
+        if (!isActiveSenior(seniorId)) return
+        invalidatePhotoGallery(clearPhotos = true)
+        loadFamilyOverview(seniorId)
+        loadPhotoGallery(seniorId = seniorId, force = true)
+    }
+
+    private fun invalidatePhotoGallery(clearPhotos: Boolean) {
         isPhotoGalleryLoaded = false
         loadedPhotoSeniorId = null
         nextPhotoCursorAt = null
         nextPhotoCursorId = null
         hasNextPhotoPage = false
-        _uiState.update { it.copy(hasLoadedPhotoGallery = false) }
-        loadFamilyOverview(seniorId)
-        loadPhotoGallery(seniorId = seniorId, force = true)
+        _uiState.update {
+            it.copy(
+                sharedPhotos = if (clearPhotos) emptyList() else it.sharedPhotos,
+                isPhotoLoading = false,
+                isPhotoRefreshing = false,
+                hasLoadedPhotoGallery = false,
+                hasMorePhotos = false,
+                photoErrorMessage = null,
+            )
+        }
     }
 
     private fun activateSenior(seniorId: Long): Boolean {
@@ -656,7 +697,8 @@ internal fun FamilyOverview.toFamilyTabUiState(): FamilyTabUiState = FamilyTabUi
         photo.toFamilyPhotoUiModel()
     },
     invitationCode = invitationCode,
-    isLoading = false
+    isLoading = false,
+    hasLoadedOverview = true,
 )
 
 internal fun SharedFamilyPhoto.toFamilyPhotoUiModel(): SharedFamilyPhotoUiModel =

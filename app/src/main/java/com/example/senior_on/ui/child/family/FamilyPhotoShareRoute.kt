@@ -1,8 +1,8 @@
 package com.example.senior_on.ui.child.family
 
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoUploadViewModel
-import com.example.senior_on.ui.child.family.viewmodel.SeniorConnectionViewModel
-import com.example.senior_on.domain.model.server.ServerConnectedSenior
+import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoTargetViewModel
+import com.example.senior_on.domain.model.server.ServerPhotoTarget
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,11 +28,9 @@ fun FamilyPhotoShareRoute(
     onReselectClick: () -> Unit,
     onShareSuccess: () -> Unit,
     seniorId: Long,
-    currentSeniorRecipient: ServerConnectedSenior?,
-    managedSeniors: List<com.example.senior_on.domain.model.senior.ManagedSenior> = emptyList(),
     modifier: Modifier = Modifier,
     viewModel: FamilyPhotoUploadViewModel,
-    seniorConnectionViewModel: SeniorConnectionViewModel,
+    targetViewModel: FamilyPhotoTargetViewModel,
 ) {
     val context = LocalContext.current
     val preferences = remember(context) {
@@ -54,25 +52,16 @@ fun FamilyPhotoShareRoute(
         mutableStateOf(emptyList<Long>())
     }
     val uploadUiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val connectionUiState by seniorConnectionViewModel.uiState.collectAsStateWithLifecycle()
-    val recipients = familyPhotoRecipients(
-        currentSenior = currentSeniorRecipient,
-        connectedSeniors = connectionUiState.connectedSeniors.map { recipient ->
-            val managed = managedSeniors.firstOrNull { it.seniorId == recipient.seniorId }
-            if (managed == null) recipient else recipient.copy(
-                name = managed.name,
-                relationshipLabel = managed.relationship.displayLabel,
-            )
-        },
-    )
+    val targetUiState by targetViewModel.uiState.collectAsStateWithLifecycle()
+    val recipients = familyPhotoRecipients(targetUiState.targets)
     val isCurrentUploadSession = uploadUiState.sessionId == uploadSessionId
 
     LaunchedEffect(uploadSessionId, photoUri) {
         viewModel.startUploadSession(uploadSessionId, photoUri)
     }
 
-    LaunchedEffect(seniorId) {
-        seniorConnectionViewModel.loadConnections(seniorId)
+    LaunchedEffect(uploadSessionId) {
+        targetViewModel.loadTargets(force = true)
     }
 
     LaunchedEffect(recipients) {
@@ -143,10 +132,10 @@ fun FamilyPhotoShareRoute(
                     photoGroupIds = selectedPhotoGroupIds,
                 )
             },
-            isLoading = connectionUiState.isLoading && recipients.isEmpty(),
-            errorMessage = connectionUiState.loadErrorMessage.takeIf { recipients.isEmpty() },
+            isLoading = targetUiState.isLoading && recipients.isEmpty(),
+            errorMessage = targetUiState.errorMessage.takeIf { recipients.isEmpty() },
             onRetryClick = {
-                seniorConnectionViewModel.loadConnections(seniorId, force = true)
+                targetViewModel.loadTargets(force = true)
             },
         )
     }
@@ -163,11 +152,7 @@ fun FamilyPhotoShareRoute(
 }
 
 internal fun familyPhotoRecipients(
-    currentSenior: ServerConnectedSenior?,
-    connectedSeniors: List<ServerConnectedSenior>,
-): List<ServerConnectedSenior> = buildList {
-    currentSenior?.let(::add)
-    addAll(connectedSeniors)
-}.distinctBy(ServerConnectedSenior::photoGroupId)
+    targets: List<ServerPhotoTarget>,
+): List<ServerPhotoTarget> = targets.distinctBy(ServerPhotoTarget::photoGroupId)
 
 internal fun normalizeFamilyPhotoMessage(message: String): String = message.take(30)

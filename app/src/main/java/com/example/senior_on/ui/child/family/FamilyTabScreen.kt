@@ -65,6 +65,7 @@ import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
+import com.example.senior_on.ui.common.QueryRetryContent
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnBrushes
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -116,19 +117,18 @@ fun FamilyTabScreen(
         ) {
             FamilyTopBar()
 
-            if (uiState.isLoading) {
-                FamilyLoadingContent(modifier = Modifier.weight(1f))
-            } else if (uiState.errorMessage != null) {
-                FamilyErrorContent(
-                    message = uiState.errorMessage,
-                    onRetryClick = onRetryClick,
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
+            QueryRetryContent(
+                error = uiState.errorMessage,
+                loading = uiState.isLoading || isRefreshing,
+                hasContent = uiState.hasLoadedOverview,
+                onRetry = onRetryClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                        .fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
                     item {

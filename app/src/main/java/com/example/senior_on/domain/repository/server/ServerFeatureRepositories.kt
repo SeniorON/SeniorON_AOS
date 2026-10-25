@@ -39,6 +39,7 @@ interface FamilyServerRepository {
     suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
         error("Photo-group disconnection is not implemented")
     }
+    suspend fun getPhotoTargets(): List<ServerPhotoTarget> = emptyList()
     suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum>
     suspend fun getPhotos(
         uploaderId: Long? = null,

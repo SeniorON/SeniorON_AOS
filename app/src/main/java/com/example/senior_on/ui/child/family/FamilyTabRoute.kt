@@ -26,7 +26,12 @@ fun FamilyTabRoute(
     viewModel: FamilyViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var isPhotoSourceSheetVisible by rememberSaveable { mutableStateOf(false) }
+    var isPhotoSourceSheetVisible by rememberSaveable(seniorId) { mutableStateOf(false) }
+    val presentedUiState = if (uiState.seniorId == seniorId) {
+        uiState
+    } else {
+        FamilyTabUiState(seniorId = seniorId, isLoading = true)
+    }
 
     LaunchedEffect(viewModel, seniorId) {
         viewModel.loadLatestFamilyOverview(seniorId)
@@ -34,7 +39,7 @@ fun FamilyTabRoute(
 
     FamilyTabScreen(
         modifier = modifier,
-        uiState = uiState,
+        uiState = presentedUiState,
         onMemberSettingsClick = onMemberSettingsClick,
         onAddFamilyClick = onAddFamilyClick,
         onInviteFamilyClick = onInviteFamilyClick,
@@ -43,7 +48,7 @@ fun FamilyTabRoute(
         onSeniorConnectionClick = onSeniorConnectionClick,
         onPhotoClick = onPhotoClick,
         onRetryClick = { viewModel.loadFamilyOverview(seniorId) },
-        isRefreshing = uiState.isRefreshing,
+        isRefreshing = presentedUiState.isRefreshing,
         onRefresh = { viewModel.refreshFamilyOverview(seniorId) },
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(

@@ -74,6 +74,12 @@ data class ServerConnectedSenior(
     val relationshipLabel: String,
     val connectedAt: String,
 )
+data class ServerPhotoTarget(
+    val photoGroupId: Long,
+    val seniorId: Long,
+    val name: String,
+    val relationshipLabel: String,
+)
 data class ServerFamilyPhoto(
     val id: Long, val imageUrl: String, val uploaderId: Long,
     val uploaderName: String, val description: String, val createdAt: String,

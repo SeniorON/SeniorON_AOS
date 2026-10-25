@@ -223,6 +223,14 @@ class FamilyServerRepositoryImpl(
         require(photoGroupId > 0L) { "연결된 사진 그룹 정보가 올바르지 않습니다." }
         source.disconnectPhotoGroup(seniorId = seniorId, photoGroupId = photoGroupId)
     }
+    override suspend fun getPhotoTargets() = source.getPhotoTargets().map { target ->
+        ServerPhotoTarget(
+            photoGroupId = target.photoGroupId.requirePositiveFamilyId("photoGroupId"),
+            seniorId = target.seniorId.requirePositiveFamilyId("seniorId"),
+            name = target.name.orEmpty(),
+            relationshipLabel = target.toRelationshipLabel(),
+        )
+    }
     override suspend fun getPhotoAlbums(seniorId: Long) = source.getAlbums(seniorId).map { album ->
         ServerFamilyPhotoAlbum(
             uploaderId = album.uploaderUserId.requirePositiveFamilyId("uploaderUserId"),
@@ -465,6 +473,12 @@ private fun FamilyMemberResponse.toServerFamilyMember() = ServerFamilyMember(
 )
 
 private fun FamilyPhotoGroupConnectionResponse.toRelationshipLabel(): String =
+    familyRelationshipLabel(relation, customRelation)
+
+private fun FamilyPhotoTargetResponse.toRelationshipLabel(): String =
+    familyRelationshipLabel(relation, customRelation)
+
+private fun familyRelationshipLabel(relation: String?, customRelation: String?): String =
     when (relation?.uppercase()) {
         "MOTHER" -> "어머니"
         "FATHER" -> "아버지"

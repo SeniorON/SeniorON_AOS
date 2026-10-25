@@ -11,15 +11,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.server.ServerConnectedSenior
+import com.example.senior_on.ui.child.family.viewmodel.SeniorConnectionUiState
 import com.example.senior_on.ui.child.family.viewmodel.SeniorConnectionViewModel
 
-private enum class SeniorConnectionDestination { Intro, CodeInput, Connected }
+internal enum class SeniorConnectionDestination { Intro, CodeInput, Connected }
 
 @Composable
 fun SeniorConnectionRoute(
     seniorId: Long,
     canManageConnections: Boolean,
     onBackClick: () -> Unit,
+    onConnectionsChanged: () -> Unit = {},
     viewModel: SeniorConnectionViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -35,15 +37,6 @@ fun SeniorConnectionRoute(
     LaunchedEffect(seniorId) {
         viewModel.loadConnections(seniorId)
     }
-    LaunchedEffect(uiState.hasLoaded, uiState.connectedSeniors, seniorId) {
-        if (uiState.hasLoaded && uiState.seniorId == seniorId && destination == null) {
-            destination = if (uiState.connectedSeniors.isEmpty()) {
-                SeniorConnectionDestination.Intro
-            } else {
-                SeniorConnectionDestination.Connected
-            }
-        }
-    }
     LaunchedEffect(canManageConnections) {
         if (!canManageConnections) {
             pendingDisconnectSenior = null
@@ -56,19 +49,26 @@ fun SeniorConnectionRoute(
             }
         }
     }
+    val resolvedDestination = resolveSeniorConnectionDestination(
+        requestedDestination = destination,
+        uiState = uiState,
+        seniorId = seniorId,
+    )
 
     when {
-        uiState.isLoading && destination == null -> SeniorConnectionLoadingScreen(
-            onBackClick = onBackClick,
-            modifier = modifier,
-        )
-        uiState.loadErrorMessage != null && destination == null -> SeniorConnectionErrorScreen(
+        resolvedDestination == null &&
+            uiState.seniorId == seniorId &&
+            uiState.loadErrorMessage != null -> SeniorConnectionErrorScreen(
             message = uiState.loadErrorMessage.orEmpty(),
             onBackClick = onBackClick,
             onRetryClick = { viewModel.loadConnections(seniorId, force = true) },
             modifier = modifier,
         )
-        destination == SeniorConnectionDestination.CodeInput -> SeniorCodeInputScreen(
+        resolvedDestination == null -> SeniorConnectionLoadingScreen(
+            onBackClick = onBackClick,
+            modifier = modifier,
+        )
+        resolvedDestination == SeniorConnectionDestination.CodeInput -> SeniorCodeInputScreen(
             onBackClick = {
                 viewModel.clearConnectError()
                 destination = if (uiState.connectedSeniors.isEmpty()) {
@@ -80,6 +80,7 @@ fun SeniorConnectionRoute(
             onConnectClick = { code ->
                 if (canManageConnections) {
                     viewModel.connect(seniorId, code) {
+                        onConnectionsChanged()
                         destination = SeniorConnectionDestination.Connected
                     }
                 }
@@ -89,7 +90,7 @@ fun SeniorConnectionRoute(
             onCodeChange = viewModel::clearConnectError,
             modifier = modifier,
         )
-        destination == SeniorConnectionDestination.Connected -> ConnectedSeniorListScreen(
+        resolvedDestination == SeniorConnectionDestination.Connected -> ConnectedSeniorListScreen(
             seniors = uiState.connectedSeniors,
             canManageConnections = canManageConnections,
             onBackClick = onBackClick,
@@ -125,6 +126,7 @@ fun SeniorConnectionRoute(
                     seniorId = seniorId,
                     photoGroupId = senior.photoGroupId,
                     onSuccess = { hasRemainingConnections ->
+                        onConnectionsChanged()
                         pendingDisconnectSenior = null
                         if (!hasRemainingConnections) {
                             destination = SeniorConnectionDestination.Intro
@@ -136,5 +138,26 @@ fun SeniorConnectionRoute(
                 )
             },
         )
+    }
+}
+
+internal fun resolveSeniorConnectionDestination(
+    requestedDestination: SeniorConnectionDestination?,
+    uiState: SeniorConnectionUiState,
+    seniorId: Long,
+): SeniorConnectionDestination? {
+    if (requestedDestination != null) return requestedDestination
+    if (
+        uiState.seniorId != seniorId ||
+        !uiState.hasLoaded ||
+        uiState.isLoading ||
+        uiState.loadErrorMessage != null
+    ) {
+        return null
+    }
+    return if (uiState.connectedSeniors.isEmpty()) {
+        SeniorConnectionDestination.Intro
+    } else {
+        SeniorConnectionDestination.Connected
     }
 }

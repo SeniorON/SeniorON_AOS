@@ -31,7 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.senior_on.R
-import com.example.senior_on.domain.model.server.ServerConnectedSenior
+import com.example.senior_on.domain.model.server.ServerPhotoTarget
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
@@ -39,7 +39,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun FamilyPhotoRecipientBottomSheet(
-    seniors: List<ServerConnectedSenior>,
+    seniors: List<ServerPhotoTarget>,
     selectedPhotoGroupIds: List<Long>,
     onPhotoGroupClick: (Long) -> Unit,
     onDismiss: () -> Unit,
@@ -112,7 +112,7 @@ internal fun FamilyPhotoRecipientBottomSheet(
                     ) {
                         items(
                             items = seniors,
-                            key = ServerConnectedSenior::photoGroupId,
+                            key = ServerPhotoTarget::photoGroupId,
                         ) { senior ->
                             FamilyPhotoRecipientItem(
                                 senior = senior,
@@ -141,7 +141,7 @@ internal fun FamilyPhotoRecipientBottomSheet(
 
 @Composable
 private fun FamilyPhotoRecipientItem(
-    senior: ServerConnectedSenior,
+    senior: ServerPhotoTarget,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -264,7 +264,7 @@ private fun RecipientEmptyContent() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "연결된 시니어가 없어요",
+            text = "사진을 공유할 시니어가 없어요",
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500,
         )
