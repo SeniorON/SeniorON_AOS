@@ -35,6 +35,8 @@ fun FamilyPhotoGalleryRoute(
             viewModel.loadPhotoGallery(seniorId = seniorId, force = true)
         },
         onLoadMore = { viewModel.loadMorePhotos(seniorId) },
+        isRefreshing = uiState.isPhotoRefreshing,
+        onRefresh = { viewModel.refreshPhotoGallery(seniorId) },
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(
                 photo = photo,

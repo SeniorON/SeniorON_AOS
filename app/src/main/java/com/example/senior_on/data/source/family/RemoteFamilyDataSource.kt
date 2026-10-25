@@ -28,6 +28,7 @@ interface RemoteFamilySource {
     suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
         error("Photo-group disconnection is not implemented")
     }
+    suspend fun getPhotoTargets(): List<FamilyPhotoTargetResponse> = emptyList()
     suspend fun getPhotos(
         uploaderId: Long?,
         cursorAt: String?,
@@ -90,6 +91,9 @@ class RemoteFamilyDataSource(
             api.disconnectPhotoGroup(photoGroupId = photoGroupId, seniorId = seniorId)
             Unit
         }
+    }
+    override suspend fun getPhotoTargets() = remoteRequest {
+        api.getPhotoTargets().requireData()
     }
     override suspend fun getPhotos(
         uploaderId: Long?,

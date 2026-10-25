@@ -43,6 +43,8 @@ interface FamilyApi {
         @Path("photoGroupId") photoGroupId: Long,
         @Query("seniorId") seniorId: Long,
     ): ApiResponse<Unit>
+    @GET("api/family/photos/targets")
+    suspend fun getPhotoTargets(): ApiResponse<List<FamilyPhotoTargetResponse>>
     @GET("api/family/photos") suspend fun getPhotos(
         @Query("uploaderUserId") uploaderUserId: Long? = null,
         @Query("cursorCreatedAt") cursorCreatedAt: String? = null,

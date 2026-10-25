@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child
 
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoUploadViewModel
+import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoTargetViewModel
 import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 import com.example.senior_on.ui.child.family.viewmodel.SeniorConnectionViewModel
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
@@ -29,10 +30,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,7 +56,6 @@ import com.example.senior_on.data.repository.impl.AddressSearchRepository
 import com.example.senior_on.domain.repository.display.DisplayRepository
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.domain.model.senior.ManagedSenior
-import com.example.senior_on.domain.model.server.ServerConnectedSenior
 import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
@@ -171,23 +172,38 @@ fun ChildMainScreen(
             }
         }
     }
-    var familyDestination by rememberSaveable {
+    val childSessionViewModelKey = "$authenticatedUserId:$sessionInstance"
+    val selectionRepository = remember(context.applicationContext) {
+        com.example.senior_on.data.repository.impl.SelectedSeniorRepositoryImpl(context)
+    }
+    val selectionViewModel: SelectedSeniorViewModel = viewModel(
+        viewModelStoreOwner = rememberSeniorScopedViewModelStoreOwner("selection:$childSessionViewModelKey"),
+        key = "selected-senior:$childSessionViewModelKey",
+        factory = SelectedSeniorViewModel.factory(authenticatedUserId, selectionRepository),
+    )
+    val selectionState by selectionViewModel.state.collectAsStateWithLifecycle()
+    val activeSeniorId = selectionState.seniorId.takeUnless { selectionState.isLoading }
+
+    var familyDestination by rememberSaveable(activeSeniorId) {
         mutableStateOf(ChildFamilyDestination.Overview)
     }
-    var invitationReturnDestination by rememberSaveable {
+    var invitationReturnDestination by rememberSaveable(activeSeniorId) {
         mutableStateOf(ChildFamilyDestination.Overview)
     }
-    var photoDetailReturnDestination by rememberSaveable {
+    var photoDetailReturnDestination by rememberSaveable(activeSeniorId) {
         mutableStateOf(ChildFamilyDestination.PhotoGallery)
     }
-    var photoShareReturnDestination by rememberSaveable {
+    var photoShareReturnDestination by rememberSaveable(activeSeniorId) {
         mutableStateOf(ChildFamilyDestination.Overview)
     }
-    var selectedPhotoId by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedPhotoSessionId by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingCameraPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    val childSessionViewModelKey = "$authenticatedUserId:$sessionInstance"
+    var selectedPhotoId by rememberSaveable(activeSeniorId) { mutableStateOf<String?>(null) }
+    var selectedPhotoUri by rememberSaveable(activeSeniorId) { mutableStateOf<String?>(null) }
+    var selectedPhotoSessionId by rememberSaveable(activeSeniorId) {
+        mutableStateOf<String?>(null)
+    }
+    var pendingCameraPhotoUri by rememberSaveable(activeSeniorId) {
+        mutableStateOf<String?>(null)
+    }
     val familyViewModel: FamilyViewModel = viewModel(
         key = "family:$childSessionViewModelKey",
         factory = FamilyViewModel.factory(familyServerRepository),
@@ -199,6 +215,10 @@ fun ChildMainScreen(
             uploadPreparer = familyPhotoUploadPreparer,
         ),
     )
+    val familyPhotoTargetViewModel: FamilyPhotoTargetViewModel = viewModel(
+        key = "family-photo-targets:$childSessionViewModelKey",
+        factory = FamilyPhotoTargetViewModel.factory(familyServerRepository),
+    )
     val familyPhotoUploadUiState by
         familyPhotoUploadViewModel.uiState.collectAsStateWithLifecycle()
     val isFamilyPhotoUploading =
@@ -208,15 +228,6 @@ fun ChildMainScreen(
     var isHealthSaving by remember { mutableStateOf(false) }
     val childMainNavigationEnabled =
         isChildMainNavigationEnabled(isFamilyPhotoUploading, isHealthSaving)
-    val selectionRepository = remember(context.applicationContext) {
-        com.example.senior_on.data.repository.impl.SelectedSeniorRepositoryImpl(context)
-    }
-    val selectionViewModel: SelectedSeniorViewModel = viewModel(
-        viewModelStoreOwner = rememberSeniorScopedViewModelStoreOwner("selection:$childSessionViewModelKey"),
-        key = "selected-senior:$childSessionViewModelKey",
-        factory = SelectedSeniorViewModel.factory(authenticatedUserId, selectionRepository),
-    )
-    val selectionState by selectionViewModel.state.collectAsStateWithLifecycle()
     val displayViewModel: DisplayViewModel = viewModel(
         key = "display:$childSessionViewModelKey",
         factory = DisplayViewModel.factory(
@@ -239,7 +250,6 @@ fun ChildMainScreen(
         key = "senior-connection:$childSessionViewModelKey",
         factory = SeniorConnectionViewModel.factory(familyServerRepository),
     )
-    val activeSeniorId = selectionState.seniorId.takeUnless { selectionState.isLoading }
     var showSeniorManagement by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.managedSeniors, seniorManagementUiState.errorMessage) {
@@ -262,9 +272,20 @@ fun ChildMainScreen(
         event.seniorId ?: seniorManagementUiState.managedSeniors
             .firstOrNull { event.parentUserId != null && it.parentUserId == event.parentUserId }?.seniorId
     }
-    LaunchedEffect(notificationNavigationEvent, notificationTargetSeniorId, selectionState.seniorId, seniorManagementUiState.isLoading) {
+    LaunchedEffect(
+        notificationNavigationEvent,
+        notificationTargetSeniorId,
+        selectionState.seniorId,
+        seniorManagementUiState.isLoading,
+        childMainNavigationEnabled,
+    ) {
         val event = notificationNavigationEvent ?: return@LaunchedEffect
-        if (seniorManagementUiState.isLoading || seniorManagementUiState.errorMessage != null || selectionState.isLoading) return@LaunchedEffect
+        if (
+            !childMainNavigationEnabled ||
+            seniorManagementUiState.isLoading ||
+            seniorManagementUiState.errorMessage != null ||
+            selectionState.isLoading
+        ) return@LaunchedEffect
         if (event.seniorId != null || event.parentUserId != null) {
             if (notificationTargetSeniorId == null || seniorManagementUiState.managedSeniors.none { it.seniorId == notificationTargetSeniorId }) {
                 android.widget.Toast.makeText(context, "현재 관리 중인 시니어의 알림이 아니에요.", android.widget.Toast.LENGTH_LONG).show()
@@ -449,6 +470,7 @@ fun ChildMainScreen(
                 selectedPhotoSessionId = selectedPhotoSessionId,
                 familyViewModel = familyViewModel,
                 familyPhotoUploadViewModel = familyPhotoUploadViewModel,
+                familyPhotoTargetViewModel = familyPhotoTargetViewModel,
                 seniorConnectionViewModel = seniorConnectionViewModel,
                 activeSeniorId = activeSeniorId,
                 tabReselectionToken = tabReselectionToken,
@@ -625,6 +647,7 @@ private fun ChildMainTabContent(
     selectedPhotoSessionId: String?,
     familyViewModel: FamilyViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
+    familyPhotoTargetViewModel: FamilyPhotoTargetViewModel,
     seniorConnectionViewModel: SeniorConnectionViewModel,
     activeSeniorId: Long?,
     tabReselectionToken: Int,
@@ -676,19 +699,22 @@ private fun ChildMainTabContent(
     val familyUiState by familyViewModel.uiState.collectAsStateWithLifecycle()
 
     if (selectedTab == ChildMainTab.Screen) {
-        DisplayTabRoute(
-            onProfileSaved = onProfileSaved,
-            tabReselectionToken = tabReselectionToken,
-            viewModel = displayViewModel,
-            isDisconnectingRelationship = isDisconnectingRelationship,
-            onDisconnectRelationship = onDisconnectRelationship,
-            addressSearchViewModel = addressSearchViewModel,
-            seniorAccounts = seniorAccounts,
-            isSeniorAccountsLoading = isSeniorAccountsLoading,
-            onSeniorAccountClick = onSeniorAccountClick,
-            onAddSeniorAccountClick = onAddSeniorAccountClick,
-            modifier = modifier,
-        )
+        key(selectedSeniorId) {
+            DisplayTabRoute(
+                expectedSeniorId = selectedSeniorId,
+                onProfileSaved = onProfileSaved,
+                tabReselectionToken = tabReselectionToken,
+                viewModel = displayViewModel,
+                isDisconnectingRelationship = isDisconnectingRelationship,
+                onDisconnectRelationship = onDisconnectRelationship,
+                addressSearchViewModel = addressSearchViewModel,
+                seniorAccounts = seniorAccounts,
+                isSeniorAccountsLoading = isSeniorAccountsLoading,
+                onSeniorAccountClick = onSeniorAccountClick,
+                onAddSeniorAccountClick = onAddSeniorAccountClick,
+                modifier = modifier,
+            )
+        }
         return
     }
 
@@ -781,30 +807,6 @@ private fun ChildMainTabContent(
                 val uploadSessionId = selectedPhotoSessionId
                 val seniorId = activeSeniorId
                 if (photoUri != null && uploadSessionId != null && seniorId != null) {
-                    LaunchedEffect(familyViewModel, seniorId) {
-                        if (
-                            familyUiState.seniorId != seniorId ||
-                            familyUiState.photoGroupId == null
-                        ) {
-                            familyViewModel.loadFamilyOverview(seniorId)
-                        }
-                    }
-                    val activeSenior = seniorAccounts.firstOrNull {
-                        it.seniorId == seniorId
-                    }
-                    val currentSeniorRecipient = familyUiState.photoGroupId
-                        ?.takeIf { familyUiState.seniorId == seniorId }
-                        ?.let { photoGroupId ->
-                            ServerConnectedSenior(
-                                photoGroupId = photoGroupId,
-                                seniorId = seniorId,
-                                name = activeSenior?.name.orEmpty().ifBlank { "현재 시니어" },
-                                relationshipLabel = activeSenior?.relationship?.displayLabel
-                                    .orEmpty()
-                                    .ifBlank { "가족" },
-                                connectedAt = "",
-                            )
-                        }
                     FamilyPhotoShareRoute(
                         photoUri = photoUri,
                         uploadSessionId = uploadSessionId,
@@ -812,11 +814,9 @@ private fun ChildMainTabContent(
                         onReselectClick = onGalleryClick,
                         onShareSuccess = onPhotoShared,
                         seniorId = seniorId,
-                        currentSeniorRecipient = currentSeniorRecipient,
-                        managedSeniors = seniorAccounts,
                         modifier = modifier,
                         viewModel = familyPhotoUploadViewModel,
-                        seniorConnectionViewModel = seniorConnectionViewModel,
+                        targetViewModel = familyPhotoTargetViewModel,
                     )
                 } else if (seniorId == null) {
                     ChildFamilySeniorRequiredContent(modifier)
@@ -840,6 +840,9 @@ private fun ChildMainTabContent(
                     seniorId = seniorId,
                     canManageConnections = familyUiState.canManageSeniorConnections,
                     onBackClick = onFamilyBackClick,
+                    onConnectionsChanged = {
+                        familyViewModel.refreshAfterConnectionChange(seniorId)
+                    },
                     viewModel = seniorConnectionViewModel,
                     modifier = modifier,
                 )

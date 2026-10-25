@@ -2,6 +2,7 @@ package com.example.senior_on.data.remote.api
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import retrofit2.http.GET
 import retrofit2.http.Query
 
 class FamilyApiContractTest {
@@ -37,6 +38,17 @@ class FamilyApiContractTest {
     fun `photo group connections are scoped by the selected senior`() {
         assertEquals(listOf("seniorId"), queryNames("getPhotoGroupConnections"))
         assertEquals(listOf("seniorId"), queryNames("disconnectPhotoGroup"))
+    }
+
+    @Test
+    fun `photo targets use the dedicated unscoped endpoint`() {
+        val method = FamilyApi::class.java.methods.single { it.name == "getPhotoTargets" }
+
+        assertEquals(
+            "api/family/photos/targets",
+            requireNotNull(method.getAnnotation(GET::class.java)).value,
+        )
+        assertEquals(emptyList<String>(), queryNames("getPhotoTargets"))
     }
 
     @Test

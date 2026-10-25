@@ -15,6 +15,7 @@ import com.example.senior_on.data.remote.dto.FamilyPhotoUploadUrlRequest
 import com.example.senior_on.data.remote.dto.FamilyPhotoUploadUrlResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoItemResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoListResponse
+import com.example.senior_on.data.remote.dto.FamilyPhotoTargetResponse
 import com.example.senior_on.data.remote.dto.FamilyPrimaryManagerUpdateRequest
 import com.example.senior_on.data.remote.dto.FamilyPrimaryManagerUpdateResponse
 import com.example.senior_on.data.source.family.RemoteFamilySource
@@ -29,6 +30,28 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FamilyServerRepositoryImplTest {
+    @Test
+    fun `photo targets come from the dedicated target response`() = runBlocking {
+        val source = FakeRemoteFamilySource(
+            targets = listOf(
+                FamilyPhotoTargetResponse(
+                    photoGroupId = 41L,
+                    seniorId = 12L,
+                    name = "김순자",
+                    relation = "MOTHER",
+                    customRelation = null,
+                ),
+            ),
+        )
+
+        val targets = FamilyServerRepositoryImpl(source).getPhotoTargets()
+
+        assertEquals(41L, targets.single().photoGroupId)
+        assertEquals(12L, targets.single().seniorId)
+        assertEquals("김순자", targets.single().name)
+        assertEquals("어머니", targets.single().relationshipLabel)
+    }
+
     @Test
     fun `photo group connection maps recipients and normalizes the entered code`() = runBlocking {
         val source = FakeRemoteFamilySource(
@@ -380,6 +403,7 @@ private class FakeRemoteFamilySource(
     ),
     private val photo: FamilyPhotoItemResponse = familyPhoto(id = 92, canDelete = true),
     private val connections: List<FamilyPhotoGroupConnectionResponse> = emptyList(),
+    private val targets: List<FamilyPhotoTargetResponse> = emptyList(),
     completionFailures: Int = 0,
     storageFailures: Int = 0,
 ) : RemoteFamilySource {
@@ -439,6 +463,8 @@ private class FakeRemoteFamilySource(
     override suspend fun getPhotoGroupConnections(
         seniorId: Long,
     ): List<FamilyPhotoGroupConnectionResponse> = connections
+
+    override suspend fun getPhotoTargets(): List<FamilyPhotoTargetResponse> = targets
 
     override suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
         connectionRequest = request

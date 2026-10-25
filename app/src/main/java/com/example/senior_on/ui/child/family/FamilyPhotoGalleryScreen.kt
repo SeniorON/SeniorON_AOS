@@ -26,8 +26,10 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +53,7 @@ import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FamilyPhotoGalleryScreen(
     uiState: FamilyTabUiState,
@@ -61,6 +64,8 @@ fun FamilyPhotoGalleryScreen(
     onPhotoClick: (String) -> Unit = {},
     onRetryClick: () -> Unit = {},
     onLoadMore: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     memberImage: @Composable BoxScope.(FamilyMemberUiModel) -> Unit = {
         FamilyMemberImage(it)
     },
@@ -71,7 +76,12 @@ fun FamilyPhotoGalleryScreen(
     var isPhotoSourceSheetVisible by rememberSaveable { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
 
-    LaunchedEffect(gridState, uiState.hasMorePhotos, uiState.isPhotoLoading) {
+    LaunchedEffect(
+        gridState,
+        uiState.hasMorePhotos,
+        uiState.isPhotoLoading,
+        isRefreshing,
+    ) {
         snapshotFlow {
             gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
         }
@@ -81,6 +91,7 @@ fun FamilyPhotoGalleryScreen(
                     lastVisibleIndex != null &&
                     uiState.hasMorePhotos &&
                     !uiState.isPhotoLoading &&
+                    !isRefreshing &&
                     lastVisibleIndex >= uiState.sharedPhotos.size - 1
                 ) {
                     onLoadMore()
@@ -88,82 +99,88 @@ fun FamilyPhotoGalleryScreen(
             }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SeniorOnColors.White)
-            .statusBarsPadding()
-            .background(SeniorOnColors.Background1)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
     ) {
-        FamilyBackTopAppBar(
-            title = "사진 더보기",
-            onBackClick = onBackClick,
-        )
-
-        if (
-            (uiState.isLoading && uiState.members.isEmpty()) ||
-            (uiState.isPhotoLoading && !uiState.hasLoadedPhotoGallery)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SeniorOnColors.White)
+                .statusBarsPadding()
+                .background(SeniorOnColors.Background1)
         ) {
-            FamilyLoadingContent(modifier = Modifier.weight(1f))
-        } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
-            FamilyErrorContent(
-                message = uiState.errorMessage,
-                onRetryClick = onRetryClick,
-                modifier = Modifier.weight(1f),
-            )
-        } else if (
-            uiState.photoErrorMessage != null && !uiState.hasLoadedPhotoGallery
-        ) {
-            FamilyErrorContent(
-                message = uiState.photoErrorMessage,
-                onRetryClick = onRetryClick,
-                modifier = Modifier.weight(1f),
-            )
-        } else {
-            FamilyPhotoGalleryHeader(
-                members = uiState.visibleMembers,
-                memberImage = memberImage
+            FamilyBackTopAppBar(
+                title = "사진 더보기",
+                onBackClick = onBackClick,
             )
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                state = gridState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = 12.dp,
-                    end = 16.dp,
-                    bottom = 24.dp
-                ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            if (
+                (uiState.isLoading && uiState.members.isEmpty()) ||
+                (uiState.isPhotoLoading && !uiState.hasLoadedPhotoGallery)
             ) {
-                item(key = "add-family-photo") {
-                    AddFamilyPhotoCard(
-                        onClick = { isPhotoSourceSheetVisible = true }
-                    )
-                }
+                FamilyLoadingContent(modifier = Modifier.weight(1f))
+            } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
+                FamilyErrorContent(
+                    message = uiState.errorMessage,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.weight(1f),
+                )
+            } else if (
+                uiState.photoErrorMessage != null && !uiState.hasLoadedPhotoGallery
+            ) {
+                FamilyErrorContent(
+                    message = uiState.photoErrorMessage,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                FamilyPhotoGalleryHeader(
+                    members = uiState.visibleMembers,
+                    memberImage = memberImage
+                )
 
-                items(
-                    items = uiState.sharedPhotos,
-                    key = SharedFamilyPhotoUiModel::id
-                ) { photo ->
-                    SharedPhotoCard(
-                        photo = photo,
-                        sharedPhotoImage = sharedPhotoImage,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { onPhotoClick(photo.id) }
-                    )
-                }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = gridState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = 12.dp,
+                        end = 16.dp,
+                        bottom = 24.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item(key = "add-family-photo") {
+                        AddFamilyPhotoCard(
+                            onClick = { isPhotoSourceSheetVisible = true }
+                        )
+                    }
 
-                if (uiState.isPhotoLoading && uiState.sharedPhotos.isNotEmpty()) {
-                    item(
-                        key = "photo-gallery-loading",
-                        span = { GridItemSpan(maxLineSpan) },
-                    ) {
-                        PhotoGalleryLoadingItem()
+                    items(
+                        items = uiState.sharedPhotos,
+                        key = SharedFamilyPhotoUiModel::id
+                    ) { photo ->
+                        SharedPhotoCard(
+                            photo = photo,
+                            sharedPhotoImage = sharedPhotoImage,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onPhotoClick(photo.id) }
+                        )
+                    }
+
+                    if (uiState.isPhotoLoading && uiState.sharedPhotos.isNotEmpty()) {
+                        item(
+                            key = "photo-gallery-loading",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            PhotoGalleryLoadingItem()
+                        }
                     }
                 }
             }

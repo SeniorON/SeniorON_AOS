@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.child.family
 
-import com.example.senior_on.domain.model.server.ServerConnectedSenior
+import com.example.senior_on.domain.model.server.ServerPhotoTarget
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -28,23 +28,20 @@ class FamilyPhotoRecipientSelectionTest {
     }
 
     @Test
-    fun `현재 시니어의 기본 그룹을 연결된 시니어보다 앞에 표시한다`() {
-        val currentSenior = recipient(photoGroupId = 10L, seniorId = 7L)
-        val connectedSenior = recipient(photoGroupId = 20L, seniorId = 8L)
+    fun `사진 대상 응답의 중복 그룹을 한 번만 표시한다`() {
+        val first = recipient(photoGroupId = 10L, seniorId = 7L)
+        val duplicate = recipient(photoGroupId = 10L, seniorId = 8L)
 
-        val recipients = familyPhotoRecipients(
-            currentSenior = currentSenior,
-            connectedSeniors = listOf(connectedSenior),
-        )
+        val recipients = familyPhotoRecipients(listOf(first, duplicate))
 
-        assertEquals(listOf(10L, 20L), recipients.map { it.photoGroupId })
+        assertEquals(listOf(10L), recipients.map { it.photoGroupId })
+        assertEquals(7L, recipients.single().seniorId)
     }
 
-    private fun recipient(photoGroupId: Long, seniorId: Long) = ServerConnectedSenior(
+    private fun recipient(photoGroupId: Long, seniorId: Long) = ServerPhotoTarget(
         photoGroupId = photoGroupId,
         seniorId = seniorId,
         name = "시니어",
         relationshipLabel = "가족",
-        connectedAt = "",
     )
 }

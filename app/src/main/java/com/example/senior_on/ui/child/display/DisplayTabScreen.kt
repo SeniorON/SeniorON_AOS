@@ -354,7 +354,7 @@ private fun DeviceConnectionBanner(
         device?.connectionStatus == DisplayDeviceConnectionStatus.LoginExpired
     val leadingContentColor = when {
         isNotConnected -> SeniorOnColors.Red300
-        isLoginExpired -> SeniorOnColors.Red400
+        isLoginExpired -> SeniorOnColors.Gray500
         isOnline -> SeniorOnColors.Primary600
         else -> SeniorOnColors.Gray700
     }
@@ -370,13 +370,6 @@ private fun DeviceConnectionBanner(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .then(
-                if (isLoginExpired) {
-                    Modifier.border(1.dp, SeniorOnColors.Beige200, shape)
-                } else {
-                    Modifier
-                }
-            )
             .clip(shape)
             .background(backgroundBrush)
             .clickable(
@@ -397,15 +390,25 @@ private fun DeviceConnectionBanner(
         Spacer(modifier = Modifier.width(4.dp))
 
         Text(
-            text = device?.let {
-                listOfNotNull(it.name, relationshipLabel)
+            text = when {
+                device == null -> "연결된 기기가 없습니다"
+                isLoginExpired -> loginExpiredDeviceLabel(
+                    deviceName = device.name,
+                    relationshipLabel = relationshipLabel,
+                )
+                else -> listOfNotNull(device.name, relationshipLabel)
                     .filter(String::isNotBlank)
                     .joinToString(" · ")
-            } ?: "연결된 기기가 없습니다",
+            },
             modifier = Modifier.weight(1f),
-            style = SeniorOnTextStyles.BodySSemiBold,
+            style = if (isLoginExpired) {
+                SeniorOnTextStyles.BodyMSemiBold
+            } else {
+                SeniorOnTextStyles.BodySSemiBold
+            },
             color = when {
                 isNotConnected -> SeniorOnColors.Red300
+                isLoginExpired -> SeniorOnColors.Gray700
                 else -> SeniorOnColors.Black
             },
             maxLines = 1,
@@ -432,11 +435,15 @@ private fun DeviceConnectionBanner(
         } else if (device != null) {
             Text(
                 text = if (isLoginExpired) {
-                    "로그인이 만료되었습니다"
+                    "로그인 만료"
                 } else {
                     "오프라인"
                 },
-                style = SeniorOnTextStyles.BodySSemiBold,
+                style = if (isLoginExpired) {
+                    SeniorOnTextStyles.BodyMSemiBold
+                } else {
+                    SeniorOnTextStyles.BodySSemiBold
+                },
                 color = if (isLoginExpired) SeniorOnColors.Red400 else SeniorOnColors.Gray500,
             )
 
@@ -449,10 +456,25 @@ private fun DeviceConnectionBanner(
             modifier = Modifier.size(24.dp),
             tint = when {
                 isNotConnected -> SeniorOnColors.Red300
-                isLoginExpired -> SeniorOnColors.Red400
+                isLoginExpired -> SeniorOnColors.Gray700
                 else -> SeniorOnColors.Gray700
             },
         )
+    }
+}
+
+internal fun loginExpiredDeviceLabel(
+    deviceName: String,
+    relationshipLabel: String?,
+): String {
+    val normalizedDeviceName = deviceName.trim()
+    val normalizedRelationship = relationshipLabel?.trim().orEmpty()
+    return when {
+        normalizedDeviceName.isNotEmpty() && normalizedRelationship.isNotEmpty() ->
+            "$normalizedDeviceName-$normalizedRelationship 폰"
+        normalizedDeviceName.isNotEmpty() -> normalizedDeviceName
+        normalizedRelationship.isNotEmpty() -> "$normalizedRelationship 폰"
+        else -> "연결된 기기 없음"
     }
 }
 

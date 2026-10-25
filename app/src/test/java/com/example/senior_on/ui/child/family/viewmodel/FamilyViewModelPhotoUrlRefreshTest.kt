@@ -23,6 +23,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -81,6 +83,47 @@ class FamilyViewModelPhotoUrlRefreshTest {
             advanceUntilIdle()
             assertEquals(null, vm.uiState.value.errorMessage)
         } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `family tab reentry keeps loaded content visible while refreshing`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var requestCount = 0
+            val secondRequestStarted = CompletableDeferred<Unit>()
+            val releaseSecondRequest = CompletableDeferred<Unit>()
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = FRESH_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                homeProvider = {
+                    requestCount++
+                    if (requestCount == 2) {
+                        secondRequestStarted.complete(Unit)
+                        releaseSecondRequest.await()
+                    }
+                    ServerFamilyHome(
+                        members = emptyList(),
+                        recentPhotos = listOf(serverPhoto(url = FRESH_URL)),
+                    )
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadLatestFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.hasLoadedOverview)
+            viewModel.loadLatestFamilyOverview(SENIOR_ID)
+            runCurrent()
+            secondRequestStarted.await()
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertEquals(1, viewModel.uiState.value.sharedPhotos.size)
+
+            releaseSecondRequest.complete(Unit)
+            advanceUntilIdle()
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 
     @Test
@@ -246,6 +289,60 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
+    fun `사진 목록 당겨서 새로고침은 기존 사진을 유지하고 첫 페이지를 교체한다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val refreshStarted = CompletableDeferred<Unit>()
+            val releaseRefresh = CompletableDeferred<Unit>()
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = EXPIRED_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                photoPageProvider = { requestCount ->
+                    if (requestCount == 2) {
+                        refreshStarted.complete(Unit)
+                        releaseRefresh.await()
+                    }
+                    ServerFamilyPhotoPage(
+                        photos = listOf(
+                            serverPhoto(
+                                url = if (requestCount == 1) EXPIRED_URL else FRESH_URL,
+                            ),
+                        ),
+                        totalCount = 1,
+                        nextCursor = null,
+                        hasNext = false,
+                    )
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.refreshPhotoGallery(SENIOR_ID)
+            runCurrent()
+            refreshStarted.await()
+
+            assertTrue(viewModel.uiState.value.isPhotoRefreshing)
+            assertFalse(viewModel.uiState.value.isPhotoLoading)
+            assertEquals(
+                EXPIRED_URL,
+                (viewModel.uiState.value.sharedPhotos.single().imageSource as FamilyImageSource.Remote).url,
+            )
+
+            releaseRefresh.complete(Unit)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.isPhotoRefreshing)
+            assertEquals(
+                FRESH_URL,
+                (viewModel.uiState.value.sharedPhotos.single().imageSource as FamilyImageSource.Remote).url,
+            )
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun `강제 갱신은 진행 중인 페이지 요청을 취소하고 첫 페이지를 다시 받는다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -280,6 +377,48 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 as FamilyImageSource.Remote
             assertEquals(FRESH_URL, imageSource.url)
             assertEquals(2, repository.photoPageRequestCount)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `연결 변경은 기존 사진 캐시를 비우고 홈과 첫 페이지를 다시 받는다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = EXPIRED_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                photoPageProvider = { requestCount ->
+                    ServerFamilyPhotoPage(
+                        photos = listOf(
+                            serverPhoto(
+                                url = if (requestCount == 1) EXPIRED_URL else FRESH_URL,
+                            ),
+                        ),
+                        totalCount = 1,
+                        nextCursor = null,
+                        hasNext = false,
+                    )
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.refreshAfterConnectionChange(SENIOR_ID)
+
+            assertTrue(viewModel.uiState.value.sharedPhotos.isEmpty())
+            assertFalse(viewModel.uiState.value.hasLoadedPhotoGallery)
+
+            advanceUntilIdle()
+
+            assertEquals(2, repository.homeRequestCount)
+            assertEquals(2, repository.photoPageRequestCount)
+            val imageSource = viewModel.uiState.value.sharedPhotos.single().imageSource
+                as FamilyImageSource.Remote
+            assertEquals(FRESH_URL, imageSource.url)
         } finally {
             Dispatchers.resetMain()
         }
