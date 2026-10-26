@@ -14,6 +14,18 @@ import java.io.IOException
 class OutingTrackingStateStoreTest {
     private val key = stringPreferencesKey("confirmed_state_v2")
 
+    @Test fun offlineMarkerPersistsAndGenericRecheckDoesNotInventOrEraseIt() = runBlocking {
+        fixture { data, store ->
+            store.saveHomeLocation(37.0, 127.0)
+            store.markNeedsRecheck()
+            assertFalse(store.snapshot()!!.offlineObserved)
+            store.markNeedsRecheck(offlineObserved = true)
+            store.markNeedsRecheck()
+            val reopened = OutingTrackingStateStore(data, { "parent" }, { "cipher:$it" }, { it.removePrefix("cipher:") })
+            assertTrue(reopened.snapshot()!!.offlineObserved)
+        }
+    }
+
     private suspend fun fixture(test: suspend (DataStore<Preferences>, OutingTrackingStateStore) -> Unit) {
         // File migration and Android Keystore are covered by the instrumented test.
         val data = object : DataStore<Preferences> {

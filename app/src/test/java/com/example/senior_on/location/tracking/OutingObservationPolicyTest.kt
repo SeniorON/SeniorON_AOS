@@ -8,10 +8,35 @@ import org.junit.Test
 class OutingObservationPolicyTest {
     private fun baseline(state: OutingTrackingState, reconnect: Boolean = false) = OutingSnapshot(
         account = "parent:1", home = StoredHomeLocation(37.0, 127.0), state = state,
-        deliveredState = state, needsRecheck = reconnect,
+        deliveredState = state, needsRecheck = reconnect, offlineObserved = reconnect,
     )
     private fun observe(old: OutingSnapshot, next: OutingTrackingState, at: Long = 100) =
         applyOutingObservation(old, next, 37.1, 127.1, at)
+
+    @Test fun `online recheck after boundary or failure remains transition`() {
+        val old = baseline(OutingTrackingState.Outing).copy(needsRecheck = true)
+        assertNull(observedOutingState(125f, outingBoundaries(qa = true)))
+        assertEquals(OutingTrackingState.Outing, old.state)
+        assertTrue(requiresReturnConfirmation(old, OutingTrackingState.Home))
+        assertFalse(requiresReturnConfirmation(old.copy(offlineObserved = true), OutingTrackingState.Home))
+        val result = observe(old, OutingTrackingState.Home)
+        assertEquals(OutingDetectionType.TRANSITION, result.pending?.detectionType)
+    }
+
+    @Test fun `offline marker is consumed after successful observation`() {
+        val home = observe(baseline(OutingTrackingState.Home, true), OutingTrackingState.Home)
+        assertFalse(home.offlineObserved)
+        assertEquals(OutingDetectionType.TRANSITION, observe(home, OutingTrackingState.Outing).pending?.detectionType)
+    }
+
+    @Test fun `legacy retry flag does not imply offline`() {
+        val gson = Gson()
+        val json = gson.toJsonTree(baseline(OutingTrackingState.Outing).copy(needsRecheck = true)).asJsonObject
+        json.remove("offlineObserved")
+        val restored = gson.fromJson(json, OutingSnapshot::class.java)
+        assertFalse(restored.offlineObserved)
+        assertEquals(OutingDetectionType.TRANSITION, observe(restored, OutingTrackingState.Home).pending?.detectionType)
+    }
 
     @Test fun `online home to outside is a transition`() {
         val result = observe(baseline(OutingTrackingState.Home), OutingTrackingState.Outing)

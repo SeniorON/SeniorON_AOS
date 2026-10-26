@@ -1,9 +1,15 @@
 package com.example.senior_on.location.tracking
 
-internal fun observedOutingState(distance: Float): OutingTrackingState? = when {
+internal fun requiresReturnConfirmation(old: OutingSnapshot, next: OutingTrackingState): Boolean =
+    !old.offlineObserved && old.state == OutingTrackingState.Outing && next == OutingTrackingState.Home
+
+internal fun observedOutingState(
+    distance: Float,
+    boundaries: OutingBoundaries = outingBoundaries(qa = false),
+): OutingTrackingState? = when {
     !distance.isFinite() -> null
-    distance >= OutingBoundaryMeters -> OutingTrackingState.Outing
-    distance <= ReturnBoundaryMeters -> OutingTrackingState.Home
+    distance >= boundaries.outing -> OutingTrackingState.Outing
+    distance <= boundaries.home -> OutingTrackingState.Home
     else -> null // Hysteresis band: don't invent a transition.
 }
 
@@ -15,7 +21,7 @@ internal fun applyOutingObservation(
     now: Long,
 ): OutingSnapshot {
     require(next != OutingTrackingState.Unknown)
-    val type = if (old.needsRecheck) OutingDetectionType.RECONNECTION else OutingDetectionType.TRANSITION
+    val type = if (old.offlineObserved) OutingDetectionType.RECONNECTION else OutingDetectionType.TRANSITION
     val pending = when {
         old.state == OutingTrackingState.Unknown -> null // First baseline is silent.
         old.pending != null && next == old.deliveredState -> null // Unsent situation has resolved.
@@ -31,6 +37,6 @@ internal fun applyOutingObservation(
     return old.copy(
         state = next, confirmedAt = now, latitude = latitude, longitude = longitude,
         deliveredState = if (old.state == OutingTrackingState.Unknown) next else old.deliveredState,
-        needsRecheck = false, returnCandidateAt = null, pending = pending,
+        needsRecheck = false, offlineObserved = false, returnCandidateAt = null, pending = pending,
     )
 }

@@ -37,6 +37,8 @@ internal data class OutingSnapshot(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val needsRecheck: Boolean = true,
+    // Set only after observing unavailable internet; unrelated retries must not imply reconnection.
+    val offlineObserved: Boolean = false,
     val returnCandidateAt: Long? = null,
     // Latest unresolved state only; not an offline movement history.
     val pending: PendingOutingEvent? = null,
@@ -44,9 +46,9 @@ internal data class OutingSnapshot(
 )
 
 private val Context.outingDataStore by androidx.datastore.preferences.preferencesDataStore(
-    name = "outing_tracking",
+    name = com.example.senior_on.device.DetectionQa.storeName("outing_tracking"),
     produceMigrations = { context ->
-        listOf(androidx.datastore.preferences.SharedPreferencesMigration(
+        if (com.example.senior_on.device.DetectionQa.enabled) emptyList() else listOf(androidx.datastore.preferences.SharedPreferencesMigration(
             context, "outing_tracking", keysToMigrate = setOf("confirmed_state_v2"),
         ))
     },
@@ -100,10 +102,11 @@ internal class OutingTrackingStateStore internal constructor(
         true
     }
 
-    suspend fun markNeedsRecheck() = lock.withLock {
+    suspend fun markNeedsRecheck(offlineObserved: Boolean = false) = lock.withLock {
         read()?.let { old ->
-            if ((!old.needsRecheck || old.returnCandidateAt != null) && accountKey() == old.account) {
-                write(old.copy(needsRecheck = true, returnCandidateAt = null, revision = UUID.randomUUID().toString()))
+            if ((!old.needsRecheck || old.returnCandidateAt != null || (offlineObserved && !old.offlineObserved)) && accountKey() == old.account) {
+                write(old.copy(needsRecheck = true, offlineObserved = old.offlineObserved || offlineObserved,
+                    returnCandidateAt = null, revision = UUID.randomUUID().toString()))
             }
         }
     }
