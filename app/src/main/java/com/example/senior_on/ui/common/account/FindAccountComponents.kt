@@ -2,6 +2,8 @@ package com.example.senior_on.ui.common.account
 
 import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,6 +19,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,6 +42,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -181,7 +188,8 @@ internal fun FindAccountTextField(
     showClearIcon: Boolean = true,
     clearIconResId: Int = R.drawable.ic_close_filled,
     clearIconSize: Dp = 18.dp,
-    trailingContent: (@Composable () -> Unit)? = null
+    trailingContent: (@Composable () -> Unit)? = null,
+    readOnly: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -210,6 +218,7 @@ internal fun FindAccountTextField(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
+            readOnly = readOnly,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(43.dp),
@@ -613,23 +622,43 @@ internal fun FindAccountScaffold(
     selectedTab: FindAccountTab = FindAccountTab.Id,
     onTabSelected: (FindAccountTab) -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    keyboardProtectedContentHeight: Dp? = null,
     content: @Composable () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    var totalHeight by remember { mutableStateOf(0) }
+    var headerHeight by remember { mutableStateOf(0) }
+    var footerHeight by remember { mutableStateOf(0) }
+    val imeHeight = (WindowInsets.ime.getBottom(density) -
+        WindowInsets.navigationBars.getBottom(density)).coerceAtLeast(0)
+    val targetLift = keyboardProtectedContentHeight?.let { protectedHeight ->
+        if (totalHeight == 0 || footerHeight == 0 || protectedHeight <= 0.dp) 0 else
+            cappedAccountKeyboardLift(imeHeight, totalHeight, headerHeight, footerHeight,
+                with(density) { protectedHeight.roundToPx() })
+    } ?: 0
+    val lift by animateIntAsState(
+        targetValue = targetLift,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 700f),
+        label = "accountKeyboardLift",
+    )
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { totalHeight = it.height }
+            .padding(bottom = with(density) { lift.toDp() })
             .background(SeniorOnColors.White)
             .clearFocusOnBackgroundTap(focusManager)
     ) {
-        FindAccountTopBar(onBackClick = onBackClick)
-
-        if (showTabs) {
-            FindAccountTabRow(
-                selectedTab = selectedTab,
-                onTabSelected = onTabSelected
-            )
+        Column(Modifier.onSizeChanged { headerHeight = it.height }) {
+            FindAccountTopBar(onBackClick = onBackClick)
+            if (showTabs) {
+                FindAccountTabRow(
+                    selectedTab = selectedTab,
+                    onTabSelected = onTabSelected
+                )
+            }
         }
 
         Box(
@@ -643,6 +672,7 @@ internal fun FindAccountScaffold(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .onSizeChanged { footerHeight = it.height }
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp)
         ) {
@@ -650,6 +680,13 @@ internal fun FindAccountScaffold(
         }
     }
 }
+
+/** Keep the footer below the input content even if this leaves it behind the keyboard. */
+internal fun cappedAccountKeyboardLift(
+    imeHeight: Int, totalHeight: Int, headerHeight: Int, footerHeight: Int, protectedContentHeight: Int,
+): Int = imeHeight.coerceAtLeast(0).coerceAtMost(
+    (totalHeight - headerHeight - footerHeight - protectedContentHeight).coerceAtLeast(0),
+)
 
 @Preview(
     showBackground = true,
