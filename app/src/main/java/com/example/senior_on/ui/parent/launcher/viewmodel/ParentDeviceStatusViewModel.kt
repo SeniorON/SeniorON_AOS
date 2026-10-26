@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 class ParentDeviceStatusViewModel(
     private val repository: DeviceRepository,
     private val inactivityMonitor: ParentInactivityMonitor? = null,
-    private val statusUpdateIntervalMillis: Long = StatusUpdateIntervalMillis,
+    private val statusUpdateIntervalMillis: Long = com.example.senior_on.device.DetectionQa.foregroundIntervalMillis(),
 ) : ViewModel() {
     private var foregroundUpdateJob: Job? = null
     private val _isDeviceDisconnected = MutableStateFlow(false)
@@ -56,12 +56,16 @@ class ParentDeviceStatusViewModel(
                         Log.w(LogTag, "Foreground device status sync failed.", throwable)
                     }
                 checkInactivity()
+                com.example.senior_on.device.DetectionQaStatus.update {
+                    it.copy(nextForegroundCheckAt = System.currentTimeMillis() + statusUpdateIntervalMillis)
+                }
                 delay(statusUpdateIntervalMillis)
             }
         }
     }
 
     fun stopForegroundUpdates() {
+        com.example.senior_on.device.DetectionQaStatus.update { it.copy(nextForegroundCheckAt = null) }
         foregroundUpdateJob?.cancel()
         foregroundUpdateJob = null
     }
@@ -76,7 +80,6 @@ class ParentDeviceStatusViewModel(
 
     companion object {
         private const val LogTag = "ParentDeviceStatus"
-        private const val StatusUpdateIntervalMillis = 5L * 60L * 1_000L
 
         fun factory(
             repository: DeviceRepository,

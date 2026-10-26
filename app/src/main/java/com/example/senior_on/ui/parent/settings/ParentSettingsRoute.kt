@@ -144,6 +144,11 @@ fun ParentSettingsRoute(
         },
     ) {
     when (destination) {
+        ParentSettingsDestination.DetectionQa -> {
+            if (com.example.senior_on.device.DetectionQa.enabled) {
+                DetectionQaScreen(onBackClick = ::back, modifier = modifier)
+            } else LaunchedEffect(Unit) { destination = ParentSettingsDestination.Main }
+        }
         ParentSettingsDestination.Main -> ParentSettingsScreen(profile, ::back,
             { if (!isBusy) { destination = it; if (it == ParentSettingsDestination.Account) profileViewModel.loadAccount() } },
             { if (!isBusy) confirmation = it }, modifier, onPhotoClick = editPhoto)

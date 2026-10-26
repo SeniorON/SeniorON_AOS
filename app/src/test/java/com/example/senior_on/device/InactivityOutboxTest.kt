@@ -3,6 +3,7 @@ package com.example.senior_on.device
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
@@ -11,6 +12,36 @@ import org.junit.Test
 import java.util.UUID
 
 class InactivityOutboxTest {
+    @Test fun observationDoesNotMigrateOrChangeData() = runTest {
+        val data = MemoryStore()
+        data.edit {
+            it[stringPreferencesKey("account")] = "parent-a"
+            it[longPreferencesKey("activity")] = 100
+            it[longPreferencesKey("queued")] = 200
+        }
+        val before = data.data.value
+        val observed = InactivityOutbox(data).observe().first()!!
+        assertEquals("", observed.clientEventId)
+        assertEquals(before, data.data.value)
+    }
+
+    @Test fun retryDiagnosticsPreserveDetectionTimeAcrossReopen() = runTest {
+        val data = MemoryStore()
+        val original = PendingInactivity("parent-a", 100, 120_100)
+        val box = InactivityOutbox(data)
+        box.save(original.copy(attempts = 1, lastAttemptAt = 125_000))
+        val retry = InactivityOutbox(data).read()!!
+        box.save(retry.copy(attempts = 2, lastAttemptAt = 150_000, status = "sent", completedAt = 151_000))
+        val completed = InactivityOutbox(data).observe().first()!!
+        assertEquals(original.queuedAt, completed.queuedAt)
+        assertEquals(original.clientEventId, completed.clientEventId)
+        assertEquals(2, completed.attempts)
+        assertEquals(150_000L, completed.lastAttemptAt)
+        assertEquals(151_000L, completed.completedAt)
+        box.clear()
+        assertNull(box.observe().first())
+    }
+
     private class MemoryStore : DataStore<Preferences> {
         override val data = MutableStateFlow<Preferences>(emptyPreferences())
         private val mutex = Mutex()
