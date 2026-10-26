@@ -21,6 +21,8 @@ class ParentBootCompletedReceiver : BroadcastReceiver() {
             intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED
         ) return
 
+        ParentGeofenceManager.invalidateRegistration()
+
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {

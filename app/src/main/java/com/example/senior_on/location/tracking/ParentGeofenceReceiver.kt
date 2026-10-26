@@ -17,6 +17,8 @@ class ParentGeofenceReceiver : BroadcastReceiver() {
             try {
                 withTimeout(8_000) {
                     if (event.hasError()) {
+                        ParentGeofenceManager.invalidateRegistration()
+                        com.example.senior_on.device.DetectionQaHistory.record(context, "재확인 설정 사유: 지오펜스 오류 code=${event.errorCode}")
                         if (com.example.senior_on.BuildConfig.DEBUG) Log.w("SeniorOnGeofence", "Geofence unavailable: ${event.errorCode}")
                         else Log.w("SeniorOnGeofence", "GEOFENCE_UNAVAILABLE")
                         OutingTrackingStateStore(context).markNeedsRecheck()
@@ -26,6 +28,7 @@ class ParentGeofenceReceiver : BroadcastReceiver() {
                     if (!OutingReconciliation.check(context)) OutingRecoveryScheduler.enqueue(context)
                 }
             } catch (_: TimeoutCancellationException) {
+                com.example.senior_on.device.DetectionQaHistory.record(context, "재확인 설정 사유: 지오펜스 처리 8초 시간 초과 (온라인이어도 발생 가능)")
                 try { OutingTrackingStateStore(context).markNeedsRecheck() }
                 catch (error: Exception) {
                     if (error is CancellationException) throw error
