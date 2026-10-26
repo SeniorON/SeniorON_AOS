@@ -21,11 +21,13 @@ class ParentEmergencySharingTest {
     @Test fun failedSendWaitsForExplicitRetryAndIgnoresDoubleTap() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         var requests = 0
+        val ids = mutableListOf<String>()
         var fail = true
         val vm = ParentEmergencyAlertViewModel(
-            stub<EventRepository> { name, _ ->
+            stub<EventRepository> { name, args ->
                 check(name == "createSos")
                 requests++
+                ids += args[3] as String
                 if (fail) error("offline")
                 SafetyEvent(1L, "SOS", null, null, null, null, 70)
             },
@@ -48,6 +50,14 @@ class ParentEmergencySharingTest {
             advanceUntilIdle()
             assertEquals(2, requests)
             assertEquals(ParentEmergencyAlertStatus.Sent, vm.uiState.value.status)
+            assertEquals(ids.first(), ids.last())
+            java.util.UUID.fromString(ids.first())
+            // Leaving the flow ends that request. A new SOS is not deduplicated with it.
+            vm.reset()
+            vm.startCountdown()
+            advanceUntilIdle()
+            assertEquals(3, requests)
+            assertNotEquals(ids[0], ids[2])
         } finally { vm.reset(); Dispatchers.resetMain() }
     }
 

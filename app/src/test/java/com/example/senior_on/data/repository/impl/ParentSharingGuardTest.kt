@@ -13,7 +13,8 @@ import org.junit.Test
 class ParentSharingGuardTest {
     @Test fun sosLocationOffStripsCoordinatesButStillSends() = runTest {
         val source = Events()
-        EventRepositoryImpl(source, guard(false, true)).createSos(37.0, 127.0, 70)
+        EventRepositoryImpl(source, guard(false, true)).createSos(37.0, 127.0, 70, "sos-1")
+        assertEquals("sos-1", Gson().toJsonTree(source.sos.single()).asJsonObject["clientEventId"].asString)
         assertNull(source.sos.single().latitude)
         assertNull(source.sos.single().longitude)
         assertEquals(70, source.sos.single().deviceBattery)
@@ -22,10 +23,11 @@ class ParentSharingGuardTest {
     @Test fun sosLocationOnKeepsCoordinatesAndAllowsNullPair() = runTest {
         val source = Events()
         val repository = EventRepositoryImpl(source, guard(true, true))
-        repository.createSos(37.0, 127.0, 70)
+        repository.createSos(37.0, 127.0, 70, "sos-1")
         assertEquals(37.0, source.sos.single().latitude)
         assertEquals(127.0, source.sos.single().longitude)
-        repository.createSos(null, null, 70)
+        repository.createSos(null, null, 70, "sos-1")
+        assertEquals(source.sos.first().clientEventId, source.sos.last().clientEventId)
         assertNull(source.sos.last().latitude)
         assertNull(source.sos.last().longitude)
     }
@@ -56,11 +58,12 @@ class ParentSharingGuardTest {
     @Test fun locationOffStillSendsInactivityWithoutCoordinates() = runTest {
         val source = Events()
         val repo = EventRepositoryImpl(source, guard(false, true))
-        repo.createInactivity(37.0, 127.0, 70, "2026-09-28T10:00:00")
+        repo.createInactivity(37.0, 127.0, 70, "2026-09-28T10:00:00", "inactive-1")
         val body = source.requests.single()
         assertNull(body.latitude)
         assertNull(body.longitude)
         val json = Gson().toJsonTree(body).asJsonObject
+        assertEquals("inactive-1", json["clientEventId"].asString)
         assertFalse(json.has("latitude"))
         assertFalse(json.has("longitude"))
         assertEquals(70, body.deviceBattery)
@@ -69,10 +72,12 @@ class ParentSharingGuardTest {
     @Test fun independentPermissionsBlockOnlyCorrespondingEvent() = runTest {
         val source = Events()
         val locationOff = EventRepositoryImpl(source, guard(false, true))
-        assertTrue(runCatching { locationOff.createOutingReturn("OUTING", 37.0, 127.0, 70) }.isFailure)
+        assertTrue(runCatching { locationOff.createOutingReturn("OUTING", 37.0, 127.0, 70,
+            clientEventId = "event-1", detectedAt = "2026-10-25T12:00:00+09:00") }.isFailure)
         val inactivityOff = EventRepositoryImpl(source, guard(true, false))
-        assertTrue(runCatching { inactivityOff.createInactivity(37.0, 127.0, 70, "today") }.isFailure)
-        inactivityOff.createOutingReturn("OUTING", 37.0, 127.0, 70)
+        assertTrue(runCatching { inactivityOff.createInactivity(37.0, 127.0, 70, "today", "inactive-1") }.isFailure)
+        inactivityOff.createOutingReturn("OUTING", 37.0, 127.0, 70,
+            clientEventId = "event-1", detectedAt = "2026-10-25T12:00:00+09:00")
         assertEquals(1, source.outings)
         assertTrue(source.requests.isEmpty())
     }
@@ -85,10 +90,10 @@ class ParentSharingGuardTest {
         )
         val source = Events()
         val repo = EventRepositoryImpl(source, guard)
-        repo.createInactivity(37.0, 127.0, 70, "today")
+        repo.createInactivity(37.0, 127.0, 70, "today", "inactive-1")
         assertEquals(37.0, source.requests.single().latitude)
         fail = true
-        assertTrue(runCatching { repo.createInactivity(37.0, 127.0, 70, "today") }.isFailure)
+        assertTrue(runCatching { repo.createInactivity(37.0, 127.0, 70, "today", "inactive-1") }.isFailure)
         assertEquals(1, source.requests.size)
         assertNull(guard.state.value)
     }
@@ -127,16 +132,40 @@ class ParentSharingGuardTest {
         load = { SeniorPermissionSettings(1, location, inactivity) }, save = { error("unused") },
     )
 
+    @Test fun outingRetryPassesSameIdentityAndTimeToRequest() = runTest {
+        val source = Events()
+        val repo = EventRepositoryImpl(source, guard(true, true))
+        source.failNextOuting = true
+        assertTrue(runCatching {
+            repo.createOutingReturn("OUTING", 37.0, 127.0, 70, "RECONNECTION",
+                "event-1", "2026-10-25T12:00:00+09:00")
+        }.isFailure)
+        repo.createOutingReturn("OUTING", 37.0, 127.0, 69, "RECONNECTION",
+            "event-1", "2026-10-25T12:00:00+09:00")
+        assertEquals(2, source.outingRequests.size)
+        source.outingRequests.forEach {
+            assertEquals("event-1", it.clientEventId)
+            assertEquals("2026-10-25T12:00:00+09:00", it.detectedAt)
+        }
+    }
+
     private class Events : EventDataSource {
         val sos = mutableListOf<SosEventRequest>()
         val requests = mutableListOf<InactivityRequest>()
         var outings = 0
+        val outingRequests = mutableListOf<OutingReturnRequest>()
+        var failNextOuting = false
         override suspend fun createInactivity(request: InactivityRequest): InactivityResponse {
             requests += request
             return InactivityResponse(null, request.latitude, request.longitude, request.lastSeenAt)
         }
         override suspend fun createOutingReturn(request: OutingReturnRequest): OutingReturnResponse {
             outings++
+            outingRequests += request
+            if (failNextOuting) {
+                failNextOuting = false
+                throw java.io.IOException("response lost")
+            }
             return OutingReturnResponse(1, request.phase, null, request.latitude, request.longitude, null, request.deviceBattery)
         }
         override suspend fun createSos(request: SosEventRequest): SosEventResponse {

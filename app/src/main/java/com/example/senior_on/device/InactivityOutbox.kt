@@ -5,7 +5,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.first
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 private val Context.inactivityOutbox by preferencesDataStore("inactivity_outbox")
@@ -16,20 +18,28 @@ internal data class PendingInactivity(
     val lastActive: Long,
     val queuedAt: Long,
     val status: String = "pending",
+    val clientEventId: String = UUID.randomUUID().toString(),
 ) {
     fun isExpired(now: Long) = now - queuedAt >= TimeUnit.HOURS.toMillis(48)
     fun isCurrent(account: String, state: ParentInactivityState) =
         this.account == account && lastActive == state.lastActiveAtMillis
 }
 
-internal class InactivityOutbox(context: Context) {
-    private val store = context.applicationContext.inactivityOutbox
+internal class InactivityOutbox(private val store: DataStore<Preferences>) {
+    constructor(context: Context) : this(context.applicationContext.inactivityOutbox)
     suspend fun read(): PendingInactivity? {
-        val p = store.data.first()
-        return PendingInactivity(
-            p[Account] ?: return null, p[Activity] ?: return null,
-            p[Queued] ?: return null, p[Status] ?: "pending",
-        )
+        var event: PendingInactivity? = null
+        // Older queued episodes have no ID. Persist one atomically before any send,
+        // so repeated reads and process restarts reuse the same identity.
+        store.edit { p ->
+            val account = p[Account] ?: return@edit
+            val activity = p[Activity] ?: return@edit
+            val queued = p[Queued] ?: return@edit
+            val id = p[ClientEventId]?.takeIf { it.isNotBlank() }
+                ?: UUID.randomUUID().toString().also { p[ClientEventId] = it }
+            event = PendingInactivity(account, activity, queued, p[Status] ?: "pending", id)
+        }
+        return event
     }
     suspend fun save(event: PendingInactivity) {
         store.edit {
@@ -38,6 +48,7 @@ internal class InactivityOutbox(context: Context) {
             it[Activity] = event.lastActive
             it[Queued] = event.queuedAt
             it[Status] = event.status
+            it[ClientEventId] = event.clientEventId
         }
     }
     suspend fun clear() { store.edit { it.clear() } }
@@ -46,5 +57,6 @@ internal class InactivityOutbox(context: Context) {
         val Activity = longPreferencesKey("activity")
         val Queued = longPreferencesKey("queued")
         val Status = stringPreferencesKey("status")
+        val ClientEventId = stringPreferencesKey("client_event_id")
     }
 }

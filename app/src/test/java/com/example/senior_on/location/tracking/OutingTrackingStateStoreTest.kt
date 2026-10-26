@@ -40,6 +40,15 @@ class OutingTrackingStateStoreTest {
             val reopened = OutingTrackingStateStore(data, { "parent" }, { "cipher:$it" }, { it.removePrefix("cipher:") })
             assertEquals(saved, reopened.snapshot())
             assertEquals(pending, saved.pending)
+            // Reopening the store and rechecking after a gap must not regenerate metadata.
+            reopened.markNeedsRecheck()
+            val restored = reopened.snapshot()!!
+            assertTrue(reopened.update(restored, applyOutingObservation(restored,
+                OutingTrackingState.Outing, 39.0, 129.0, 999)))
+            val retry = reopened.snapshot()!!.pending!!
+            assertEquals(pending.id, retry.id)
+            assertEquals(pending.confirmedAt, retry.confirmedAt)
+            assertEquals(pending.detectedAtText(), retry.detectedAtText())
             assertTrue(data.data.first()[key]!!.startsWith("cipher:"))
         }
     }

@@ -717,9 +717,9 @@ class EventRepositoryImpl(
     private val source: EventDataSource,
     private val sharingGuard: ParentSharingGuard? = null,
 ) : EventRepository {
-    override suspend fun createSos(latitude: Double?, longitude: Double?, battery: Int?) = withSharing { permissions ->
+    override suspend fun createSos(latitude: Double?, longitude: Double?, battery: Int?, clientEventId: String) = withSharing { permissions ->
         val includeLocation = permissions?.locationEnabled != false && latitude != null && longitude != null
-        source.createSos(SosEventRequest(latitude.takeIf { includeLocation }, longitude.takeIf { includeLocation }, battery)).let {
+        source.createSos(SosEventRequest(latitude.takeIf { includeLocation }, longitude.takeIf { includeLocation }, battery, clientEventId)).let {
             SafetyEvent(
                 id = it.id,
                 type = "SOS",
@@ -752,22 +752,24 @@ class EventRepositoryImpl(
             )
         }
     override suspend fun createOutingReturn(
-        phase: String, latitude: Double, longitude: Double, battery: Int, detectionType: String
+        phase: String, latitude: Double, longitude: Double, battery: Int, detectionType: String,
+        clientEventId: String, detectedAt: String,
     ) = withSharing { permissions ->
         check(permissions?.locationEnabled != false) { "위치 정보 공유가 중단되었어요." }
         source.createOutingReturn(
-            OutingReturnRequest(phase.trim().uppercase(), latitude, longitude, battery, detectionType)
+            OutingReturnRequest(phase.trim().uppercase(), latitude, longitude, battery, detectionType,
+                clientEventId = clientEventId, detectedAt = detectedAt)
         ).let {
             SafetyEvent(it.id, "OUTING_RETURN", it.occurredAt, it.address, it.latitude, it.longitude, it.deviceBattery, phase = it.phase)
         }
     }
     override suspend fun createInactivity(
-        latitude: Double?, longitude: Double?, battery: Int, lastSeenAt: String
+        latitude: Double?, longitude: Double?, battery: Int, lastSeenAt: String, clientEventId: String,
     ) = withSharing { permissions ->
         check(permissions?.inactivityDetectionEnabled != false) { "무응답 감지 공유가 중단되었어요." }
         val includeLocation = permissions?.locationEnabled != false && latitude != null && longitude != null
         source.createInactivity(InactivityRequest(
-            latitude.takeIf { includeLocation }, longitude.takeIf { includeLocation }, battery, lastSeenAt,
+            latitude.takeIf { includeLocation }, longitude.takeIf { includeLocation }, battery, lastSeenAt, clientEventId,
         )).let {
             SafetyEvent(null, "INACTIVITY", it.lastSeenAt, it.address, it.latitude, it.longitude, battery)
         }

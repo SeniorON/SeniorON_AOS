@@ -108,6 +108,7 @@ class ParentInactivityMonitor(
                 longitude = location?.longitude,
                 battery = deviceRepository.getBatteryLevel(),
                 lastSeenAt = lastActiveAt.toLocalDateTimeText(),
+                clientEventId = event.clientEventId,
             )
             outbox.save(event.copy(status = "sent"))
             if (account() == owner && stateStore.snapshot().lastActiveAtMillis == lastActiveAt) {

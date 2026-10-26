@@ -105,6 +105,8 @@ internal object OutingReconciliation {
                 latitude = pending.latitude, longitude = pending.longitude,
                 battery = container.deviceRepository.getBatteryLevel(),
                 detectionType = pending.detectionType.name,
+                clientEventId = pending.id,
+                detectedAt = pending.detectedAtText(),
             )
             // Never roll the observed state back on a failed HTTP request.
             store.update(confirmed, confirmed.copy(pending = null, deliveredState = pending.state, sentAt = System.currentTimeMillis()))

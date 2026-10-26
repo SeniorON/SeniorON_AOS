@@ -23,11 +23,9 @@ internal fun applyOutingObservation(
             state = next, detectionType = type, confirmedAt = now,
             latitude = latitude, longitude = longitude,
         )
-        old.pending?.state == next -> old.pending.copy(
-            detectionType = if (old.needsRecheck) type else old.pending.detectionType,
-            confirmedAt = if (old.needsRecheck) now else old.pending.confirmedAt,
-            latitude = latitude, longitude = longitude,
-        )
+        // The same event may already be saved remotely. Retry its original identity and
+        // observation; only the snapshot below receives the freshly confirmed location/time.
+        old.pending?.state == next -> old.pending
         else -> null
     }
     return old.copy(

@@ -20,7 +20,12 @@ internal data class PendingOutingEvent(
     val confirmedAt: Long,
     val latitude: Double,
     val longitude: Double,
-)
+) {
+    // Use the persisted event time, never the retry time or the device's current timezone.
+    fun detectedAtText(): String = java.time.Instant.ofEpochMilli(confirmedAt)
+        .atZone(com.example.senior_on.core.time.KoreaZoneId)
+        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+}
 
 internal data class OutingSnapshot(
     val revision: String = UUID.randomUUID().toString(),
