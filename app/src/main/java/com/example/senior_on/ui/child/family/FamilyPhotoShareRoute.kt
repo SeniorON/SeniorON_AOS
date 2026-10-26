@@ -118,6 +118,9 @@ fun FamilyPhotoShareRoute(
             seniors = recipients,
             selectedPhotoGroupIds = selectedPhotoGroupIds,
             onPhotoGroupClick = { photoGroupId ->
+                if (!targetViewModel.uiState.value.canShare(listOf(photoGroupId))) {
+                    return@FamilyPhotoRecipientBottomSheet
+                }
                 selectedPhotoGroupIds = togglePhotoRecipientSelection(
                     selectedPhotoGroupIds = selectedPhotoGroupIds,
                     photoGroupId = photoGroupId,
@@ -125,6 +128,9 @@ fun FamilyPhotoShareRoute(
             },
             onDismiss = { isRecipientSheetVisible = false },
             onShareClick = {
+                if (!targetViewModel.uiState.value.canShare(selectedPhotoGroupIds)) {
+                    return@FamilyPhotoRecipientBottomSheet
+                }
                 isRecipientSheetVisible = false
                 viewModel.uploadPhoto(
                     message = message,
@@ -132,8 +138,8 @@ fun FamilyPhotoShareRoute(
                     photoGroupIds = selectedPhotoGroupIds,
                 )
             },
-            isLoading = targetUiState.isLoading && recipients.isEmpty(),
-            errorMessage = targetUiState.errorMessage.takeIf { recipients.isEmpty() },
+            isLoading = targetUiState.isLoading || !targetUiState.hasLoaded,
+            errorMessage = targetUiState.errorMessage,
             onRetryClick = {
                 targetViewModel.loadTargets(force = true)
             },
