@@ -424,6 +424,48 @@ class FamilyViewModelPhotoUrlRefreshTest {
         }
     }
 
+    @Test
+    fun `새로고침 실패는 캐시와 구분되는 오류로 남고 재시도 성공 시 해제된다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = EXPIRED_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                photoPageProvider = { requestCount ->
+                    if (requestCount == 2) throw IOException("Offline")
+                    ServerFamilyPhotoPage(
+                        photos = listOf(serverPhoto(url = if (requestCount == 1) EXPIRED_URL else FRESH_URL)),
+                        totalCount = 1,
+                        nextCursor = null,
+                        hasNext = false,
+                    )
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.refreshPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            val failed = viewModel.uiState.value
+            assertTrue(failed.hasLoadedPhotoGallery)
+            assertFalse(failed.isPhotoRefreshing)
+            assertEquals("가족 사진을 불러오지 못했어요.", failed.photoErrorMessage)
+            assertEquals(EXPIRED_URL, (failed.sharedPhotos.single().imageSource as FamilyImageSource.Remote).url)
+
+            viewModel.loadPhotoGallery(SENIOR_ID, force = true)
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.photoErrorMessage)
+            assertEquals(FRESH_URL, (viewModel.uiState.value.sharedPhotos.single().imageSource as FamilyImageSource.Remote).url)
+            assertEquals(3, repository.photoPageRequestCount)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private companion object {
         const val PHOTO_ID = 91L
         const val SENIOR_ID = 7L
