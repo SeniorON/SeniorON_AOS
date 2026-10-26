@@ -112,6 +112,7 @@ data class NotificationMessageUiState(
     val eventId: Long? = null,
     val isRead: Boolean = false,
     val eventMessage: String? = null,
+    val detectionType: String? = null,
     val senderName: String? = null,
     val address: String? = null,
     val latitude: Double? = null,

@@ -148,6 +148,7 @@ internal fun SafetyEvent.toUiState(
             ?: fallback.movementType,
         eventId = id ?: fallback.eventId,
         eventMessage = message,
+        detectionType = detectionType,
         senderName = senderName,
         address = address,
         latitude = latitude,
@@ -155,6 +156,21 @@ internal fun SafetyEvent.toUiState(
         deviceBattery = deviceBattery,
         lastSeenAt = lastSeenAt,
     )
+}
+
+internal fun NotificationMessageUiState.outingDetailTitle(): String =
+    eventMessage?.trim()?.takeIf(String::isNotEmpty)
+        ?: if (detectionType == "RECONNECTION") {
+            if (movementType == NotificationMovementType.ReturnedHome) "집에 있는 것이 확인됐어요"
+            else "집 밖에 있는 것이 확인됐어요"
+        } else {
+            if (movementType == NotificationMovementType.ReturnedHome) "귀가하셨어요" else "외출하셨어요"
+        }
+
+internal fun NotificationMessageUiState.outingDetailTimeLabel(): String = when {
+    detectionType == "RECONNECTION" -> "확인 시간: "
+    movementType == NotificationMovementType.ReturnedHome -> "귀가 시간: "
+    else -> "외출 시간: "
 }
 
 private fun SafetyEvent.inactivityDurationLabel(): String? {

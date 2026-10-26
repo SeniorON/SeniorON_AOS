@@ -792,6 +792,7 @@ class EventRepositoryImpl(
             message = it.message,
             senderName = it.senderName,
             lastSeenAt = it.lastSeenAt,
+            detectionType = it.detectionType,
         )
     }
 }

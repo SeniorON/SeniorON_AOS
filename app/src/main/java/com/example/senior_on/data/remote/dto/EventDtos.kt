@@ -33,5 +33,6 @@ data class EventDetailResponse(
     val senderName: String?, val occurredAt: String?, val address: String?,
     val latitude: Double?, val longitude: Double?, val deviceBattery: Int?,
     val phase: String?, val lastSeenAt: String?, val linkUrl: String?,
-    val isDangerous: Boolean?
+    val isDangerous: Boolean?,
+    val detectionType: String? = null,
 )
