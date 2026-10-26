@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.child.notification
 
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -93,7 +93,7 @@ internal fun NotificationKakaoMap(
                     }
                     Log.d(
                         MAP_LOG_TAG,
-                        "Kakao map ready at latitude=$resolvedLatitude, longitude=$resolvedLongitude",
+                        "Kakao map ready",
                     )
                 }
 

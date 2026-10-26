@@ -81,7 +81,7 @@ object SeniorOnNetwork {
                 .build(),
             url = "${BASE_URL}ws",
             bearerToken = AccessTokenStore::getBearerToken,
-            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.d("SeniorOnHomeSocket", it) },
         )
     }
 
@@ -93,7 +93,7 @@ object SeniorOnNetwork {
                 .followRedirects(false).followSslRedirects(false).build(),
             url = "${BASE_URL}ws",
             bearerToken = AccessTokenStore::getBearerToken,
-            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnNotificationSocket", it) },
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.d("SeniorOnNotificationSocket", it) },
         )
     }
 

@@ -1,7 +1,7 @@
 package com.example.senior_on.device
 
 import android.content.Context
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import com.example.senior_on.core.time.KoreaZoneId
 import com.example.senior_on.domain.model.location.GeoLocation
 import com.example.senior_on.domain.repository.location.LocationRepository
@@ -115,8 +115,7 @@ class ParentInactivityMonitor(
             }
             Log.i(
                 LogTag,
-                "Inactivity event created; thresholdHours=${state.thresholdHours}, " +
-                    "lastActiveAt=${lastActiveAt.toLocalDateTimeText()}",
+                "Inactivity event created",
             )
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled

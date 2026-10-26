@@ -1,7 +1,7 @@
 package com.example.senior_on
 
 import android.app.Application
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.api.SeniorOnNetwork
 import com.example.senior_on.data.source.auth.RemoteAccountRecoveryDataSource

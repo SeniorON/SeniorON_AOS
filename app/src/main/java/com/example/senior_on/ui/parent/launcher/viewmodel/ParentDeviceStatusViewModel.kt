@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.parent.launcher.viewmodel
 
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope

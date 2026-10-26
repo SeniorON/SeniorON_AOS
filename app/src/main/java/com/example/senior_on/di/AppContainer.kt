@@ -174,7 +174,7 @@ class DefaultAppContainer(
             currentUsersId = {
                 SeniorOnNetwork.notificationApi.getMyInactivitySetting().data?.usersId
             },
-            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.d("SeniorOnHomeSocket", it) },
         )
     }
     private val pendingFamilyCodeStore = com.example.senior_on.data.repository.impl.PendingFamilyCodeStore(context)

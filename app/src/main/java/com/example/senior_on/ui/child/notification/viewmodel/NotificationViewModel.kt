@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.child.notification.viewmodel
 
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import com.example.senior_on.data.remote.api.SeniorPermissionSettings
 import com.example.senior_on.ui.child.notification.canAccess
 import com.example.senior_on.ui.child.notification.enforceAccess
@@ -379,9 +379,7 @@ class NotificationViewModel(
                 events.getDetail(eventId).toUiState(category, message)
             }.onSuccess { detail ->
                 detailLog(
-                    "Loaded eventId=$eventId, battery=${detail.deviceBattery}, " +
-                        "hasCoordinates=${detail.latitude != null && detail.longitude != null}, " +
-                        "occurredAtMillis=${detail.occurredAtMillis}",
+                    "Notification detail loaded",
                 )
                 _uiState.update {
                     it.copy(

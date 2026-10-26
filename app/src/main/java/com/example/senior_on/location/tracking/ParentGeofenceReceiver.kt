@@ -3,7 +3,7 @@ package com.example.senior_on.location.tracking
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
 import kotlinx.coroutines.*

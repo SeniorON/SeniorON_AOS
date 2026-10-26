@@ -7,7 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import android.os.SystemClock
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.core.content.ContextCompat
 import com.example.senior_on.domain.model.location.GeoLocation
 import com.google.android.gms.location.CurrentLocationRequest

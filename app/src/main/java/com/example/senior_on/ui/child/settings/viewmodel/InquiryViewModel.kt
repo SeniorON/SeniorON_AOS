@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.child.settings.viewmodel
 
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -120,7 +120,7 @@ class InquiryViewModel(
                         )
                     }
                 }.onFailure { throwable ->
-                    Log.e(Tag, "Failed to load inquiry detail: $inquiryId", throwable)
+                    Log.e(Tag, "Failed to load inquiry detail", throwable)
                     _uiState.update { state ->
                         state.copy(
                             historyItems = state.historyItems.map { item ->

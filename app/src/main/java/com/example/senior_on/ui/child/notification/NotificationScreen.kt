@@ -164,24 +164,24 @@ fun NotificationScreen(
                         },
                         onToggleClick = {
                             val isEnabling = !section.enabled
-                            android.util.Log.d("NotificationToggle",
+                            com.example.senior_on.logging.AppLog.d("NotificationToggle",
                                 "screen category=${section.category} target=$isEnabling registered=${uiState.isParentPhoneRegistered} online=${uiState.isParentPhoneInternetConnected} sharingRevoked=${uiState.isSeniorSharingRevoked} hasAddress=${uiState.hasHomeAddress}")
                             when {
                                 section.category == NotificationCategory.Outing &&
                                     isEnabling &&
                                     !uiState.hasHomeAddress -> {
-                                    android.util.Log.d("NotificationToggle", "blocked: home_address_missing")
+                                    com.example.senior_on.logging.AppLog.d("NotificationToggle", "blocked: home_address_missing")
                                     showHomeAddressMissingDialog = true
                                 }
 
                                 !uiState.isParentPhoneRegistered ||
                                     !uiState.isParentPhoneInternetConnected -> {
-                                    android.util.Log.d("NotificationToggle", "blocked: parent_unregistered_or_offline")
+                                    com.example.senior_on.logging.AppLog.d("NotificationToggle", "blocked: parent_unregistered_or_offline")
                                     showParentPhoneInternetRequiredDialog = true
                                 }
 
                                 else -> {
-                                    android.util.Log.d("NotificationToggle", "dispatch category=${section.category} target=$isEnabling")
+                                    com.example.senior_on.logging.AppLog.d("NotificationToggle", "dispatch category=${section.category} target=$isEnabling")
                                     onNotificationToggle(section.category, isEnabling)
                                 }
                             }

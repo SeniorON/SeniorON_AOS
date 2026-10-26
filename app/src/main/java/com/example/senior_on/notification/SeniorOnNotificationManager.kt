@@ -11,7 +11,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.media.RingtoneManager
 import android.os.Build
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat

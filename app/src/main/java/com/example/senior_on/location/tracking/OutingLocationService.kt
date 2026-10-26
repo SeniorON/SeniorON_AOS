@@ -78,8 +78,8 @@ class OutingLocationService : Service() {
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.w("SeniorOnOutingSync", "State unavailable; deferring outing check", error)
-                else android.util.Log.w("SeniorOnOutingSync", "OUTING_CHECK_DEFERRED")
+                if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.w("SeniorOnOutingSync", "State unavailable; deferring outing check", error)
+                else com.example.senior_on.logging.AppLog.w("SeniorOnOutingSync", "OUTING_CHECK_DEFERRED")
                 OutingRecoveryScheduler.enqueue(this)
             }
             delay(LocationUploadIntervalMillis)

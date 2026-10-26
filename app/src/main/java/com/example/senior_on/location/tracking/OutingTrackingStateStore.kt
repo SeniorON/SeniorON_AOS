@@ -112,8 +112,8 @@ internal class OutingTrackingStateStore internal constructor(
             try { clearAndAwait() }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
             catch (error: Exception) {
-                if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.e("SeniorOnOutingStore", "Failed to clear outing state", error)
-                else android.util.Log.e("SeniorOnOutingStore", "OUTING_STATE_CLEAR_FAILED")
+                if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.e("SeniorOnOutingStore", "Failed to clear outing state", error)
+                else com.example.senior_on.logging.AppLog.e("SeniorOnOutingStore", "OUTING_STATE_CLEAR_FAILED")
             }
         }
     }
