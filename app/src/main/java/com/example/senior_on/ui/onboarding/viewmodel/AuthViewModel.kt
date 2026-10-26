@@ -191,7 +191,7 @@ class AuthViewModel(
         onResult: (Boolean) -> Unit
     ) {
         launchBooleanRequest(onResult, onError = { message ->
-            _uiState.update { it.copy(signupVerificationErrorMessage = message) }
+            _uiState.update { it.copy(signupVerificationErrorMessage = signupVerificationErrorText(it.errorCode, message)) }
         }) {
             authRepository.verifySignupEmailVerificationCode(
                 email = email,

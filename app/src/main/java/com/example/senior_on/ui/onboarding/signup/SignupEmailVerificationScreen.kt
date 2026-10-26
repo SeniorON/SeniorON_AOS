@@ -73,6 +73,8 @@ fun SignupEmailVerificationScreen(
 
     val isVerified = verificationResult == EmailVerificationResult.Verified
     val canRequestVerification = email.isValidEmail() && !isVerified && !isRequestingCode && !isVerifyingCode && !requestUi.locked
+    // A send limit must not prevent verifying an existing, unexpired code for this email.
+    // The request label still belongs to this flow; a new signup starts with "인증 요청".
     val hasCode = hasRequestedCode || remainingSeconds > 0
     val shouldShowVerificationCodeInput = hasCode
     val canVerifyCode = hasCode &&
@@ -121,8 +123,8 @@ fun SignupEmailVerificationScreen(
                 Spacer(modifier = Modifier.width(7.dp))
 
                 SignupEmailRequestButton(
-                    text = if (shouldShowVerificationCodeInput) "재전송" else "인증 요청",
-                    width = if (shouldShowVerificationCodeInput) 53.dp else 68.dp,
+                    text = if (hasRequestedCode) "재전송" else "인증 요청",
+                    width = if (hasRequestedCode) 53.dp else 68.dp,
                     enabled = canRequestVerification,
                     isLoading = isRequestingCode,
                     onClick = {
@@ -198,6 +200,8 @@ fun SignupEmailVerificationScreen(
                         isLoading = isVerifyingCode,
                         onClick = {
                             if (!canVerifyCode) return@SignupCodeVerificationButton
+                            // Keep the result visible after the shared code validity is consumed.
+                            hasRequestedCode = true
                             isVerifyingCode = true
                             val requestedEmail = email
                             val requestedRevision = emailRevision

@@ -20,6 +20,7 @@ import com.example.senior_on.domain.model.auth.SignupCredentials
 import com.example.senior_on.domain.model.auth.SignupResult
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.model.auth.VerificationRequestGate
+import com.example.senior_on.domain.model.auth.RemoteRequestException
 
 class AuthRepositoryImpl(
     private val dataSource: AuthDataSource
@@ -40,12 +41,23 @@ class AuthRepositoryImpl(
         email: String,
         verificationCode: String
     ): Boolean {
-        return dataSource.verifySignupEmailVerificationCode(
-            VerifySignupEmailVerificationCodeRequest(
-                email = email.trim(),
-                verificationCode = verificationCode.trim()
-            )
-        ).verified
+        val key = VerificationRequestGate.emailKey(email)
+        val expiresAt = VerificationRequestGate.state(key).expiresAt
+        return try {
+            dataSource.verifySignupEmailVerificationCode(
+                VerifySignupEmailVerificationCodeRequest(
+                    email = email.trim(),
+                    verificationCode = verificationCode.trim()
+                )
+            ).verified.also { verified ->
+                if (verified) VerificationRequestGate.invalidateCode(key, expiresAt)
+            }
+        } catch (error: RemoteRequestException) {
+            if (error.code in setOf("USER409_2", "USER400_12", "USER404_3")) {
+                VerificationRequestGate.invalidateCode(key, expiresAt)
+            }
+            throw error
+        }
     }
 
     override suspend fun signup(credentials: SignupCredentials): SignupResult {
