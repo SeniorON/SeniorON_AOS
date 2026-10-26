@@ -67,6 +67,13 @@ fun NotificationRoute(
         eventRepository = eventRepository,
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val toastContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(viewModel, uiState.toggleToastMessage) {
+        uiState.toggleToastMessage?.let { message ->
+            android.widget.Toast.makeText(toastContext, message, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.consumeToggleToast()
+        }
+    }
     var destination by rememberSaveable(seniorId, sessionKey) {
         mutableStateOf(NotificationDestination.Home)
     }

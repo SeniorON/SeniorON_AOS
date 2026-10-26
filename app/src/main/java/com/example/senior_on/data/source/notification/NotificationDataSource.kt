@@ -23,7 +23,9 @@ class RemoteNotificationDataSource(private val api: NotificationApi) : Notificat
     override suspend fun delete(id: Long) { api.delete(id) }
     override suspend fun getSettings(seniorId: Long) = api.getSettings(seniorId).requireData()
     override suspend fun updateSetting(seniorId: Long, type: String, request: NotificationSettingRequest) =
-        api.updateSetting(type = type, seniorId = seniorId, request = request).requireData()
+        com.example.senior_on.data.source.remoteRequest {
+            api.updateSetting(type = type, seniorId = seniorId, request = request).requireData()
+        }
     override suspend fun getParentDeviceStatus(seniorId: Long) = api.getParentDeviceStatus(seniorId).requireData()
     override suspend fun getInactivitySetting(userId: Long) =
         api.getInactivitySetting(userId).requireData()

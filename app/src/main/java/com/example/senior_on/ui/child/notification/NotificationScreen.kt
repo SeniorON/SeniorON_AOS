@@ -88,7 +88,7 @@ fun NotificationScreen(
             else -> section
         }
     }
-    var showHomeAddressMissingDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showParentPhoneInternetRequiredDialog by remember { mutableStateOf(false) }
     val enabledSections = sections.filter { section -> section.enabled }
     val recentMessages = enabledSections.flatMap { section ->
@@ -171,7 +171,7 @@ fun NotificationScreen(
                                     isEnabling &&
                                     !uiState.hasHomeAddress -> {
                                     com.example.senior_on.logging.AppLog.d("NotificationToggle", "blocked: home_address_missing")
-                                    showHomeAddressMissingDialog = true
+                                    android.widget.Toast.makeText(context, HomeLocationMissingMessage, android.widget.Toast.LENGTH_SHORT).show()
                                 }
 
                                 !uiState.isParentPhoneRegistered ||
@@ -232,12 +232,6 @@ fun NotificationScreen(
             }
         }
     }
-    }
-
-    if (showHomeAddressMissingDialog) {
-        HomeAddressMissingDialog(
-            onConfirmClick = { showHomeAddressMissingDialog = false }
-        )
     }
 
     if (showParentPhoneInternetRequiredDialog) {
