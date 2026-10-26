@@ -10,6 +10,6 @@ object DetectionQa {
     fun foregroundIntervalMillis(): Long = DetectionModule.config.foregroundIntervalMillis
     fun storeName(production: String): String = DetectionModule.config.storeName(production)
     fun trace(message: String) {
-        if (enabled) AppLog.d("SeniorOnDetectionQA", message)
+        AppLog.d("SeniorOnDetectionQA", message)
     }
 }

@@ -6,6 +6,21 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LogPrivacyTest {
+    @Test fun debugBodyKeepsFieldsButMasksKnownSensitiveValues() {
+        assertEquals(
+            """{"enabled":true,"count":2,"accessToken":"██","name":"██","latitude":"██"}""",
+            debugHttpMessage("""{"enabled":true,"count":2,"accessToken":"secret","name":"private","latitude":37.5}"""),
+        )
+    }
+
+    @Test fun debugMasksEscapedPasswordsAndSignedQueryValues() {
+        assertEquals("""{"password":"██"}""", debugHttpMessage("""{"password":"a\"b"}"""))
+        assertEquals("https://example.com?X-Amz-Signature=██&page=1",
+            debugHttpMessage("https://example.com?X-Amz-Signature=secret&page=1"))
+        assertEquals("[multipart body omitted]",
+            debugHttpMessage("Content-Disposition: form-data; filename=private.jpg"))
+    }
+
     @Test fun requestOmitsUrlIdentifiersAndQuery() {
         assertEquals("HTTP request method=POST", safeHttpSummary(
             "--> POST https://example.com/users/123?email=private@example.com&token=secret"))
