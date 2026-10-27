@@ -166,7 +166,9 @@ class DisplayViewModel(
         }
     }
 
-    fun refreshOnScreenTabReentry() {
+    fun refreshOnScreenTabReentry(expectedSeniorId: Long? = selectedSeniorId) {
+        // A route can resume before the selection effect has synchronized this ViewModel.
+        if (expectedSeniorId == null || selectedSeniorId != expectedSeniorId) return
         refreshEditPermission()
         refreshHomeSilently()
     }

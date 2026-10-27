@@ -68,7 +68,9 @@ fun DisplayTabRoute(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-        viewModel.refreshOnScreenTabReentry()
+        if (!isDisconnectingRelationship) {
+            viewModel.refreshOnScreenTabReentry(expectedSeniorId)
+        }
     }
     val saveableStateHolder = rememberSaveableStateHolder()
     var destination by rememberSaveable { mutableStateOf(DisplayDestination.Overview) }
@@ -103,7 +105,7 @@ fun DisplayTabRoute(
             buttonEditDraftItems = emptyList()
             buttonAddEntryItems = emptyList()
             transientImportedButtons = emptyList()
-            viewModel.refreshOnScreenTabReentry()
+            viewModel.refreshOnScreenTabReentry(expectedSeniorId)
         }
     }
 

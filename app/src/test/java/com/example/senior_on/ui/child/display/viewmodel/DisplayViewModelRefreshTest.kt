@@ -31,6 +31,57 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class DisplayViewModelRefreshTest {
     @Test
+    fun `disconnect with no remaining senior never refreshes the previous selection`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = RecordingDisplayRepository()
+            val vm = DisplayViewModel(
+                parentInfoRepository = ParentInfoRepositoryImpl(MockParentInfoDataSource(MockSeniorFixtures.mother)),
+                displayRepository = repository,
+            )
+            advanceUntilIdle()
+            val requests = repository.overviewRequestCount
+            val permissions = repository.editPermissionRequestCount
+            vm.refreshOnScreenTabReentry(expectedSeniorId = null)
+            advanceUntilIdle()
+            assertEquals(requests, repository.overviewRequestCount)
+            assertEquals(permissions, repository.editPermissionRequestCount)
+            vm.clearSelection()
+            vm.refreshOnScreenTabReentry(expectedSeniorId = null)
+            advanceUntilIdle()
+            assertEquals(requests, repository.overviewRequestCount)
+            assertNull(vm.uiState.value.selectedSeniorId)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `remaining senior is queried only after selection synchronization`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = RecordingDisplayRepository()
+            val vm = DisplayViewModel(
+                parentInfoRepository = ParentInfoRepositoryImpl(MockParentInfoDataSource(MockSeniorFixtures.mother)),
+                displayRepository = repository,
+            )
+            advanceUntilIdle()
+            val nextId = MockSeniorFixtures.SENIOR_ID + 1
+            val requests = repository.overviewRequestCount
+            val permissions = repository.editPermissionRequestCount
+            vm.refreshOnScreenTabReentry(expectedSeniorId = nextId)
+            advanceUntilIdle()
+            assertEquals(requests, repository.overviewRequestCount)
+            assertEquals(permissions, repository.editPermissionRequestCount)
+            vm.selectSenior(nextId, "아버지")
+            advanceUntilIdle()
+            vm.refreshOnScreenTabReentry(expectedSeniorId = nextId)
+            advanceUntilIdle()
+            assertEquals(listOf(nextId, nextId), repository.overviewSeniorIds.drop(requests))
+            assertEquals(listOf(nextId, nextId), repository.editPermissionSeniorIds.drop(permissions))
+            assertEquals(nextId, vm.uiState.value.selectedSeniorId)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
     fun `최초 조회는 빈 서버 버튼을 안드로이드 기본값으로 저장하지 않는다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

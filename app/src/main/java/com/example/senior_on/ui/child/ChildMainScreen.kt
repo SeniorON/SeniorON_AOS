@@ -497,6 +497,16 @@ fun ChildMainScreen(
                             },
                             onMessage = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
                             onSuccess = {
+                                // Synchronize before remounting the screen route; its resume callback
+                                // must never refresh the relationship that was just removed.
+                                val nextId = selectionViewModel.state.value.seniorId
+                                val nextSenior = seniorManagementViewModel.uiState.value.managedSeniors
+                                    .firstOrNull { it.seniorId == nextId }
+                                if (nextSenior == null) {
+                                    displayViewModel.clearSelection()
+                                } else {
+                                    displayViewModel.selectSenior(nextSenior.seniorId, nextSenior.relationship.displayLabel)
+                                }
                                 finished()
                                 selectedTab = ChildMainTab.Screen
                             },
@@ -1087,3 +1097,4 @@ private fun ChildMainScreenSettingsPreview() {
         }
     }
 }
+
