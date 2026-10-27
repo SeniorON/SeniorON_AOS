@@ -480,6 +480,9 @@ fun ChildMainScreen(
                 isDisconnectingRelationship = seniorManagementUiState.isDisconnecting,
                 onDisconnectRelationship = { finished ->
                     activeSeniorId?.let { seniorId ->
+                        val disconnectedSeniorName = seniorManagementViewModel.uiState.value.managedSeniors
+                            .firstOrNull { it.seniorId == seniorId }?.name?.trim()
+                            ?.takeIf { it.isNotEmpty() }
                         seniorManagementViewModel.disconnectRelationship(
                             seniorId = seniorId,
                             isPrimary = { id ->
@@ -509,6 +512,12 @@ fun ChildMainScreen(
                                 }
                                 finished()
                                 selectedTab = ChildMainTab.Screen
+                                Toast.makeText(
+                                    context,
+                                    disconnectedSeniorName?.let { "${it}님과 연결이 해제되었어요." }
+                                        ?: "시니어와 연결이 해제되었어요.",
+                                    Toast.LENGTH_LONG,
+                                ).show()
                             },
                         )
                     }
@@ -1097,4 +1106,3 @@ private fun ChildMainScreenSettingsPreview() {
         }
     }
 }
-
