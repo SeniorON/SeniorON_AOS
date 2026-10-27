@@ -55,6 +55,7 @@ fun FamilyShareCodeCreatedScreen(
     errorMessage: String? = null,
     onRetryClick: () -> Unit = {},
     showNextButton: Boolean = true,
+    topBarTitle: String = "로그인",
 ) {
     var isCopied by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -65,7 +66,7 @@ fun FamilyShareCodeCreatedScreen(
             .background(SeniorOnColors.White)
             .statusBarsPadding()
     ) {
-        FamilyShareCodeTopBar(onBackClick = onBackClick)
+        FamilyShareCodeTopBar(onBackClick = onBackClick, title = topBarTitle)
 
         Column(
             modifier = Modifier

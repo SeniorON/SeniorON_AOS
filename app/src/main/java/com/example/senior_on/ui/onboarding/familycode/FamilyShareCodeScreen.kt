@@ -42,7 +42,8 @@ enum class FamilyShareCodeOption {
 fun FamilyShareCodeScreen(
     onBackClick: () -> Unit,
     onNextClick: (FamilyShareCodeOption) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    topBarTitle: String = "로그인",
 ) {
     var selectedOption by rememberSaveable {
         mutableStateOf<FamilyShareCodeOption?>(null)
@@ -50,6 +51,7 @@ fun FamilyShareCodeScreen(
 
     FamilyShareCodeScreenContent(
         selectedOption = selectedOption,
+        topBarTitle = topBarTitle,
         onOptionSelected = { selectedOption = it },
         onBackClick = onBackClick,
         onNextClick = {
@@ -61,6 +63,7 @@ fun FamilyShareCodeScreen(
 
 @Composable
 private fun FamilyShareCodeScreenContent(
+    topBarTitle: String = "로그인",
     selectedOption: FamilyShareCodeOption?,
     onOptionSelected: (FamilyShareCodeOption) -> Unit,
     onBackClick: () -> Unit,
@@ -73,7 +76,7 @@ private fun FamilyShareCodeScreenContent(
             .background(SeniorOnColors.White)
             .statusBarsPadding()
     ) {
-        FamilyShareCodeTopBar(onBackClick = onBackClick)
+        FamilyShareCodeTopBar(onBackClick = onBackClick, title = topBarTitle)
 
         Column(
             modifier = Modifier

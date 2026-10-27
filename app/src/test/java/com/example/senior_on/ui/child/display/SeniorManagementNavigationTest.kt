@@ -6,12 +6,19 @@ import org.junit.Test
 
 class SeniorManagementNavigationTest {
     @Test
-    fun `family code back closes the add flow`() {
+    fun `choice back closes the add flow`() {
         assertNull(
             resolveSeniorManagementBackDestination(
-                SeniorManagementDestination.FamilyCodeCreated
+                SeniorManagementDestination.CodeChoice
             )
         )
+    }
+
+    @Test
+    fun `both code branches return to choice`() {
+        listOf(SeniorManagementDestination.CodeInput, SeniorManagementDestination.FamilyCodeCreated).forEach {
+            assertEquals(SeniorManagementDestination.CodeChoice, resolveSeniorManagementBackDestination(it))
+        }
     }
 
     @Test

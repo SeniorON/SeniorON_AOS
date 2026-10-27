@@ -65,6 +65,8 @@ fun FamilyShareCodeInputScreen(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     onFamilyShareCodeChange: () -> Unit = {},
+    topBarTitle: String = "로그인",
+    submitLabel: String = "로그인",
 ) {
     var familyShareCode by rememberSaveable { mutableStateOf("") }
     val isLoginEnabled =
@@ -84,7 +86,7 @@ fun FamilyShareCodeInputScreen(
             .clearFocusOnBackgroundTap(focusManager)
             .statusBarsPadding()
     ) {
-        FamilyShareCodeTopBar(onBackClick = onBackClick)
+        FamilyShareCodeTopBar(onBackClick = onBackClick, title = topBarTitle)
 
         Column(
             modifier = Modifier
@@ -111,7 +113,7 @@ fun FamilyShareCodeInputScreen(
         }
 
         FamilyShareCodeBottomButton(
-            text = "로그인",
+            text = submitLabel,
             enabled = isLoginEnabled,
             isLoading = isLoading,
             onClick = {
