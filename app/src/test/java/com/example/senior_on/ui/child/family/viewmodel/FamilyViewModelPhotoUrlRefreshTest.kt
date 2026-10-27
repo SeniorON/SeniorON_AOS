@@ -76,8 +76,11 @@ class FamilyViewModelPhotoUrlRefreshTest {
             advanceUntilIdle()
             fail = true
             vm.loadLatestFamilyOverview(SENIOR_ID)
+            assertTrue(vm.uiState.value.isLoading)
+            assertFalse(vm.uiState.value.hasLoadedOverview)
             advanceUntilIdle()
             assertEquals("가족 정보를 불러오지 못했어요.", vm.uiState.value.errorMessage)
+            assertFalse(vm.uiState.value.hasLoadedOverview)
             fail = false
             vm.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
@@ -86,7 +89,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
-    fun `family tab reentry keeps loaded content visible while refreshing`() = runTest {
+    fun `family tab reentry hides cached content until fresh response succeeds`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             var requestCount = 0
@@ -113,14 +116,19 @@ class FamilyViewModelPhotoUrlRefreshTest {
 
             assertTrue(viewModel.uiState.value.hasLoadedOverview)
             viewModel.loadLatestFamilyOverview(SENIOR_ID)
+            assertTrue(viewModel.uiState.value.isLoading)
+            assertFalse(viewModel.uiState.value.hasLoadedOverview)
             runCurrent()
             secondRequestStarted.await()
 
-            assertFalse(viewModel.uiState.value.isLoading)
+            assertTrue(viewModel.uiState.value.isLoading)
+            assertFalse(viewModel.uiState.value.hasLoadedOverview)
             assertEquals(1, viewModel.uiState.value.sharedPhotos.size)
 
             releaseSecondRequest.complete(Unit)
             advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertTrue(viewModel.uiState.value.hasLoadedOverview)
         } finally {
             Dispatchers.resetMain()
         }

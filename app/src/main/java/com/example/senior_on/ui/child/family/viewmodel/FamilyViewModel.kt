@@ -48,6 +48,10 @@ class FamilyViewModel(
     private val lastRetriedImageUrlByPhotoId = mutableMapOf<String, String>()
 
     fun loadLatestFamilyOverview(seniorId: Long) {
+        // A new entry must validate the cached overview before displaying it again.
+        _uiState.update {
+            it.copy(isLoading = true, isRefreshing = false, hasLoadedOverview = false, errorMessage = null)
+        }
         if (homeLoadJob?.isActive == true && _uiState.value.seniorId == seniorId) return
         loadFamilyOverview(seniorId)
     }
