@@ -265,6 +265,14 @@ internal fun DisplayTopBar(
         ) {
             if (normalizedTitle != null) {
                 Row(
+                    modifier = if (onAccountSelectorClick != null) {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Button,
+                            onClick = onAccountSelectorClick,
+                        )
+                    } else Modifier,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -279,15 +287,7 @@ internal fun DisplayTopBar(
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .clip(RoundedCornerShape(SeniorOnRadius.Small))
-                                .clickable(
-                                    interactionSource = remember {
-                                        MutableInteractionSource()
-                                    },
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = onAccountSelectorClick,
-                                ),
+                                .clip(RoundedCornerShape(SeniorOnRadius.Small)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(

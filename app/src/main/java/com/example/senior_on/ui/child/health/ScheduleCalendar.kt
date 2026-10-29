@@ -147,7 +147,7 @@ internal fun Modifier.calendarSwipe(
             onDragEnd = {
                 val delta = calendarSwipeMonthDelta(distance, threshold)
                 if (com.example.senior_on.BuildConfig.DEBUG) {
-                    android.util.Log.d("HealthCalendarSwipe", "scope=$scope distance=$distance threshold=$threshold delta=$delta")
+                    com.example.senior_on.logging.AppLog.d("HealthCalendarSwipe", "scope=$scope distance=$distance threshold=$threshold delta=$delta")
                 }
                 when (delta) {
                     -1 -> previous()

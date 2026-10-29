@@ -480,6 +480,9 @@ fun ChildMainScreen(
                 isDisconnectingRelationship = seniorManagementUiState.isDisconnecting,
                 onDisconnectRelationship = { finished ->
                     activeSeniorId?.let { seniorId ->
+                        val disconnectedSeniorName = seniorManagementViewModel.uiState.value.managedSeniors
+                            .firstOrNull { it.seniorId == seniorId }?.name?.trim()
+                            ?.takeIf { it.isNotEmpty() }
                         seniorManagementViewModel.disconnectRelationship(
                             seniorId = seniorId,
                             isPrimary = { id ->
@@ -497,8 +500,24 @@ fun ChildMainScreen(
                             },
                             onMessage = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
                             onSuccess = {
+                                // Synchronize before remounting the screen route; its resume callback
+                                // must never refresh the relationship that was just removed.
+                                val nextId = selectionViewModel.state.value.seniorId
+                                val nextSenior = seniorManagementViewModel.uiState.value.managedSeniors
+                                    .firstOrNull { it.seniorId == nextId }
+                                if (nextSenior == null) {
+                                    displayViewModel.clearSelection()
+                                } else {
+                                    displayViewModel.selectSenior(nextSenior.seniorId, nextSenior.relationship.displayLabel)
+                                }
                                 finished()
                                 selectedTab = ChildMainTab.Screen
+                                Toast.makeText(
+                                    context,
+                                    disconnectedSeniorName?.let { "${it}님과 연결이 해제되었어요." }
+                                        ?: "시니어와 연결이 해제되었어요.",
+                                    Toast.LENGTH_LONG,
+                                ).show()
                             },
                         )
                     }

@@ -9,6 +9,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.domain.model.senior.ManagedSenior
 import com.example.senior_on.domain.model.senior.SeniorRegistration
@@ -21,8 +23,13 @@ import com.example.senior_on.ui.common.seniorinfo.SeniorRelationship
 import com.example.senior_on.ui.common.seniorinfo.parseBirthDate
 import com.example.senior_on.ui.common.seniorinfo.viewmodel.AddressSearchViewModel
 import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeCreatedScreen
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeScreen
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeInputScreen
+import com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeOption
 
 internal enum class SeniorManagementDestination {
+    CodeChoice,
+    CodeInput,
     FamilyCodeCreated,
     ParentInfoInput,
     AddressSearch,
@@ -38,19 +45,23 @@ internal fun SeniorManagementRoute(
     modifier: Modifier = Modifier,
 ) {
     var destination by rememberSaveable {
-        mutableStateOf(SeniorManagementDestination.FamilyCodeCreated)
+        mutableStateOf(if (uiState.joinedFamilyId != null) SeniorManagementDestination.CodeInput else SeniorManagementDestination.CodeChoice)
     }
     var selectedAddress by rememberSaveable { mutableStateOf("") }
     var selectedAddressLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     val saveableStateHolder = rememberSaveableStateHolder()
 
-    LaunchedEffect(viewModel) {
-        viewModel.beginSeniorAddition()
+    LaunchedEffect(viewModel, destination) {
+        if (destination == SeniorManagementDestination.FamilyCodeCreated) viewModel.beginSeniorAddition()
     }
 
     fun navigateBack() {
         if (uiState.isSubmitting || uiState.isCreatingFamilyCode) return
+        if (uiState.joinedFamilyId != null) {
+            onClose()
+            return
+        }
         val backDestination = resolveSeniorManagementBackDestination(destination)
         if (backDestination == null) {
             onClose()
@@ -72,6 +83,41 @@ internal fun SeniorManagementRoute(
 
     saveableStateHolder.SaveableStateProvider(destination.name) {
         when (destination) {
+            SeniorManagementDestination.CodeChoice -> FamilyShareCodeScreen(
+                onBackClick = ::navigateBack,
+                onNextClick = { option ->
+                    viewModel.clearError()
+                    destination = if (option == FamilyShareCodeOption.HasCode)
+                        SeniorManagementDestination.CodeInput else SeniorManagementDestination.FamilyCodeCreated
+                },
+                topBarTitle = "시니어 추가",
+                modifier = modifier,
+            )
+            SeniorManagementDestination.CodeInput -> {
+                if (uiState.joinedFamilyId != null) {
+                    com.example.senior_on.ui.common.QueryRetryContent(
+                        loading = uiState.isSubmitting,
+                        error = uiState.errorMessage,
+                        hasContent = false,
+                        onRetry = { viewModel.joinSenior("", ::finish) },
+                        modifier = modifier.fillMaxSize().statusBarsPadding(),
+                        placeholderHeader = {
+                            com.example.senior_on.ui.onboarding.familycode.FamilyShareCodeTopBar(
+                                onBackClick = ::navigateBack, title = "시니어 추가",
+                            )
+                        },
+                    ) {}
+                } else FamilyShareCodeInputScreen(
+                    onBackClick = ::navigateBack,
+                    onLoginClick = { code -> viewModel.joinSenior(code, ::finish) },
+                    isLoading = uiState.isSubmitting,
+                    errorMessage = uiState.errorMessage,
+                    onFamilyShareCodeChange = viewModel::clearError,
+                    topBarTitle = "시니어 추가",
+                    submitLabel = "연결하기",
+                    modifier = modifier,
+                )
+            }
             SeniorManagementDestination.FamilyCodeCreated ->
                 FamilyShareCodeCreatedScreen(
                     onBackClick = ::navigateBack,
@@ -85,6 +131,7 @@ internal fun SeniorManagementRoute(
                     isLoading = uiState.isCreatingFamilyCode,
                     errorMessage = uiState.errorMessage,
                     onRetryClick = viewModel::retryCreateFamilyCode,
+                    topBarTitle = "시니어 추가",
                     modifier = modifier,
                 )
 
@@ -127,7 +174,9 @@ internal fun SeniorManagementRoute(
 internal fun resolveSeniorManagementBackDestination(
     destination: SeniorManagementDestination,
 ): SeniorManagementDestination? = when (destination) {
-    SeniorManagementDestination.FamilyCodeCreated -> null
+    SeniorManagementDestination.CodeChoice -> null
+    SeniorManagementDestination.CodeInput,
+    SeniorManagementDestination.FamilyCodeCreated -> SeniorManagementDestination.CodeChoice
     SeniorManagementDestination.ParentInfoInput ->
         SeniorManagementDestination.FamilyCodeCreated
     SeniorManagementDestination.AddressSearch ->

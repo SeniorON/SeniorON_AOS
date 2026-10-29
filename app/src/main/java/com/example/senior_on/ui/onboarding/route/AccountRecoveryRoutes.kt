@@ -83,6 +83,7 @@ fun FindPasswordVerifyRoute(
     FindPasswordVerifyScreen(
         onInputChange = viewModel::clearRequestError,
         verificationId = uiState.verificationId,
+        isVerified = uiState.passwordResetVerified,
         requestLoginId = uiState.requestLoginId,
         requestErrorMessage = uiState.errorMessage,
         maskedEmail = "계정에 등록된 이메일",

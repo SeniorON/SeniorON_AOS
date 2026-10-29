@@ -8,10 +8,35 @@ import org.junit.Test
 class OutingObservationPolicyTest {
     private fun baseline(state: OutingTrackingState, reconnect: Boolean = false) = OutingSnapshot(
         account = "parent:1", home = StoredHomeLocation(37.0, 127.0), state = state,
-        deliveredState = state, needsRecheck = reconnect,
+        deliveredState = state, needsRecheck = reconnect, offlineObserved = reconnect,
     )
     private fun observe(old: OutingSnapshot, next: OutingTrackingState, at: Long = 100) =
         applyOutingObservation(old, next, 37.1, 127.1, at)
+
+    @Test fun `online recheck after boundary or failure remains transition`() {
+        val old = baseline(OutingTrackingState.Outing).copy(needsRecheck = true)
+        assertNull(observedOutingState(125f, outingBoundaries(qa = true)))
+        assertEquals(OutingTrackingState.Outing, old.state)
+        assertTrue(requiresReturnConfirmation(old, OutingTrackingState.Home))
+        assertFalse(requiresReturnConfirmation(old.copy(offlineObserved = true), OutingTrackingState.Home))
+        val result = observe(old, OutingTrackingState.Home)
+        assertEquals(OutingDetectionType.TRANSITION, result.pending?.detectionType)
+    }
+
+    @Test fun `offline marker is consumed after successful observation`() {
+        val home = observe(baseline(OutingTrackingState.Home, true), OutingTrackingState.Home)
+        assertFalse(home.offlineObserved)
+        assertEquals(OutingDetectionType.TRANSITION, observe(home, OutingTrackingState.Outing).pending?.detectionType)
+    }
+
+    @Test fun `legacy retry flag does not imply offline`() {
+        val gson = Gson()
+        val json = gson.toJsonTree(baseline(OutingTrackingState.Outing).copy(needsRecheck = true)).asJsonObject
+        json.remove("offlineObserved")
+        val restored = gson.fromJson(json, OutingSnapshot::class.java)
+        assertFalse(restored.offlineObserved)
+        assertEquals(OutingDetectionType.TRANSITION, observe(restored, OutingTrackingState.Home).pending?.detectionType)
+    }
 
     @Test fun `online home to outside is a transition`() {
         val result = observe(baseline(OutingTrackingState.Home), OutingTrackingState.Outing)
@@ -57,11 +82,13 @@ class OutingObservationPolicyTest {
         assertNull(returned.pending)
         assertEquals(OutingTrackingState.Home, returned.state)
     }
-    @Test fun `reconfirmed pending event changes to reconnection after offline gap`() {
+    @Test fun `reconfirmed pending event preserves original payload after offline gap`() {
         val failed = observe(baseline(OutingTrackingState.Home), OutingTrackingState.Outing)
-        val result = observe(failed.copy(needsRecheck = true), OutingTrackingState.Outing)
-        assertEquals(OutingDetectionType.RECONNECTION, result.pending?.detectionType)
-        assertEquals(failed.pending?.id, result.pending?.id)
+        val result = applyOutingObservation(failed.copy(needsRecheck = true),
+            OutingTrackingState.Outing, 38.0, 128.0, 900)
+        assertEquals(failed.pending, result.pending)
+        assertEquals(900L, result.confirmedAt)
+        assertEquals(38.0, result.latitude)
     }
     @Test fun `uncertain boundary and invalid distances do not change state`() {
         assertNull(observedOutingState(900f))
@@ -74,9 +101,23 @@ class OutingObservationPolicyTest {
         val gson = Gson()
         assertEquals(snapshot, gson.fromJson(gson.toJson(snapshot), OutingSnapshot::class.java))
     }
-    @Test fun `request includes assumed backend detection type`() {
-        val json = Gson().toJsonTree(OutingReturnRequest("RETURN", 37.0, 127.0, 50, "RECONNECTION")).asJsonObject
+    @Test fun `request includes backend identity and offset timestamp`() {
+        val pending = PendingOutingEvent(state = OutingTrackingState.Home,
+            detectionType = OutingDetectionType.RECONNECTION, confirmedAt = 0,
+            latitude = 37.0, longitude = 127.0)
+        val json = Gson().toJsonTree(OutingReturnRequest("RETURN", 37.0, 127.0, 50,
+            "RECONNECTION", pending.id, pending.detectedAtText())).asJsonObject
         assertEquals("RECONNECTION", json["detectionType"].asString)
         assertEquals("RETURN", json["phase"].asString)
+        assertEquals(pending.id, json["clientEventId"].asString)
+        assertEquals("1970-01-01T09:00:00+09:00", json["detectedAt"].asString)
+    }
+
+    @Test fun `next transition after successful delivery creates new identity`() {
+        val first = observe(baseline(OutingTrackingState.Home), OutingTrackingState.Outing)
+        val delivered = first.copy(pending = null, deliveredState = OutingTrackingState.Outing)
+        val next = observe(delivered, OutingTrackingState.Home, 200)
+        assertNotEquals(first.pending!!.id, next.pending!!.id)
+        assertEquals(200L, next.pending.confirmedAt)
     }
 }

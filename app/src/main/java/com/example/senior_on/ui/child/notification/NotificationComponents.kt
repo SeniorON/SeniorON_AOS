@@ -112,6 +112,7 @@ data class NotificationMessageUiState(
     val eventId: Long? = null,
     val isRead: Boolean = false,
     val eventMessage: String? = null,
+    val detectionType: String? = null,
     val senderName: String? = null,
     val address: String? = null,
     val latitude: Double? = null,
@@ -399,7 +400,7 @@ internal fun NotificationSectionCard(
                     NotificationSeverity.Normal
                 },
                 onClick = {
-                    android.util.Log.d("NotificationToggle", "touch category=${section.category} checked=${section.enabled}")
+                    com.example.senior_on.logging.AppLog.d("NotificationToggle", "touch category=${section.category} checked=${section.enabled}")
                     onToggleClick()
                 },
                 modifier = Modifier.align(Alignment.TopEnd)

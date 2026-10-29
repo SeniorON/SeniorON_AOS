@@ -37,6 +37,9 @@ fun ParentSettingsScreen(
                 ParentSettingsMenuRow("탈퇴하기", { onConfirmAction(ParentSettingsConfirmation.Withdraw) }, textColor = SeniorOnColors.Red300, isSectionItem = true)
             }
             Spacer(Modifier.height(21.dp))
+            if (com.example.senior_on.device.DetectionQa.enabled) {
+                ParentSettingsMenuRow("감지 QA", { onNavigate(ParentSettingsDestination.DetectionQa) })
+            }
         }
     }
 }

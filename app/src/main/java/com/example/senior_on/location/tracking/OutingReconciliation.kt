@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
+import com.example.senior_on.device.DetectionQaHistory
 
 internal fun Context.isOutingNetworkAvailable(): Boolean {
     val manager = getSystemService(ConnectivityManager::class.java)
@@ -34,7 +35,10 @@ internal object OutingReconciliation {
         if (PersistedSessionStore(app).getSession()?.role != UserRole.PARENT ||
             AccessTokenStore.getBearerToken() == null) return@withLock true
         if (!app.isOutingNetworkAvailable()) {
-            store.markNeedsRecheck()
+            DetectionQaHistory.record(app, "오프라인 · 위치 판정 및 전송 보류")
+            com.example.senior_on.device.DetectionQaStatus.update { it.copy(outingResult = "오프라인 — 판정 보류") }
+            com.example.senior_on.device.DetectionQa.trace("OUTING_DEFERRED reason=offline")
+            store.markNeedsRecheck(offlineObserved = true)
             return@withLock false
         }
         if (!ParentConnectionGate.isReady()) return@withLock false
@@ -42,41 +46,54 @@ internal object OutingReconciliation {
         var observationStored = false
         try {
             if (container.parentSharingGuard?.refresh()?.locationEnabled == false) {
+                com.example.senior_on.device.DetectionQaStatus.update { it.copy(outingResult = "위치 공유 꺼짐", distanceMeters = null, locationCheckedAt = null) }
                 if (store.accountKey() != account) return@withLock true
                 ParentOutingTrackingController.reset(app)
                 return@withLock true
             }
             if (!app.hasRequiredGeofencePermissions()) {
+                ParentGeofenceManager.invalidateRegistration()
+                DetectionQaHistory.record(app, "재확인 설정 사유: 위치 권한/GPS 확인 실패")
+                com.example.senior_on.device.DetectionQaStatus.update { it.copy(outingResult = "위치 권한 또는 GPS 확인 필요") }
                 store.markNeedsRecheck()
                 return@withLock false
             }
             // Load home after permission/session validation; also handles changed home addresses.
             val home = container.deviceRepository.getHomeLocation()
             if (store.accountKey() != account || !ParentConnectionGate.isReady()) return@withLock false
-            val previousHome = store.getHomeLocation()
             check(store.saveHomeLocation(home.latitude, home.longitude))
-            if (previousHome != StoredHomeLocation(home.latitude, home.longitude)) {
-                ParentGeofenceManager(app).register(StoredHomeLocation(home.latitude, home.longitude), "outing_recovery")
-            }
+            ParentGeofenceManager(app).register(StoredHomeLocation(home.latitude, home.longitude), "outing_recovery")
             val old = store.snapshot() ?: return@withLock false
             if (recoveryOnly && !old.needsRecheck && old.pending == null && old.state == OutingTrackingState.Home) return@withLock true
             val current = container.locationRepository.getFreshLocation()
             if (store.accountKey() != account) return@withLock true
             if (!app.isOutingNetworkAvailable() || !ParentConnectionGate.isReady()) {
-                store.markNeedsRecheck()
+                DetectionQaHistory.record(app, "재확인 설정 사유: 위치 조회 도중 네트워크 또는 가족 연결 상태 변경")
+                store.markNeedsRecheck(offlineObserved = !app.isOutingNetworkAvailable())
                 return@withLock false
             }
-            val next = observedOutingState(distanceMeters(
+            val distance = distanceMeters(
                 home.latitude, home.longitude, current.latitude, current.longitude,
-            )) ?: run {
+            )
+            DetectionQaHistory.record(app, "온라인 · 판정용 위치 확인 ${distance.toInt()}m · 이전=${old.state} · 재확인=${old.needsRecheck} · 오프라인관측=${old.offlineObserved} · 전송대기=${old.pending != null}")
+            com.example.senior_on.device.DetectionQaStatus.update {
+                it.copy(distanceMeters = distance.takeIf { value -> value.isFinite() },
+                    locationCheckedAt = System.currentTimeMillis(), outingState = old.state.name)
+            }
+            val next = observedOutingState(distance, activeOutingBoundaries) ?: run {
+                DetectionQaHistory.record(app, "재확인 설정 사유: 경계 구간/위치 불확실 · 판정 보류")
+                com.example.senior_on.device.DetectionQaStatus.update { it.copy(outingResult = "100~150m 경계 또는 위치 불확실 — 판정 보류") }
                 store.markNeedsRecheck()
                 return@withLock false
             }
             val now = System.currentTimeMillis()
+            com.example.senior_on.device.DetectionQa.trace("OUTING_OBSERVED previous=${old.state} current=$next reconnect=${old.offlineObserved} needsRecheck=${old.needsRecheck} pending=${old.pending != null}")
             // Normal return retains two confirmations spaced by five minutes.
-            if (!old.needsRecheck && old.state == OutingTrackingState.Outing && next == OutingTrackingState.Home) {
+            if (requiresReturnConfirmation(old, next)) {
                 val first = old.returnCandidateAt
                 if (first == null || now < first || now - first < TimeUnit.MINUTES.toMillis(5)) {
+                    DetectionQaHistory.record(app, "귀가 후보 · 5분 간격 재확인 대기 · ${distance.toInt()}m")
+                    com.example.senior_on.device.DetectionQaStatus.update { it.copy(outingResult = "집 안 후보 — 5분 후 재확인 대기") }
                     if (first == null || now < first) store.update(old, old.copy(returnCandidateAt = now))
                     return@withLock true
                 }
@@ -84,6 +101,12 @@ internal object OutingReconciliation {
             check(store.update(old, applyOutingObservation(old, next, current.latitude, current.longitude, now)))
             observationStored = true
             val confirmed = store.snapshot() ?: return@withLock false
+            DetectionQaHistory.record(app, "판정 ${old.state} → ${confirmed.state} · ${distance.toInt()}m · " +
+                (confirmed.pending?.let { "전송 대기 ${it.detectionType} · ID=${it.id} · 감지시각=${it.detectedAtText()}" } ?: "전송할 이벤트 없음"))
+            com.example.senior_on.device.DetectionQaStatus.update {
+                it.copy(outingState = confirmed.state.name,
+                    outingResult = confirmed.pending?.let { event -> "전송 대기 · ${event.detectionType}" } ?: "판정 완료 · 전송할 이벤트 없음")
+            }
             // A stale observation cannot resurrect state cleared by logout/revocation.
             if (confirmed.account != old.account || confirmed.home != old.home) return@withLock false
             if (next == OutingTrackingState.Outing) {
@@ -105,18 +128,27 @@ internal object OutingReconciliation {
                 latitude = pending.latitude, longitude = pending.longitude,
                 battery = container.deviceRepository.getBatteryLevel(),
                 detectionType = pending.detectionType.name,
+                clientEventId = pending.id,
+                detectedAt = pending.detectedAtText(),
             )
             // Never roll the observed state back on a failed HTTP request.
-            store.update(confirmed, confirmed.copy(pending = null, deliveredState = pending.state, sentAt = System.currentTimeMillis()))
+            val saved = store.update(confirmed, confirmed.copy(pending = null, deliveredState = pending.state, sentAt = System.currentTimeMillis()))
+            DetectionQaHistory.record(app, "전송 후 상태 저장=${if (saved) "완료" else "경합으로 미반영"} · ID=${pending.id}")
+            com.example.senior_on.device.DetectionQaStatus.update {
+                it.copy(outingResult = if (saved) "모의 전송 완료 · ${pending.detectionType}" else "상태 변경됨 — 재확인 대기")
+            }
+            saved
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
+            DetectionQaHistory.record(app, "${if (observationStored) "전송/저장" else "위치/설정 확인"} 실패 · ${error.javaClass.simpleName} · 재시도 대기")
+            com.example.senior_on.device.DetectionQaStatus.update { it.copy(outingResult = if (observationStored) "전송/저장 실패 — 재시도 대기" else "위치·설정 확인 실패 — 마지막 거리만 표시") }
             try {
                 if (!observationStored && store.accountKey() == account) store.markNeedsRecheck()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (storageError: Exception) { error.addSuppressed(storageError) }
-            if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.w("SeniorOnOutingSync", "Outing confirmation/send deferred", error)
-            else android.util.Log.w("SeniorOnOutingSync", "OUTING_SYNC_DEFERRED")
+            if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.w("SeniorOnOutingSync", "Outing confirmation/send deferred", error)
+            else com.example.senior_on.logging.AppLog.w("SeniorOnOutingSync", "OUTING_SYNC_DEFERRED")
             false
         }
     }
@@ -154,7 +186,7 @@ object OutingRecoveryScheduler {
     fun cancel(context: Context) { WorkManager.getInstance(context).cancelUniqueWork(Name) }
 }
 
-/** Process-start is treated conservatively as a gap; never claims an unobserved transition. */
+/** Only an observed offline state marks the next successful observation as reconnection. */
 object OutingNetworkObserver {
     fun register(context: Context) {
         val app = context.applicationContext
@@ -165,7 +197,9 @@ object OutingNetworkObserver {
         suspend fun checkNetwork() {
             if (PersistedSessionStore(app).getSession()?.role != UserRole.PARENT) return
             val online = app.isOutingNetworkAvailable()
-            if (!online || !wasOnline) OutingTrackingStateStore(app).markNeedsRecheck()
+            if (online != wasOnline) DetectionQaHistory.record(app,
+                if (online) "네트워크 온라인 확인 · 복구 검사 요청 (프로세스 시작 후 최초 확인 포함)" else "네트워크 오프라인 확인 · 다음 온라인 때 재확인")
+            if (!online || !wasOnline) OutingTrackingStateStore(app).markNeedsRecheck(offlineObserved = !online)
             if (online && !wasOnline) OutingRecoveryScheduler.enqueue(app)
             wasOnline = online
         }
@@ -176,8 +210,8 @@ object OutingNetworkObserver {
                         try { checkNetwork() }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (error: Exception) {
-                            if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.w("SeniorOnOutingSync", "Network state persistence failed", error)
-                            else android.util.Log.e("SeniorOnOutingSync", "OUTING_NETWORK_STATE_SAVE_FAILED")
+                            if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.w("SeniorOnOutingSync", "Network state persistence failed", error)
+                            else com.example.senior_on.logging.AppLog.e("SeniorOnOutingSync", "OUTING_NETWORK_STATE_SAVE_FAILED")
                             OutingRecoveryScheduler.enqueue(app)
                         }
                     }

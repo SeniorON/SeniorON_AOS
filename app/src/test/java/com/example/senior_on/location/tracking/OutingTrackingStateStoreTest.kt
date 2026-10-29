@@ -14,6 +14,18 @@ import java.io.IOException
 class OutingTrackingStateStoreTest {
     private val key = stringPreferencesKey("confirmed_state_v2")
 
+    @Test fun offlineMarkerPersistsAndGenericRecheckDoesNotInventOrEraseIt() = runBlocking {
+        fixture { data, store ->
+            store.saveHomeLocation(37.0, 127.0)
+            store.markNeedsRecheck()
+            assertFalse(store.snapshot()!!.offlineObserved)
+            store.markNeedsRecheck(offlineObserved = true)
+            store.markNeedsRecheck()
+            val reopened = OutingTrackingStateStore(data, { "parent" }, { "cipher:$it" }, { it.removePrefix("cipher:") })
+            assertTrue(reopened.snapshot()!!.offlineObserved)
+        }
+    }
+
     private suspend fun fixture(test: suspend (DataStore<Preferences>, OutingTrackingStateStore) -> Unit) {
         // File migration and Android Keystore are covered by the instrumented test.
         val data = object : DataStore<Preferences> {
@@ -40,6 +52,15 @@ class OutingTrackingStateStoreTest {
             val reopened = OutingTrackingStateStore(data, { "parent" }, { "cipher:$it" }, { it.removePrefix("cipher:") })
             assertEquals(saved, reopened.snapshot())
             assertEquals(pending, saved.pending)
+            // Reopening the store and rechecking after a gap must not regenerate metadata.
+            reopened.markNeedsRecheck()
+            val restored = reopened.snapshot()!!
+            assertTrue(reopened.update(restored, applyOutingObservation(restored,
+                OutingTrackingState.Outing, 39.0, 129.0, 999)))
+            val retry = reopened.snapshot()!!.pending!!
+            assertEquals(pending.id, retry.id)
+            assertEquals(pending.confirmedAt, retry.confirmedAt)
+            assertEquals(pending.detectedAtText(), retry.detectedAtText())
             assertTrue(data.data.first()[key]!!.startsWith("cipher:"))
         }
     }

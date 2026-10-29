@@ -76,6 +76,8 @@ import com.example.senior_on.domain.repository.server.*
 import com.google.android.gms.location.LocationServices
 
 interface AppContainer {
+    val detectionConfig: com.example.senior_on.device.DetectionConfig
+        get() = DetectionModule.config
     val parentSharingGuard: com.example.senior_on.data.repository.impl.ParentSharingGuard?
         get() = null
     val parentReconnectionRepository: com.example.senior_on.data.repository.impl.ParentReconnectionRepository
@@ -174,7 +176,7 @@ class DefaultAppContainer(
             currentUsersId = {
                 SeniorOnNetwork.notificationApi.getMyInactivitySetting().data?.usersId
             },
-            log = { if (com.example.senior_on.BuildConfig.DEBUG) android.util.Log.d("SeniorOnHomeSocket", it) },
+            log = { if (com.example.senior_on.BuildConfig.DEBUG) com.example.senior_on.logging.AppLog.d("SeniorOnHomeSocket", it) },
         )
     }
     private val pendingFamilyCodeStore = com.example.senior_on.data.repository.impl.PendingFamilyCodeStore(context)
@@ -188,7 +190,9 @@ class DefaultAppContainer(
     override val hospitalRepository = HospitalRepositoryImpl(hospitalDataSource)
     override val medicationRepository = MedicationRepositoryImpl(medicationDataSource)
     override val notificationRepository = NotificationRepositoryImpl(notificationDataSource)
-    override val eventRepository = EventRepositoryImpl(eventDataSource, parentSharingGuard)
+    override val eventRepository = com.example.senior_on.device.detectionEventRepository(
+        context, EventRepositoryImpl(eventDataSource, parentSharingGuard), detectionConfig,
+    )
     override val userSettingsRepository = UserSettingsRepositoryImpl(userSettingsDataSource)
     override val deviceRepository = DeviceRepositoryImpl(
         source = deviceDataSource,

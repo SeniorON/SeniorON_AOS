@@ -125,7 +125,7 @@ class ParentHomeStompSource(
                                         else -> null
                                     }
                                     if (event != null) {
-                                        log("STOMP <-- MESSAGE ${frame.body.trim()} accepted; requesting refresh")
+                                        log("STOMP <-- MESSAGE accepted; requesting refresh")
                                         trySend(event)
                                     } else log("STOMP <-- MESSAGE ignored (unknown event)")
                                 } else {

@@ -230,6 +230,8 @@ private fun ParentLauncherContent(
         fun initializeIfAllowed() {
             if (context.hasForegroundLocationPermission() && context.hasBackgroundLocationPermission()) {
                 locationTrackingViewModel.initialize()
+            } else {
+                com.example.senior_on.location.tracking.ParentGeofenceManager.invalidateRegistration()
             }
         }
         val observer = LifecycleEventObserver { _, event ->

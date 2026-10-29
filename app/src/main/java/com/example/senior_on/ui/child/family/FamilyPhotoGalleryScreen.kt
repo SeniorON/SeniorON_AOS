@@ -47,6 +47,7 @@ import com.example.senior_on.R
 import com.example.senior_on.data.source.mock.fixtures.MockFamilyFixtures
 import com.example.senior_on.ui.child.ChildBottomNavigation
 import com.example.senior_on.ui.child.ChildMainTab
+import com.example.senior_on.ui.common.QueryRetryContent
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
@@ -80,6 +81,8 @@ fun FamilyPhotoGalleryScreen(
         gridState,
         uiState.hasMorePhotos,
         uiState.isPhotoLoading,
+        uiState.photoErrorMessage,
+        uiState.errorMessage,
         isRefreshing,
     ) {
         snapshotFlow {
@@ -92,6 +95,8 @@ fun FamilyPhotoGalleryScreen(
                     uiState.hasMorePhotos &&
                     !uiState.isPhotoLoading &&
                     !isRefreshing &&
+                    uiState.photoErrorMessage == null &&
+                    uiState.errorMessage == null &&
                     lastVisibleIndex >= uiState.sharedPhotos.size - 1
                 ) {
                     onLoadMore()
@@ -116,70 +121,59 @@ fun FamilyPhotoGalleryScreen(
                 onBackClick = onBackClick,
             )
 
-            if (
-                (uiState.isLoading && uiState.members.isEmpty()) ||
-                (uiState.isPhotoLoading && !uiState.hasLoadedPhotoGallery)
+            QueryRetryContent(
+                error = uiState.photoErrorMessage ?: uiState.errorMessage,
+                loading = uiState.isLoading || uiState.isPhotoLoading || isRefreshing,
+                hasContent = uiState.hasLoadedPhotoGallery,
+                onRetry = onRetryClick,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
-                FamilyLoadingContent(modifier = Modifier.weight(1f))
-            } else if (uiState.errorMessage != null && uiState.members.isEmpty()) {
-                FamilyErrorContent(
-                    message = uiState.errorMessage,
-                    onRetryClick = onRetryClick,
-                    modifier = Modifier.weight(1f),
-                )
-            } else if (
-                uiState.photoErrorMessage != null && !uiState.hasLoadedPhotoGallery
-            ) {
-                FamilyErrorContent(
-                    message = uiState.photoErrorMessage,
-                    onRetryClick = onRetryClick,
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                FamilyPhotoGalleryHeader(
-                    members = uiState.visibleMembers,
-                    memberImage = memberImage
-                )
+                Column(Modifier.fillMaxSize()) {
+                    FamilyPhotoGalleryHeader(
+                        members = uiState.visibleMembers,
+                        memberImage = memberImage
+                    )
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    state = gridState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        top = 12.dp,
-                        end = 16.dp,
-                        bottom = 24.dp
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item(key = "add-family-photo") {
-                        AddFamilyPhotoCard(
-                            onClick = { isPhotoSourceSheetVisible = true }
-                        )
-                    }
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        state = gridState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            top = 12.dp,
+                            end = 16.dp,
+                            bottom = 24.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item(key = "add-family-photo") {
+                            AddFamilyPhotoCard(
+                                onClick = { isPhotoSourceSheetVisible = true }
+                            )
+                        }
 
-                    items(
-                        items = uiState.sharedPhotos,
-                        key = SharedFamilyPhotoUiModel::id
-                    ) { photo ->
-                        SharedPhotoCard(
-                            photo = photo,
-                            sharedPhotoImage = sharedPhotoImage,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onPhotoClick(photo.id) }
-                        )
-                    }
+                        items(
+                            items = uiState.sharedPhotos,
+                            key = SharedFamilyPhotoUiModel::id
+                        ) { photo ->
+                            SharedPhotoCard(
+                                photo = photo,
+                                sharedPhotoImage = sharedPhotoImage,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { onPhotoClick(photo.id) }
+                            )
+                        }
 
-                    if (uiState.isPhotoLoading && uiState.sharedPhotos.isNotEmpty()) {
-                        item(
-                            key = "photo-gallery-loading",
-                            span = { GridItemSpan(maxLineSpan) },
-                        ) {
-                            PhotoGalleryLoadingItem()
+                        if (uiState.isPhotoLoading && uiState.sharedPhotos.isNotEmpty()) {
+                            item(
+                                key = "photo-gallery-loading",
+                                span = { GridItemSpan(maxLineSpan) },
+                            ) {
+                                PhotoGalleryLoadingItem()
+                            }
                         }
                     }
                 }

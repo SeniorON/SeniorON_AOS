@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -27,7 +28,8 @@ fun FamilyTabRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isPhotoSourceSheetVisible by rememberSaveable(seniorId) { mutableStateOf(false) }
-    val presentedUiState = if (uiState.seniorId == seniorId) {
+    var entryLoadStarted by remember(viewModel, seniorId) { mutableStateOf(false) }
+    val presentedUiState = if (entryLoadStarted && uiState.seniorId == seniorId) {
         uiState
     } else {
         FamilyTabUiState(seniorId = seniorId, isLoading = true)
@@ -35,6 +37,7 @@ fun FamilyTabRoute(
 
     LaunchedEffect(viewModel, seniorId) {
         viewModel.loadLatestFamilyOverview(seniorId)
+        entryLoadStarted = true
     }
 
     FamilyTabScreen(

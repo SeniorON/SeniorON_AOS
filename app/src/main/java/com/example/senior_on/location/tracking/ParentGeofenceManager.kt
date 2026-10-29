@@ -8,11 +8,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal class ParentGeofenceManager(context: Context) {
     private val applicationContext = context.applicationContext
@@ -22,13 +25,24 @@ internal class ParentGeofenceManager(context: Context) {
     suspend fun register(
         home: StoredHomeLocation,
         origin: String,
-    ) {
+    ) = registrationMutex.withLock {
         val stateStore = OutingTrackingStateStore(applicationContext)
+        if (!applicationContext.hasRequiredGeofencePermissions()) {
+            invalidateRegistration()
+            return@withLock
+        }
+        val account = stateStore.accountKey() ?: return@withLock
+        val key = GeofenceRegistrationKey(account, home, activeOutingBoundaries.outing)
+        if (registrationCache.matches(key)) {
+            if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Geofence unchanged; registration skipped; origin=$origin")
+            return@withLock
+        }
+        val generation = registrationCache.generation()
         if (com.example.senior_on.BuildConfig.DEBUG) Log.d(
             LogTag,
             "Registering home geofence; origin=$origin, " +
                 "requestId=$HomeGeofenceRequestId, " +
-                "radius=${OutingBoundaryMeters.toInt()}m, " +
+                "radius=${activeOutingBoundaries.outing.toInt()}m, " +
                 "trackingState=${stateStore.getState()}, " +
                 "foregroundPermission=${applicationContext.hasForegroundLocationPermission()}, " +
                 "backgroundPermission=${applicationContext.hasBackgroundLocationPermission()}, " +
@@ -36,7 +50,8 @@ internal class ParentGeofenceManager(context: Context) {
         )
         if (!applicationContext.hasRequiredGeofencePermissions()) {
             if (com.example.senior_on.BuildConfig.DEBUG) Log.w(LogTag, "Skipping geofence registration because location permission is missing")
-            return
+            invalidateRegistration()
+            return@withLock
         }
 
         val geofence = Geofence.Builder()
@@ -44,7 +59,7 @@ internal class ParentGeofenceManager(context: Context) {
             .setCircularRegion(
                 home.latitude,
                 home.longitude,
-                OutingBoundaryMeters,
+                activeOutingBoundaries.outing,
             )
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(
@@ -68,8 +83,11 @@ internal class ParentGeofenceManager(context: Context) {
                 "Geofence registration stopped because location permission was revoked",
                 securityException,
             )
-            return
+            invalidateRegistration()
+            return@withLock
         } catch (throwable: Throwable) {
+            invalidateRegistration()
+            if (throwable is CancellationException) throw throwable
             if (com.example.senior_on.BuildConfig.DEBUG) Log.e(
                 LogTag,
                 "GeofencingClient rejected registration; origin=$origin, " +
@@ -79,6 +97,9 @@ internal class ParentGeofenceManager(context: Context) {
             else Log.e(LogTag, "GEOFENCE_REGISTRATION_FAILED")
             throw throwable
         }
+        if (stateStore.accountKey() == account && applicationContext.hasRequiredGeofencePermissions()) {
+            registrationCache.registered(key, generation)
+        }
         if (com.example.senior_on.BuildConfig.DEBUG) Log.d(
             LogTag,
             "GeofencingClient accepted registration; origin=$origin, " +
@@ -87,15 +108,21 @@ internal class ParentGeofenceManager(context: Context) {
     }
 
     fun unregister() {
-        if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Removing home geofence; requestId=$HomeGeofenceRequestId")
-        client.removeGeofences(geofencePendingIntent())
-            .addOnSuccessListener {
-                if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Home geofence removal accepted")
+        invalidateRegistration()
+        registrationScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            registrationMutex.withLock {
+                invalidateRegistration()
+                if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Removing home geofence; requestId=$HomeGeofenceRequestId")
+                try {
+                    client.removeGeofences(geofencePendingIntent()).awaitResult()
+                    if (com.example.senior_on.BuildConfig.DEBUG) Log.d(LogTag, "Home geofence removal accepted")
+                } catch (throwable: Exception) {
+                    if (throwable is CancellationException) throw throwable
+                    if (com.example.senior_on.BuildConfig.DEBUG) Log.e(LogTag, "Home geofence removal failed", throwable)
+                    else Log.e(LogTag, "GEOFENCE_REMOVAL_FAILED")
+                }
             }
-            .addOnFailureListener { throwable ->
-                if (com.example.senior_on.BuildConfig.DEBUG) Log.e(LogTag, "Home geofence removal failed", throwable)
-                else Log.e(LogTag, "GEOFENCE_REMOVAL_FAILED")
-            }
+        }
     }
 
     private fun geofencePendingIntent(): PendingIntent = PendingIntent.getBroadcast(
@@ -105,7 +132,11 @@ internal class ParentGeofenceManager(context: Context) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
     )
 
-    private companion object {
+    companion object {
+        private val registrationMutex = Mutex()
+        private val registrationCache = GeofenceRegistrationCache()
+        private val registrationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        fun invalidateRegistration() = registrationCache.invalidate()
         const val LogTag = "SeniorOnGeofence"
         const val HomeGeofenceRequestId = "senior_home_geofence"
         const val GeofencePendingIntentRequestCode = 7101

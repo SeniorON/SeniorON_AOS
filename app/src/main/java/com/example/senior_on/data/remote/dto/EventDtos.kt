@@ -1,6 +1,6 @@
 package com.example.senior_on.data.remote.dto
 
-data class SosEventRequest(val latitude: Double?, val longitude: Double?, val deviceBattery: Int?)
+data class SosEventRequest(val latitude: Double?, val longitude: Double?, val deviceBattery: Int?, val clientEventId: String)
 data class SosEventResponse(
     val id: Long?, val latitude: Double?, val longitude: Double?,
     val address: String?, val deviceBattery: Int?,
@@ -13,6 +13,8 @@ data class RiskLinkResponse(
 data class OutingReturnRequest(
     val phase: String, val latitude: Double, val longitude: Double, val deviceBattery: Int,
     val detectionType: String = "TRANSITION",
+    val clientEventId: String,
+    val detectedAt: String,
 )
 data class OutingReturnResponse(
     val id: Long?, val phase: String?, val occurredAt: String?,
@@ -21,7 +23,7 @@ data class OutingReturnResponse(
 )
 data class InactivityRequest(
     val latitude: Double?, val longitude: Double?, val deviceBattery: Int,
-    val lastSeenAt: String
+    val lastSeenAt: String, val clientEventId: String,
 )
 data class InactivityResponse(
     val address: String?, val latitude: Double?, val longitude: Double?, val lastSeenAt: String?
@@ -31,5 +33,6 @@ data class EventDetailResponse(
     val senderName: String?, val occurredAt: String?, val address: String?,
     val latitude: Double?, val longitude: Double?, val deviceBattery: Int?,
     val phase: String?, val lastSeenAt: String?, val linkUrl: String?,
-    val isDangerous: Boolean?
+    val isDangerous: Boolean?,
+    val detectionType: String? = null,
 )

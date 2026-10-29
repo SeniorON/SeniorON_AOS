@@ -33,6 +33,17 @@ class VerificationRequestLimiterTest {
         assertEquals(key, gate.emailKey(" user@EXAMPLE.com "))
     }
 
+    @Test fun revisitingSameEmailKeepsRemainingCooldownWithoutRestartingIt() = runTest {
+        gate.send(key, { it }) { true }
+        time += 20_000
+        val revisitedKey = gate.emailKey(" user@example.com ")
+        assertEquals(40_000L, gate.state(revisitedKey).blockedUntil - time)
+        var requested = false
+        assertTrue(runCatching { gate.send(revisitedKey, { it }) { requested = true; true } }.isFailure)
+        assertFalse(requested)
+        assertEquals(40_000L, gate.state(revisitedKey).blockedUntil - time)
+    }
+
     @Test fun ipLimitBlocksBothFlows() = runTest {
         runCatching { gate.send(key, { it: Boolean -> it }) { throw limited("EMAIL429_4") } }
         assertEquals(time + 42_000, gate.state(gate.recoveryKey("user")).blockedUntil)
@@ -46,6 +57,40 @@ class VerificationRequestLimiterTest {
         assertEquals(expiry, gate.state(key).expiresAt)
         assertFalse(gate.state(key).sending)
         assertTrue(gate.state(key).blockedUntil <= time)
+    }
+
+    @Test fun tenMinuteSendLimitKeepsExistingCodeUntilItsOriginalExpiry() = runTest {
+        gate.send(key, { it }) { true }
+        val expiry = gate.state(key).expiresAt
+        time += 60_000
+        runCatching { gate.send(key, { it: Boolean -> it }) { throw limited("EMAIL429_2", 600) } }
+        assertEquals(time + 600_000, gate.state(key).blockedUntil)
+        assertEquals(expiry, gate.state(key).expiresAt)
+        assertTrue(gate.state(key).expiresAt > time)
+        assertEquals(0L, gate.state(gate.emailKey("other@example.com")).expiresAt)
+        time = expiry
+        assertTrue(gate.state(key).expiresAt <= time)
+        assertTrue(gate.state(key).blockedUntil > time)
+    }
+
+    @Test fun consumingCodePreservesSendLimitAndResendCreatesNewCode() = runTest {
+        gate.send(key, { it }) { true }
+        val cooldown = gate.state(key).blockedUntil
+        gate.invalidateCode(key, gate.state(key).expiresAt)
+        assertEquals(0L, gate.state(key).expiresAt)
+        assertEquals(cooldown, gate.state(key).blockedUntil)
+        time = cooldown
+        gate.send(key, { it }) { true }
+        assertEquals(time + 300_000, gate.state(key).expiresAt)
+    }
+
+    @Test fun lateVerificationCannotInvalidateNewerCode() = runTest {
+        gate.send(key, { it }) { true }
+        val oldExpiry = gate.state(key).expiresAt
+        time += 60_000
+        gate.send(key, { it }) { true }
+        gate.invalidateCode(key, oldExpiry)
+        assertEquals(time + 300_000, gate.state(key).expiresAt)
     }
 
     @Test fun pendingRequestCannotBeDuplicated() = runTest {

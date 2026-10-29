@@ -41,6 +41,15 @@ open class VerificationRequestLimiter(private val clock: () -> Long) {
         mutableStates.value = mutableStates.value + (key to state)
     }
 
+    /** Consuming a code must not remove the resend cooldown or invalidate a newer code. */
+    @Synchronized
+    fun invalidateCode(key: String, expectedExpiresAt: Long) {
+        val current = mutableStates.value[key] ?: return
+        if (current.expiresAt == expectedExpiresAt) {
+            update(key, current.copy(expiresAt = 0))
+        }
+    }
+
     suspend fun <T> send(key: String, sent: (T) -> Boolean, request: suspend () -> T): T {
         synchronized(this) {
             val current = state(key)

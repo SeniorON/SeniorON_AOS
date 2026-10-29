@@ -76,8 +76,11 @@ class FamilyViewModelPhotoUrlRefreshTest {
             advanceUntilIdle()
             fail = true
             vm.loadLatestFamilyOverview(SENIOR_ID)
+            assertTrue(vm.uiState.value.isLoading)
+            assertFalse(vm.uiState.value.hasLoadedOverview)
             advanceUntilIdle()
             assertEquals("가족 정보를 불러오지 못했어요.", vm.uiState.value.errorMessage)
+            assertFalse(vm.uiState.value.hasLoadedOverview)
             fail = false
             vm.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
@@ -86,7 +89,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
-    fun `family tab reentry keeps loaded content visible while refreshing`() = runTest {
+    fun `family tab reentry hides cached content until fresh response succeeds`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             var requestCount = 0
@@ -113,14 +116,19 @@ class FamilyViewModelPhotoUrlRefreshTest {
 
             assertTrue(viewModel.uiState.value.hasLoadedOverview)
             viewModel.loadLatestFamilyOverview(SENIOR_ID)
+            assertTrue(viewModel.uiState.value.isLoading)
+            assertFalse(viewModel.uiState.value.hasLoadedOverview)
             runCurrent()
             secondRequestStarted.await()
 
-            assertFalse(viewModel.uiState.value.isLoading)
+            assertTrue(viewModel.uiState.value.isLoading)
+            assertFalse(viewModel.uiState.value.hasLoadedOverview)
             assertEquals(1, viewModel.uiState.value.sharedPhotos.size)
 
             releaseSecondRequest.complete(Unit)
             advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertTrue(viewModel.uiState.value.hasLoadedOverview)
         } finally {
             Dispatchers.resetMain()
         }
@@ -419,6 +427,48 @@ class FamilyViewModelPhotoUrlRefreshTest {
             val imageSource = viewModel.uiState.value.sharedPhotos.single().imageSource
                 as FamilyImageSource.Remote
             assertEquals(FRESH_URL, imageSource.url)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `새로고침 실패는 캐시와 구분되는 오류로 남고 재시도 성공 시 해제된다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = EXPIRED_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+                photoPageProvider = { requestCount ->
+                    if (requestCount == 2) throw IOException("Offline")
+                    ServerFamilyPhotoPage(
+                        photos = listOf(serverPhoto(url = if (requestCount == 1) EXPIRED_URL else FRESH_URL)),
+                        totalCount = 1,
+                        nextCursor = null,
+                        hasNext = false,
+                    )
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.refreshPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            val failed = viewModel.uiState.value
+            assertTrue(failed.hasLoadedPhotoGallery)
+            assertFalse(failed.isPhotoRefreshing)
+            assertEquals("가족 사진을 불러오지 못했어요.", failed.photoErrorMessage)
+            assertEquals(EXPIRED_URL, (failed.sharedPhotos.single().imageSource as FamilyImageSource.Remote).url)
+
+            viewModel.loadPhotoGallery(SENIOR_ID, force = true)
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.photoErrorMessage)
+            assertEquals(FRESH_URL, (viewModel.uiState.value.sharedPhotos.single().imageSource as FamilyImageSource.Remote).url)
+            assertEquals(3, repository.photoPageRequestCount)
         } finally {
             Dispatchers.resetMain()
         }

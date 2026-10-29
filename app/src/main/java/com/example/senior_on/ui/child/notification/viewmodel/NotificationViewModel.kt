@@ -1,6 +1,6 @@
 package com.example.senior_on.ui.child.notification.viewmodel
 
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import com.example.senior_on.data.remote.api.SeniorPermissionSettings
 import com.example.senior_on.ui.child.notification.canAccess
 import com.example.senior_on.ui.child.notification.enforceAccess
@@ -52,6 +52,7 @@ data class NotificationUiState(
     val isDetailLoading: Boolean = false,
     val parentPhoneNumber: String? = null,
     val errorMessage: String? = null,
+    val toggleToastMessage: String? = null,
 )
 
 class NotificationViewModel(
@@ -340,19 +341,29 @@ class NotificationViewModel(
                 check(allowed) { "해당 정보의 공유가 중단되었거나 기기가 연결되지 않았어요." }
                 val home = _uiState.value.home
                 check(home.isParentPhoneInternetConnected) { "시니어 기기의 인터넷 연결을 확인해 주세요." }
-                check(category != NotificationCategory.Outing || !enabled || home.hasHomeAddress) { "집 주소를 먼저 등록해 주세요." }
+                if (category == NotificationCategory.Outing && enabled && !home.hasHomeAddress) {
+                    _uiState.update { it.copy(toggleToastMessage = com.example.senior_on.ui.child.notification.HomeLocationMissingMessage) }
+                    return@launch
+                }
                 repository.updateSetting(requireSeniorId(), category.apiType, enabled)
                 confirmedSettings[category] = enabled
                 setLocalSetting(category, enabled)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
-                _uiState.update { it.copy(errorMessage = failure.message ?: "알림 설정을 변경하지 못했어요.") }
+                _uiState.update { it.copy(
+                    errorMessage = failure.message ?: "알림 설정을 변경하지 못했어요.",
+                    toggleToastMessage = com.example.senior_on.ui.child.notification.homeLocationToggleFeedback(category, failure),
+                ) }
             } finally {
                 desiredSettings.remove(category)
                 settingSyncJobs.remove(category)
             }
         }
+    }
+
+    fun consumeToggleToast() {
+        _uiState.update { it.copy(toggleToastMessage = null) }
     }
 
     fun openNotification(
@@ -379,9 +390,7 @@ class NotificationViewModel(
                 events.getDetail(eventId).toUiState(category, message)
             }.onSuccess { detail ->
                 detailLog(
-                    "Loaded eventId=$eventId, battery=${detail.deviceBattery}, " +
-                        "hasCoordinates=${detail.latitude != null && detail.longitude != null}, " +
-                        "occurredAtMillis=${detail.occurredAtMillis}",
+                    "Notification detail loaded",
                 )
                 _uiState.update {
                     it.copy(

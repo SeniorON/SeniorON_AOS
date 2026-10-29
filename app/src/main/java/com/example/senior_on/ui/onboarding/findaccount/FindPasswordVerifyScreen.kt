@@ -4,12 +4,14 @@ import com.example.senior_on.ui.common.account.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +21,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +50,7 @@ fun FindPasswordVerifyScreen(
     modifier: Modifier = Modifier,
     requestLoginId: String = "",
     verificationId: Long? = null,
+    isVerified: Boolean = false,
     requestErrorMessage: String? = null,
     onInputChange: () -> Unit = {},
 ) {
@@ -53,10 +58,12 @@ fun FindPasswordVerifyScreen(
     var isVerificationError by rememberSaveable(requestLoginId, verificationId) { mutableStateOf(false) }
     var isVerifying by androidx.compose.runtime.remember { mutableStateOf(false) }
     var isResending by androidx.compose.runtime.remember { mutableStateOf(false) }
+    var inputAreaHeight by androidx.compose.runtime.remember { mutableStateOf(0) }
+    val density = LocalDensity.current
 
     val requestUi = rememberVerificationRequestUi(VerificationRequestGate.recoveryKey(requestLoginId))
-    val isVerifyEnabled = verificationCode.length == 6 && !isVerifying && !isResending && requestUi.remainingCodeSeconds > 0
-    val verificationError = requestErrorMessage ?: when {
+    val isVerifyEnabled = !isVerified && verificationCode.length == 6 && !isVerifying && !isResending && requestUi.remainingCodeSeconds > 0
+    val verificationError = if (isVerified) null else requestErrorMessage ?: when {
         isVerificationError -> "인증번호가 일치하지 않아요."
         verificationId != null && requestUi.remainingCodeSeconds <= 0 ->
             "인증 시간이 만료됐어요. 재전송해 주세요."
@@ -65,40 +72,37 @@ fun FindPasswordVerifyScreen(
 
     FindAccountScaffold(
         modifier = modifier.systemBarsPadding(),
+        keyboardProtectedContentHeight = with(density) { inputAreaHeight.toDp() } + 24.dp,
         onBackClick = onBackClick,
         selectedTab = FindAccountTab.Password,
         onTabSelected = onTabSelected,
         bottomBar = {
             Column {
-                FindAccountInfoBanner(
-                    text = "계정에 등록된 이메일로 인증번호가 전송됩니다"
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 FindAccountPrimaryButton(
                     text = "인증하기",
-                    enabled = isVerifyEnabled,
+                    enabled = isVerifyEnabled || (isVerified && !isVerifying && !isResending),
                     isLoading = isVerifying,
                     onClick = {
-                        isVerifying = true
-                        onVerifyCode(verificationCode) { verified ->
-                            isVerifying = false
-                            if (verified) {
-                                isVerificationError = false
-                                onVerifySuccess()
-                            } else {
-                                isVerificationError = true
+                        if (isVerified) {
+                            onVerifySuccess()
+                        } else if (isVerifyEnabled) {
+                            isVerifying = true
+                            onVerifyCode(verificationCode) { verified ->
+                                isVerifying = false
+                                isVerificationError = !verified
+                                if (verified) onVerifySuccess()
                             }
                         }
-                    }
+                    },
                 )
             }
         }
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .onSizeChanged { inputAreaHeight = it.height }
                 .padding(horizontal = 16.dp)
                 .padding(top = 24.dp)
         ) {
@@ -135,32 +139,38 @@ fun FindPasswordVerifyScreen(
             Spacer(modifier = Modifier.height(30.dp))
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top
-                ) {
                     FindAccountTextField(
                         label = null,
                         value = verificationCode,
                         onValueChange = {
-                            if (isVerifying || isResending) return@FindAccountTextField
+                            if (isVerified || isVerifying || isResending) return@FindAccountTextField
                             verificationCode = it.filter(Char::isDigit).take(6)
                             isVerificationError = false
                             onInputChange()
                         },
                         placeholder = "인증번호 6자리 입력",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = isVerified || isVerifying || isResending,
+                        showClearIcon = !isVerified && !isVerifying && !isResending,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         isError = verificationError != null,
                         errorMessage = verificationError,
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    FindAccountSmallPrimaryButton(
-                        text = "재전송",
-                        enabled = !isVerifying && !isResending && !requestUi.locked,
-                        isLoading = isResending,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val seconds = requestUi.remainingCodeSeconds
+                    Text(
+                        text = if (isVerified) "인증 완료됐어요." else
+                            "남은 시간 ${(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}",
+                        modifier = Modifier.weight(1f),
+                        style = SeniorOnTextStyles.CaptionRegular,
+                        color = if (isVerified) SeniorOnColors.Primary600 else SeniorOnColors.Red300,
+                    )
+                    TextButton(
+                        enabled = !isVerified && !isVerifying && !isResending && !requestUi.locked,
                         onClick = {
                             isVerificationError = false
                             onInputChange()
@@ -173,18 +183,24 @@ fun FindPasswordVerifyScreen(
                                 }
                             }
                         }
-                    )
+                    ) {
+                        Text(
+                            text = when {
+                                isResending -> "전송 중…"
+                                !isVerified && requestUi.remainingRequestSeconds > 0 ->
+                                    "${requestUi.remainingRequestSeconds}초 후 재전송 가능"
+                                else -> "인증번호 재전송"
+                            },
+                            style = SeniorOnTextStyles.CaptionRegular,
+                            textDecoration = if (!isResending && !requestUi.locked)
+                                TextDecoration.Underline else TextDecoration.None,
+                            color = if (isVerified || isVerifying || isResending || requestUi.locked)
+                                SeniorOnColors.Gray400 else SeniorOnColors.Gray800,
+                        )
+                    }
                 }
 
-                if (requestUi.remainingRequestSeconds > 0) {
-                    val seconds = requestUi.remainingRequestSeconds
-                    Text(
-                        text = "잠시 후 다시 요청해 주세요. (${(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')})",
-                        modifier = Modifier.padding(top = 6.dp),
-                        style = SeniorOnTextStyles.CaptionRegular,
-                        color = SeniorOnColors.Gray400,
-                    )
-                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

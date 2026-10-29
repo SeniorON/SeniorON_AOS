@@ -11,11 +11,12 @@ data class ParentInactivityState(
 
 class ParentInactivityStateStore(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences(
-        PreferencesName,
+        DetectionQa.storeName(PreferencesName),
         Context.MODE_PRIVATE,
     )
 
     fun recordActivity(atMillis: Long = System.currentTimeMillis()) = synchronized(ActivityLock) {
+        DetectionQa.trace("ACTIVITY_BASELINE_UPDATED")
         preferences.edit()
             .putLong(LastActiveAtKey, atMillis)
             .remove(AlertedForActivityAtKey)
@@ -23,7 +24,10 @@ class ParentInactivityStateStore(context: Context) {
     }
 
     fun initializeIfMissing(atMillis: Long = System.currentTimeMillis()) = synchronized(ActivityLock) {
-        if (preferences.optionalLong(LastActiveAtKey) == null) recordActivity(atMillis)
+        if (preferences.optionalLong(LastActiveAtKey) == null) {
+            DetectionQa.trace("BASELINE_INITIALIZING reason=missing_record")
+            recordActivity(atMillis)
+        }
     }
 
     fun updateSetting(thresholdHours: Int, enabled: Boolean) {

@@ -28,6 +28,7 @@ data class SeniorManagementUiState(
     val isDisconnecting: Boolean = false,
     val disconnectRefreshPending: Boolean = false,
     val disconnectRefreshError: String? = null,
+    val joinedFamilyId: Long? = null,
 )
 
 class SeniorManagementViewModel(
@@ -63,7 +64,7 @@ class SeniorManagementViewModel(
             retryDisconnectRefresh()
             return
         }
-        if (refreshJob?.isActive == true || _uiState.value.isDisconnecting) return
+        if (refreshJob?.isActive == true || _uiState.value.isDisconnecting || _uiState.value.isSubmitting) return
 
         refreshJob = viewModelScope.launch {
             val requestRevision = profileRevision
@@ -213,7 +214,45 @@ class SeniorManagementViewModel(
         }
     }
 
+    fun joinSenior(code: String, onSuccess: (ManagedSenior) -> Unit) {
+        if (_uiState.value.isSubmitting || _uiState.value.isCreatingFamilyCode) return
+        _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
+        viewModelScope.launch {
+            try {
+                // Prevent an older list request from replacing the joined list.
+                refreshJob?.cancel()
+                refreshJob?.join()
+                val familyId = _uiState.value.joinedFamilyId ?: requireNotNull(
+                    familyRepository.join(code).familyId
+                ) { "연결된 가족 정보를 확인하지 못했어요." }.also { joinedId ->
+                    _uiState.update { it.copy(joinedFamilyId = joinedId) }
+                }
+                val seniors = seniorRepository.getManagedSeniors()
+                val joined = seniors.firstOrNull { it.familyId == familyId && it.seniorId > 0 }
+                    ?: error("연결된 가족에 등록된 시니어가 없어요. 주담당자의 등록 후 다시 시도해 주세요.")
+                _uiState.update { it.copy(
+                    managedSeniors = seniors, isLoading = false, listError = null,
+                    joinedFamilyId = null, errorMessage = null,
+                ) }
+                onSuccess(joined)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    errorMessage = if (it.joinedFamilyId != null)
+                        "코드 연결은 완료됐지만 시니어 정보를 확인하지 못했어요. 주담당자의 시니어 등록 여부를 확인한 후 다시 시도해 주세요."
+                    else failure.message ?: "시니어 코드를 다시 확인해 주세요.",
+                ) }
+            } finally {
+                _uiState.update { it.copy(isSubmitting = false) }
+            }
+        }
+    }
+
     fun clearError() {
+        // Keep the read-retry prompt if the add flow is closed and reopened after a successful join.
+        if (_uiState.value.joinedFamilyId != null) return
         _uiState.update { it.copy(errorMessage = null) }
     }
 

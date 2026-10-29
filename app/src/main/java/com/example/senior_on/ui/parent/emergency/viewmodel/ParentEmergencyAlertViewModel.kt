@@ -44,6 +44,9 @@ class ParentEmergencyAlertViewModel(
 
     private var countdownJob: Job? = null
     private var sendJob: Job? = null
+    // Manual retries (including the retry countdown) share one request identity.
+    // Leaving/cancelling this SOS ends the request; no automatic retry queue is used.
+    private var clientEventId: String? = null
 
     fun startCountdown() {
         countdownJob?.cancel()
@@ -74,6 +77,9 @@ class ParentEmergencyAlertViewModel(
         countdownJob?.cancel()
         countdownJob = null
 
+        val requestId = clientEventId ?: java.util.UUID.randomUUID().toString().also {
+            clientEventId = it
+        }
         _uiState.update { it.copy(status = ParentEmergencyAlertStatus.Sending, errorMessage = null) }
         sendJob = viewModelScope.launch {
             _uiState.update {
@@ -92,6 +98,7 @@ class ParentEmergencyAlertViewModel(
                     longitude = currentLocation?.longitude,
                     // ViewModel이 재사용되어도 각 SOS 전송 시점의 배터리를 기록합니다.
                     battery = deviceRepository.getBatteryLevel(),
+                    clientEventId = requestId,
                 )
             }
                 .onSuccess {
@@ -135,6 +142,7 @@ class ParentEmergencyAlertViewModel(
         countdownJob = null
         sendJob?.cancel()
         sendJob = null
+        clientEventId = null
         _uiState.value = ParentEmergencyAlertUiState()
     }
 

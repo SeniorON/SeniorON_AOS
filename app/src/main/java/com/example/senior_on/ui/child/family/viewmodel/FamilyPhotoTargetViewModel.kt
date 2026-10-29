@@ -20,7 +20,12 @@ data class FamilyPhotoTargetUiState(
     val isLoading: Boolean = false,
     val hasLoaded: Boolean = false,
     val errorMessage: String? = null,
-)
+) {
+    fun canShare(photoGroupIds: List<Long>): Boolean =
+        hasLoaded && !isLoading && errorMessage == null &&
+            photoGroupIds.isNotEmpty() &&
+            photoGroupIds.all { id -> targets.any { it.photoGroupId == id } }
+}
 
 class FamilyPhotoTargetViewModel(
     private val repository: FamilyServerRepository,

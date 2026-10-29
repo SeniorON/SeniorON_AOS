@@ -33,6 +33,71 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorManagementViewModelTest {
     @Test
+    fun `existing code joins and selects matching senior without creating family`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val seniors = FakeSeniorRepository(listOf(managedSenior(3L)))
+            val family = FakeFamilyRepository(joinResult = FamilyCodeInfo(104L, "ABCD1234"))
+            val vm = SeniorManagementViewModel(seniors, family)
+            advanceUntilIdle()
+            seniors.managedSeniors = listOf(managedSenior(3L), managedSenior(4L))
+            var selected: ManagedSenior? = null
+            vm.joinSenior("ABCD1234") { selected = it }
+            vm.joinSenior("ABCD1234") { error("duplicate callback") }
+            advanceUntilIdle()
+            assertEquals(4L, selected?.seniorId)
+            assertEquals(1, family.joinCount)
+            assertEquals(0, family.createCodeRequestCount)
+            assertEquals(0, seniors.createRequestCount)
+            assertEquals(listOf(3L, 4L), vm.uiState.value.managedSeniors.map { it.seniorId })
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `join success followed by list failure retries only list and preserves old selection`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val seniors = FakeSeniorRepository(listOf(managedSenior(3L)))
+            val family = FakeFamilyRepository(joinResult = FamilyCodeInfo(104L, "ABCD1234"))
+            val vm = SeniorManagementViewModel(seniors, family)
+            advanceUntilIdle()
+            seniors.failList = true
+            var selected: ManagedSenior? = null
+            vm.joinSenior("ABCD1234") { selected = it }
+            advanceUntilIdle()
+            assertNull(selected)
+            assertEquals(104L, vm.uiState.value.joinedFamilyId)
+            vm.clearError()
+            assertTrue(vm.uiState.value.errorMessage != null)
+            assertEquals(listOf(3L), vm.uiState.value.managedSeniors.map { it.seniorId })
+            seniors.failList = false
+            seniors.managedSeniors = listOf(managedSenior(3L), managedSenior(4L))
+            vm.joinSenior("") { selected = it }
+            advanceUntilIdle()
+            assertEquals(1, family.joinCount)
+            assertEquals(4L, selected?.seniorId)
+            assertNull(vm.uiState.value.joinedFamilyId)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `join failure keeps original list and allows corrected code`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val seniors = FakeSeniorRepository(listOf(managedSenior(3L)))
+            val family = FakeFamilyRepository()
+            val vm = SeniorManagementViewModel(seniors, family)
+            advanceUntilIdle()
+            vm.joinSenior("BADCODE1") { error("must not navigate") }
+            advanceUntilIdle()
+            assertNull(vm.uiState.value.joinedFamilyId)
+            assertFalse(vm.uiState.value.isSubmitting)
+            assertEquals(listOf(3L), vm.uiState.value.managedSeniors.map { it.seniorId })
+            assertTrue(vm.uiState.value.errorMessage != null)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
     fun `saved profile updates only matching senior without clearing the list`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -343,15 +408,20 @@ private class FakeSeniorRepository(
 
 private class FakeFamilyRepository(
     private val createResult: FamilyCodeInfo = FamilyCodeInfo(31L, "43TS-6GTE"),
+    private val joinResult: FamilyCodeInfo? = null,
 ) : FamilyServerRepository {
     var createCodeRequestCount = 0
+    var joinCount = 0
 
     override suspend fun createCode(): FamilyCodeInfo {
         createCodeRequestCount += 1
         return createResult
     }
 
-    override suspend fun join(code: String): FamilyCodeInfo = error("unused")
+    override suspend fun join(code: String): FamilyCodeInfo {
+        joinCount++
+        return joinResult ?: error("유효하지 않은 시니어 코드예요.")
+    }
     override suspend fun getCode(seniorId: Long): FamilyCodeInfo = error("unused")
     override suspend fun getHome(seniorId: Long): ServerFamilyHome = error("unused")
     override suspend fun getMembers(seniorId: Long): List<ServerFamilyMember> = error("unused")

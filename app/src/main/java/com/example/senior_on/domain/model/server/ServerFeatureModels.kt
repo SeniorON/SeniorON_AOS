@@ -191,6 +191,7 @@ data class SafetyEvent(
     val lastSeenAt: String? = null,
     val receiverCount: Int? = null,
     val notifiedCount: Int? = null,
+    val detectionType: String? = null,
 )
 data class UserAccountSettings(
     val name: String,

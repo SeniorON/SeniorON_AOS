@@ -29,7 +29,8 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 @Composable
 internal fun FamilyShareCodeTopBar(
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    title: String = "로그인",
 ) {
     Box(
         modifier = modifier
@@ -57,7 +58,7 @@ internal fun FamilyShareCodeTopBar(
         }
 
         Text(
-            text = "로그인",
+            text = title,
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(start = 58.dp),

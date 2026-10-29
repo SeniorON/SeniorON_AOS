@@ -753,8 +753,8 @@ private data class NotificationDetailUiState(
                 )
                 NotificationCategory.Outing -> NotificationDetailUiState(
                     category = category,
-                    heroTitle = if (isReturnedHome) "귀가하셨어요" else "외출하셨어요",
-                    heroTime = (if (isReturnedHome) "귀가 시간: " else "외출 시간: ") + formattedTime,
+                    heroTitle = message.outingDetailTitle(),
+                    heroTime = message.outingDetailTimeLabel() + formattedTime,
                     heroIconResId = if (isReturnedHome) R.drawable.ic_big_in else R.drawable.ic_big_out,
                     heroBrush = if (isReturnedHome) {
                         cssLinearGradient(

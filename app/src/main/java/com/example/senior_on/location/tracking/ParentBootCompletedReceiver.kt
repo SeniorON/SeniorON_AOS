@@ -3,7 +3,7 @@ package com.example.senior_on.location.tracking
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.dto.UserRole
 import com.example.senior_on.data.source.auth.PersistedSessionStore
@@ -20,6 +20,8 @@ class ParentBootCompletedReceiver : BroadcastReceiver() {
             intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED
         ) return
+
+        ParentGeofenceManager.invalidateRegistration()
 
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {

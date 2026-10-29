@@ -1,7 +1,7 @@
 package com.example.senior_on.notification
 
 import android.content.Context
-import android.util.Log
+import com.example.senior_on.logging.AppLog as Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
