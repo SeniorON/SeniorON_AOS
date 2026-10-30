@@ -11,7 +11,7 @@ import retrofit2.HttpException
 interface RemoteFamilySource {
     suspend fun join(request: FamilyJoinRequest): FamilyJoinResponse
     suspend fun createCode(): FamilyCodeCreateResponse
-    suspend fun getCode(seniorId: Long): FamilyCodeResponse
+    suspend fun getCode(familyId: Long): FamilyCodeResponse
     suspend fun getHome(seniorId: Long): FamilyHomeResponse
     suspend fun getMembers(seniorId: Long): List<FamilyMemberResponse>
     suspend fun changePrimaryManager(
@@ -19,15 +19,6 @@ interface RemoteFamilySource {
         request: FamilyPrimaryManagerUpdateRequest,
     ): FamilyPrimaryManagerUpdateResponse
     suspend fun deleteMember(userId: Long, seniorId: Long)
-    suspend fun getPhotoGroupConnections(
-        seniorId: Long,
-    ): List<FamilyPhotoGroupConnectionResponse> = emptyList()
-    suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
-        error("Photo-group connection is not implemented")
-    }
-    suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        error("Photo-group disconnection is not implemented")
-    }
     suspend fun getPhotoTargets(): List<FamilyPhotoTargetResponse> = emptyList()
     suspend fun getPhotos(
         uploaderId: Long?,
@@ -63,8 +54,8 @@ class RemoteFamilyDataSource(
     override suspend fun createCode() = remoteRequest {
         api.createCode().requireData()
     }
-    override suspend fun getCode(seniorId: Long) = remoteRequest {
-        api.getCode(seniorId).requireData()
+    override suspend fun getCode(familyId: Long) = remoteRequest {
+        api.getCode(familyId).requireData()
     }
     override suspend fun getHome(seniorId: Long) = remoteRequest {
         api.getHome(seniorId).requireData()
@@ -80,17 +71,6 @@ class RemoteFamilyDataSource(
     }
     override suspend fun deleteMember(userId: Long, seniorId: Long) {
         remoteRequest { api.deleteMember(userId, seniorId); Unit }
-    }
-    override suspend fun getPhotoGroupConnections(seniorId: Long) =
-        api.getPhotoGroupConnections(seniorId).requireData()
-    override suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
-        remoteRequest { api.connectPhotoGroup(request); Unit }
-    }
-    override suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        remoteRequest {
-            api.disconnectPhotoGroup(photoGroupId = photoGroupId, seniorId = seniorId)
-            Unit
-        }
     }
     override suspend fun getPhotoTargets() = remoteRequest {
         api.getPhotoTargets().requireData()

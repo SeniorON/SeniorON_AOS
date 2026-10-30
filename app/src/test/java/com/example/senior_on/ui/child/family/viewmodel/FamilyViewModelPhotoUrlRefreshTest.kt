@@ -391,48 +391,6 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
-    fun `연결 변경은 기존 사진 캐시를 비우고 홈과 첫 페이지를 다시 받는다`() = runTest {
-        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        try {
-            val repository = FakeFamilyServerRepository(
-                initialPhoto = serverPhoto(url = EXPIRED_URL),
-                refreshedPhoto = serverPhoto(url = FRESH_URL),
-                photoPageProvider = { requestCount ->
-                    ServerFamilyPhotoPage(
-                        photos = listOf(
-                            serverPhoto(
-                                url = if (requestCount == 1) EXPIRED_URL else FRESH_URL,
-                            ),
-                        ),
-                        totalCount = 1,
-                        nextCursor = null,
-                        hasNext = false,
-                    )
-                },
-            )
-            val viewModel = FamilyViewModel(repository)
-            viewModel.loadFamilyOverview(SENIOR_ID)
-            viewModel.loadPhotoGallery(SENIOR_ID)
-            advanceUntilIdle()
-
-            viewModel.refreshAfterConnectionChange(SENIOR_ID)
-
-            assertTrue(viewModel.uiState.value.sharedPhotos.isEmpty())
-            assertFalse(viewModel.uiState.value.hasLoadedPhotoGallery)
-
-            advanceUntilIdle()
-
-            assertEquals(2, repository.homeRequestCount)
-            assertEquals(2, repository.photoPageRequestCount)
-            val imageSource = viewModel.uiState.value.sharedPhotos.single().imageSource
-                as FamilyImageSource.Remote
-            assertEquals(FRESH_URL, imageSource.url)
-        } finally {
-            Dispatchers.resetMain()
-        }
-    }
-
-    @Test
     fun `새로고침 실패는 캐시와 구분되는 오류로 남고 재시도 성공 시 해제된다`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -520,7 +478,7 @@ private class FakeFamilyServerRepository(
 
     override suspend fun join(code: String) = FamilyCodeInfo(1L, code)
     override suspend fun createCode() = FamilyCodeInfo(1L, "ABCD-1234")
-    override suspend fun getCode(seniorId: Long) = FamilyCodeInfo(1L, "ABCD-1234")
+    override suspend fun getCode(familyId: Long) = FamilyCodeInfo(1L, "ABCD-1234")
     override suspend fun getHome(seniorId: Long): ServerFamilyHome {
         homeRequestCount++
         return homeProvider?.invoke(seniorId) ?: home

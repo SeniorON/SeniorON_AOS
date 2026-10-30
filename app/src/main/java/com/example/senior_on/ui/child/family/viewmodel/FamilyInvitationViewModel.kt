@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 class FamilyInvitationViewModel(
     private val repository: FamilyServerRepository,
+    private val familyId: Long,
     private val seniorId: Long,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -47,7 +48,7 @@ class FamilyInvitationViewModel(
 
             try {
                 val (familyCodeInfo, familyMembers) = coroutineScope {
-                    val familyCode = async { repository.getCode(seniorId) }
+                    val familyCode = async { repository.getCode(familyId) }
                     val members = async { repository.getMembers(seniorId) }
                     familyCode.await() to members.await()
                 }
@@ -84,10 +85,11 @@ class FamilyInvitationViewModel(
 
         fun factory(
             repository: FamilyServerRepository,
+            familyId: Long,
             seniorId: Long,
         ) = viewModelFactory {
             initializer {
-                FamilyInvitationViewModel(repository, seniorId)
+                FamilyInvitationViewModel(repository, familyId, seniorId)
             }
         }
     }

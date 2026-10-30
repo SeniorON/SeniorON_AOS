@@ -17,8 +17,8 @@ class FamilyApiContractTest {
     }
 
     @Test
-    fun `family code sends the selected senior id`() {
-        assertEquals(listOf("seniorId"), queryNames("getCode"))
+    fun `family code sends the selected family id`() {
+        assertEquals(listOf("familyId"), queryNames("getCode"))
     }
 
     @Test
@@ -32,12 +32,6 @@ class FamilyApiContractTest {
             listOf("uploaderUserId", "cursorCreatedAt", "cursorId", "size", "seniorId"),
             queryNames("getPhotos"),
         )
-    }
-
-    @Test
-    fun `photo group connections are scoped by the selected senior`() {
-        assertEquals(listOf("seniorId"), queryNames("getPhotoGroupConnections"))
-        assertEquals(listOf("seniorId"), queryNames("disconnectPhotoGroup"))
     }
 
     @Test
@@ -60,7 +54,6 @@ class FamilyApiContractTest {
     @Test
     fun `required family scope uses a non-null senior id`() {
         listOf(
-            "getCode",
             "getHome",
             "getMembers",
             "changePrimaryManager",
@@ -78,6 +71,12 @@ class FamilyApiContractTest {
                 method.parameterTypes[seniorIdIndex],
             )
         }
+
+        val codeMethod = FamilyApi::class.java.methods.single { it.name == "getCode" }
+        val familyIdIndex = codeMethod.parameterAnnotations.indexOfFirst { annotations ->
+            annotations.filterIsInstance<Query>().any { it.value == "familyId" }
+        }
+        assertEquals(Long::class.javaPrimitiveType, codeMethod.parameterTypes[familyIdIndex])
     }
 
     private fun queryNames(methodName: String): List<String> {

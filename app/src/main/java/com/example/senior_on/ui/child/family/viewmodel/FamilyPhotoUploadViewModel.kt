@@ -45,7 +45,7 @@ class FamilyPhotoUploadViewModel(
     fun uploadPhoto(
         message: String,
         seniorId: Long,
-        photoGroupIds: List<Long>,
+        seniorIds: List<Long>,
     ) {
         val currentState = _uiState.value
         val sessionId = currentState.sessionId ?: return
@@ -69,7 +69,7 @@ class FamilyPhotoUploadViewModel(
                     description = message,
                     idempotencyKey = idempotencyKey,
                     seniorId = seniorId,
-                    photoGroupIds = photoGroupIds,
+                    seniorIds = seniorIds,
                 )
                 discardPreparedFileOnFailure = false
                 preparedFile.delete()

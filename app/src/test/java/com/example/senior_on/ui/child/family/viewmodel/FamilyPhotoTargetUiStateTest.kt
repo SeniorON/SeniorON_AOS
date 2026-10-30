@@ -7,7 +7,7 @@ import org.junit.Test
 
 class FamilyPhotoTargetUiStateTest {
     private val loaded = FamilyPhotoTargetUiState(
-        targets = listOf(ServerPhotoTarget(10L, 7L, "시니어", "가족")),
+        targets = listOf(ServerPhotoTarget(10L, "시니어", "가족")),
         hasLoaded = true,
     )
 
@@ -31,7 +31,7 @@ class FamilyPhotoTargetUiStateTest {
     @Test
     fun `재조회 성공 후 현재 목록의 대상에게만 공유할 수 있다`() {
         assertTrue(loaded.canShare(listOf(10L)))
-        val refreshed = loaded.copy(targets = listOf(ServerPhotoTarget(20L, 8L, "시니어", "가족")))
+        val refreshed = loaded.copy(targets = listOf(ServerPhotoTarget(20L, "시니어", "가족")))
         assertFalse(refreshed.canShare(listOf(10L)))
         assertTrue(refreshed.canShare(listOf(20L)))
     }

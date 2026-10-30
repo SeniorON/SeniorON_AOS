@@ -7,8 +7,6 @@ import com.example.senior_on.data.remote.dto.FamilyJoinRequest
 import com.example.senior_on.data.remote.dto.FamilyJoinResponse
 import com.example.senior_on.data.remote.dto.FamilyMemberResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoAlbumResponse
-import com.example.senior_on.data.remote.dto.FamilyPhotoGroupConnectionRequest
-import com.example.senior_on.data.remote.dto.FamilyPhotoGroupConnectionResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoCursorResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoUploadCompleteRequest
 import com.example.senior_on.data.remote.dto.FamilyPhotoUploadUrlRequest
@@ -35,7 +33,6 @@ class FamilyServerRepositoryImplTest {
         val source = FakeRemoteFamilySource(
             targets = listOf(
                 FamilyPhotoTargetResponse(
-                    photoGroupId = 41L,
                     seniorId = 12L,
                     name = "김순자",
                     relation = "MOTHER",
@@ -46,46 +43,9 @@ class FamilyServerRepositoryImplTest {
 
         val targets = FamilyServerRepositoryImpl(source).getPhotoTargets()
 
-        assertEquals(41L, targets.single().photoGroupId)
         assertEquals(12L, targets.single().seniorId)
         assertEquals("김순자", targets.single().name)
         assertEquals("어머니", targets.single().relationshipLabel)
-    }
-
-    @Test
-    fun `photo group connection maps recipients and normalizes the entered code`() = runBlocking {
-        val source = FakeRemoteFamilySource(
-            connections = listOf(
-                FamilyPhotoGroupConnectionResponse(
-                    photoGroupId = 31L,
-                    seniorId = 9L,
-                    name = "김순자",
-                    relation = "MOTHER",
-                    customRelation = null,
-                    connectedAt = "2026-07-13T09:00:00+09:00",
-                )
-            )
-        )
-        val repository = FamilyServerRepositoryImpl(source)
-
-        repository.connectPhotoGroup(seniorId = 7L, seniorCode = "43ts 6gte")
-        val connections = repository.getConnectedSeniors(seniorId = 7L)
-
-        assertEquals(7L, source.connectionRequest?.seniorId)
-        assertEquals("43TS-6GTE", source.connectionRequest?.seniorCode)
-        assertEquals(31L, connections.single().photoGroupId)
-        assertEquals("어머니", connections.single().relationshipLabel)
-    }
-
-    @Test
-    fun `photo group disconnection sends the selected senior and group ids`() = runBlocking {
-        val source = FakeRemoteFamilySource()
-        val repository = FamilyServerRepositoryImpl(source)
-
-        repository.disconnectPhotoGroup(seniorId = 7L, photoGroupId = 31L)
-
-        assertEquals(7L, source.disconnectedSeniorId)
-        assertEquals(31L, source.disconnectedPhotoGroupId)
     }
 
     @Test
@@ -112,11 +72,9 @@ class FamilyServerRepositoryImplTest {
                         profileImageUrl = null,
                     ),
                 ),
-                recentUploaderProfileImageUrls = emptyList(),
                 recentPhotos = listOf(
                     familyPhoto(id = 91, canDelete = true),
                 ),
-                photoGroupId = 31L,
             ),
         )
 
@@ -126,7 +84,6 @@ class FamilyServerRepositoryImplTest {
         assertFalse(home.members.first().canBecomePrimary)
         assertTrue(home.members.last().canBecomePrimary)
         assertTrue(home.recentPhotos.single().canDelete)
-        assertEquals(31L, home.photoGroupId)
     }
 
     @Test
@@ -134,7 +91,6 @@ class FamilyServerRepositoryImplTest {
         val source = FakeRemoteFamilySource(
             home = FamilyHomeResponse(
                 members = emptyList(),
-                recentUploaderProfileImageUrls = emptyList(),
                 recentPhotos = listOf(
                     familyPhoto(id = 91, canDelete = false).copy(
                         imageUrl = "https://example.com/original.jpg",
@@ -207,7 +163,7 @@ class FamilyServerRepositoryImplTest {
                 description = "함께 본 사진",
                 idempotencyKey = "123e4567-e89b-12d3-a456-426614174000",
                 seniorId = 7L,
-                photoGroupIds = listOf(31L, 32L),
+                seniorIds = listOf(31L, 32L),
             )
 
             assertEquals(
@@ -223,7 +179,7 @@ class FamilyServerRepositoryImplTest {
             assertEquals("family-photos/1/11/photo.jpg", source.completeRequest?.imageKey)
             assertEquals("함께 본 사진", source.completeRequest?.description)
             assertEquals(7L, source.completeRequest?.seniorId)
-            assertEquals(listOf(31L, 32L), source.completeRequest?.photoGroupIds)
+            assertEquals(listOf(31L, 32L), source.completeRequest?.seniorIds)
         } finally {
             uploadFile.delete()
         }
@@ -337,7 +293,6 @@ class FamilyServerRepositoryImplTest {
                         profileImageUrl = null,
                     ),
                 ),
-                recentUploaderProfileImageUrls = emptyList(),
                 recentPhotos = emptyList(),
             ),
         )
@@ -392,7 +347,6 @@ private fun familyPhoto(
 private class FakeRemoteFamilySource(
     private val home: FamilyHomeResponse = FamilyHomeResponse(
         members = emptyList(),
-        recentUploaderProfileImageUrls = emptyList(),
         recentPhotos = emptyList(),
     ),
     private val photos: FamilyPhotoListResponse = FamilyPhotoListResponse(
@@ -402,7 +356,6 @@ private class FakeRemoteFamilySource(
         hasNext = false,
     ),
     private val photo: FamilyPhotoItemResponse = familyPhoto(id = 92, canDelete = true),
-    private val connections: List<FamilyPhotoGroupConnectionResponse> = emptyList(),
     private val targets: List<FamilyPhotoTargetResponse> = emptyList(),
     completionFailures: Int = 0,
     storageFailures: Int = 0,
@@ -427,12 +380,6 @@ private class FakeRemoteFamilySource(
         private set
     var completionRequestCount: Int = 0
         private set
-    var connectionRequest: FamilyPhotoGroupConnectionRequest? = null
-        private set
-    var disconnectedSeniorId: Long? = null
-        private set
-    var disconnectedPhotoGroupId: Long? = null
-        private set
     private var remainingCompletionFailures = completionFailures
     private var remainingStorageFailures = storageFailures
 
@@ -442,7 +389,7 @@ private class FakeRemoteFamilySource(
     override suspend fun createCode() =
         FamilyCodeCreateResponse(familyId = 1, familyCode = "ABCD-1234")
 
-    override suspend fun getCode(seniorId: Long) =
+    override suspend fun getCode(familyId: Long) =
         FamilyCodeResponse(familyCode = "ABCD-1234", familyMemberCount = 2)
 
     override suspend fun getHome(seniorId: Long) = home
@@ -460,20 +407,7 @@ private class FakeRemoteFamilySource(
 
     override suspend fun deleteMember(userId: Long, seniorId: Long) = Unit
 
-    override suspend fun getPhotoGroupConnections(
-        seniorId: Long,
-    ): List<FamilyPhotoGroupConnectionResponse> = connections
-
     override suspend fun getPhotoTargets(): List<FamilyPhotoTargetResponse> = targets
-
-    override suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
-        connectionRequest = request
-    }
-
-    override suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        disconnectedSeniorId = seniorId
-        disconnectedPhotoGroupId = photoGroupId
-    }
 
     override suspend fun getPhotos(
         uploaderId: Long?,

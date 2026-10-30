@@ -16,6 +16,7 @@ import com.example.senior_on.ui.common.share.ShareLaunchResult
 
 @Composable
 fun FamilyInvitationRoute(
+    familyId: Long,
     seniorId: Long,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -25,7 +26,7 @@ fun FamilyInvitationRoute(
     val context = LocalContext.current
     val viewModel: FamilyInvitationViewModel = viewModel(
         key = viewModelKey,
-        factory = FamilyInvitationViewModel.factory(repository, seniorId),
+        factory = FamilyInvitationViewModel.factory(repository, familyId, seniorId),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

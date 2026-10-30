@@ -6,7 +6,9 @@ import com.example.senior_on.data.remote.dto.ApiResponse
 import com.example.senior_on.data.repository.impl.ParentSettingsRepository
 import com.example.senior_on.domain.model.auth.*
 import com.example.senior_on.domain.model.server.UserAccountSettings
+import com.example.senior_on.domain.model.server.FamilyCodeInfo
 import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.server.*
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +93,63 @@ class ParentSettingsViewModelTest {
             assertNotNull(vm.state.value.queryErrors["permissions"])
             assertNull(vm.state.value.error)
         } finally { store.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun shareCodeUsesFamilyIdFromOnboardingStatus() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        var requestedFamilyId: Long? = null
+        val familyRepository = Proxy.newProxyInstance(
+            FamilyServerRepository::class.java.classLoader,
+            arrayOf(FamilyServerRepository::class.java),
+        ) { _, method, args ->
+            check(method.name == "getCode")
+            requestedFamilyId = args?.first() as Long
+            FamilyCodeInfo(requestedFamilyId, "ABCD-1234")
+        } as FamilyServerRepository
+        val authRepository = stub<AuthRepository> { methodName ->
+            check(methodName == "getOnboardingStatus")
+            OnboardingStatus(
+                hasFamily = true,
+                managerType = CareManagerType.None,
+                seniorId = null,
+                seniorProfileCompleted = true,
+                relationRegistered = true,
+                onboardingCompleted = true,
+                families = listOf(
+                    OnboardingFamilyStatus(
+                        familyId = 42L,
+                        managerType = CareManagerType.None,
+                        parentUserId = 9L,
+                        seniorId = 3L,
+                        seniorName = "시니어",
+                        seniorProfileCompleted = true,
+                        relationRegistered = true,
+                    )
+                ),
+            )
+        }
+        val vm = ParentSettingsViewModel(
+            accounts = stub<UserSettingsRepository> {
+                UserAccountSettings("부모", "PARENT", "parent@example.com", null, true)
+            },
+            profileRepository = stub<ParentSeniorProfileRepository> { 3L },
+            settings = ParentSettingsRepository(FakeApi()),
+            family = familyRepository,
+            auth = authRepository,
+        ).also { store.put("settings", it) }
+
+        try {
+            advanceUntilIdle()
+            vm.loadShareCode()
+            advanceUntilIdle()
+
+            assertEquals(42L, requestedFamilyId)
+            assertEquals("ABCD-1234", vm.state.value.shareCode)
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
     }
 
     private fun makeViewModel(api: FakeApi, seniorId: Long?) = ParentSettingsViewModel(

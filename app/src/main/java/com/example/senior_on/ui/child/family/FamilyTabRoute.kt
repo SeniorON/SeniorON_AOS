@@ -22,7 +22,6 @@ fun FamilyTabRoute(
     onMorePhotosClick: () -> Unit = {},
     onGalleryClick: () -> Unit = {},
     onCameraClick: () -> Unit = {},
-    onSeniorConnectionClick: () -> Unit = {},
     onPhotoClick: (String) -> Unit = {},
     viewModel: FamilyViewModel,
 ) {
@@ -48,7 +47,6 @@ fun FamilyTabRoute(
         onInviteFamilyClick = onInviteFamilyClick,
         onMorePhotosClick = onMorePhotosClick,
         onUploadPhotoClick = { isPhotoSourceSheetVisible = true },
-        onSeniorConnectionClick = onSeniorConnectionClick,
         onPhotoClick = onPhotoClick,
         onRetryClick = { viewModel.loadFamilyOverview(seniorId) },
         isRefreshing = presentedUiState.isRefreshing,

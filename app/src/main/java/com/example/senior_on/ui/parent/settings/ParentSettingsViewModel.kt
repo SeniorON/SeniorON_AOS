@@ -7,6 +7,7 @@ import com.example.senior_on.data.repository.impl.ParentSettingsRepository
 import com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.domain.repository.auth.AuthRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,7 @@ class ParentSettingsViewModel(
     private val settings: ParentSettingsRepository,
     private val family: FamilyServerRepository,
     private val photoPreparer: com.example.senior_on.data.local.FamilyPhotoUploadPreparer? = null,
+    private val auth: AuthRepository? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ParentSettingsState())
     val state = mutableState.asStateFlow()
@@ -65,7 +67,16 @@ class ParentSettingsViewModel(
 
     fun loadShareCode() = perform(queryKey = "shareCode") {
         val seniorId = profileRepository.getOwnSeniorId()
-        val code = family.getCode(seniorId).code
+        val familyId = auth?.let { repository ->
+            requireNotNull(
+                repository.getOnboardingStatus()
+                    .families
+                    .orEmpty()
+                    .firstOrNull { it.seniorId == seniorId }
+                    ?.familyId
+            ) { "가족 정보를 확인하지 못했어요." }
+        } ?: seniorId
+        val code = family.getCode(familyId).code
         check(code.isNotBlank()) { "공유 코드를 확인하지 못했어요." }
         mutableState.update { it.copy(shareCode = code) }
     }

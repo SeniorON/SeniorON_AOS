@@ -7,23 +7,6 @@ import org.junit.Test
 
 class FamilyMemberSettingsPolicyTest {
     @Test
-    fun `시니어 연결 관리는 현재 사용자가 주 담당자일 때만 허용한다`() {
-        val primaryState = FamilyTabUiState(
-            members = listOf(
-                familyMember("1", FamilyCaregiverRole.Primary, false, isCurrentUser = true),
-            ),
-        )
-        val assistantState = FamilyTabUiState(
-            members = listOf(
-                familyMember("2", FamilyCaregiverRole.Assistant, true, isCurrentUser = true),
-            ),
-        )
-
-        assertTrue(primaryState.canManageSeniorConnections)
-        assertFalse(assistantState.canManageSeniorConnections)
-    }
-
-    @Test
     fun `구성원을 선택하기 전에는 변경과 삭제가 로딩 상태가 아니다`() {
         assertFalse(isSelectedMemberMutationLoading(null, null))
     }

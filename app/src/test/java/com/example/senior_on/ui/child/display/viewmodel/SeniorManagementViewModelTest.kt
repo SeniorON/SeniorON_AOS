@@ -422,7 +422,7 @@ private class FakeFamilyRepository(
         joinCount++
         return joinResult ?: error("유효하지 않은 시니어 코드예요.")
     }
-    override suspend fun getCode(seniorId: Long): FamilyCodeInfo = error("unused")
+    override suspend fun getCode(familyId: Long): FamilyCodeInfo = error("unused")
     override suspend fun getHome(seniorId: Long): ServerFamilyHome = error("unused")
     override suspend fun getMembers(seniorId: Long): List<ServerFamilyMember> = error("unused")
     override suspend fun changePrimaryManager(userId: Long, seniorId: Long) = error("unused")

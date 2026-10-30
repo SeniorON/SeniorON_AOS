@@ -3,7 +3,6 @@ package com.example.senior_on.ui.child
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoUploadViewModel
 import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoTargetViewModel
 import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
-import com.example.senior_on.ui.child.family.viewmodel.SeniorConnectionViewModel
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
 import android.Manifest
@@ -92,7 +91,6 @@ import com.example.senior_on.ui.child.family.FamilyPhotoDetailRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoGalleryRoute
 import com.example.senior_on.ui.child.family.FamilyPhotoShareRoute
 import com.example.senior_on.ui.child.family.FamilyTabRoute
-import com.example.senior_on.ui.child.family.SeniorConnectionRoute
 import com.example.senior_on.ui.child.health.HealthMainScreen
 import com.example.senior_on.ui.child.health.HealthSection
 import com.example.senior_on.ui.child.health.previewRegisteredMedications
@@ -122,7 +120,6 @@ internal enum class ChildFamilyDestination {
     PhotoGallery,
     PhotoShare,
     PhotoDetail,
-    SeniorConnection,
 }
 
 @Composable
@@ -246,10 +243,6 @@ fun ChildMainScreen(
     )
     val seniorManagementUiState by
         seniorManagementViewModel.uiState.collectAsStateWithLifecycle()
-    val seniorConnectionViewModel: SeniorConnectionViewModel = viewModel(
-        key = "senior-connection:$childSessionViewModelKey",
-        factory = SeniorConnectionViewModel.factory(familyServerRepository),
-    )
     var showSeniorManagement by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.managedSeniors, seniorManagementUiState.errorMessage) {
@@ -471,7 +464,6 @@ fun ChildMainScreen(
                 familyViewModel = familyViewModel,
                 familyPhotoUploadViewModel = familyPhotoUploadViewModel,
                 familyPhotoTargetViewModel = familyPhotoTargetViewModel,
-                seniorConnectionViewModel = seniorConnectionViewModel,
                 activeSeniorId = activeSeniorId,
                 tabReselectionToken = tabReselectionToken,
                 familyInvitationViewModelKey = "family-invitation:$childSessionViewModelKey",
@@ -543,9 +535,6 @@ fun ChildMainScreen(
                 },
                 onGalleryClick = launchGallery,
                 onCameraClick = launchCamera,
-                onSeniorConnectionClick = {
-                    familyDestination = ChildFamilyDestination.SeniorConnection
-                },
                 onPhotoShared = {
                     selectedPhotoUri = null
                     selectedPhotoSessionId = null
@@ -639,7 +628,6 @@ internal fun resolveChildFamilyBackDestination(
     ChildFamilyDestination.PhotoGallery -> ChildFamilyDestination.Overview
     ChildFamilyDestination.PhotoShare -> photoShareReturnDestination
     ChildFamilyDestination.PhotoDetail -> photoDetailReturnDestination
-    ChildFamilyDestination.SeniorConnection -> ChildFamilyDestination.Overview
     ChildFamilyDestination.Overview -> ChildFamilyDestination.Overview
 }
 
@@ -667,7 +655,6 @@ private fun ChildMainTabContent(
     familyViewModel: FamilyViewModel,
     familyPhotoUploadViewModel: FamilyPhotoUploadViewModel,
     familyPhotoTargetViewModel: FamilyPhotoTargetViewModel,
-    seniorConnectionViewModel: SeniorConnectionViewModel,
     activeSeniorId: Long?,
     tabReselectionToken: Int,
     familyInvitationViewModelKey: String,
@@ -687,7 +674,6 @@ private fun ChildMainTabContent(
     onMorePhotosClick: () -> Unit,
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
-    onSeniorConnectionClick: () -> Unit,
     onPhotoShared: () -> Unit,
     onPhotoClick: (String) -> Unit,
     onFamilyBackClick: () -> Unit,
@@ -715,8 +701,6 @@ private fun ChildMainTabContent(
     onWithdrawClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val familyUiState by familyViewModel.uiState.collectAsStateWithLifecycle()
-
     if (selectedTab == ChildMainTab.Screen) {
         key(selectedSeniorId) {
             DisplayTabRoute(
@@ -781,7 +765,6 @@ private fun ChildMainTabContent(
                     onMorePhotosClick = onMorePhotosClick,
                     onGalleryClick = onGalleryClick,
                     onCameraClick = onCameraClick,
-                    onSeniorConnectionClick = onSeniorConnectionClick,
                     onPhotoClick = onPhotoClick,
                     viewModel = familyViewModel,
                 )
@@ -798,13 +781,17 @@ private fun ChildMainTabContent(
             } ?: ChildFamilySeniorRequiredContent(modifier)
 
             ChildFamilyDestination.Invitation -> {
-                activeSeniorId?.let { seniorId ->
+                val activeSenior = seniorAccounts.firstOrNull {
+                    it.seniorId == activeSeniorId
+                }
+                activeSenior?.let { senior ->
                     FamilyInvitationRoute(
-                        seniorId = seniorId,
+                        familyId = senior.familyId,
+                        seniorId = senior.seniorId,
                         onBackClick = onFamilyBackClick,
                         modifier = modifier,
                         repository = familyServerRepository,
-                        viewModelKey = "$familyInvitationViewModelKey:$seniorId",
+                        viewModelKey = "$familyInvitationViewModelKey:${senior.familyId}",
                     )
                 } ?: ChildFamilySeniorRequiredContent(modifier)
             }
@@ -845,6 +832,7 @@ private fun ChildMainTabContent(
             ChildFamilyDestination.PhotoDetail -> {
                 selectedPhotoId?.let { photoId ->
                     FamilyPhotoDetailRoute(
+                        seniorId = requireNotNull(activeSeniorId),
                         photoId = photoId,
                         onBackClick = onFamilyBackClick,
                         onDeleteSuccess = onFamilyBackClick,
@@ -854,18 +842,6 @@ private fun ChildMainTabContent(
                 }
             }
 
-            ChildFamilyDestination.SeniorConnection -> activeSeniorId?.let { seniorId ->
-                SeniorConnectionRoute(
-                    seniorId = seniorId,
-                    canManageConnections = familyUiState.canManageSeniorConnections,
-                    onBackClick = onFamilyBackClick,
-                    onConnectionsChanged = {
-                        familyViewModel.refreshAfterConnectionChange(seniorId)
-                    },
-                    viewModel = seniorConnectionViewModel,
-                    modifier = modifier,
-                )
-            } ?: ChildFamilySeniorRequiredContent(modifier)
         }
         return
     }

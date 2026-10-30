@@ -48,7 +48,7 @@ fun FamilyPhotoShareRoute(
     var isRecipientSheetVisible by rememberSaveable(uploadSessionId) {
         mutableStateOf(false)
     }
-    var selectedPhotoGroupIds by rememberSaveable(uploadSessionId) {
+    var selectedSeniorIds by rememberSaveable(uploadSessionId) {
         mutableStateOf(emptyList<Long>())
     }
     val uploadUiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -65,10 +65,10 @@ fun FamilyPhotoShareRoute(
     }
 
     LaunchedEffect(recipients) {
-        val availablePhotoGroupIds = recipients
-            .map { it.photoGroupId }
+        val availableSeniorIds = recipients
+            .map { it.seniorId }
             .toSet()
-        selectedPhotoGroupIds = selectedPhotoGroupIds.filter(availablePhotoGroupIds::contains)
+        selectedSeniorIds = selectedSeniorIds.filter(availableSeniorIds::contains)
     }
 
     LaunchedEffect(
@@ -116,26 +116,26 @@ fun FamilyPhotoShareRoute(
     if (isRecipientSheetVisible) {
         FamilyPhotoRecipientBottomSheet(
             seniors = recipients,
-            selectedPhotoGroupIds = selectedPhotoGroupIds,
-            onPhotoGroupClick = { photoGroupId ->
-                if (!targetViewModel.uiState.value.canShare(listOf(photoGroupId))) {
+            selectedSeniorIds = selectedSeniorIds,
+            onSeniorClick = { selectedSeniorId ->
+                if (!targetViewModel.uiState.value.canShare(listOf(selectedSeniorId))) {
                     return@FamilyPhotoRecipientBottomSheet
                 }
-                selectedPhotoGroupIds = togglePhotoRecipientSelection(
-                    selectedPhotoGroupIds = selectedPhotoGroupIds,
-                    photoGroupId = photoGroupId,
+                selectedSeniorIds = togglePhotoRecipientSelection(
+                    selectedSeniorIds = selectedSeniorIds,
+                    seniorId = selectedSeniorId,
                 )
             },
             onDismiss = { isRecipientSheetVisible = false },
             onShareClick = {
-                if (!targetViewModel.uiState.value.canShare(selectedPhotoGroupIds)) {
+                if (!targetViewModel.uiState.value.canShare(selectedSeniorIds)) {
                     return@FamilyPhotoRecipientBottomSheet
                 }
                 isRecipientSheetVisible = false
                 viewModel.uploadPhoto(
                     message = message,
                     seniorId = seniorId,
-                    photoGroupIds = selectedPhotoGroupIds,
+                    seniorIds = selectedSeniorIds,
                 )
             },
             isLoading = targetUiState.isLoading || !targetUiState.hasLoaded,
@@ -159,6 +159,6 @@ fun FamilyPhotoShareRoute(
 
 internal fun familyPhotoRecipients(
     targets: List<ServerPhotoTarget>,
-): List<ServerPhotoTarget> = targets.distinctBy(ServerPhotoTarget::photoGroupId)
+): List<ServerPhotoTarget> = targets.distinctBy(ServerPhotoTarget::seniorId)
 
 internal fun normalizeFamilyPhotoMessage(message: String): String = message.take(30)

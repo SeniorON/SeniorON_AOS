@@ -120,7 +120,6 @@ class FamilyViewModel(
                     if (!isActiveSenior(seniorId)) return@update currentState
                     currentState.copy(
                         seniorId = seniorId,
-                        photoGroupId = home.photoGroupId,
                         members = members,
                         sharedPhotos = if (isPhotoGalleryLoaded) {
                             (recentPhotos + currentState.sharedPhotos)
@@ -613,13 +612,6 @@ class FamilyViewModel(
     fun refreshAfterPhotoUpload(seniorId: Long) {
         if (!isActiveSenior(seniorId)) return
         invalidatePhotoGallery(clearPhotos = false)
-        loadFamilyOverview(seniorId)
-        loadPhotoGallery(seniorId = seniorId, force = true)
-    }
-
-    fun refreshAfterConnectionChange(seniorId: Long) {
-        if (!isActiveSenior(seniorId)) return
-        invalidatePhotoGallery(clearPhotos = true)
         loadFamilyOverview(seniorId)
         loadPhotoGallery(seniorId = seniorId, force = true)
     }

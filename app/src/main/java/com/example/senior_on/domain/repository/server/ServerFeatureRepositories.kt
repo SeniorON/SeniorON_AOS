@@ -27,18 +27,11 @@ interface FamilyServerRepository {
     suspend fun join(code: String): FamilyCodeInfo
     suspend fun createCode(): FamilyCodeInfo
     suspend fun getPendingCode(): FamilyCodeInfo? = null
-    suspend fun getCode(seniorId: Long): FamilyCodeInfo
+    suspend fun getCode(familyId: Long): FamilyCodeInfo
     suspend fun getHome(seniorId: Long): ServerFamilyHome
     suspend fun getMembers(seniorId: Long): List<ServerFamilyMember>
     suspend fun changePrimaryManager(userId: Long, seniorId: Long)
     suspend fun deleteMember(userId: Long, seniorId: Long)
-    suspend fun getConnectedSeniors(seniorId: Long): List<ServerConnectedSenior> = emptyList()
-    suspend fun connectPhotoGroup(seniorId: Long, seniorCode: String) {
-        error("Photo-group connection is not implemented")
-    }
-    suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        error("Photo-group disconnection is not implemented")
-    }
     suspend fun getPhotoTargets(): List<ServerPhotoTarget> = emptyList()
     suspend fun getPhotoAlbums(seniorId: Long): List<ServerFamilyPhotoAlbum>
     suspend fun getPhotos(
@@ -58,7 +51,7 @@ interface FamilyServerRepository {
         description: String,
         idempotencyKey: String,
         seniorId: Long,
-        photoGroupIds: List<Long>,
+        seniorIds: List<Long>,
     ): ServerFamilyPhoto = uploadPhoto(photo, description, idempotencyKey)
     suspend fun getPhoto(photoId: Long): ServerFamilyPhoto
     suspend fun markPhotoViewed(photoId: Long, seniorId: Long)

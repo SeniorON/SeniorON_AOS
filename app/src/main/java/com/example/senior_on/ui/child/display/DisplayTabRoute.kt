@@ -182,13 +182,19 @@ fun DisplayTabRoute(
         destination = DisplayDestination.SeniorAppInstallGuide
     }
 
-    fun runWhenParentPhoneOnline(action: () -> Unit) {
-        when (uiState.device?.connectionStatus) {
-            DisplayDeviceConnectionStatus.Online -> action()
-            DisplayDeviceConnectionStatus.Offline -> showInternetRequiredDialog = true
-            DisplayDeviceConnectionStatus.LoginExpired ->
+    fun runWhenParentPhoneConnected(action: () -> Unit) {
+        val status = uiState.device?.connectionStatus
+        when {
+            status.allowsDisplayPreviewAndEditing() -> action()
+            status == DisplayDeviceConnectionStatus.LoginExpired ->
                 destination = DisplayDestination.DeviceConnection
-            null -> navigateToSeniorAppInstallGuide()
+            else -> navigateToSeniorAppInstallGuide()
+        }
+    }
+
+    fun showOfflineDelayNoticeIfNeeded() {
+        if (uiState.device?.connectionStatus.requiresDelayedApplyNotice()) {
+            showInternetRequiredDialog = true
         }
     }
 
@@ -278,13 +284,13 @@ fun DisplayTabRoute(
                         }
                     },
                     onLargePreviewClick = {
-                        runWhenParentPhoneOnline {
+                        runWhenParentPhoneConnected {
                             showLargePreview = true
                             onLargePreviewClick()
                         }
                     },
                     onFontEditClick = {
-                        runWhenParentPhoneOnline {
+                        runWhenParentPhoneConnected {
                             saveableStateHolder.removeState(
                                 DisplayDestination.FontEdit.name
                             )
@@ -293,7 +299,7 @@ fun DisplayTabRoute(
                         }
                     },
                     onButtonEditClick = {
-                        runWhenParentPhoneOnline {
+                        runWhenParentPhoneConnected {
                             saveableStateHolder.removeState(
                                 DisplayDestination.ButtonEditGuide.name
                             )
@@ -421,6 +427,7 @@ fun DisplayTabRoute(
                                 DisplayDestination.FontEdit.name
                             )
                             destination = DisplayDestination.Overview
+                            showOfflineDelayNoticeIfNeeded()
                         },
                     )
                 },
@@ -450,6 +457,7 @@ fun DisplayTabRoute(
                         onSuccess = {
                             clearButtonEditFlowState()
                             destination = DisplayDestination.Overview
+                            showOfflineDelayNoticeIfNeeded()
                         },
                     )
                 },
@@ -531,6 +539,7 @@ fun DisplayTabRoute(
                         onSuccess = {
                             clearButtonEditFlowState()
                             destination = DisplayDestination.Overview
+                            showOfflineDelayNoticeIfNeeded()
                         },
                     )
                 },

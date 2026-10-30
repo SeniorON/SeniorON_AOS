@@ -10,7 +10,7 @@ interface FamilyApi {
     @POST("api/family/code-create") suspend fun createCode(): ApiResponse<FamilyCodeCreateResponse>
     @GET("api/family/code")
     suspend fun getCode(
-        @Query("seniorId") seniorId: Long,
+        @Query("familyId") familyId: Long,
     ): ApiResponse<FamilyCodeResponse>
     @GET("api/family/home")
     suspend fun getHome(
@@ -28,19 +28,6 @@ interface FamilyApi {
     @DELETE("api/family/members/{targetUserId}")
     suspend fun deleteMember(
         @Path("targetUserId") targetUserId: Long,
-        @Query("seniorId") seniorId: Long,
-    ): ApiResponse<Unit>
-    @GET("api/family/photo-groups/connections")
-    suspend fun getPhotoGroupConnections(
-        @Query("seniorId") seniorId: Long,
-    ): ApiResponse<List<FamilyPhotoGroupConnectionResponse>>
-    @POST("api/family/photo-groups/connections")
-    suspend fun connectPhotoGroup(
-        @Body request: FamilyPhotoGroupConnectionRequest,
-    ): ApiResponse<Unit>
-    @DELETE("api/family/photo-groups/connections/{photoGroupId}")
-    suspend fun disconnectPhotoGroup(
-        @Path("photoGroupId") photoGroupId: Long,
         @Query("seniorId") seniorId: Long,
     ): ApiResponse<Unit>
     @GET("api/family/photos/targets")
