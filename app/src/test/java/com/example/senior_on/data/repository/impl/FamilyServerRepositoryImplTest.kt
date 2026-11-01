@@ -29,6 +29,24 @@ import org.junit.Test
 
 class FamilyServerRepositoryImplTest {
     @Test
+    fun `code lookup sends selected family id`() = runBlocking {
+        val source = FakeRemoteFamilySource()
+        val repository = FamilyServerRepositoryImpl(source)
+
+        assertEquals(28L, repository.getCode(28L).familyId)
+        assertEquals(listOf(28L), source.codeFamilyIds)
+    }
+
+    @Test
+    fun `invalid family id does not query code`() = runBlocking {
+        val source = FakeRemoteFamilySource()
+        val repository = FamilyServerRepositoryImpl(source)
+
+        assertTrue(runCatching { repository.getCode(0L) }.isFailure)
+        assertTrue(source.codeFamilyIds.isEmpty())
+    }
+
+    @Test
     fun `photo targets come from the dedicated target response`() = runBlocking {
         val source = FakeRemoteFamilySource(
             targets = listOf(
@@ -389,8 +407,11 @@ private class FakeRemoteFamilySource(
     override suspend fun createCode() =
         FamilyCodeCreateResponse(familyId = 1, familyCode = "ABCD-1234")
 
-    override suspend fun getCode(familyId: Long) =
-        FamilyCodeResponse(familyCode = "ABCD-1234", familyMemberCount = 2)
+    val codeFamilyIds = mutableListOf<Long>()
+    override suspend fun getCode(familyId: Long): FamilyCodeResponse {
+        codeFamilyIds.add(familyId)
+        return FamilyCodeResponse(familyCode = "ABCD-1234", familyMemberCount = 2)
+    }
 
     override suspend fun getHome(seniorId: Long) = home
 

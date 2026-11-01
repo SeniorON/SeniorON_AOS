@@ -1,5 +1,13 @@
 package com.example.senior_on.data.remote.dto
 
+/** Gson omits null properties; false and zero are intentional updates. */
+data class DeviceStatusPatchRequest(
+    val deviceIdentifier: String,
+    val batteryLevel: Int? = null,
+    val charging: Boolean? = null,
+    val networkConnected: Boolean? = null,
+)
+
 data class DeviceStatusUpdateRequest(
     val deviceIdentifier: String,
     val deviceName: String,

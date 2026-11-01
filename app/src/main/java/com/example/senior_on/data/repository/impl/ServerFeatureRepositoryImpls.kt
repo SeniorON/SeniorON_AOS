@@ -171,8 +171,12 @@ class FamilyServerRepositoryImpl(
     override suspend fun createCode() = source.createCode().let {
         FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }
-    override suspend fun getCode(familyId: Long) = source.getCode(familyId).let {
-        FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
+    override suspend fun getCode(familyId: Long): FamilyCodeInfo {
+        check(familyId > 0) { "가족 정보를 확인하지 못했어요." }
+        return source.getCode(familyId).let {
+            check(!it.familyCode.isNullOrBlank()) { "코드를 확인하지 못했어요." }
+            FamilyCodeInfo(familyId, it.familyCode.orEmpty(), it.familyMemberCount)
+        }
     }
     override suspend fun getHome(seniorId: Long) = mapFamilyHome(source.getHome(seniorId))
 
@@ -819,9 +823,23 @@ class DeviceRepositoryImpl(
     private val sharingGuard: ParentSharingGuard? = null,
     private val permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)? = null,
 ) : DeviceRepository {
-    override suspend fun updateStatus(): Boolean {
+    private val statusMutex = Mutex()
+
+    override suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, canSend: () -> Boolean): Boolean = statusMutex.withLock {
+        if (!canSend()) return@withLock false
         val status = localStatusSource.getStatusSnapshot()
-        return source.updateStatus(
+        if (!status.networkConnected) return@withLock false
+        source.patchStatus(com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest(
+            deviceIdentifier = identifierSource.getOrCreateIdentifier(),
+            batteryLevel = status.batteryLevel.takeIf { battery || network },
+            charging = status.charging.takeIf { charging || network },
+            networkConnected = true.takeIf { network },
+        ))
+    }
+
+    override suspend fun updateStatus(): Boolean = statusMutex.withLock {
+        val status = localStatusSource.getStatusSnapshot()
+        source.updateStatus(
             DeviceStatusUpdateRequest(
                 deviceIdentifier = identifierSource.getOrCreateIdentifier(),
                 deviceName = status.deviceName,

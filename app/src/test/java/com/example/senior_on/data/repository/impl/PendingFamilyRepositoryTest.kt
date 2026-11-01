@@ -11,16 +11,24 @@ import org.junit.Test
 class PendingFamilyRepositoryTest {
     private var account = 1L
     private var creations = 0
+    private var failLookup = false
+    private val lookups = mutableListOf<Long>()
     private var families = emptyList<OnboardingFamilyStatus>()
     private val saved = mutableMapOf<Long, FamilyCodeInfo>()
     private val code = FamilyCodeInfo(10L, "ABCD-1234")
     private val delegate = Proxy.newProxyInstance(
         FamilyServerRepository::class.java.classLoader,
         arrayOf(FamilyServerRepository::class.java),
-    ) { _, method, _ ->
-        check(method.name == "createCode")
-        creations++
-        code
+    ) { _, method, args ->
+        when (method.name) {
+            "createCode" -> { creations++; code }
+            "getCode" -> {
+                lookups.add(args[0] as Long)
+                check(!failLookup) { "offline" }
+                code.copy(familyId = args[0] as Long)
+            }
+            else -> error("Unexpected ${method.name}")
+        }
     } as FamilyServerRepository
     private val repository = PendingFamilyRepository(
         delegate, { account },
@@ -46,8 +54,9 @@ class PendingFamilyRepositoryTest {
 
     @Test fun missingCachedCodeDoesNotCreateDuplicateFamily() = runTest {
         families = listOf(family())
-        assertTrue(runCatching { repository.getPendingCode() }.isFailure)
-        assertTrue(runCatching { repository.createCode() }.isFailure)
+        assertEquals(code, repository.getPendingCode())
+        assertEquals(code, repository.createCode())
+        assertEquals(listOf(10L, 10L), lookups)
         assertEquals(0, creations)
     }
 
@@ -69,8 +78,18 @@ class PendingFamilyRepositoryTest {
         saved[1L] = code
         account = 2L
         families = listOf(family())
-        assertTrue(runCatching { repository.getPendingCode() }.isFailure)
+        assertEquals(code, repository.getPendingCode())
         assertEquals(code, saved[1L])
+        assertEquals(code, saved[2L])
         assertEquals(0, creations)
+    }
+
+    @Test fun failedLookupDoesNotCreateFamilyOrReturnStaleCode() = runTest {
+        families = listOf(family())
+        saved[account] = code.copy(code = "OLD-CODE")
+        failLookup = true
+        assertTrue(runCatching { repository.createCode() }.isFailure)
+        assertEquals(0, creations)
+        assertEquals("OLD-CODE", saved[account]?.code)
     }
 }

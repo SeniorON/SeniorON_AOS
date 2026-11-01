@@ -19,6 +19,8 @@ class FamilyApiContractTest {
     @Test
     fun `family code sends the selected family id`() {
         assertEquals(listOf("familyId"), queryNames("getCode"))
+        val method = FamilyApi::class.java.methods.single { it.name == "getCode" }
+        assertEquals(Long::class.javaPrimitiveType, method.parameterTypes[0])
     }
 
     @Test

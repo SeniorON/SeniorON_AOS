@@ -14,6 +14,9 @@ import retrofit2.http.PUT
 import retrofit2.http.Query
 
 interface DeviceApi {
+    @PATCH("api/devices/status")
+    suspend fun patchStatus(@Body request: com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest): Response<Unit>
+
     @GET("api/devices/reconnection")
     suspend fun getReconnection(): DeviceReconnectionStatus
 

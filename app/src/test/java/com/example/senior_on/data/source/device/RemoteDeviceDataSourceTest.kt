@@ -58,6 +58,7 @@ class RemoteDeviceDataSourceTest {
     private class FakeDeviceApi(
         private val statusResponse: Response<Unit>,
     ) : DeviceApi {
+        override suspend fun patchStatus(request: com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest): Response<Unit> = statusResponse
         override suspend fun getReconnection() = com.example.senior_on.data.remote.api.DeviceReconnectionStatus(true, false)
         override suspend fun reconnect(): Response<Unit> = Response.success(Unit)
         override suspend fun updateStatus(
