@@ -10,7 +10,7 @@ interface FamilyApi {
     @POST("api/family/code-create") suspend fun createCode(): ApiResponse<FamilyCodeCreateResponse>
     @GET("api/family/code")
     suspend fun getCode(
-        @Query("seniorId") seniorId: Long,
+        @Query("familyId") familyId: Long,
     ): ApiResponse<FamilyCodeResponse>
     @GET("api/family/home")
     suspend fun getHome(

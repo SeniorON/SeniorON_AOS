@@ -156,9 +156,17 @@ class HomeServerRepositoryImpl(
     }
 }
 
+internal fun familyIdForCodeLookup(
+    families: List<com.example.senior_on.domain.model.auth.OnboardingFamilyStatus>?,
+    seniorId: Long,
+): Long = checkNotNull(families?.singleOrNull { it.seniorId == seniorId }?.familyId) {
+    "선택한 시니어의 가족 정보를 확인하지 못했어요."
+}.also { check(it > 0) { "가족 정보를 확인하지 못했어요." } }
+
 class FamilyServerRepositoryImpl(
     private val source: RemoteFamilySource,
     private val elapsedTimeMillis: () -> Long = { System.nanoTime() / 1_000_000L },
+    private val resolveFamilyId: suspend (Long) -> Long = { error("Family lookup is not configured") },
 ) : FamilyServerRepository {
     private val photoUploadMutex = Mutex()
     private val pendingPhotoUploads = mutableMapOf<String, PendingFamilyPhotoUpload>()
@@ -171,8 +179,14 @@ class FamilyServerRepositoryImpl(
     override suspend fun createCode() = source.createCode().let {
         FamilyCodeInfo(it.familyId, it.familyCode.orEmpty())
     }
-    override suspend fun getCode(seniorId: Long) = source.getCode(seniorId).let {
-        FamilyCodeInfo(null, it.familyCode.orEmpty(), it.familyMemberCount)
+    override suspend fun getCode(seniorId: Long) = getCodeByFamilyId(resolveFamilyId(seniorId))
+
+    override suspend fun getCodeByFamilyId(familyId: Long): FamilyCodeInfo {
+        check(familyId > 0) { "가족 정보를 확인하지 못했어요." }
+        return source.getCode(familyId).let {
+            check(!it.familyCode.isNullOrBlank()) { "코드를 확인하지 못했어요." }
+            FamilyCodeInfo(familyId, it.familyCode.orEmpty(), it.familyMemberCount)
+        }
     }
     override suspend fun getHome(seniorId: Long) = mapFamilyHome(source.getHome(seniorId))
 

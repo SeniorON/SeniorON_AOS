@@ -58,13 +58,18 @@ class PendingFamilyRepository(
         val pending = families.filter { it.managerType == CareManagerType.Primary && it.seniorId == null }
         val cached = read(account)
         check(accountId() == account) { "로그인 계정이 변경되었어요." }
-        if (cached != null && pending.any { it.familyId == cached.familyId } && cached.code.isNotBlank()) {
-            return cached
+        val target = pending.firstOrNull { it.familyId == cached?.familyId }
+            ?: pending.firstOrNull()
+        if (target != null) {
+            val refreshed = delegate.getCodeByFamilyId(target.familyId)
+            check(accountId() == account) { "로그인 계정이 변경되었어요." }
+            check(refreshed.familyId == target.familyId && refreshed.code.isNotBlank()) {
+                "코드를 확인하지 못했어요."
+            }
+            write(account, refreshed)
+            return refreshed
         }
         if (cached != null) write(account, null)
-        check(pending.isEmpty()) {
-            "아직 시니어가 등록되지 않은 가족이 있지만, 이 기기에 저장된 공유코드가 없어요. 기존 발급 화면에서 확인한 코드를 이용해 주세요."
-        }
         if (!create) return null
         check(accountId() == account) { "로그인 계정이 변경되었어요." }
         val created = delegate.createCode()
