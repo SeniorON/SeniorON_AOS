@@ -28,6 +28,8 @@ interface FamilyServerRepository {
     suspend fun createCode(): FamilyCodeInfo
     suspend fun getPendingCode(): FamilyCodeInfo? = null
     suspend fun getCode(seniorId: Long): FamilyCodeInfo
+    suspend fun getCodeByFamilyId(familyId: Long): FamilyCodeInfo =
+        error("Family code lookup is not implemented")
     suspend fun getHome(seniorId: Long): ServerFamilyHome
     suspend fun getMembers(seniorId: Long): List<ServerFamilyMember>
     suspend fun changePrimaryManager(userId: Long, seniorId: Long)
@@ -121,6 +123,8 @@ interface UserSettingsRepository {
 }
 
 interface DeviceRepository {
+    suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, canSend: () -> Boolean): Boolean =
+        error("Partial status update is not supported")
     /**
      * @return `false` when the server reports that this device was explicitly disconnected.
      */

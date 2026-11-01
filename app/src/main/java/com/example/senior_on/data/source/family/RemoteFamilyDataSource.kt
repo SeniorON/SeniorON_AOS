@@ -11,7 +11,7 @@ import retrofit2.HttpException
 interface RemoteFamilySource {
     suspend fun join(request: FamilyJoinRequest): FamilyJoinResponse
     suspend fun createCode(): FamilyCodeCreateResponse
-    suspend fun getCode(seniorId: Long): FamilyCodeResponse
+    suspend fun getCode(familyId: Long): FamilyCodeResponse
     suspend fun getHome(seniorId: Long): FamilyHomeResponse
     suspend fun getMembers(seniorId: Long): List<FamilyMemberResponse>
     suspend fun changePrimaryManager(
@@ -63,8 +63,8 @@ class RemoteFamilyDataSource(
     override suspend fun createCode() = remoteRequest {
         api.createCode().requireData()
     }
-    override suspend fun getCode(seniorId: Long) = remoteRequest {
-        api.getCode(seniorId).requireData()
+    override suspend fun getCode(familyId: Long) = remoteRequest {
+        api.getCode(familyId).requireData()
     }
     override suspend fun getHome(seniorId: Long) = remoteRequest {
         api.getHome(seniorId).requireData()
