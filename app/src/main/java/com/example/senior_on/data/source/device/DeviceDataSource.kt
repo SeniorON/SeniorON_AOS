@@ -11,6 +11,8 @@ import retrofit2.HttpException
 import retrofit2.Response
 
 interface DeviceDataSource {
+    suspend fun patchStatus(request: com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest): Boolean =
+        error("Partial status update is not supported")
     suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean
     suspend fun updateFcmToken(request: FcmTokenUpdateRequest)
     suspend fun disconnect(seniorId: Long)
@@ -20,6 +22,13 @@ interface DeviceDataSource {
 }
 
 class RemoteDeviceDataSource(private val api: DeviceApi) : DeviceDataSource {
+    override suspend fun patchStatus(request: com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest): Boolean =
+        remoteRequest {
+            val response = api.patchStatus(request)
+            if (response.code() == DEVICE_NOT_CONNECTED_HTTP_STATUS) false
+            else { response.requireSuccessful(); true }
+        }
+
     override suspend fun updateStatus(request: DeviceStatusUpdateRequest): Boolean =
         remoteRequest {
             val response = api.updateStatus(request)

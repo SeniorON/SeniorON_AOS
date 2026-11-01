@@ -34,7 +34,7 @@ object ParentConnectionGate {
     @Synchronized fun blocks(method: String, path: String): Boolean {
         if (!parent || ready) return false
         return path == "/ws" ||
-            (method == "PUT" && path == "/api/devices/status") ||
+            (method in setOf("PUT", "PATCH") && path == "/api/devices/status") ||
             (method == "PATCH" && path in setOf("/api/devices/location", "/api/devices/fcm-token")) ||
             (method == "POST" && path.startsWith("/api/event/"))
     }

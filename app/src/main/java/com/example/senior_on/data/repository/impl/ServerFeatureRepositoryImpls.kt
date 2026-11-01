@@ -863,9 +863,23 @@ class DeviceRepositoryImpl(
     private val sharingGuard: ParentSharingGuard? = null,
     private val permissionsLoader: (suspend (Long) -> com.example.senior_on.data.remote.api.SeniorPermissionSettings)? = null,
 ) : DeviceRepository {
-    override suspend fun updateStatus(): Boolean {
+    private val statusMutex = Mutex()
+
+    override suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, canSend: () -> Boolean): Boolean = statusMutex.withLock {
+        if (!canSend()) return@withLock false
         val status = localStatusSource.getStatusSnapshot()
-        return source.updateStatus(
+        if (!status.networkConnected) return@withLock false
+        source.patchStatus(com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest(
+            deviceIdentifier = identifierSource.getOrCreateIdentifier(),
+            batteryLevel = status.batteryLevel.takeIf { battery || network },
+            charging = status.charging.takeIf { charging || network },
+            networkConnected = true.takeIf { network },
+        ))
+    }
+
+    override suspend fun updateStatus(): Boolean = statusMutex.withLock {
+        val status = localStatusSource.getStatusSnapshot()
+        source.updateStatus(
             DeviceStatusUpdateRequest(
                 deviceIdentifier = identifierSource.getOrCreateIdentifier(),
                 deviceName = status.deviceName,

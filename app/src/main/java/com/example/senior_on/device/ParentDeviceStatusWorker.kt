@@ -85,6 +85,7 @@ class ParentDeviceStatusWorker(
 
 object ParentDeviceStatusScheduler {
     fun cancel(context: Context) {
+        DeviceStatusPatchScheduler.cancel(context.applicationContext)
         WorkManager.getInstance(context.applicationContext).cancelUniqueWork(PeriodicWorkName)
         WorkManager.getInstance(context.applicationContext).cancelUniqueWork(ImmediateWorkName)
     }

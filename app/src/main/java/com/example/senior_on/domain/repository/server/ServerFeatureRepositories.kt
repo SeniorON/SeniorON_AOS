@@ -123,6 +123,8 @@ interface UserSettingsRepository {
 }
 
 interface DeviceRepository {
+    suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, canSend: () -> Boolean): Boolean =
+        error("Partial status update is not supported")
     /**
      * @return `false` when the server reports that this device was explicitly disconnected.
      */
