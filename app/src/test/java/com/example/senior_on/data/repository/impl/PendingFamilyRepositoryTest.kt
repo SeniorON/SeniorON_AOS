@@ -22,7 +22,7 @@ class PendingFamilyRepositoryTest {
     ) { _, method, args ->
         when (method.name) {
             "createCode" -> { creations++; code }
-            "getCodeByFamilyId" -> {
+            "getCode" -> {
                 lookups.add(args[0] as Long)
                 check(!failLookup) { "offline" }
                 code.copy(familyId = args[0] as Long)
@@ -41,14 +41,6 @@ class PendingFamilyRepositoryTest {
     @Test fun viewingDoesNotCreateFamily() = runTest {
         assertNull(repository.getPendingCode())
         assertEquals(0, creations)
-    }
-
-    @Test fun selectedSeniorResolvesMatchingFamilyRatherThanFirstFamily() {
-        val entries = listOf(family(senior = 3L), family(senior = 7L).copy(familyId = 20L))
-        assertEquals(20L, familyIdForCodeLookup(entries, 7L))
-        assertTrue(runCatching { familyIdForCodeLookup(entries, 9L) }.isFailure)
-        assertTrue(runCatching { familyIdForCodeLookup(null, 7L) }.isFailure)
-        assertTrue(runCatching { familyIdForCodeLookup(listOf(family()), 7L) }.isFailure)
     }
 
     @Test fun createdCodeIsSavedAndReusedAcrossEntryPoints() = runTest {

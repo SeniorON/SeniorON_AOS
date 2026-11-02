@@ -181,17 +181,7 @@ class DefaultAppContainer(
     }
     private val pendingFamilyCodeStore = com.example.senior_on.data.repository.impl.PendingFamilyCodeStore(context)
     override val familyServerRepository = com.example.senior_on.data.repository.impl.PendingFamilyRepository(
-        delegate = FamilyServerRepositoryImpl(
-            remoteFamilySource,
-            resolveFamilyId = { seniorId ->
-                val account = checkNotNull(PersistedSessionStore(context).getSession()?.usersId)
-                val families = authRepository.getOnboardingStatus().families
-                check(PersistedSessionStore(context).getSession()?.usersId == account) {
-                    "로그인 계정이 변경되었어요."
-                }
-                com.example.senior_on.data.repository.impl.familyIdForCodeLookup(families, seniorId)
-            },
-        ),
+        delegate = FamilyServerRepositoryImpl(remoteFamilySource),
         accountId = { PersistedSessionStore(context).getSession()?.usersId },
         loadStatus = { authRepository.getOnboardingStatus() },
         read = pendingFamilyCodeStore::read,

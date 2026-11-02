@@ -599,6 +599,7 @@ internal fun BoxScope.FamilyMemberImage(member: FamilyMemberUiModel) {
 internal fun BoxScope.SharedFamilyPhotoImage(
     photo: SharedFamilyPhotoUiModel,
     preferThumbnail: Boolean = true,
+    contentScale: ContentScale = ContentScale.Crop,
     onRemoteImageLoadError: (photoId: String, failedUrl: String) -> Unit = { _, _ -> },
 ) {
     val displayedImageSource = if (preferThumbnail) {
@@ -611,7 +612,7 @@ internal fun BoxScope.SharedFamilyPhotoImage(
             painter = painterResource(id = imageSource.drawableResId),
             contentDescription = null,
             modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
+            contentScale = contentScale,
         )
         is FamilyImageSource.Remote -> {
             val context = LocalContext.current
@@ -631,7 +632,7 @@ internal fun BoxScope.SharedFamilyPhotoImage(
                 model = imageRequest,
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
+                contentScale = contentScale,
                 error = painterResource(id = R.drawable.ic_photo),
                 onError = {
                     onRemoteImageLoadError(photo.id, imageSource.url)
@@ -642,7 +643,7 @@ internal fun BoxScope.SharedFamilyPhotoImage(
             model = imageSource.value,
             contentDescription = null,
             modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
+            contentScale = contentScale,
             error = painterResource(id = R.drawable.ic_photo),
         )
         null -> SharedPhotoImagePlaceholder()

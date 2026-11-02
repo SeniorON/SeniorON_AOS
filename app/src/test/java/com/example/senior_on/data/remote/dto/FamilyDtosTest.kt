@@ -30,29 +30,6 @@ class FamilyDtosTest {
     }
 
     @Test
-    fun `photo group connection sends selected senior and entered code`() {
-        val json = gson.toJsonTree(
-            FamilyPhotoGroupConnectionRequest(
-                seniorId = 7L,
-                seniorCode = "43TS-6GTE",
-            )
-        ).asJsonObject
-
-        assertEquals(7L, json["seniorId"].asLong)
-        assertEquals("43TS-6GTE", json["seniorCode"].asString)
-    }
-
-    @Test
-    fun `family home reads the default photo group id`() {
-        val response = gson.fromJson(
-            """{"members":[],"recentPhotos":[],"photoGroupId":31}""",
-            FamilyHomeResponse::class.java,
-        )
-
-        assertEquals(31L, response.photoGroupId)
-    }
-
-    @Test
     fun `family photo reads the thumbnail URL separately from the original`() {
         val response = gson.fromJson(
             """{"familyPhotoId":91,"imageUrl":"https://example.com/original.jpg","thumbnailUrl":"https://example.com/thumbnail.jpg"}""",
@@ -64,17 +41,17 @@ class FamilyDtosTest {
     }
 
     @Test
-    fun `photo completion sends selected photo groups`() {
+    fun `photo completion sends selected senior ids`() {
         val json = gson.toJsonTree(
             FamilyPhotoUploadCompleteRequest(
                 seniorId = 7L,
-                photoGroupIds = listOf(31L, 32L),
+                seniorIds = listOf(31L, 32L),
                 imageKey = "family/photo.jpg",
                 description = "함께 본 사진",
             )
         ).asJsonObject
 
         assertEquals(7L, json["seniorId"].asLong)
-        assertEquals(listOf(31L, 32L), json["photoGroupIds"].asJsonArray.map { it.asLong })
+        assertEquals(listOf(31L, 32L), json["seniorIds"].asJsonArray.map { it.asLong })
     }
 }

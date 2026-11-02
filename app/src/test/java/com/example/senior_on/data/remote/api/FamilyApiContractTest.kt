@@ -37,12 +37,6 @@ class FamilyApiContractTest {
     }
 
     @Test
-    fun `photo group connections are scoped by the selected senior`() {
-        assertEquals(listOf("seniorId"), queryNames("getPhotoGroupConnections"))
-        assertEquals(listOf("seniorId"), queryNames("disconnectPhotoGroup"))
-    }
-
-    @Test
     fun `photo targets use the dedicated unscoped endpoint`() {
         val method = FamilyApi::class.java.methods.single { it.name == "getPhotoTargets" }
 
@@ -79,6 +73,12 @@ class FamilyApiContractTest {
                 method.parameterTypes[seniorIdIndex],
             )
         }
+
+        val codeMethod = FamilyApi::class.java.methods.single { it.name == "getCode" }
+        val familyIdIndex = codeMethod.parameterAnnotations.indexOfFirst { annotations ->
+            annotations.filterIsInstance<Query>().any { it.value == "familyId" }
+        }
+        assertEquals(Long::class.javaPrimitiveType, codeMethod.parameterTypes[familyIdIndex])
     }
 
     private fun queryNames(methodName: String): List<String> {

@@ -67,15 +67,7 @@ data class ServerFamilyMember(
     val id: Long, val name: String, val role: String, val managerType: String,
     val canBecomePrimary: Boolean, val isMe: Boolean, val profileImageUrl: String?
 )
-data class ServerConnectedSenior(
-    val photoGroupId: Long,
-    val seniorId: Long,
-    val name: String,
-    val relationshipLabel: String,
-    val connectedAt: String,
-)
 data class ServerPhotoTarget(
-    val photoGroupId: Long,
     val seniorId: Long,
     val name: String,
     val relationshipLabel: String,
@@ -105,7 +97,6 @@ data class ServerFamilyPhotoPage(
 data class ServerFamilyHome(
     val members: List<ServerFamilyMember>,
     val recentPhotos: List<ServerFamilyPhoto>,
-    val photoGroupId: Long? = null,
 )
 data class HospitalAppointment(
     val id: Long,

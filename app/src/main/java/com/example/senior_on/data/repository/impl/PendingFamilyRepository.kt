@@ -61,7 +61,7 @@ class PendingFamilyRepository(
         val target = pending.firstOrNull { it.familyId == cached?.familyId }
             ?: pending.firstOrNull()
         if (target != null) {
-            val refreshed = delegate.getCodeByFamilyId(target.familyId)
+            val refreshed = delegate.getCode(target.familyId)
             check(accountId() == account) { "로그인 계정이 변경되었어요." }
             check(refreshed.familyId == target.familyId && refreshed.code.isNotBlank()) {
                 "코드를 확인하지 못했어요."

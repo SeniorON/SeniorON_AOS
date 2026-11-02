@@ -49,7 +49,6 @@ data class FamilyTabUiState(
     val members: List<FamilyMemberUiModel> = emptyList(),
     val sharedPhotos: List<SharedFamilyPhotoUiModel> = emptyList(),
     val seniorId: Long? = null,
-    val photoGroupId: Long? = null,
     val invitationCode: String = "",
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -87,9 +86,6 @@ data class FamilyTabUiState(
 
     val canManageMembers: Boolean
         get() = currentUserRole == FamilyCaregiverRole.Primary
-
-    val canManageSeniorConnections: Boolean
-        get() = canManageMembers
 
     val isMemberMutationInProgress: Boolean
         get() = changingPrimaryMemberId != null || deletingMemberId != null

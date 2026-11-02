@@ -28,18 +28,17 @@ class FamilyPhotoRecipientSelectionTest {
     }
 
     @Test
-    fun `사진 대상 응답의 중복 그룹을 한 번만 표시한다`() {
-        val first = recipient(photoGroupId = 10L, seniorId = 7L)
-        val duplicate = recipient(photoGroupId = 10L, seniorId = 8L)
+    fun `사진 대상 응답의 중복 시니어를 한 번만 표시한다`() {
+        val first = recipient(seniorId = 7L)
+        val duplicate = recipient(seniorId = 7L)
 
         val recipients = familyPhotoRecipients(listOf(first, duplicate))
 
-        assertEquals(listOf(10L), recipients.map { it.photoGroupId })
+        assertEquals(listOf(7L), recipients.map { it.seniorId })
         assertEquals(7L, recipients.single().seniorId)
     }
 
-    private fun recipient(photoGroupId: Long, seniorId: Long) = ServerPhotoTarget(
-        photoGroupId = photoGroupId,
+    private fun recipient(seniorId: Long) = ServerPhotoTarget(
         seniorId = seniorId,
         name = "시니어",
         relationshipLabel = "가족",

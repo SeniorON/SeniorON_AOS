@@ -40,8 +40,8 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 @Composable
 internal fun FamilyPhotoRecipientBottomSheet(
     seniors: List<ServerPhotoTarget>,
-    selectedPhotoGroupIds: List<Long>,
-    onPhotoGroupClick: (Long) -> Unit,
+    selectedSeniorIds: List<Long>,
+    onSeniorClick: (Long) -> Unit,
     onDismiss: () -> Unit,
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -112,12 +112,12 @@ internal fun FamilyPhotoRecipientBottomSheet(
                     ) {
                         items(
                             items = seniors,
-                            key = ServerPhotoTarget::photoGroupId,
+                            key = ServerPhotoTarget::seniorId,
                         ) { senior ->
                             FamilyPhotoRecipientItem(
                                 senior = senior,
-                                selected = senior.photoGroupId in selectedPhotoGroupIds,
-                                onClick = { onPhotoGroupClick(senior.photoGroupId) },
+                                selected = senior.seniorId in selectedSeniorIds,
+                                onClick = { onSeniorClick(senior.seniorId) },
                             )
                         }
                     }
@@ -127,10 +127,10 @@ internal fun FamilyPhotoRecipientBottomSheet(
             Spacer(modifier = Modifier.height(18.dp))
 
             FamilyTextActionButton(
-                text = recipientShareButtonText(selectedPhotoGroupIds.size),
+                text = recipientShareButtonText(selectedSeniorIds.size),
                 backgroundColor = SeniorOnColors.Primary600,
                 contentColor = SeniorOnColors.White,
-                enabled = selectedPhotoGroupIds.isNotEmpty() && !isLoading && errorMessage == null,
+                enabled = selectedSeniorIds.isNotEmpty() && !isLoading && errorMessage == null,
                 onClick = onShareClick,
                 modifier = Modifier.fillMaxWidth(),
                 buttonHeight = 44.dp,
@@ -272,12 +272,12 @@ private fun RecipientEmptyContent() {
 }
 
 internal fun togglePhotoRecipientSelection(
-    selectedPhotoGroupIds: List<Long>,
-    photoGroupId: Long,
-): List<Long> = if (photoGroupId in selectedPhotoGroupIds) {
-    selectedPhotoGroupIds - photoGroupId
+    selectedSeniorIds: List<Long>,
+    seniorId: Long,
+): List<Long> = if (seniorId in selectedSeniorIds) {
+    selectedSeniorIds - seniorId
 } else {
-    selectedPhotoGroupIds + photoGroupId
+    selectedSeniorIds + seniorId
 }
 
 internal fun recipientShareButtonText(selectedCount: Int): String =

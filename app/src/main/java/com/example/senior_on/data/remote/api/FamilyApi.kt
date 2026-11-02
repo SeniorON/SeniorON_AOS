@@ -30,19 +30,6 @@ interface FamilyApi {
         @Path("targetUserId") targetUserId: Long,
         @Query("seniorId") seniorId: Long,
     ): ApiResponse<Unit>
-    @GET("api/family/photo-groups/connections")
-    suspend fun getPhotoGroupConnections(
-        @Query("seniorId") seniorId: Long,
-    ): ApiResponse<List<FamilyPhotoGroupConnectionResponse>>
-    @POST("api/family/photo-groups/connections")
-    suspend fun connectPhotoGroup(
-        @Body request: FamilyPhotoGroupConnectionRequest,
-    ): ApiResponse<Unit>
-    @DELETE("api/family/photo-groups/connections/{photoGroupId}")
-    suspend fun disconnectPhotoGroup(
-        @Path("photoGroupId") photoGroupId: Long,
-        @Query("seniorId") seniorId: Long,
-    ): ApiResponse<Unit>
     @GET("api/family/photos/targets")
     suspend fun getPhotoTargets(): ApiResponse<List<FamilyPhotoTargetResponse>>
     @GET("api/family/photos") suspend fun getPhotos(

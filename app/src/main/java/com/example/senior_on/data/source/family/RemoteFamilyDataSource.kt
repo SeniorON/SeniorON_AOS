@@ -19,15 +19,6 @@ interface RemoteFamilySource {
         request: FamilyPrimaryManagerUpdateRequest,
     ): FamilyPrimaryManagerUpdateResponse
     suspend fun deleteMember(userId: Long, seniorId: Long)
-    suspend fun getPhotoGroupConnections(
-        seniorId: Long,
-    ): List<FamilyPhotoGroupConnectionResponse> = emptyList()
-    suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
-        error("Photo-group connection is not implemented")
-    }
-    suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        error("Photo-group disconnection is not implemented")
-    }
     suspend fun getPhotoTargets(): List<FamilyPhotoTargetResponse> = emptyList()
     suspend fun getPhotos(
         uploaderId: Long?,
@@ -80,17 +71,6 @@ class RemoteFamilyDataSource(
     }
     override suspend fun deleteMember(userId: Long, seniorId: Long) {
         remoteRequest { api.deleteMember(userId, seniorId); Unit }
-    }
-    override suspend fun getPhotoGroupConnections(seniorId: Long) =
-        api.getPhotoGroupConnections(seniorId).requireData()
-    override suspend fun connectPhotoGroup(request: FamilyPhotoGroupConnectionRequest) {
-        remoteRequest { api.connectPhotoGroup(request); Unit }
-    }
-    override suspend fun disconnectPhotoGroup(seniorId: Long, photoGroupId: Long) {
-        remoteRequest {
-            api.disconnectPhotoGroup(photoGroupId = photoGroupId, seniorId = seniorId)
-            Unit
-        }
     }
     override suspend fun getPhotoTargets() = remoteRequest {
         api.getPhotoTargets().requireData()

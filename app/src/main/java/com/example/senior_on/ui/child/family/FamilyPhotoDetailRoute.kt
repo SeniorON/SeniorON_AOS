@@ -16,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.data.local.FamilyPhotoSaver
@@ -27,6 +28,7 @@ private const val SaveSuccessVisibleDurationMillis = 1_500L
 
 @Composable
 fun FamilyPhotoDetailRoute(
+    seniorId: Long,
     photoId: String,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -38,10 +40,14 @@ fun FamilyPhotoDetailRoute(
     val photoSaver = remember(context) { FamilyPhotoSaver(context) }
     val coroutineScope = rememberCoroutineScope()
     val familyUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var displayedPhotoId by remember(photoId) { mutableStateOf(photoId) }
+    val displayedPhoto = familyUiState.sharedPhotos.firstOrNull {
+        it.id == displayedPhotoId
+    }
     val uiState = FamilyPhotoDetailUiState(
-        photo = familyUiState.sharedPhotos.firstOrNull { it.id == photoId },
-        isLoading = familyUiState.loadingPhotoId == photoId,
-        isDeleting = familyUiState.deletingPhotoId == photoId,
+        photo = displayedPhoto,
+        isLoading = familyUiState.loadingPhotoId == displayedPhotoId,
+        isDeleting = familyUiState.deletingPhotoId == displayedPhotoId,
         deletedPhotoId = familyUiState.deletedPhotoId,
         errorMessage = familyUiState.photoMutationErrorMessage,
     )
@@ -49,12 +55,13 @@ fun FamilyPhotoDetailRoute(
     var isSaveSuccessVisible by remember { mutableStateOf(false) }
     var isDeleteDialogVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(photoId) {
+    LaunchedEffect(seniorId, photoId) {
         viewModel.ensurePhotoLoaded(photoId)
+        viewModel.loadPhotoGallery(seniorId)
     }
 
-    LaunchedEffect(uiState.deletedPhotoId, photoId) {
-        if (uiState.deletedPhotoId == photoId) onDeleteSuccess()
+    LaunchedEffect(uiState.deletedPhotoId, displayedPhotoId) {
+        if (uiState.deletedPhotoId == displayedPhotoId) onDeleteSuccess()
     }
 
     LaunchedEffect(isSaveSuccessVisible) {
@@ -69,14 +76,14 @@ fun FamilyPhotoDetailRoute(
             isSaving = true
             coroutineScope.launch {
                 runCatching {
-                    val latestImageUrl = viewModel.getLatestPhotoUrlForDownload(photoId)
+                    val latestImageUrl = viewModel.getLatestPhotoUrlForDownload(displayedPhotoId)
                     photoSaver.save(
                         imageSource = FamilyImageSource.Remote(latestImageUrl),
                         displayName = "SeniorON_${System.currentTimeMillis()}"
                     )
                 }.onSuccess {
                     isSaveSuccessVisible = true
-                    onDownloadClick(photoId)
+                    onDownloadClick(displayedPhotoId)
                 }
                 isSaving = false
             }
@@ -113,6 +120,10 @@ fun FamilyPhotoDetailRoute(
 
     FamilyPhotoDetailScreen(
         uiState = uiState,
+        photos = familyUiState.sharedPhotos,
+        initialPhotoId = photoId,
+        onDisplayedPhotoChange = { photo -> displayedPhotoId = photo.id },
+        onLoadMore = { viewModel.loadMorePhotos(seniorId) },
         onBackClick = onBackClick,
         isSaving = isSaving,
         isSaveSuccessVisible = isSaveSuccessVisible,
@@ -122,13 +133,14 @@ fun FamilyPhotoDetailRoute(
         onDeleteDismiss = { isDeleteDialogVisible = false },
         onDeleteConfirm = {
             isDeleteDialogVisible = false
-            viewModel.deletePhoto(photoId)
+            viewModel.deletePhoto(displayedPhotoId)
         },
         onRetryClick = { viewModel.ensurePhotoLoaded(photoId) },
         sharedPhotoImage = { photo ->
             SharedFamilyPhotoImage(
                 photo = photo,
                 preferThumbnail = false,
+                contentScale = ContentScale.Fit,
                 onRemoteImageLoadError = viewModel::refreshPhotoUrlAfterLoadFailure,
             )
         },

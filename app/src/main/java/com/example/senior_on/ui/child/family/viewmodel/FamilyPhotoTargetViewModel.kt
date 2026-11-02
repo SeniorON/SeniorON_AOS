@@ -21,10 +21,10 @@ data class FamilyPhotoTargetUiState(
     val hasLoaded: Boolean = false,
     val errorMessage: String? = null,
 ) {
-    fun canShare(photoGroupIds: List<Long>): Boolean =
+    fun canShare(seniorIds: List<Long>): Boolean =
         hasLoaded && !isLoading && errorMessage == null &&
-            photoGroupIds.isNotEmpty() &&
-            photoGroupIds.all { id -> targets.any { it.photoGroupId == id } }
+            seniorIds.isNotEmpty() &&
+            seniorIds.all { id -> targets.any { it.seniorId == id } }
 }
 
 class FamilyPhotoTargetViewModel(
