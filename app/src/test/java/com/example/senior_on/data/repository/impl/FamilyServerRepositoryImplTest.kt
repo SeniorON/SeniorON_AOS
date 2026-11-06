@@ -13,11 +13,14 @@ import com.example.senior_on.data.remote.dto.FamilyPhotoUploadUrlRequest
 import com.example.senior_on.data.remote.dto.FamilyPhotoUploadUrlResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoItemResponse
 import com.example.senior_on.data.remote.dto.FamilyPhotoListResponse
+import com.example.senior_on.data.remote.dto.FamilyPhotoReportRequest
+import com.example.senior_on.data.remote.dto.FamilyUserReportRequest
 import com.example.senior_on.data.remote.dto.FamilyPhotoTargetResponse
 import com.example.senior_on.data.remote.dto.FamilyPrimaryManagerUpdateRequest
 import com.example.senior_on.data.remote.dto.FamilyPrimaryManagerUpdateResponse
 import com.example.senior_on.data.source.family.RemoteFamilySource
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
+import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.runBlocking
@@ -163,6 +166,40 @@ class FamilyServerRepositoryImplTest {
         assertEquals(93L, source.requestedPhotoId)
         assertEquals(93L, photo.id)
         assertTrue(photo.canDelete)
+    }
+
+    @Test
+    fun `photo report maps the selected reason and hides the reported photo`() = runBlocking {
+        val source = FakeRemoteFamilySource()
+
+        FamilyServerRepositoryImpl(source).reportPhoto(
+            photoId = 93L,
+            reason = FamilyPhotoReportReason.Copyright,
+            detail = "저작권을 침해한 사진입니다.",
+            hide = true,
+        )
+
+        assertEquals(93L, source.reportedPhotoId)
+        assertEquals("COPYRIGHT", source.reportRequest?.reason)
+        assertEquals("저작권을 침해한 사진입니다.", source.reportRequest?.detail)
+        assertTrue(source.reportRequest?.hide == true)
+    }
+
+    @Test
+    fun `uploader report maps the selected reason and hide choice`() = runBlocking {
+        val source = FakeRemoteFamilySource()
+
+        FamilyServerRepositoryImpl(source).reportUploader(
+            photoId = 93L,
+            reason = FamilyPhotoReportReason.Abuse,
+            detail = "욕설이 담긴 사진을 계속 올려요.",
+            hide = false,
+        )
+
+        assertEquals(93L, source.reportedUploaderPhotoId)
+        assertEquals("ABUSE", source.uploaderReportRequest?.reason)
+        assertEquals("욕설이 담긴 사진을 계속 올려요.", source.uploaderReportRequest?.detail)
+        assertFalse(source.uploaderReportRequest?.hide == true)
     }
 
     @Test
@@ -400,6 +437,14 @@ private class FakeRemoteFamilySource(
         private set
     private var remainingCompletionFailures = completionFailures
     private var remainingStorageFailures = storageFailures
+    var reportedPhotoId: Long? = null
+        private set
+    var reportRequest: FamilyPhotoReportRequest? = null
+        private set
+    var reportedUploaderPhotoId: Long? = null
+        private set
+    var uploaderReportRequest: FamilyUserReportRequest? = null
+        private set
 
     override suspend fun join(request: FamilyJoinRequest) =
         FamilyJoinResponse(familyId = 1, familyCode = request.familyCode)
@@ -488,4 +533,14 @@ private class FakeRemoteFamilySource(
     override suspend fun markViewed(photoId: Long, seniorId: Long) = Unit
 
     override suspend fun deletePhoto(photoId: Long) = Unit
+
+    override suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) {
+        reportedPhotoId = photoId
+        reportRequest = request
+    }
+
+    override suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) {
+        reportedUploaderPhotoId = photoId
+        uploaderReportRequest = request
+    }
 }

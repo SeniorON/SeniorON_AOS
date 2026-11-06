@@ -455,6 +455,7 @@ fun ChildMainScreen(
         } else {
             ChildMainTabContent(
                 selectedTab = selectedTab,
+                authenticatedUserId = authenticatedUserId,
                 onHealthSavingChanged = { isHealthSaving = it },
                 onProfileSaved = seniorManagementViewModel::updateSavedProfile,
                 familyDestination = familyDestination,
@@ -646,6 +647,7 @@ internal fun isChildMainNavigationEnabled(
 @Composable
 private fun ChildMainTabContent(
     selectedTab: ChildMainTab,
+    authenticatedUserId: String,
     onHealthSavingChanged: (Boolean) -> Unit,
     onProfileSaved: (ParentInfo) -> Unit,
     familyDestination: ChildFamilyDestination,
@@ -834,6 +836,7 @@ private fun ChildMainTabContent(
                     FamilyPhotoDetailRoute(
                         seniorId = requireNotNull(activeSeniorId),
                         photoId = photoId,
+                        currentUserId = authenticatedUserId.toLongOrNull(),
                         onBackClick = onFamilyBackClick,
                         onDeleteSuccess = onFamilyBackClick,
                         modifier = modifier,

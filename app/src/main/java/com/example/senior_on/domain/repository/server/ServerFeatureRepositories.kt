@@ -1,6 +1,7 @@
 package com.example.senior_on.domain.repository.server
 
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
+import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import com.example.senior_on.domain.model.server.*
 
 interface HomeServerRepository {
@@ -56,6 +57,22 @@ interface FamilyServerRepository {
     suspend fun getPhoto(photoId: Long): ServerFamilyPhoto
     suspend fun markPhotoViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
+    suspend fun reportPhoto(
+        photoId: Long,
+        reason: FamilyPhotoReportReason,
+        detail: String?,
+        hide: Boolean,
+    ) {
+        error("Family photo reporting is not implemented")
+    }
+    suspend fun reportUploader(
+        photoId: Long,
+        reason: FamilyPhotoReportReason,
+        detail: String?,
+        hide: Boolean,
+    ) {
+        error("Family photo uploader reporting is not implemented")
+    }
 }
 
 interface HospitalRepository {
