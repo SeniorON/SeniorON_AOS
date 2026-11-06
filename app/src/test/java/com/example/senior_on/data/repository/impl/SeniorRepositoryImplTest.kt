@@ -17,6 +17,17 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SeniorRepositoryImplTest {
+    @Test fun `withdrawal marker and notice id survive mapping`() = runBlocking {
+        val response = Gson().fromJson(
+            """{"familyId":1,"seniorId":3,"seniorName":"탈퇴 시니어","withdrawn":true,"withdrawalNoticeId":42}""",
+            ManagedSeniorResponse::class.java,
+        )
+        val source = RecordingSeniorDataSource().apply { managedSeniorResponses = listOf(response) }
+        val senior = SeniorRepositoryImpl(source).getManagedSeniors().single()
+        assertEquals(true, senior.withdrawn)
+        assertEquals(42L, senior.withdrawalNoticeId)
+    }
+
     @Test
     fun `code only family does not prevent loading registered seniors`() = runBlocking {
         val responses = Gson().fromJson(

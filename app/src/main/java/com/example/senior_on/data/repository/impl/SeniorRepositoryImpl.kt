@@ -16,6 +16,13 @@ import com.example.senior_on.domain.repository.senior.SeniorRepository
 class SeniorRepositoryImpl(
     private val dataSource: SeniorDataSource
 ) : SeniorRepository {
+    override suspend fun getWithdrawalNotices() = dataSource.getWithdrawalNotices().map {
+        com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice(
+            it.withdrawalNoticeId, it.familyId, it.seniorId, it.seniorName, it.withdrawnAt,
+        )
+    }
+    override suspend fun acknowledgeWithdrawal(noticeId: Long) = dataSource.acknowledgeWithdrawal(noticeId)
+
     override suspend fun createSenior(
         familyId: Long,
         accessToken: String?,
@@ -108,7 +115,9 @@ class SeniorRepositoryImpl(
             seniorId = registeredSeniorId,
             parentUserId = parentUserId,
             name = registeredSeniorName,
-            relationship = relationship
+            relationship = relationship,
+            withdrawn = withdrawn,
+            withdrawalNoticeId = withdrawalNoticeId,
         )
     }
 

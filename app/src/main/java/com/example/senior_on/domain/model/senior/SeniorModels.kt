@@ -37,5 +37,15 @@ data class ManagedSenior(
     val seniorId: Long,
     val parentUserId: Long?,
     val name: String,
-    val relationship: CaregiverRelationship
+    val relationship: CaregiverRelationship,
+    val withdrawn: Boolean = false,
+    val withdrawalNoticeId: Long? = null,
+)
+
+data class SeniorWithdrawalNotice(
+    val withdrawalNoticeId: Long,
+    val familyId: Long,
+    val seniorId: Long,
+    val seniorName: String,
+    val withdrawnAt: String,
 )

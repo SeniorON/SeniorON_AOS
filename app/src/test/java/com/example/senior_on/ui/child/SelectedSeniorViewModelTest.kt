@@ -10,6 +10,29 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SelectedSeniorViewModelTest {
+    @Test fun withdrawalPreservesOtherSelectionAndFallsBackToFirstOrEmpty() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        val saved = MutableStateFlow<Long?>(77)
+        val repo = object : SelectedSeniorRepository {
+            override fun observe(accountId: String) = saved
+            override suspend fun select(accountId: String, seniorId: Long?) { saved.value = seniorId }
+        }
+        try {
+            val vm = SelectedSeniorViewModel("account", repo).also { store.put("selection", it) }
+            vm.reconcile(listOf(42, 77, 99))
+            advanceUntilIdle()
+            vm.replaceAfterWithdrawal(listOf(42, 77))
+            advanceUntilIdle()
+            assertEquals(77L, saved.value)
+            vm.replaceAfterWithdrawal(listOf(42))
+            advanceUntilIdle()
+            assertEquals(42L, saved.value)
+            vm.replaceAfterWithdrawal(emptyList())
+            advanceUntilIdle()
+            assertNull(saved.value)
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
     @Test fun validatesRestoredSelectionAndHandlesSwitchRemovalAndEmptyList() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()

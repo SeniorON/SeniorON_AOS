@@ -162,7 +162,9 @@ fun ChildMainScreen(
     var tabReselectionToken by remember { mutableStateOf(0) }
     LaunchedEffect(notificationNavigationEvent) {
         notificationNavigationEvent?.let { event ->
-            if (event.isMedicationNotification || event.isHospitalNotification) {
+            if (event.type == "SENIOR_WITHDRAWAL") {
+                selectedTab = ChildMainTab.Screen
+            } else if (event.isMedicationNotification || event.isHospitalNotification) {
                 selectedTab = ChildMainTab.Health
             } else {
                 selectedTab = ChildMainTab.Notification
@@ -245,15 +247,58 @@ fun ChildMainScreen(
         seniorManagementViewModel.uiState.collectAsStateWithLifecycle()
     var showSeniorManagement by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.managedSeniors, seniorManagementUiState.errorMessage) {
-        if (!seniorManagementUiState.isLoading && seniorManagementUiState.errorMessage == null) {
+    val withdrawalRevision by com.example.senior_on.notification.SeniorWithdrawalEventStore.changes.collectAsStateWithLifecycle()
+    LaunchedEffect(withdrawalRevision) { seniorManagementViewModel.refreshWithdrawalNotices() }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, seniorManagementViewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) seniorManagementViewModel.refreshWithdrawalNotices()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val withdrawnSenior = seniorManagementUiState.managedSeniors.firstOrNull {
+        it.seniorId == activeSeniorId && it.withdrawn
+    }
+    LaunchedEffect(withdrawnSenior) {
+        withdrawnSenior?.let {
+            displayViewModel.clearSelection()
+            seniorManagementViewModel.showWithdrawal(it)
+        }
+    }
+    val withdrawalBusy = seniorManagementUiState.isAcknowledgingWithdrawal || seniorManagementUiState.withdrawalAcknowledged
+    seniorManagementUiState.withdrawalDialog?.let { notice ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            title = { Text("${notice.seniorName}님이 탈퇴했어요") },
+            text = { Text(seniorManagementUiState.withdrawalError ?: "해당 시니어의 정보를 더 이상 조회하거나 수정할 수 없어요. 확인하면 내 목록에서 삭제돼요.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    enabled = !seniorManagementUiState.isAcknowledgingWithdrawal,
+                    onClick = {
+                        seniorManagementViewModel.acknowledgeWithdrawal(
+                            saveSelection = selectionViewModel::replaceAfterWithdrawal,
+                            onSuccess = {
+                                displayViewModel.clearSelection()
+                                selectedTab = ChildMainTab.Screen
+                                showSeniorManagement = false
+                            },
+                        )
+                    },
+                ) { Text(if (seniorManagementUiState.isAcknowledgingWithdrawal) "처리 중…" else if (seniorManagementUiState.withdrawalError != null) "다시 시도" else "확인") }
+            },
+        )
+    }
+
+    LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.managedSeniors, seniorManagementUiState.errorMessage, withdrawalBusy) {
+        if (!withdrawalBusy && !seniorManagementUiState.isLoading && seniorManagementUiState.errorMessage == null) {
             selectionViewModel.reconcile(seniorManagementUiState.managedSeniors.map { it.seniorId })
         }
     }
-    LaunchedEffect(selectionState.seniorId, selectionState.isLoading, seniorManagementUiState.managedSeniors) {
-        if (!selectionState.isLoading) {
+    LaunchedEffect(selectionState.seniorId, selectionState.isLoading, seniorManagementUiState.managedSeniors, withdrawalBusy) {
+        if (!selectionState.isLoading && !withdrawalBusy) {
             val selected = seniorManagementUiState.managedSeniors.firstOrNull { it.seniorId == selectionState.seniorId }
-            if (selected == null) displayViewModel.clearSelection()
+            if (selected == null || selected.withdrawn) displayViewModel.clearSelection()
             else displayViewModel.selectSenior(selected.seniorId, selected.relationship.displayLabel)
         }
     }
@@ -273,6 +318,13 @@ fun ChildMainScreen(
         childMainNavigationEnabled,
     ) {
         val event = notificationNavigationEvent ?: return@LaunchedEffect
+        if (event.type == "SENIOR_WITHDRAWAL") {
+            seniorManagementViewModel.openWithdrawalNotification(event.withdrawalNoticeId)
+            val target = seniorManagementUiState.managedSeniors.firstOrNull { it.withdrawn && it.seniorId == event.seniorId }
+            if (target != null) seniorManagementViewModel.showWithdrawal(target)
+            onNotificationNavigationConsumed()
+            return@LaunchedEffect
+        }
         if (
             !childMainNavigationEnabled ||
             seniorManagementUiState.isLoading ||
@@ -397,7 +449,23 @@ fun ChildMainScreen(
                 onRetry = seniorManagementViewModel::refreshSeniors,
             )
         }
-        if (seniorManagementUiState.disconnectRefreshPending) {
+        if (withdrawalBusy) {
+            Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("시니어 목록을 갱신하고 있어요.")
+            }
+        } else if (withdrawnSenior != null && !showSeniorManagement) {
+            com.example.senior_on.ui.child.display.WithdrawnSeniorContent(
+                senior = withdrawnSenior,
+                accounts = seniorManagementUiState.managedSeniors,
+                onAccountClick = { senior ->
+                    if (senior.withdrawn) seniorManagementViewModel.showWithdrawal(senior)
+                    else selectionViewModel.select(senior.seniorId)
+                },
+                onConfirm = { seniorManagementViewModel.showWithdrawal(withdrawnSenior) },
+                onAdd = { showSeniorManagement = true },
+                modifier = Modifier.weight(1f),
+            )
+        } else if (seniorManagementUiState.disconnectRefreshPending) {
             com.example.senior_on.ui.common.QueryRetryContent(
                 error = seniorManagementUiState.disconnectRefreshError,
                 loading = seniorManagementUiState.isDisconnecting,
@@ -499,7 +567,7 @@ fun ChildMainScreen(
                                 val nextId = selectionViewModel.state.value.seniorId
                                 val nextSenior = seniorManagementViewModel.uiState.value.managedSeniors
                                     .firstOrNull { it.seniorId == nextId }
-                                if (nextSenior == null) {
+                                if (nextSenior == null || nextSenior.withdrawn) {
                                     displayViewModel.clearSelection()
                                 } else {
                                     displayViewModel.selectSenior(nextSenior.seniorId, nextSenior.relationship.displayLabel)
@@ -519,7 +587,8 @@ fun ChildMainScreen(
                 seniorAccounts = seniorManagementUiState.managedSeniors,
                 isSeniorAccountsLoading = seniorManagementUiState.isLoading,
                 onSeniorAccountClick = { senior ->
-                    selectionViewModel.select(senior.seniorId)
+                    if (senior.withdrawn) seniorManagementViewModel.showWithdrawal(senior)
+                    else selectionViewModel.select(senior.seniorId)
                 },
                 onAddSeniorAccountClick = {
                     seniorManagementViewModel.clearError()

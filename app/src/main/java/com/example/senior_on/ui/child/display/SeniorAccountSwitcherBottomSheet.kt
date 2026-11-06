@@ -145,6 +145,7 @@ private fun SeniorAccountOption(
             .fillMaxWidth()
             .heightIn(min = 67.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
+            .background(if (account.withdrawn) SeniorOnColors.Gray100 else SeniorOnColors.White)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -153,7 +154,7 @@ private fun SeniorAccountOption(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SeniorAccountAvatar()
+        SeniorAccountAvatar(withdrawn = account.withdrawn)
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -161,12 +162,12 @@ private fun SeniorAccountOption(
             Text(
                 text = account.name,
                 style = SeniorOnTextStyles.BodyLSemiBold,
-                color = SeniorOnColors.Gray800,
+                color = if (account.withdrawn) SeniorOnColors.Gray400 else SeniorOnColors.Gray800,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = account.relationship.displayLabel,
+                text = if (account.withdrawn) "탈퇴한 시니어" else account.relationship.displayLabel,
                 style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray400,
                 maxLines = 1,
@@ -177,12 +178,12 @@ private fun SeniorAccountOption(
 }
 
 @Composable
-private fun SeniorAccountAvatar() {
+private fun SeniorAccountAvatar(withdrawn: Boolean = false) {
     Box(
         modifier = Modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(SeniorOnColors.AccountAvatarBackground)
+            .background(if (withdrawn) SeniorOnColors.Gray100 else SeniorOnColors.AccountAvatarBackground)
             .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
@@ -190,7 +191,7 @@ private fun SeniorAccountAvatar() {
             painter = painterResource(id = R.drawable.ic_senior_account_avatar),
             contentDescription = null,
             modifier = Modifier.size(34.dp),
-            tint = SeniorOnColors.AccountAvatarForeground,
+            tint = if (withdrawn) SeniorOnColors.Gray400 else SeniorOnColors.AccountAvatarForeground,
         )
     }
 }

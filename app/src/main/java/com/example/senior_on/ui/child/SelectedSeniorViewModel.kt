@@ -48,11 +48,15 @@ class SelectedSeniorViewModel(
 
     fun reconcile(ids: List<Long>) { availableIds.value = ids.filter { it > 0 }.distinct() }
 
-    suspend fun replaceAfterDisconnect(ids: List<Long>) {
+    suspend fun replaceAfterDisconnect(ids: List<Long>) = replaceSelection(ids, false)
+
+    suspend fun replaceAfterWithdrawal(ids: List<Long>) = replaceSelection(ids, true)
+
+    private suspend fun replaceSelection(ids: List<Long>, preserveCurrent: Boolean) {
         replacingSelection = true
         try {
             val validIds = ids.filter { it > 0 }.distinct()
-            val first = validIds.firstOrNull()
+            val first = _state.value.seniorId?.takeIf { preserveCurrent && it in validIds } ?: validIds.firstOrNull()
             repository.select(accountId, first)
             availableIds.value = validIds
             _state.value = SelectedSeniorState(first, isLoading = false)

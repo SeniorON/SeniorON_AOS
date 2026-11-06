@@ -14,6 +14,12 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface SeniorApi {
+    @GET("api/seniors/withdrawal-notices")
+    suspend fun getWithdrawalNotices(): ApiResponse<List<com.example.senior_on.data.remote.dto.SeniorWithdrawalNoticeResponse>>
+
+    @PATCH("api/seniors/withdrawal-notices/{noticeId}/acknowledgement")
+    suspend fun acknowledgeWithdrawal(@Path("noticeId") noticeId: Long): ApiResponse<Unit>
+
     @GET("api/seniors/me/profile")
     suspend fun getOwnProfile(): ApiResponse<ParentSeniorProfileResponse>
 
