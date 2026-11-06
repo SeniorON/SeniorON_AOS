@@ -145,6 +145,7 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    selectedSeniorName: String? = null,
     tabReselectionToken: Int = 0,
     sessionKey: String,
     parentInfo: ParentInfo?,
@@ -335,10 +336,12 @@ fun SettingsTabRoute(
         destination,
         displayUiState.hasLoadedOverview,
         displayUiState.device,
+        selectedSeniorName,
     ) {
         if (
             destination == SettingsDestination.ConnectedDevices &&
             shouldOpenSeniorAppInstallGuide(
+                hasSelectedSenior = selectedSeniorName != null,
                 hasLoadedOverview = displayUiState.hasLoadedOverview,
                 hasRegisteredDevice = displayUiState.device != null,
             )
@@ -391,6 +394,7 @@ fun SettingsTabRoute(
             onConnectedDevicesClick = {
                 destination = if (
                     shouldOpenSeniorAppInstallGuide(
+                        hasSelectedSenior = selectedSeniorName != null,
                         hasLoadedOverview = displayUiState.hasLoadedOverview,
                         hasRegisteredDevice = displayUiState.device != null,
                     )
@@ -444,6 +448,7 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
+            selectedSeniorName = selectedSeniorName,
             device = connectedDevice,
             isDisconnecting = isDisconnectingRelationship,
             onBackClick = navigateBack,
@@ -471,6 +476,7 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.DeviceConnection -> DeviceConnectionScreen(
+            canDisconnectRelationship = selectedSeniorName != null,
             device = displayUiState.device,
             relationshipLabel = displayUiState.relationshipLabel
                 ?: connectedDevice?.relationshipLabel
@@ -600,7 +606,8 @@ fun SettingsTabRoute(
 internal fun shouldOpenSeniorAppInstallGuide(
     hasLoadedOverview: Boolean,
     hasRegisteredDevice: Boolean,
-): Boolean = hasLoadedOverview && !hasRegisteredDevice
+    hasSelectedSenior: Boolean = false,
+): Boolean = hasLoadedOverview && !hasRegisteredDevice && !hasSelectedSenior
 
 @Composable
 fun SettingsScreen(

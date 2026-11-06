@@ -25,6 +25,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.senior_on.ui.child.settings.DisconnectDeviceDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +55,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 
 @Composable
 fun DeviceConnectionScreen(
+    canDisconnectRelationship: Boolean = false,
     device: DisplayDevice?,
     relationshipLabel: String,
     modifier: Modifier = Modifier,
@@ -60,6 +66,14 @@ fun DeviceConnectionScreen(
     onDisconnectClick: () -> Unit = {},
     onInstallGuideClick: () -> Unit = {},
 ) {
+    var showDisconnectDialog by rememberSaveable { mutableStateOf(false) }
+    if (showDisconnectDialog) {
+        DisconnectDeviceDialog(
+            onDismiss = { if (!isDisconnecting) showDisconnectDialog = false },
+            onConfirm = onDisconnectClick,
+            isDisconnecting = isDisconnecting,
+        )
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -88,8 +102,15 @@ fun DeviceConnectionScreen(
             DeviceConnectionActionButton(
                 isConnected = device != null,
                 isLoading = device != null && isDisconnecting,
-                onClick = if (device == null) onInstallGuideClick else onDisconnectClick,
+                onClick = { if (device == null) onInstallGuideClick() else showDisconnectDialog = true },
             )
+            if (device == null && canDisconnectRelationship) {
+                DeviceConnectionActionButton(
+                    isConnected = true,
+                    isLoading = isDisconnecting,
+                    onClick = { showDisconnectDialog = true },
+                )
+            }
         }
     }
 }

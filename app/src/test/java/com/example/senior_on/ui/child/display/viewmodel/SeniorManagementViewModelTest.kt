@@ -201,7 +201,7 @@ class SeniorManagementViewModelTest {
     }
 
     @Test
-    fun `primary caregiver cannot remove relationship or change selection`() = runTest {
+    fun `server rejection preserves primary caregiver relationship and selection`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             val repository = FakeSeniorRepository()
@@ -210,12 +210,46 @@ class SeniorManagementViewModelTest {
             var requests = 0
             var saves = 0
             var completed = false
-            vm.disconnectRelationship(3L, { true }, { saves++ }, {}, { completed = true }, { requests++ })
+            vm.disconnectRelationship(3L, {}, { saves++ }, {}, { completed = true }, { requests++; error("시니어 연결 이력이 있어 해제할 수 없어요.") })
             advanceUntilIdle()
-            assertEquals(0, requests)
+            assertEquals(1, requests)
             assertEquals(0, saves)
             assertFalse(completed)
             assertFalse(vm.uiState.value.isDisconnecting)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `never linked family deletion removes senior and selects remaining senior`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeSeniorRepository(listOf(managedSenior(3L), managedSenior(7L)))
+            val vm = SeniorManagementViewModel(repository, FakeFamilyRepository())
+            advanceUntilIdle()
+            var selected: List<Long>? = null
+            var completed = false
+            vm.disconnectRelationship(3L, {}, { selected = it }, {}, { completed = true }, {
+                repository.managedSeniors = listOf(managedSenior(7L))
+            })
+            advanceUntilIdle()
+            assertEquals(listOf(7L), selected)
+            assertEquals(listOf(7L), vm.uiState.value.managedSeniors.map { it.seniorId })
+            assertTrue(completed)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `missing caregiver information prevents deletion`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val vm = SeniorManagementViewModel(FakeSeniorRepository(), FakeFamilyRepository())
+            advanceUntilIdle()
+            var requests = 0
+            var completed = false
+            vm.disconnectRelationship(3L, { error("담당자 정보 없음") }, {}, {}, { completed = true }, { requests++ })
+            advanceUntilIdle()
+            assertEquals(0, requests)
+            assertFalse(completed)
         } finally { Dispatchers.resetMain() }
     }
 

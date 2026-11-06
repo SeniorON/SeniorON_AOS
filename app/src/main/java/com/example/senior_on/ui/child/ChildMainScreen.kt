@@ -478,18 +478,19 @@ fun ChildMainScreen(
                             ?.takeIf { it.isNotEmpty() }
                         seniorManagementViewModel.disconnectRelationship(
                             seniorId = seniorId,
-                            isPrimary = { id ->
+                            validateRelationship = { id ->
                                 val member = familyServerRepository.getMembers(id).firstOrNull { it.isMe }
                                     ?: error("담당자 정보를 확인하지 못했어요. 다시 시도해 주세요.")
                                 require(member.managerType.equals("PRIMARY", true) || member.managerType.equals("SUB", true)) {
                                     "담당자 정보를 확인하지 못했어요."
                                 }
-                                member.managerType.equals("PRIMARY", true)
                             },
                             saveSelection = selectionViewModel::replaceAfterDisconnect,
                             removeRelationship = { id ->
-                                requireNotNull(deviceRepository) { "연결 해제 서비스를 사용할 수 없어요." }
-                                    .disconnect(id)
+                                val familyId = authRepository.getOnboardingStatus().families.orEmpty()
+                                    .singleOrNull { it.seniorId == id }?.familyId
+                                requireNotNull(familyId) { "가족 정보를 확인하지 못했어요. 다시 시도해 주세요." }
+                                familyServerRepository.disconnectFamily(familyId)
                             },
                             onMessage = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
                             onSuccess = {
@@ -868,6 +869,7 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            selectedSeniorName = seniorAccounts.firstOrNull { it.seniorId == activeSeniorId }?.name,
             tabReselectionToken = tabReselectionToken,
             sessionKey = settingsSessionKey,
             isDisconnectingRelationship = isDisconnectingRelationship,

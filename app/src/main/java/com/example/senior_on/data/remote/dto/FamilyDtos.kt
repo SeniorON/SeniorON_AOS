@@ -16,6 +16,7 @@ data class FamilyCodeCreateResponse(
     @SerializedName("seniorCode")
     val familyCode: String?,
 )
+data class FamilyConnectionDisconnectResponse(val familyId: Long, val familyDeleted: Boolean)
 data class FamilyPrimaryManagerUpdateRequest(val targetUserId: Long)
 data class FamilyPrimaryManagerUpdateResponse(
     val usersId: Long?, val name: String?, val managerType: String?

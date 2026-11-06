@@ -25,6 +25,7 @@ interface HomeServerRepository {
 }
 
 interface FamilyServerRepository {
+    suspend fun disconnectFamily(familyId: Long): Unit = error("가족 연결 해제 서비스를 사용할 수 없어요.")
     suspend fun join(code: String): FamilyCodeInfo
     suspend fun createCode(): FamilyCodeInfo
     suspend fun getPendingCode(): FamilyCodeInfo? = null

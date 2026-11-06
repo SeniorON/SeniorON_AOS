@@ -316,6 +316,7 @@ fun DisplayTabRoute(
             }
 
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
+                canDisconnectRelationship = uiState.parentInfo != null,
                 device = uiState.device,
                 relationshipLabel = uiState.relationshipLabel ?: "부모님",
                 isRefreshing = uiState.isRefreshingDevice,

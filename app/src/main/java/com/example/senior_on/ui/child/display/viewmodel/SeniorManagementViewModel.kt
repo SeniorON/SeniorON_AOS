@@ -258,7 +258,7 @@ class SeniorManagementViewModel(
 
     fun disconnectRelationship(
         seniorId: Long,
-        isPrimary: suspend (Long) -> Boolean,
+        validateRelationship: suspend (Long) -> Unit,
         saveSelection: suspend (List<Long>) -> Unit,
         onMessage: (String) -> Unit,
         onSuccess: () -> Unit,
@@ -272,10 +272,9 @@ class SeniorManagementViewModel(
         _uiState.update { it.copy(isDisconnecting = true) }
         viewModelScope.launch {
             try {
-                if (isPrimary(seniorId)) {
-                    onMessage("주담당자는 연결을 해제할 수 없어요.")
-                    return@launch
-                }
+                // The family API checks connection history and other guardians atomically.
+                // A disconnected device alone does not prove the family was never linked.
+                validateRelationship(seniorId)
                 removeRelationship(seniorId)
                 // Once DELETE succeeds, retries must never send it again.
                 pendingDisconnectRefresh = {

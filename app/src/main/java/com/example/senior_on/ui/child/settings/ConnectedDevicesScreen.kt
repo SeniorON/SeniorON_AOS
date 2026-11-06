@@ -80,6 +80,7 @@ data class ConnectedSeniorDeviceUiState(
 
 @Composable
 fun ConnectedDevicesScreen(
+    selectedSeniorName: String? = null,
     device: ConnectedSeniorDeviceUiState?,
     isDisconnecting: Boolean = false,
     onBackClick: () -> Unit,
@@ -130,6 +131,20 @@ fun ConnectedDevicesScreen(
                     style = SeniorOnTextStyles.BodyMMedium,
                     color = SeniorOnColors.Gray500
                 )
+                if (selectedSeniorName != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "$selectedSeniorName · 미연결",
+                        style = SeniorOnTextStyles.BodyMMedium,
+                        color = SeniorOnColors.Gray800,
+                    )
+                    androidx.compose.material3.TextButton(
+                        enabled = !isDisconnecting,
+                        onClick = { showDisconnectDialog = true },
+                    ) {
+                        Text("연결 해제", color = SeniorOnColors.Gray800)
+                    }
+                }
             }
         }
     }
@@ -356,7 +371,7 @@ private fun ConnectedSeniorDeviceCard(
 }
 
 @Composable
-private fun DisconnectDeviceDialog(
+internal fun DisconnectDeviceDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     isDisconnecting: Boolean = false,
@@ -379,7 +394,7 @@ private fun DisconnectDeviceDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp)
+                    .verticalScroll(rememberScrollState())
                     .clip(
                         RoundedCornerShape(
                             topStart = 28.dp,
@@ -394,7 +409,7 @@ private fun DisconnectDeviceDialog(
                     )
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp)
-                    .padding(top = 24.dp)
+                    .padding(top = 24.dp, bottom = 24.dp)
             ) {
                 Text(
                     text = "연결을 해제할까요?",
@@ -409,7 +424,8 @@ private fun DisconnectDeviceDialog(
                 Text(
                     text = buildAnnotatedString {
                         append("내 목록에서 해당 시니어가 삭제돼요.\n")
-                        append("시니어의 정보와 다른 가족의 연결은 유지돼요.")
+                        append("다른 가족의 연결은 유지돼요.\n")
+                        append("아직 연결한 적 없는 가족을 마지막으로 나가면 등록 정보와 코드가 삭제돼요.")
                     },
                     style = SeniorOnTextStyles.BodyMMedium,
                     color = SeniorOnColors.Gray500,

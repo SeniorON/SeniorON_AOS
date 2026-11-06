@@ -6,6 +6,8 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface FamilyApi {
+    @DELETE("api/families/{familyId}/connection")
+    suspend fun disconnectFamily(@Path("familyId") familyId: Long): ApiResponse<FamilyConnectionDisconnectResponse>
     @POST("api/family/join") suspend fun join(@Body request: FamilyJoinRequest): ApiResponse<FamilyJoinResponse>
     @POST("api/family/code-create") suspend fun createCode(): ApiResponse<FamilyCodeCreateResponse>
     @GET("api/family/code")
