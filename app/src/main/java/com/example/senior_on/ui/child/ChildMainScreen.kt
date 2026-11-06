@@ -935,6 +935,7 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
             selectedSeniorName = seniorAccounts.firstOrNull { it.seniorId == activeSeniorId }?.name,
+            selectedSeniorRelationship = seniorAccounts.firstOrNull { it.seniorId == activeSeniorId }?.relationship?.displayLabel,
             tabReselectionToken = tabReselectionToken,
             sessionKey = settingsSessionKey,
             isDisconnectingRelationship = isDisconnectingRelationship,

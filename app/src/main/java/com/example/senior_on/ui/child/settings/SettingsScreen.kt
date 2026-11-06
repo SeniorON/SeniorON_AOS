@@ -146,6 +146,7 @@ private data class SettingsMenuItem(
 @Composable
 fun SettingsTabRoute(
     selectedSeniorName: String? = null,
+    selectedSeniorRelationship: String? = null,
     tabReselectionToken: Int = 0,
     sessionKey: String,
     parentInfo: ParentInfo?,
@@ -449,6 +450,7 @@ fun SettingsTabRoute(
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
             selectedSeniorName = selectedSeniorName,
+            selectedSeniorRelationship = selectedSeniorRelationship,
             device = connectedDevice,
             isDisconnecting = isDisconnectingRelationship,
             onBackClick = navigateBack,
