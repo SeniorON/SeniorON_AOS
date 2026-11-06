@@ -749,6 +749,10 @@ internal fun resolvePostLoginDestination(
     status: OnboardingStatus,
     userId: Long? = null,
 ): PostLoginDestination {
+    // 자녀의 가족 생성·정보 입력은 홈의 '시니어 추가'에서만 시작한다.
+    // 가족이 없거나 등록을 중단했더라도 로그인 자체는 완료한다.
+    if (mode == AppUserMode.Child) return PostLoginDestination.Authenticated
+
     val family = status.forUser(mode, userId)
     return when {
         family.onboardingCompleted -> PostLoginDestination.Authenticated
