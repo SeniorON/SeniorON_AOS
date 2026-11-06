@@ -58,16 +58,19 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 fun FamilyPhotoDetailScreen(
     uiState: FamilyPhotoDetailUiState,
     onBackClick: () -> Unit,
+    currentUserId: Long? = null,
     modifier: Modifier = Modifier,
     photos: List<SharedFamilyPhotoUiModel> = listOfNotNull(uiState.photo),
     initialPhotoId: String? = uiState.photo?.id,
     onDisplayedPhotoChange: (SharedFamilyPhotoUiModel) -> Unit = {},
     onLoadMore: () -> Unit = {},
     isSaving: Boolean = false,
+    isReporting: Boolean = false,
     isSaveSuccessVisible: Boolean = false,
     isDeleteDialogVisible: Boolean = false,
     onDownloadClick: () -> Unit = {},
     onDeleteRequest: () -> Unit = {},
+    onReportRequest: () -> Unit = {},
     onDeleteDismiss: () -> Unit = {},
     onDeleteConfirm: () -> Unit = {},
     onRetryClick: () -> Unit = {},
@@ -199,10 +202,14 @@ fun FamilyPhotoDetailScreen(
 
             FamilyPhotoDetailActions(
                 showDelete = photo.canDelete,
+                showReport = currentUserId != null &&
+                    photo.authorId != null && photo.authorId != currentUserId,
                 isSaving = isSaving,
                 isDeleting = uiState.isDeleting,
+                isReporting = isReporting,
                 onDownloadClick = onDownloadClick,
-                onDeleteClick = onDeleteRequest
+                onDeleteClick = onDeleteRequest,
+                onReportClick = onReportRequest,
             )
         }
     }
@@ -331,10 +338,13 @@ private fun FamilyPhotoDetailTopBar(
 @Composable
 private fun FamilyPhotoDetailActions(
     showDelete: Boolean,
+    showReport: Boolean,
     isSaving: Boolean,
     isDeleting: Boolean,
+    isReporting: Boolean,
     onDownloadClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onReportClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -356,6 +366,16 @@ private fun FamilyPhotoDetailActions(
             isLoading = isSaving,
             onClick = onDownloadClick
         )
+
+        if (showReport) {
+            FamilyPhotoDetailActionIcon(
+                iconResId = R.drawable.ic_big_report,
+                contentDescription = "사진 신고",
+                enabled = !isReporting,
+                isLoading = isReporting,
+                onClick = onReportClick,
+            )
+        }
 
         if (showDelete) {
             FamilyPhotoDetailActionIcon(

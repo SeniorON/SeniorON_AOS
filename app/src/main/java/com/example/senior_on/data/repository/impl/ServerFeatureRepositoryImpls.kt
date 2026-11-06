@@ -13,6 +13,7 @@ import com.example.senior_on.data.source.medication.MedicationDataSource
 import com.example.senior_on.data.source.notification.NotificationDataSource
 import com.example.senior_on.data.source.settings.UserSettingsDataSource
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
+import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import com.example.senior_on.domain.model.server.*
 import com.example.senior_on.domain.repository.server.*
 import kotlinx.coroutines.sync.Mutex
@@ -400,6 +401,42 @@ class FamilyServerRepositoryImpl(
         source.getPhoto(photoId).toServerFamilyPhoto()
     override suspend fun markPhotoViewed(photoId: Long, seniorId: Long) = source.markViewed(photoId, seniorId)
     override suspend fun deletePhoto(photoId: Long) = source.deletePhoto(photoId)
+    override suspend fun reportPhoto(
+        photoId: Long,
+        reason: FamilyPhotoReportReason,
+        detail: String?,
+        hide: Boolean,
+    ) = source.reportPhoto(
+        photoId = photoId,
+        request = FamilyPhotoReportRequest(
+            reason = reason.toApiValue(),
+            detail = detail,
+            hide = hide,
+        ),
+    )
+    override suspend fun reportUploader(
+        photoId: Long,
+        reason: FamilyPhotoReportReason,
+        detail: String?,
+        hide: Boolean,
+    ) = source.reportUploader(
+        photoId = photoId,
+        request = FamilyUserReportRequest(
+            reason = reason.toApiValue(),
+            detail = detail,
+            hide = hide,
+        ),
+    )
+}
+
+private fun FamilyPhotoReportReason.toApiValue(): String = when (this) {
+    FamilyPhotoReportReason.Advertisement -> "ADVERTISEMENT"
+    FamilyPhotoReportReason.Copyright -> "COPYRIGHT"
+    FamilyPhotoReportReason.Sexual -> "SEXUAL"
+    FamilyPhotoReportReason.Abuse -> "ABUSE"
+    FamilyPhotoReportReason.Privacy -> "PRIVACY"
+    FamilyPhotoReportReason.Duplicate -> "DUPLICATE"
+    FamilyPhotoReportReason.Etc -> "ETC"
 }
 
 private data class PendingFamilyPhotoUpload(

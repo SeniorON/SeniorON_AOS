@@ -31,6 +31,7 @@ data class SharedFamilyPhotoUiModel(
     val authorName: String,
     val createdAt: Instant,
     val canDelete: Boolean,
+    val authorId: Long? = null,
     val imageSource: FamilyImageSource? = null,
     val message: String = "",
     val thumbnailSource: FamilyImageSource? = null,
@@ -66,6 +67,9 @@ data class FamilyTabUiState(
     val deletingPhotoId: String? = null,
     val deletedPhotoId: String? = null,
     val photoMutationErrorMessage: String? = null,
+    val reportingPhotoId: String? = null,
+    val reportedPhotoId: String? = null,
+    val photoReportErrorMessage: String? = null,
 ) {
     val visibleMembers: List<FamilyMemberUiModel>
         get() = members

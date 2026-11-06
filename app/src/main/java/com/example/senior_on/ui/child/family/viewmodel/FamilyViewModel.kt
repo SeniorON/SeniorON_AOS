@@ -9,11 +9,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import com.example.senior_on.domain.model.family.FamilyMemberRole
 import com.example.senior_on.domain.model.family.FamilyOverview
 import com.example.senior_on.domain.model.family.SharedFamilyPhoto
 import com.example.senior_on.domain.model.server.ServerFamilyPhoto
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
+import com.example.senior_on.domain.model.auth.RemoteRequestException
+import java.io.IOException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -38,6 +41,7 @@ class FamilyViewModel(
     private var photoLoadJob: Job? = null
     private var detailLoadJob: Job? = null
     private var photoMutationJob: Job? = null
+    private var photoReportJob: Job? = null
     private var activeSeniorId: Long? = null
     private var isPhotoGalleryLoaded = false
     private var loadedPhotoSeniorId: Long? = null
@@ -609,6 +613,105 @@ class FamilyViewModel(
         }
     }
 
+    fun reportPhoto(
+        photoId: String,
+        reason: FamilyPhotoReportReason,
+        detail: String,
+        hide: Boolean = true,
+    ) = submitPhotoReport(
+        photoId = photoId,
+        reason = reason,
+        detail = detail,
+        hide = hide,
+        subject = FamilyReportSubject.Photo,
+        submit = repository::reportPhoto,
+    )
+
+    fun reportUploader(
+        photoId: String,
+        reason: FamilyPhotoReportReason,
+        detail: String,
+        hide: Boolean = true,
+    ) = submitPhotoReport(
+        photoId = photoId,
+        reason = reason,
+        detail = detail,
+        hide = hide,
+        subject = FamilyReportSubject.Uploader,
+        submit = repository::reportUploader,
+    )
+
+    private fun submitPhotoReport(
+        photoId: String,
+        reason: FamilyPhotoReportReason,
+        detail: String,
+        hide: Boolean,
+        subject: FamilyReportSubject,
+        submit: suspend (Long, FamilyPhotoReportReason, String?, Boolean) -> Unit,
+    ) {
+        val requestSeniorId = activeSeniorId ?: return
+        if (_uiState.value.reportingPhotoId != null) return
+        val serverPhotoId = photoId.toLongOrNull()?.takeIf { it > 0L } ?: run {
+            _uiState.update {
+                it.copy(photoReportErrorMessage = "사진 정보를 확인하지 못했어요.")
+            }
+            return
+        }
+        val normalizedDetail = detail.trim().takeIf(String::isNotEmpty)
+        require(normalizedDetail == null || normalizedDetail.length <= MAX_REPORT_DETAIL_LENGTH) {
+            "신고 상세 내용은 200자 이하여야 합니다."
+        }
+
+        photoReportJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    reportingPhotoId = photoId,
+                    reportedPhotoId = null,
+                    photoReportErrorMessage = null,
+                )
+            }
+            runCatching {
+                submit(serverPhotoId, reason, normalizedDetail, hide)
+            }.onSuccess {
+                if (!isActiveSenior(requestSeniorId)) return@onSuccess
+                _uiState.update {
+                    it.copy(
+                        reportingPhotoId = null,
+                        reportedPhotoId = photoId,
+                        photoReportErrorMessage = null,
+                    )
+                }
+            }.onFailure { exception ->
+                if (exception is CancellationException) throw exception
+                if (!isActiveSenior(requestSeniorId)) return@onFailure
+                _uiState.update {
+                    it.copy(
+                        reportingPhotoId = null,
+                        reportedPhotoId = null,
+                        photoReportErrorMessage = exception.toPhotoReportErrorMessage(subject),
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearPhotoReportFeedback(
+        removeReportedPhoto: Boolean = false,
+        hiddenUploaderId: Long? = null,
+    ) {
+        val reportedPhotoId = _uiState.value.reportedPhotoId
+        _uiState.update { state ->
+            state.copy(
+                sharedPhotos = state.sharedPhotos.filterNot { photo ->
+                    (removeReportedPhoto && reportedPhotoId != null && photo.id == reportedPhotoId) ||
+                        (hiddenUploaderId != null && photo.authorId == hiddenUploaderId)
+                },
+                reportedPhotoId = null,
+                photoReportErrorMessage = null,
+            )
+        }
+    }
+
     fun refreshAfterPhotoUpload(seniorId: Long) {
         if (!isActiveSenior(seniorId)) return
         invalidatePhotoGallery(clearPhotos = false)
@@ -644,6 +747,7 @@ class FamilyViewModel(
         photoLoadJob?.cancel()
         detailLoadJob?.cancel()
         photoMutationJob?.cancel()
+        photoReportJob?.cancel()
         photoUrlRefreshJobs.values.forEach(Job::cancel)
         photoUrlRefreshJobs.clear()
         lastRetriedImageUrlByPhotoId.clear()
@@ -666,12 +770,37 @@ class FamilyViewModel(
         private const val PRIMARY_MANAGER = "PRIMARY"
         private const val SUB_MANAGER = "SUB"
         private const val PHOTO_PAGE_SIZE = 20
+        private const val MAX_REPORT_DETAIL_LENGTH = 200
 
         fun factory(repository: FamilyServerRepository) = viewModelFactory {
             initializer {
                 FamilyViewModel(repository)
             }
         }
+    }
+}
+
+private enum class FamilyReportSubject {
+    Photo,
+    Uploader,
+}
+
+private fun Throwable.toPhotoReportErrorMessage(subject: FamilyReportSubject): String {
+    val remote = this as? RemoteRequestException
+    return when {
+        remote?.code == "FAMILY_PHOTO409_1" -> if (subject == FamilyReportSubject.Photo) {
+            "이미 신고한 사진이에요."
+        } else {
+            "이미 신고한 게시자예요."
+        }
+        remote?.code == "FAMILY_PHOTO400_3" -> if (subject == FamilyReportSubject.Photo) {
+            "본인이 올린 사진은 신고할 수 없어요."
+        } else {
+            "본인은 신고할 수 없어요."
+        }
+        remote?.status == 404 -> "사진을 찾을 수 없어요."
+        this is IOException -> "네트워크 연결을 확인한 후 다시 시도해 주세요."
+        else -> "신고를 접수하지 못했어요. 잠시 후 다시 시도해 주세요."
     }
 }
 
@@ -712,6 +841,7 @@ private fun ServerFamilyPhoto.toSharedFamilyPhotoUiModel() = SharedFamilyPhotoUi
     authorName = uploaderName,
     createdAt = createdAt.toFamilyPhotoInstant(),
     canDelete = canDelete,
+    authorId = uploaderId,
     imageSource = imageUrl.toRemoteFamilyImageSource(),
     message = description,
     thumbnailSource = thumbnailUrl.toRemoteFamilyImageSource(),

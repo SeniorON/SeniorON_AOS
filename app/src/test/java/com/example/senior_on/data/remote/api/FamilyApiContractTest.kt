@@ -3,6 +3,9 @@ package com.example.senior_on.data.remote.api
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Body
 import retrofit2.http.Query
 
 class FamilyApiContractTest {
@@ -51,6 +54,36 @@ class FamilyApiContractTest {
     fun `family member mutations are scoped by the selected senior`() {
         assertEquals(listOf("seniorId"), queryNames("changePrimaryManager"))
         assertEquals(listOf("seniorId"), queryNames("deleteMember"))
+    }
+
+    @Test
+    fun `family photo report uses the report endpoint with path id and body`() {
+        val method = FamilyApi::class.java.methods.single { it.name == "reportPhoto" }
+
+        assertEquals(
+            "api/family/photos/{familyPhotoId}/reports",
+            requireNotNull(method.getAnnotation(POST::class.java)).value,
+        )
+        assertEquals(
+            listOf("familyPhotoId"),
+            method.parameterAnnotations.flatten().filterIsInstance<Path>().map(Path::value),
+        )
+        assertEquals(1, method.parameterAnnotations.flatten().filterIsInstance<Body>().size)
+    }
+
+    @Test
+    fun `family photo uploader report uses the uploader report endpoint with path id and body`() {
+        val method = FamilyApi::class.java.methods.single { it.name == "reportUploader" }
+
+        assertEquals(
+            "api/family/photos/{familyPhotoId}/uploader-reports",
+            requireNotNull(method.getAnnotation(POST::class.java)).value,
+        )
+        assertEquals(
+            listOf("familyPhotoId"),
+            method.parameterAnnotations.flatten().filterIsInstance<Path>().map(Path::value),
+        )
+        assertEquals(1, method.parameterAnnotations.flatten().filterIsInstance<Body>().size)
     }
 
     @Test

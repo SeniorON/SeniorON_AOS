@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.family.viewmodel
 
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.server.FamilyCodeInfo
 import com.example.senior_on.domain.model.server.ServerFamilyHome
@@ -29,6 +30,70 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FamilyViewModelPhotoUrlRefreshTest {
+    @Test
+    fun `photo report exposes success only after the repository request succeeds`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = FRESH_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.reportPhoto(
+                photoId = PHOTO_ID.toString(),
+                reason = FamilyPhotoReportReason.Privacy,
+                detail = "  개인정보가 노출됐어요.  ",
+            )
+            runCurrent()
+
+            assertEquals(PHOTO_ID, repository.reportedPhotoId)
+            assertEquals(FamilyPhotoReportReason.Privacy, repository.reportedReason)
+            assertEquals("개인정보가 노출됐어요.", repository.reportedDetail)
+            assertTrue(repository.reportedHide == true)
+            assertEquals(PHOTO_ID.toString(), viewModel.uiState.value.reportedPhotoId)
+            assertEquals(null, viewModel.uiState.value.photoReportErrorMessage)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `uploader report forwards the selected reason detail and hide choice`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = serverPhoto(url = FRESH_URL),
+                refreshedPhoto = serverPhoto(url = FRESH_URL),
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.reportUploader(
+                photoId = PHOTO_ID.toString(),
+                reason = FamilyPhotoReportReason.Abuse,
+                detail = "  욕설이 담긴 사진을 계속 올려요.  ",
+                hide = false,
+            )
+            runCurrent()
+
+            assertEquals(PHOTO_ID, repository.reportedUploaderPhotoId)
+            assertEquals(FamilyPhotoReportReason.Abuse, repository.reportedUploaderReason)
+            assertEquals("욕설이 담긴 사진을 계속 올려요.", repository.reportedUploaderDetail)
+            assertFalse(repository.reportedUploaderHide == true)
+            assertEquals(PHOTO_ID.toString(), viewModel.uiState.value.reportedPhotoId)
+            assertEquals(null, viewModel.uiState.value.photoReportErrorMessage)
+
+            viewModel.clearPhotoReportFeedback(hiddenUploaderId = 11L)
+            assertTrue(viewModel.uiState.value.sharedPhotos.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun `family photo list keeps thumbnail and original image sources separately`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -475,6 +540,22 @@ private class FakeFamilyServerRepository(
         private set
     var photoPageRequestCount = 0
         private set
+    var reportedPhotoId: Long? = null
+        private set
+    var reportedReason: FamilyPhotoReportReason? = null
+        private set
+    var reportedDetail: String? = null
+        private set
+    var reportedHide: Boolean? = null
+        private set
+    var reportedUploaderPhotoId: Long? = null
+        private set
+    var reportedUploaderReason: FamilyPhotoReportReason? = null
+        private set
+    var reportedUploaderDetail: String? = null
+        private set
+    var reportedUploaderHide: Boolean? = null
+        private set
 
     override suspend fun join(code: String) = FamilyCodeInfo(1L, code)
     override suspend fun createCode() = FamilyCodeInfo(1L, "ABCD-1234")
@@ -521,4 +602,27 @@ private class FakeFamilyServerRepository(
 
     override suspend fun markPhotoViewed(photoId: Long, seniorId: Long) = Unit
     override suspend fun deletePhoto(photoId: Long) = Unit
+    override suspend fun reportPhoto(
+        photoId: Long,
+        reason: FamilyPhotoReportReason,
+        detail: String?,
+        hide: Boolean,
+    ) {
+        reportedPhotoId = photoId
+        reportedReason = reason
+        reportedDetail = detail
+        reportedHide = hide
+    }
+
+    override suspend fun reportUploader(
+        photoId: Long,
+        reason: FamilyPhotoReportReason,
+        detail: String?,
+        hide: Boolean,
+    ) {
+        reportedUploaderPhotoId = photoId
+        reportedUploaderReason = reason
+        reportedUploaderDetail = detail
+        reportedUploaderHide = hide
+    }
 }

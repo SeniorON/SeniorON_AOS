@@ -47,6 +47,16 @@ data class FamilyPhotoItemResponse(
     val uploaderName: String?, val description: String?, val canDelete: Boolean?,
     val createdAt: String?, val newPhoto: Boolean?, val thumbnailUrl: String? = null,
 )
+data class FamilyPhotoReportRequest(
+    val reason: String,
+    val detail: String?,
+    val hide: Boolean,
+)
+data class FamilyUserReportRequest(
+    val reason: String,
+    val detail: String?,
+    val hide: Boolean,
+)
 data class FamilyPhotoCursorResponse(val createdAt: String?, val familyPhotoId: Long?)
 data class FamilyPhotoListResponse(
     val photos: List<FamilyPhotoItemResponse>?, val totalCount: Long?,

@@ -52,6 +52,16 @@ interface FamilyApi {
     ): ApiResponse<Unit>
     @DELETE("api/family/photos/{familyPhotoId}")
     suspend fun deletePhoto(@Path("familyPhotoId") familyPhotoId: Long): ApiResponse<Unit>
+    @POST("api/family/photos/{familyPhotoId}/reports")
+    suspend fun reportPhoto(
+        @Path("familyPhotoId") familyPhotoId: Long,
+        @Body request: FamilyPhotoReportRequest,
+    ): ApiResponse<Unit>
+    @POST("api/family/photos/{familyPhotoId}/uploader-reports")
+    suspend fun reportUploader(
+        @Path("familyPhotoId") familyPhotoId: Long,
+        @Body request: FamilyUserReportRequest,
+    ): ApiResponse<Unit>
     @POST("api/family/photos/upload-url")
     suspend fun createPhotoUploadUrl(
         @Body request: FamilyPhotoUploadUrlRequest,

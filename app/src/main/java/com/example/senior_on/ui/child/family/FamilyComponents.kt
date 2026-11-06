@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -170,7 +171,7 @@ internal fun FamilyTextActionButton(
     SeniorOnActionButton(
         text = text,
         onClick = onClick,
-        modifier = modifier.height(buttonHeight),
+        modifier = modifier.heightIn(min = buttonHeight),
         enabled = enabled,
         isLoading = isLoading,
         containerColor = backgroundColor,

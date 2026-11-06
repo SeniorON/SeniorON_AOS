@@ -42,6 +42,12 @@ interface RemoteFamilySource {
     suspend fun getAlbums(seniorId: Long): List<FamilyPhotoAlbumResponse>
     suspend fun markViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
+    suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) {
+        error("Family photo reporting is not implemented")
+    }
+    suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) {
+        error("Family photo uploader reporting is not implemented")
+    }
 }
 
 class RemoteFamilyDataSource(
@@ -108,4 +114,16 @@ class RemoteFamilyDataSource(
     override suspend fun getAlbums(seniorId: Long) = api.getAlbums(seniorId).requireData()
     override suspend fun markViewed(photoId: Long, seniorId: Long) { api.markViewed(photoId, seniorId) }
     override suspend fun deletePhoto(photoId: Long) { api.deletePhoto(photoId) }
+    override suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) {
+        remoteRequest {
+            api.reportPhoto(photoId, request)
+            Unit
+        }
+    }
+    override suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) {
+        remoteRequest {
+            api.reportUploader(photoId, request)
+            Unit
+        }
+    }
 }
