@@ -268,24 +268,19 @@ fun ChildMainScreen(
     }
     val withdrawalBusy = seniorManagementUiState.isAcknowledgingWithdrawal || seniorManagementUiState.withdrawalAcknowledged
     seniorManagementUiState.withdrawalDialog?.let { notice ->
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = {},
-            title = { Text("${notice.seniorName}님이 탈퇴했어요") },
-            text = { Text(seniorManagementUiState.withdrawalError ?: "해당 시니어의 정보를 더 이상 조회하거나 수정할 수 없어요. 확인하면 내 목록에서 삭제돼요.") },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    enabled = !seniorManagementUiState.isAcknowledgingWithdrawal,
-                    onClick = {
-                        seniorManagementViewModel.acknowledgeWithdrawal(
-                            saveSelection = selectionViewModel::replaceAfterWithdrawal,
-                            onSuccess = {
-                                displayViewModel.clearSelection()
-                                selectedTab = ChildMainTab.Screen
-                                showSeniorManagement = false
-                            },
-                        )
+        com.example.senior_on.ui.child.display.SeniorWithdrawalDialog(
+            seniorName = notice.seniorName,
+            isLoading = seniorManagementUiState.isAcknowledgingWithdrawal,
+            errorMessage = seniorManagementUiState.withdrawalError,
+            onConfirm = {
+                seniorManagementViewModel.acknowledgeWithdrawal(
+                    saveSelection = selectionViewModel::replaceAfterWithdrawal,
+                    onSuccess = {
+                        displayViewModel.clearSelection()
+                        selectedTab = ChildMainTab.Screen
+                        showSeniorManagement = false
                     },
-                ) { Text(if (seniorManagementUiState.isAcknowledgingWithdrawal) "처리 중…" else if (seniorManagementUiState.withdrawalError != null) "다시 시도" else "확인") }
+                )
             },
         )
     }
@@ -450,9 +445,10 @@ fun ChildMainScreen(
             )
         }
         if (withdrawalBusy) {
-            Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("시니어 목록을 갱신하고 있어요.")
-            }
+            com.example.senior_on.ui.child.display.DisplayTabLoadingScreen(
+                topBarTitle = withdrawnSenior?.name,
+                modifier = Modifier.weight(1f),
+            )
         } else if (withdrawnSenior != null && !showSeniorManagement) {
             com.example.senior_on.ui.child.display.WithdrawnSeniorContent(
                 senior = withdrawnSenior,

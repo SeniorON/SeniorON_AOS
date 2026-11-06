@@ -150,6 +150,7 @@ private fun SeniorAccountOption(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 role = Role.Button,
+                onClickLabel = if (account.withdrawn) "탈퇴 안내 확인" else "시니어 선택",
                 onClick = onClick,
             ),
         verticalAlignment = Alignment.CenterVertically,
@@ -162,14 +163,14 @@ private fun SeniorAccountOption(
             Text(
                 text = account.name,
                 style = SeniorOnTextStyles.BodyLSemiBold,
-                color = if (account.withdrawn) SeniorOnColors.Gray400 else SeniorOnColors.Gray800,
+                color = if (account.withdrawn) SeniorOnColors.Gray500 else SeniorOnColors.Gray800,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = if (account.withdrawn) "탈퇴한 시니어" else account.relationship.displayLabel,
                 style = SeniorOnTextStyles.BodySMedium,
-                color = SeniorOnColors.Gray400,
+                color = if (account.withdrawn) SeniorOnColors.Gray500 else SeniorOnColors.Gray400,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -183,7 +184,7 @@ private fun SeniorAccountAvatar(withdrawn: Boolean = false) {
         modifier = Modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(if (withdrawn) SeniorOnColors.Gray100 else SeniorOnColors.AccountAvatarBackground)
+            .background(if (withdrawn) SeniorOnColors.White else SeniorOnColors.AccountAvatarBackground)
             .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
@@ -260,7 +261,7 @@ private fun SeniorAccountSwitcherSheetPreview() {
         SeniorAccountSwitcherSheetContent(
             accounts = listOf(
                 PreviewMotherAccount,
-                PreviewFatherAccount,
+                PreviewFatherAccount.copy(withdrawn = true, withdrawalNoticeId = 1L),
             ),
             onAccountClick = {},
             onAddAccountClick = {},
