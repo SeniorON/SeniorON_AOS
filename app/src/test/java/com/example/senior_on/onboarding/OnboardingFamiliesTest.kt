@@ -44,15 +44,15 @@ class OnboardingFamiliesTest {
         assertEquals(PostLoginDestination.Authenticated, resolvePostLoginDestination(AppUserMode.Child, mapped))
     }
 
-    @Test fun incompletePrimaryResumesCorrectFamilyProfile() {
+    @Test fun incompletePrimaryEntersHomeWithoutAutomaticallyResumingProfile() {
         val state = status(family(10, CareManagerType.None), family(20, seniorId = null))
         assertEquals(20L, state.forUser(AppUserMode.Child).familyId)
-        assertEquals(PostLoginDestination.ParentInfoInput, resolvePostLoginDestination(AppUserMode.Child, state))
+        assertEquals(PostLoginDestination.Authenticated, resolvePostLoginDestination(AppUserMode.Child, state))
     }
 
-    @Test fun secondaryWithMissingRelationResumesRelationship() {
+    @Test fun secondaryWithMissingRelationEntersHome() {
         val state = status(family(20, CareManagerType.Sub, relation = false))
-        assertEquals(PostLoginDestination.CaregiverRelationshipInput, resolvePostLoginDestination(AppUserMode.Child, state))
+        assertEquals(PostLoginDestination.Authenticated, resolvePostLoginDestination(AppUserMode.Child, state))
     }
 
     @Test fun parentMatchesServerUserIdNotFirstFamily() {
@@ -65,7 +65,22 @@ class OnboardingFamiliesTest {
     @Test fun emptyFamiliesDoNotUseStaleFlatId() {
         val state = status().copy(seniorId = 999, onboardingCompleted = true)
         assertNull(state.forUser(AppUserMode.Child).seniorId)
-        assertEquals(PostLoginDestination.FamilyShareCode, resolvePostLoginDestination(AppUserMode.Child, state))
+        assertEquals(PostLoginDestination.Authenticated, resolvePostLoginDestination(AppUserMode.Child, state))
+    }
+
+    @Test fun newChildWithoutFamilyEntersHome() {
+        val state = status().copy(hasFamily = false, onboardingCompleted = false)
+        assertEquals(PostLoginDestination.Authenticated, resolvePostLoginDestination(AppUserMode.Child, state))
+    }
+
+    @Test fun existingChildAfterLastDisconnectionEntersHome() {
+        val state = status().copy(hasFamily = false, onboardingCompleted = true)
+        assertEquals(PostLoginDestination.Authenticated, resolvePostLoginDestination(AppUserMode.Child, state))
+    }
+
+    @Test fun seniorWithoutFamilyStillNeedsFamilyCode() {
+        val state = status().copy(hasFamily = false, onboardingCompleted = false)
+        assertEquals(PostLoginDestination.FamilyShareCode, resolvePostLoginDestination(AppUserMode.Senior, state))
     }
 
     @Test fun oldParentSessionDoesNotGuessFirstFamilyOrForceRejoining() {

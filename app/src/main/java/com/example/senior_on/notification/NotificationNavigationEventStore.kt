@@ -16,6 +16,7 @@ data class NotificationNavigationEvent(
     val seniorId: Long? = null,
     val parentUserId: Long? = null,
     val familyPhotoId: Long? = null,
+    val withdrawalNoticeId: Long? = null,
 )
 
 val NotificationNavigationEvent.isMedicationNotification: Boolean
@@ -52,7 +53,7 @@ object NotificationNavigationEventStore {
 
         val isEventNotification = type in EventNotificationTypes ||
             type in MedicationNotificationTypes ||
-            type == HospitalReminderType || type == "FAMILY_PHOTO_SHARED" || notificationId != null ||
+            type == HospitalReminderType || type == "SENIOR_WITHDRAWAL" || type == "FAMILY_PHOTO_SHARED" || notificationId != null ||
             eventId != null || medicationLogId != null || hospitalId != null
         if (!openNotificationTab && !isEventNotification) {
             return
@@ -71,6 +72,7 @@ object NotificationNavigationEventStore {
             seniorId = data.valueOf("seniorId")?.toLongOrNull()?.takeIf { it > 0 },
             parentUserId = data.valueOf("parentUserId")?.toLongOrNull()?.takeIf { it > 0 },
             familyPhotoId = data.valueOf("familyPhotoId")?.toLongOrNull()?.takeIf { it > 0 },
+            withdrawalNoticeId = data.valueOf("withdrawalNoticeId")?.toLongOrNull()?.takeIf { it > 0 },
         )
     }
 

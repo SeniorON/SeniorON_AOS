@@ -12,6 +12,11 @@ import com.example.senior_on.data.source.remoteRequest
 class RemoteSeniorDataSource(
     private val seniorApi: SeniorApi
 ) : SeniorDataSource {
+    override suspend fun getWithdrawalNotices() = remoteRequest { seniorApi.getWithdrawalNotices().requireData() }
+    override suspend fun acknowledgeWithdrawal(noticeId: Long) {
+        remoteRequest { seniorApi.acknowledgeWithdrawal(noticeId) }
+    }
+
     override suspend fun createSenior(
         authorization: String?,
         request: CreateSeniorRequest

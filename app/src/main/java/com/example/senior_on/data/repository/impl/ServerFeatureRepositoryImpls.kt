@@ -161,6 +161,10 @@ class FamilyServerRepositoryImpl(
     private val source: RemoteFamilySource,
     private val elapsedTimeMillis: () -> Long = { System.nanoTime() / 1_000_000L },
 ) : FamilyServerRepository {
+    override suspend fun disconnectFamily(familyId: Long) {
+        require(familyId > 0) { "가족 정보를 확인하지 못했어요." }
+        source.disconnectFamily(familyId)
+    }
     private val photoUploadMutex = Mutex()
     private val pendingPhotoUploads = mutableMapOf<String, PendingFamilyPhotoUpload>()
 

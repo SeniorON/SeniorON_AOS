@@ -9,6 +9,7 @@ import okhttp3.RequestBody
 import retrofit2.HttpException
 
 interface RemoteFamilySource {
+    suspend fun disconnectFamily(familyId: Long): FamilyConnectionDisconnectResponse = error("가족 연결 해제 서비스를 사용할 수 없어요.")
     suspend fun join(request: FamilyJoinRequest): FamilyJoinResponse
     suspend fun createCode(): FamilyCodeCreateResponse
     suspend fun getCode(familyId: Long): FamilyCodeResponse
@@ -54,6 +55,9 @@ class RemoteFamilyDataSource(
     private val api: FamilyApi,
     private val storageApi: FamilyPhotoStorageApi,
 ) : RemoteFamilySource {
+    override suspend fun disconnectFamily(familyId: Long) = remoteRequest {
+        api.disconnectFamily(familyId).requireData()
+    }
     override suspend fun join(request: FamilyJoinRequest) = remoteRequest {
         api.join(request).requireData()
     }

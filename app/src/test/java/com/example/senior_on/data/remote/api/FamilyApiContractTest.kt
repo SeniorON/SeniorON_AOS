@@ -10,6 +10,14 @@ import retrofit2.http.Query
 
 class FamilyApiContractTest {
     @Test
+    fun `family disconnect sends family id in path without device query`() {
+        val method = FamilyApi::class.java.methods.single { it.name == "disconnectFamily" }
+        assertEquals("api/families/{familyId}/connection", requireNotNull(method.getAnnotation(retrofit2.http.DELETE::class.java)).value)
+        val paths = method.parameterAnnotations.flatten().filterIsInstance<retrofit2.http.Path>()
+        assertEquals(listOf("familyId"), paths.map { it.value })
+        assertEquals(emptyList<String>(), queryNames("disconnectFamily"))
+    }
+    @Test
     fun `family members sends the selected senior id`() {
         val method = FamilyApi::class.java.methods.single { it.name == "getMembers" }
         val queries = method.parameterAnnotations

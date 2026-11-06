@@ -6,6 +6,14 @@ import org.junit.Test
 
 class SettingsDeviceNavigationTest {
     @Test
+    fun `unconnected selected senior stays in connected devices for relationship removal`() {
+        org.junit.Assert.assertFalse(shouldOpenSeniorAppInstallGuide(
+            hasLoadedOverview = true,
+            hasRegisteredDevice = false,
+            hasSelectedSenior = true,
+        ))
+    }
+    @Test
     fun `loaded overview without a registered device opens the install guide`() {
         assertTrue(
             shouldOpenSeniorAppInstallGuide(

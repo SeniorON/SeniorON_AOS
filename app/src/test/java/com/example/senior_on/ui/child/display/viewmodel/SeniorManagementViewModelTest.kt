@@ -32,6 +32,87 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorManagementViewModelTest {
+    @Test fun `withdrawal ack is single flight and refresh retry never repeats ack`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val withdrawn = managedSenior(3).copy(withdrawn = true, withdrawalNoticeId = 30)
+            val repo = FakeSeniorRepository(listOf(withdrawn))
+            val vm = SeniorManagementViewModel(repo, FakeFamilyRepository())
+            advanceUntilIdle()
+            vm.showWithdrawal(withdrawn)
+            repo.failList = true
+            var navigated = false
+            vm.acknowledgeWithdrawal({ error("must not save") }, { navigated = true })
+            vm.acknowledgeWithdrawal({ error("duplicate") }, { navigated = true })
+            advanceUntilIdle()
+            assertEquals(1, repo.ackCount)
+            assertFalse(navigated)
+            assertTrue(vm.uiState.value.withdrawalAcknowledged)
+            assertEquals(listOf(withdrawn), vm.uiState.value.managedSeniors)
+            repo.failList = false
+            repo.managedSeniors = listOf(managedSenior(7))
+            var selected: List<Long>? = null
+            vm.acknowledgeWithdrawal({ selected = it }, { navigated = true })
+            advanceUntilIdle()
+            assertEquals(1, repo.ackCount)
+            assertEquals(listOf(7L), selected)
+            assertTrue(navigated)
+            assertNull(vm.uiState.value.withdrawalDialog)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `failed ack keeps list and dialog and does not navigate`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val withdrawn = managedSenior(3).copy(withdrawn = true, withdrawalNoticeId = 30)
+            val repo = FakeSeniorRepository(listOf(withdrawn)).apply { failAck = true }
+            val vm = SeniorManagementViewModel(repo, FakeFamilyRepository())
+            advanceUntilIdle()
+            vm.showWithdrawal(withdrawn)
+            vm.acknowledgeWithdrawal({ error("must not save") }, { error("must not navigate") })
+            advanceUntilIdle()
+            assertFalse(vm.uiState.value.withdrawalAcknowledged)
+            assertTrue(vm.uiState.value.withdrawalError != null)
+            assertEquals(listOf(withdrawn), vm.uiState.value.managedSeniors)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `selection save failure retries after ack and last senior clears selection`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val withdrawn = managedSenior(3).copy(withdrawn = true, withdrawalNoticeId = 30)
+            val repo = FakeSeniorRepository(listOf(withdrawn))
+            val vm = SeniorManagementViewModel(repo, FakeFamilyRepository())
+            advanceUntilIdle()
+            vm.showWithdrawal(withdrawn)
+            repo.managedSeniors = emptyList()
+            vm.acknowledgeWithdrawal({ error("disk failure") }, { error("must not navigate") })
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.withdrawalAcknowledged)
+            assertEquals(listOf(withdrawn), vm.uiState.value.managedSeniors)
+            var selected: List<Long>? = null
+            vm.acknowledgeWithdrawal({ selected = it }, {})
+            advanceUntilIdle()
+            assertEquals(emptyList<Long>(), selected)
+            assertTrue(vm.uiState.value.managedSeniors.isEmpty())
+            assertEquals(1, repo.ackCount)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `notice refresh marks selected senior withdrawn without trusting push contents`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repo = FakeSeniorRepository(listOf(managedSenior(3)))
+            val vm = SeniorManagementViewModel(repo, FakeFamilyRepository())
+            advanceUntilIdle()
+            repo.notices = listOf(com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice(30, 103, 3, "시니어3", ""))
+            vm.openWithdrawalNotification(30)
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.managedSeniors.single().withdrawn)
+            assertEquals(30L, vm.uiState.value.withdrawalDialog?.withdrawalNoticeId)
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test
     fun `existing code joins and selects matching senior without creating family`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -201,7 +282,7 @@ class SeniorManagementViewModelTest {
     }
 
     @Test
-    fun `primary caregiver cannot remove relationship or change selection`() = runTest {
+    fun `server rejection preserves primary caregiver relationship and selection`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             val repository = FakeSeniorRepository()
@@ -210,12 +291,46 @@ class SeniorManagementViewModelTest {
             var requests = 0
             var saves = 0
             var completed = false
-            vm.disconnectRelationship(3L, { true }, { saves++ }, {}, { completed = true }, { requests++ })
+            vm.disconnectRelationship(3L, {}, { saves++ }, {}, { completed = true }, { requests++; error("시니어 연결 이력이 있어 해제할 수 없어요.") })
             advanceUntilIdle()
-            assertEquals(0, requests)
+            assertEquals(1, requests)
             assertEquals(0, saves)
             assertFalse(completed)
             assertFalse(vm.uiState.value.isDisconnecting)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `never linked family deletion removes senior and selects remaining senior`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeSeniorRepository(listOf(managedSenior(3L), managedSenior(7L)))
+            val vm = SeniorManagementViewModel(repository, FakeFamilyRepository())
+            advanceUntilIdle()
+            var selected: List<Long>? = null
+            var completed = false
+            vm.disconnectRelationship(3L, {}, { selected = it }, {}, { completed = true }, {
+                repository.managedSeniors = listOf(managedSenior(7L))
+            })
+            advanceUntilIdle()
+            assertEquals(listOf(7L), selected)
+            assertEquals(listOf(7L), vm.uiState.value.managedSeniors.map { it.seniorId })
+            assertTrue(completed)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `missing caregiver information prevents deletion`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val vm = SeniorManagementViewModel(FakeSeniorRepository(), FakeFamilyRepository())
+            advanceUntilIdle()
+            var requests = 0
+            var completed = false
+            vm.disconnectRelationship(3L, { error("담당자 정보 없음") }, {}, {}, { completed = true }, { requests++ })
+            advanceUntilIdle()
+            assertEquals(0, requests)
+            assertFalse(completed)
         } finally { Dispatchers.resetMain() }
     }
 
@@ -364,6 +479,14 @@ private class FakeSeniorRepository(
     var managedSeniors: List<ManagedSenior> = emptyList(),
     private val createGate: CompletableDeferred<Unit>? = null,
 ) : SeniorRepository {
+    var ackCount = 0
+    var failAck = false
+    var notices = emptyList<com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice>()
+    override suspend fun getWithdrawalNotices() = notices
+    override suspend fun acknowledgeWithdrawal(noticeId: Long) {
+        ackCount++
+        if (failAck) error("ack failed")
+    }
     var managedListRequestCount = 0
     var failList = false
     var createRequestCount = 0

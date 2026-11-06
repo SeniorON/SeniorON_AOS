@@ -2,6 +2,14 @@ package com.example.senior_on.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
+data class SeniorWithdrawalNoticeResponse(
+    val withdrawalNoticeId: Long,
+    val familyId: Long,
+    val seniorId: Long,
+    val seniorName: String,
+    val withdrawnAt: String,
+)
+
 data class CreateSeniorResponse(
     val seniorId: Long,
     val name: String,
@@ -20,7 +28,9 @@ data class ManagedSeniorResponse(
     @SerializedName(value = "seniorName", alternate = ["name"])
     val name: String?,
     val relation: SeniorRelation?,
-    val customRelation: String?
+    val customRelation: String?,
+    val withdrawn: Boolean = false,
+    val withdrawalNoticeId: Long? = null,
 )
 
 data class UpdateSeniorRelationResponse(

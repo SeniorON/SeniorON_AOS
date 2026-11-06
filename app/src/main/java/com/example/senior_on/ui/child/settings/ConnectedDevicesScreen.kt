@@ -1,5 +1,6 @@
 package com.example.senior_on.ui.child.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,6 +81,8 @@ data class ConnectedSeniorDeviceUiState(
 
 @Composable
 fun ConnectedDevicesScreen(
+    selectedSeniorName: String? = null,
+    selectedSeniorRelationship: String? = null,
     device: ConnectedSeniorDeviceUiState?,
     isDisconnecting: Boolean = false,
     onBackClick: () -> Unit,
@@ -124,6 +127,13 @@ fun ConnectedDevicesScreen(
                     onEditInfoClick = onEditInfoClick,
                     onDisconnectClick = { showDisconnectDialog = true }
                 )
+            } else if (selectedSeniorName != null) {
+                DisconnectedSeniorDeviceCard(
+                    name = selectedSeniorName,
+                    relationshipLabel = selectedSeniorRelationship,
+                    isDisconnecting = isDisconnecting,
+                    onDisconnectClick = { showDisconnectDialog = true },
+                )
             } else {
                 Text(
                     text = "연결된 시니어 기기가 없어요",
@@ -143,6 +153,63 @@ fun ConnectedDevicesScreen(
                 onDisconnectConfirm()
             },
             isDisconnecting = isDisconnecting,
+        )
+    }
+}
+
+@Composable
+private fun DisconnectedSeniorDeviceCard(
+    name: String,
+    relationshipLabel: String?,
+    isDisconnecting: Boolean,
+    onDisconnectClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(SeniorOnRadius.Medium)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(SeniorOnColors.Red50)
+            .border(1.dp, SeniorOnColors.Red400, shape)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = SeniorOnTextStyles.BodyLBold,
+                    color = SeniorOnColors.Gray800,
+                )
+                if (!relationshipLabel.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = relationshipLabel,
+                        style = SeniorOnTextStyles.BodySMedium,
+                        color = SeniorOnColors.Gray500,
+                    )
+                }
+            }
+            Text(
+                text = "미연결",
+                style = SeniorOnTextStyles.BodySMedium,
+                color = SeniorOnColors.Red400,
+            )
+        }
+        SeniorOnActionButton(
+            text = "연결 해제",
+            onClick = onDisconnectClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isDisconnecting,
+            isLoading = isDisconnecting,
+            containerColor = SeniorOnColors.Red50,
+            contentColor = SeniorOnColors.Red400,
+            border = BorderStroke(1.dp, SeniorOnColors.Red400),
+            minHeight = 42.dp,
         )
     }
 }
@@ -356,7 +423,7 @@ private fun ConnectedSeniorDeviceCard(
 }
 
 @Composable
-private fun DisconnectDeviceDialog(
+internal fun DisconnectDeviceDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     isDisconnecting: Boolean = false,
@@ -379,7 +446,7 @@ private fun DisconnectDeviceDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp)
+                    .verticalScroll(rememberScrollState())
                     .clip(
                         RoundedCornerShape(
                             topStart = 28.dp,
@@ -394,7 +461,7 @@ private fun DisconnectDeviceDialog(
                     )
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp)
-                    .padding(top = 24.dp)
+                    .padding(top = 24.dp, bottom = 24.dp)
             ) {
                 Text(
                     text = "연결을 해제할까요?",
@@ -409,7 +476,8 @@ private fun DisconnectDeviceDialog(
                 Text(
                     text = buildAnnotatedString {
                         append("내 목록에서 해당 시니어가 삭제돼요.\n")
-                        append("시니어의 정보와 다른 가족의 연결은 유지돼요.")
+                        append("다른 가족의 연결은 유지돼요.\n")
+                        append("아직 연결한 적 없는 가족을 마지막으로 나가면 등록 정보와 코드가 삭제돼요.")
                     },
                     style = SeniorOnTextStyles.BodyMMedium,
                     color = SeniorOnColors.Gray500,
@@ -470,6 +538,34 @@ private fun ConnectedDevicesScreenPreview() {
             onBackClick = {},
             onEditInfoClick = {},
             onDisconnectConfirm = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Composable
+private fun DisconnectedDevicesScreenPreview() {
+    SENIOR_ONTheme {
+        ConnectedDevicesScreen(
+            selectedSeniorName = "김순자",
+            selectedSeniorRelationship = "어머니",
+            device = null,
+            onBackClick = {},
+            onEditInfoClick = {},
+            onDisconnectConfirm = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 280)
+@Composable
+private fun DisconnectedSeniorDeviceCardLoadingPreview() {
+    SENIOR_ONTheme {
+        DisconnectedSeniorDeviceCard(
+            name = "김순자",
+            relationshipLabel = "어머니",
+            isDisconnecting = true,
+            onDisconnectClick = {},
         )
     }
 }

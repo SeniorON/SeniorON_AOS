@@ -8,6 +8,7 @@ import com.google.firebase.messaging.RemoteMessage
 class SeniorOnFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+        SeniorWithdrawalEventStore.publish(message.data)
         FamilyPhotoSharedEventStore.publish(message.data)
         // Deletion is an internal sync signal, never a user-visible notification.
         if (isFamilyPhotoDeletion(message.data)) return

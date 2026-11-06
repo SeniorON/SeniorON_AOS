@@ -29,6 +29,11 @@ data class SeniorManagementUiState(
     val disconnectRefreshPending: Boolean = false,
     val disconnectRefreshError: String? = null,
     val joinedFamilyId: Long? = null,
+    val withdrawalNotices: List<com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice> = emptyList(),
+    val withdrawalDialog: com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice? = null,
+    val isAcknowledgingWithdrawal: Boolean = false,
+    val withdrawalError: String? = null,
+    val withdrawalAcknowledged: Boolean = false,
 )
 
 class SeniorManagementViewModel(
@@ -36,6 +41,87 @@ class SeniorManagementViewModel(
     private val familyRepository: FamilyServerRepository,
 ) : ViewModel() {
     private var refreshJob: Job? = null
+    private var noticeJob: Job? = null
+    private var requestedWithdrawalNoticeId: Long? = null
+
+    fun openWithdrawalNotification(noticeId: Long?) {
+        requestedWithdrawalNoticeId = noticeId
+        refreshWithdrawalNotices()
+    }
+
+    fun refreshWithdrawalNotices() {
+        if (_uiState.value.isAcknowledgingWithdrawal || _uiState.value.withdrawalAcknowledged) return
+        noticeJob?.cancel()
+        noticeJob = viewModelScope.launch {
+            try {
+                val notices = seniorRepository.getWithdrawalNotices()
+                val requested = notices.firstOrNull { it.withdrawalNoticeId == requestedWithdrawalNoticeId }
+                _uiState.update { state -> state.copy(
+                    withdrawalNotices = notices,
+                    withdrawalDialog = requested ?: state.withdrawalDialog,
+                    managedSeniors = state.managedSeniors.map { senior ->
+                        notices.firstOrNull { it.seniorId == senior.seniorId }?.let {
+                            senior.copy(withdrawn = true, withdrawalNoticeId = it.withdrawalNoticeId)
+                        } ?: senior
+                    },
+                ) }
+                requestedWithdrawalNoticeId = null
+                refreshSeniors()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // The ordinary list is an independent fallback for missed push messages.
+                refreshSeniors()
+            }
+        }
+    }
+
+    fun showWithdrawal(senior: ManagedSenior) {
+        if (!senior.withdrawn) return
+        if (_uiState.value.isAcknowledgingWithdrawal || _uiState.value.withdrawalAcknowledged) return
+        val id = senior.withdrawalNoticeId ?: return
+        _uiState.update { it.copy(
+            withdrawalDialog = com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice(
+                id, senior.familyId, senior.seniorId, senior.name, "",
+            ), withdrawalError = null,
+        ) }
+    }
+
+    fun acknowledgeWithdrawal(
+        saveSelection: suspend (List<Long>) -> Unit,
+        onSuccess: () -> Unit,
+    ) {
+        val notice = _uiState.value.withdrawalDialog ?: return
+        if (_uiState.value.isAcknowledgingWithdrawal || _uiState.value.isDisconnecting) return
+        refreshJob?.cancel()
+        noticeJob?.cancel()
+        _uiState.update { it.copy(isAcknowledgingWithdrawal = true, isLoading = false, withdrawalError = null) }
+        viewModelScope.launch {
+            try {
+                if (!_uiState.value.withdrawalAcknowledged) {
+                    seniorRepository.acknowledgeWithdrawal(notice.withdrawalNoticeId)
+                    _uiState.update { it.copy(withdrawalAcknowledged = true) }
+                }
+                val seniors = seniorRepository.getManagedSeniors()
+                saveSelection(seniors.filterNot { it.withdrawn }.map { it.seniorId })
+                _uiState.update { it.copy(
+                    managedSeniors = seniors,
+                    withdrawalNotices = it.withdrawalNotices.filterNot { item -> item.withdrawalNoticeId == notice.withdrawalNoticeId },
+                    withdrawalDialog = null, withdrawalAcknowledged = false,
+                    listError = null, errorMessage = null,
+                ) }
+                onSuccess()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update { it.copy(withdrawalError = if (it.withdrawalAcknowledged)
+                    "확인은 완료됐지만 목록을 갱신하지 못했어요. 다시 시도해 주세요."
+                    else "탈퇴 안내를 확인 처리하지 못했어요. 다시 시도해 주세요.") }
+            } finally {
+                _uiState.update { it.copy(isAcknowledgingWithdrawal = false) }
+            }
+        }
+    }
     private var profileRevision = 0L
     private val savedProfiles = mutableMapOf<Long, Pair<Long, com.example.senior_on.domain.model.parent.ParentInfo>>()
     private var familyCodeJob: Job? = null
@@ -60,6 +146,7 @@ class SeniorManagementViewModel(
         copy(name = profile.name, relationship = CaregiverRelationship.fromDisplayLabel(profile.relationshipLabel))
 
     fun refreshSeniors() {
+        if (_uiState.value.isAcknowledgingWithdrawal || _uiState.value.withdrawalAcknowledged) return
         if (pendingDisconnectRefresh != null) {
             retryDisconnectRefresh()
             return
@@ -81,6 +168,8 @@ class SeniorManagementViewModel(
                     it.copy(
                         // A list request started before a successful edit must not restore the old label.
                         managedSeniors = managedSeniors.map { senior ->
+                            val notice = it.withdrawalNotices.firstOrNull { item -> item.seniorId == senior.seniorId }
+                            if (notice != null) return@map senior.copy(withdrawn = true, withdrawalNoticeId = notice.withdrawalNoticeId)
                             val saved = savedProfiles[senior.seniorId]
                             if (saved != null && saved.first > requestRevision) senior.withProfile(saved.second)
                             else senior
@@ -258,13 +347,17 @@ class SeniorManagementViewModel(
 
     fun disconnectRelationship(
         seniorId: Long,
-        isPrimary: suspend (Long) -> Boolean,
+        validateRelationship: suspend (Long) -> Unit,
         saveSelection: suspend (List<Long>) -> Unit,
         onMessage: (String) -> Unit,
         onSuccess: () -> Unit,
         removeRelationship: suspend (Long) -> Unit,
     ) {
-        if (_uiState.value.isDisconnecting || _uiState.value.isLoading) return
+        if (_uiState.value.isDisconnecting || _uiState.value.isLoading || _uiState.value.isAcknowledgingWithdrawal || _uiState.value.withdrawalAcknowledged) return
+        if (_uiState.value.managedSeniors.any { it.seniorId == seniorId && it.withdrawn }) {
+            onMessage("탈퇴한 시니어는 탈퇴 안내를 확인해 주세요.")
+            return
+        }
         if (pendingDisconnectRefresh != null) {
             retryDisconnectRefresh()
             return
@@ -272,10 +365,9 @@ class SeniorManagementViewModel(
         _uiState.update { it.copy(isDisconnecting = true) }
         viewModelScope.launch {
             try {
-                if (isPrimary(seniorId)) {
-                    onMessage("주담당자는 연결을 해제할 수 없어요.")
-                    return@launch
-                }
+                // The family API checks connection history and other guardians atomically.
+                // A disconnected device alone does not prove the family was never linked.
+                validateRelationship(seniorId)
                 removeRelationship(seniorId)
                 // Once DELETE succeeds, retries must never send it again.
                 pendingDisconnectRefresh = {
