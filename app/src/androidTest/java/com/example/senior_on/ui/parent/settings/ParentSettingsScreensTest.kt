@@ -31,8 +31,8 @@ class ParentSettingsScreensTest {
         compose.onNodeWithText("자녀와 연결 해제").performClick()
         compose.onNodeWithText("자녀와의 연결이 끊어져요.").assertExists()
         compose.onNodeWithText("취소").performClick()
-        compose.onNodeWithText("공유코드 확인").performClick()
-        compose.onNodeWithContentDescription("공유코드 복사").assertIsNotEnabled()
+        compose.onNodeWithText("시니어 코드 확인").performClick()
+        compose.onNodeWithContentDescription("시니어 코드 복사").assertIsNotEnabled()
     }
 
     @Test fun deniedPermissionStaysOnItsStepAndAllowsLeaving() {

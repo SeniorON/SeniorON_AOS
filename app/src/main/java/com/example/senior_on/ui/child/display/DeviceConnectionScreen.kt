@@ -214,7 +214,7 @@ private fun DeviceStatusCard(
         DisplayDeviceConnectionStatus.Online -> "연결됨"
         DisplayDeviceConnectionStatus.Offline -> "오프라인"
         DisplayDeviceConnectionStatus.LoginExpired -> "로그인 만료"
-        null -> "가족 코드를 연결해주세요"
+        null -> "시니어 코드를 연결해주세요"
     }
     val shape = RoundedCornerShape(SeniorOnRadius.Medium)
 

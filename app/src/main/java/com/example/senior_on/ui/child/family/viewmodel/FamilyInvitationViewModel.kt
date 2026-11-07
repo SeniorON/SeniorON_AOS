@@ -81,7 +81,7 @@ class FamilyInvitationViewModel(
         private const val PRIMARY_MANAGER = "PRIMARY"
         private const val SUB_MANAGER = "SUB"
         private const val FAMILY_CODE_LOAD_ERROR_MESSAGE =
-            "가족 공유 코드를 불러오지 못했어요."
+            "시니어 코드를 불러오지 못했어요."
 
         fun factory(
             repository: FamilyServerRepository,

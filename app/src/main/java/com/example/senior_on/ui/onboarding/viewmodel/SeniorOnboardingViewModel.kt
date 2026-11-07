@@ -221,7 +221,7 @@ class SeniorOnboardingViewModel(
         const val MISSING_SESSION_ERROR_MESSAGE =
             "로그인 정보가 만료되었습니다. 다시 로그인해 주세요."
         const val MISSING_FAMILY_ERROR_MESSAGE =
-            "가족 공유 코드 정보를 찾을 수 없습니다. 이전 화면에서 코드를 다시 생성해 주세요."
+            "시니어 코드 정보를 찾을 수 없습니다. 이전 화면에서 코드를 다시 생성해 주세요."
     }
 }
 

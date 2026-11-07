@@ -79,6 +79,6 @@ class NotificationAccessPresentationTest {
         val panel = NotificationScreenUiState(emptyList(), isParentPhoneRegistered = false,
             isSeniorSharingRevoked = true).accessWarningPanel()!!
         assertEquals("시니어 폰이 연결되지 않았어요.", panel.title)
-        assertTrue(panel.description.contains("가족 코드"))
+        assertTrue(panel.description.contains("시니어 코드"))
     }
 }

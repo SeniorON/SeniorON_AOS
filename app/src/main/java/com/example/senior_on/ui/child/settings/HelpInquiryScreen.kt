@@ -57,8 +57,8 @@ private data class HelpFaqItem(
 private val HelpFaqItems = listOf(
     HelpFaqItem(
         id = "family_code",
-        question = "가족공유코드를 잃어버렸어요.",
-        answer = "가족공유코드는 앱의 [가족탭]>[가족추가 버튼]을 누르시면 확인할 수 있습니다. " +
+        question = "시니어 코드를 잃어버렸어요.",
+        answer = "시니어 코드는 앱의 [가족탭]>[가족추가 버튼]을 누르시면 확인할 수 있습니다. " +
             "해당 화면에서 코드를 확인하신 후 가족에게 다시 공유해 주세요."
     ),
     HelpFaqItem(

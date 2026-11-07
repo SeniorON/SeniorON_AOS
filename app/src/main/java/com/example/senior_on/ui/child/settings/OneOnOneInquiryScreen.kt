@@ -98,9 +98,9 @@ private val SampleAnsweredInquiry = InquiryHistoryItem(
     id = "sample-answered",
     status = InquiryAnswerStatus.Answered,
     createdAtLabel = "26.04.28 14:12",
-    question = "가족 코드를 잃어버렸어요",
-    answer = "가족코드는 앱의 [설정] > [내 계정]에서 언제든 다시 확인할 수 있어요. " +
-        "가족코드를 잃어버렸다면 해당 메뉴에서 코드를 확인한 후 가족에게 다시 공유해 주세요."
+    question = "시니어 코드를 잃어버렸어요",
+    answer = "시니어 코드는 앱의 [설정] > [내 계정]에서 언제든 다시 확인할 수 있어요. " +
+        "시니어 코드를 잃어버렸다면 해당 메뉴에서 코드를 확인한 후 가족에게 다시 공유해 주세요."
 )
 
 @Composable
@@ -945,7 +945,7 @@ private fun OneOnOneInquiryHistoryListPreview() {
                     id = "waiting",
                     status = InquiryAnswerStatus.Waiting,
                     createdAtLabel = "26.04.28 14:12",
-                    question = "가족 코드를 잃어버렸어요"
+                    question = "시니어 코드를 잃어버렸어요"
                 ),
                 SampleAnsweredInquiry
             )

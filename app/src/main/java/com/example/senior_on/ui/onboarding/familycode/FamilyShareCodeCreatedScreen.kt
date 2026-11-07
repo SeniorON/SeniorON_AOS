@@ -93,9 +93,9 @@ fun FamilyShareCodeCreatedScreen(
                 }
                 Text(
                     text = errorMessage ?: if (showNextButton) {
-                        "가족 공유 코드를 생성하고 있어요."
+                        "시니어 코드를 생성하고 있어요."
                     } else {
-                        "가족 공유 코드를 불러오고 있어요."
+                        "시니어 코드를 불러오고 있어요."
                     },
                     modifier = Modifier.fillMaxWidth(),
                     style = SeniorOnTextStyles.BodyMMedium,
@@ -153,7 +153,7 @@ private fun FamilyShareCodeCreatedTitle(
         Text(
             text = buildAnnotatedString {
                 withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                    append("가족공유코드")
+                    append("시니어 코드")
                 }
                 append("가 생성되었어요")
             },
@@ -211,7 +211,7 @@ private fun FamilyShareCodeBox(
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_family_code_copy),
-                contentDescription = "가족공유코드 복사",
+                contentDescription = "시니어 코드 복사",
                 modifier = Modifier.size(26.dp),
                 tint = SeniorOnColors.Gray300
             )
@@ -226,7 +226,7 @@ private fun copyFamilyShareCode(
     val clipboardManager = context.getSystemService(
         Context.CLIPBOARD_SERVICE
     ) as ClipboardManager
-    val clipData = ClipData.newPlainText("가족공유코드", familyShareCode)
+    val clipData = ClipData.newPlainText("시니어 코드", familyShareCode)
 
     clipboardManager.setPrimaryClip(clipData)
 }

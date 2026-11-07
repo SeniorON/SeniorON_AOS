@@ -77,7 +77,7 @@ class ParentSettingsViewModel(
             ) { "가족 정보를 확인하지 못했어요." }
         } ?: seniorId
         val code = family.getCode(familyId).code
-        check(code.isNotBlank()) { "공유 코드를 확인하지 못했어요." }
+        check(code.isNotBlank()) { "시니어 코드를 확인하지 못했어요." }
         mutableState.update { it.copy(shareCode = code) }
     }
 

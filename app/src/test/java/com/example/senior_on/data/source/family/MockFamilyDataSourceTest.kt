@@ -15,7 +15,7 @@ import org.junit.Test
 
 class MockFamilyDataSourceTest {
     @Test
-    fun `유효한 공유 코드로 참여하면 현재 사용자의 담당자 역할을 반환한다`() =
+    fun `유효한 시니어 코드로 참여하면 현재 사용자의 담당자 역할을 반환한다`() =
         runBlocking {
             val repository = MockFamilyDataSource(
                 initialOverview = MockFamilyFixtures.assistantCaregiverOverview,
@@ -34,7 +34,7 @@ class MockFamilyDataSourceTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `유효하지 않은 공유 코드로는 참여할 수 없다`() {
+    fun `유효하지 않은 시니어 코드로는 참여할 수 없다`() {
         runBlocking {
             MockFamilyDataSource().joinFamily("INVALID0")
         }

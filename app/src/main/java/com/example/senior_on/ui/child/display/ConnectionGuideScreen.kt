@@ -138,10 +138,10 @@ private fun GuardianConnectionGuideContent(
 
             ConnectionGuideStep(
                 step = 3,
-                title = "가족코드 확인",
+                title = "시니어 코드 확인",
                 imageResId = R.drawable.img_guardian_step03,
-                imageDescription = "가족 공유 코드 확인 화면",
-                description = "[가족탭] > [가족추가] 버튼을 눌러 가족코드를 확인합니다.",
+                imageDescription = "시니어 코드 확인 화면",
+                description = "[가족탭] > [가족추가] 버튼을 눌러 시니어 코드를 확인합니다.",
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -167,9 +167,9 @@ private fun GuardianConnectionGuideContent(
                 step = 4,
                 title = "다른 보호자(배우자, 형제자매 등) 초대",
                 imageResId = R.drawable.img_guardian_step04,
-                imageDescription = "가족 공유 코드 입력 화면",
-                description = "발급된 가족코드를 다른 가족 구성원(배우자, 형제자매 등)에게 " +
-                    "전달합니다. 동일한 가족코드로 연결하면 같은 가족의 보조 담당자로 등록됩니다.",
+                imageDescription = "시니어 코드 입력 화면",
+                description = "발급된 시니어 코드를 다른 가족 구성원(배우자, 형제자매 등)에게 " +
+                    "전달합니다. 동일한 시니어 코드로 연결하면 같은 가족의 보조 담당자로 등록됩니다.",
             )
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -179,7 +179,7 @@ private fun GuardianConnectionGuideContent(
                 title = "시니어와의 관계 선택",
                 imageResId = R.drawable.img_guardian_step05,
                 imageDescription = "시니어와의 관계 선택 화면",
-                description = "가족코드 입력 후, 등록된 시니어와 어떤 관계인지 선택합니다. " +
+                description = "시니어 코드 입력 후, 등록된 시니어와 어떤 관계인지 선택합니다. " +
                     "어머니·아버지·조부모 중 선택하거나, 해당하지 않는 경우 ‘직접 작성’으로 " +
                     "입력할 수 있습니다. 이 정보는 나중에 설정에서 변경할 수 있습니다.",
             )
@@ -283,11 +283,11 @@ private fun SeniorConnectionGuideContent(
 
         ConnectionGuideStep(
             step = 3,
-            title = "가족코드 입력",
+            title = "시니어 코드 입력",
             imageResId = R.drawable.img_senior_step03,
-            imageDescription = "가족 공유 코드 입력 화면",
-            description = "보호자(자녀)에게 전달받은 가족코드를 입력합니다.",
-            reference = "가족코드는 보호자의 [가족탭] > [가족추가]에서 확인할 수 있습니다.\n" +
+            imageDescription = "시니어 코드 입력 화면",
+            description = "보호자(자녀)에게 전달받은 시니어 코드를 입력합니다.",
+            reference = "시니어 코드는 보호자의 [가족탭] > [가족추가]에서 확인할 수 있습니다.\n" +
                 "코드를 모르는 경우 보호자에게 다시 문의해 주세요.",
         )
 
@@ -308,7 +308,7 @@ private fun SeniorConnectionGuideContent(
             title = "가족 연결 완료",
             imageResId = R.drawable.img_senior_step05,
             imageDescription = "가족 연결이 완료된 시니어 홈 화면",
-            description = "가족코드 연결이 완료되면, 보호자가 미리 구성해 둔 홈 화면이 " +
+            description = "시니어 코드 연결이 완료되면, 보호자가 미리 구성해 둔 홈 화면이 " +
                 "자동으로 표시됩니다.",
         )
 
