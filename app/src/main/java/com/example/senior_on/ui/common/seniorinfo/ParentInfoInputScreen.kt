@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.example.senior_on.ui.common.clearFocusOnBackgroundTap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -116,6 +117,11 @@ fun ParentInfoInputScreen(
     var showBirthDateSheet by rememberSaveable { mutableStateOf(false) }
     var showSkipNotice by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    fun finishFieldInput() {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+    }
 
     LaunchedEffect(
         selectedAddress,
@@ -212,6 +218,7 @@ fun ParentInfoInputScreen(
             },
             customRelationshipLabel = customRelationship,
             onRelationshipClick = { selectedRelationship ->
+                finishFieldInput()
                 if (selectedRelationship == SeniorRelationship.Custom) {
                     customRelationshipDraft = customRelationship
                     showCustomRelationshipSheet = true
@@ -222,11 +229,15 @@ fun ParentInfoInputScreen(
                 }
             },
             birthDate = birthDate,
-            onBirthDateClick = { showBirthDateSheet = true },
+            onBirthDateClick = {
+                finishFieldInput()
+                showBirthDateSheet = true
+            },
             phoneNumber = phoneNumber,
             onPhoneNumberChange = {
-                phoneNumber = formatPhoneFieldValue(it)
-                onInputChange()
+                val next = formatPhoneFieldValue(it, previous = phoneNumber)
+                if (next.text != phoneNumber.text) onInputChange()
+                phoneNumber = next
             },
             address = address,
             onAddressChange = {
@@ -238,7 +249,10 @@ fun ParentInfoInputScreen(
                 addressDetail = it
                 onInputChange()
             },
-            onSearchAddressClick = onSearchAddressClick,
+            onSearchAddressClick = {
+                finishFieldInput()
+                onSearchAddressClick()
+            },
             showIntro = mode == ParentInfoScreenMode.Input,
             needsAddressSearch = needsAddressSearch,
             isPhoneNumberRequired = true,
@@ -273,7 +287,10 @@ fun ParentInfoInputScreen(
 
         when (mode) {
             ParentInfoScreenMode.Input -> SeniorInfoBottomActions(
-                onSkipClick = { showSkipNotice = true },
+                onSkipClick = {
+                    finishFieldInput()
+                    showSkipNotice = true
+                },
                 onSaveClick = saveParentInfo,
                 isSaveEnabled = isSaveEnabled,
                 errorMessage = errorMessage,
