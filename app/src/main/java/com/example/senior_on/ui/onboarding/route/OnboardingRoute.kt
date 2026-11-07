@@ -102,7 +102,7 @@ internal enum class PostLoginDestination {
 }
 
 private const val InvalidFamilyShareCodeMessage =
-    "가족 공유 코드를 다시 확인해 주세요."
+    "시니어 코드를 다시 확인해 주세요."
 
 private val InitialRoute = SeniorOnRoute.Splash
 

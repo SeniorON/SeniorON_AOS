@@ -441,8 +441,8 @@ private fun Throwable.toSeniorManagementError(
 private const val DEFAULT_ERROR_MESSAGE =
     "시니어 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
 private const val CREATE_FAMILY_CODE_ERROR_MESSAGE =
-    "가족 공유 코드 생성에 실패했어요. 다시 시도해 주세요."
+    "시니어 코드 생성에 실패했어요. 다시 시도해 주세요."
 private const val MISSING_FAMILY_ID_MESSAGE =
     "생성된 가족 정보를 확인할 수 없어요. 코드를 다시 생성해 주세요."
 private const val MISSING_FAMILY_CODE_MESSAGE =
-    "생성된 가족 공유 코드를 확인할 수 없어요. 다시 시도해 주세요."
+    "생성된 시니어 코드를 확인할 수 없어요. 다시 시도해 주세요."

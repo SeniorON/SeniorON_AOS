@@ -162,7 +162,7 @@ data class NotificationFooterPanelUiState(
     },
     val description: String = when (tone) {
         NotificationFooterTone.Recommendation -> "알림을 켜두면 위험 상황이나 중요한 일을\n더 빠르게 확인할 수 있어요."
-        NotificationFooterTone.Warning -> "가족 코드를 입력해 연결하면 알림 기능을\n설정할 수 있어요."
+        NotificationFooterTone.Warning -> "시니어 코드를 입력해 연결하면 알림 기능을\n설정할 수 있어요."
     }
 )
 

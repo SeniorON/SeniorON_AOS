@@ -122,7 +122,7 @@ private fun ParentSettingsSectionPreview() {
         Box(Modifier.padding(16.dp)) {
             ParentSettingsSection("관리") {
                 ParentSettingsMenuRow("내 계정", {}, isSectionItem = true)
-                ParentSettingsMenuRow("공유코드 확인", {}, isSectionItem = true)
+                ParentSettingsMenuRow("시니어 코드 확인", {}, isSectionItem = true)
                 ParentSettingsMenuRow("자녀와 연결 해제", {}, isSectionItem = true)
                 ParentSettingsMenuRow("권한 해제", {}, isSectionItem = true)
             }

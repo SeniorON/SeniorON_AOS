@@ -33,7 +33,7 @@ internal fun PendingFamilyCodeRoute(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
-            error = failure.message ?: "가족 공유코드를 불러오지 못했어요."
+            error = failure.message ?: "시니어 코드를 불러오지 못했어요."
         } finally {
             loading = false
         }

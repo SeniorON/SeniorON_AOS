@@ -132,7 +132,7 @@ private fun FamilyShareCodeInputTitle(
     Text(
         text = buildAnnotatedString {
             withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                append("가족공유코드")
+                append("시니어 코드")
             }
             append("를 입력해주세요")
         },
@@ -197,7 +197,7 @@ private fun FamilyShareCodeTextField(
                     Box(modifier = Modifier.weight(1f)) {
                         if (value.isEmpty()) {
                             Text(
-                                text = "가족 공유 코드 입력",
+                                text = "시니어 코드 입력",
                                 style = SeniorOnTextStyles.BodyMMedium,
                                 color = SeniorOnColors.Gray300
                             )

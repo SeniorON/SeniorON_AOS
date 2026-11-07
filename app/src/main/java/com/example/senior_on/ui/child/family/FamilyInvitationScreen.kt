@@ -332,7 +332,7 @@ private fun FamilyInvitationCodeBox(
         if (code.isNotBlank()) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_family_code_copy),
-                contentDescription = "가족 공유 코드 복사",
+                contentDescription = "시니어 코드 복사",
                 modifier = Modifier
                     .size(34.dp)
                     .clickable(
@@ -385,7 +385,7 @@ private fun copyFamilyInvitationCode(
     val clipboardManager = context.getSystemService(
         Context.CLIPBOARD_SERVICE
     ) as ClipboardManager
-    val clipData = ClipData.newPlainText("가족 공유 코드", invitationCode)
+    val clipData = ClipData.newPlainText("시니어 코드", invitationCode)
 
     clipboardManager.setPrimaryClip(clipData)
 }

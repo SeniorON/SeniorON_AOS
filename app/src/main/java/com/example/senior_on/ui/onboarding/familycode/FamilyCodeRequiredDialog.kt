@@ -34,14 +34,14 @@ internal fun FamilyCodeRequiredDialog(onDismiss: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "자녀에게 가족공유코드를\n발급받아 주세요",
+                "자녀에게 시니어 코드를\n발급받아 주세요",
                 style = SeniorOnTextStyles.BodyLBold,
                 color = SeniorOnColors.Gray800,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "자녀가 앱에서 발급한 가족공유코드를 전달받은 후 입력해 주세요.",
+                "자녀가 앱에서 발급한 시니어 코드를 전달받은 후 입력해 주세요.",
                 style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray500,
                 textAlign = TextAlign.Center,

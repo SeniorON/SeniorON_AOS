@@ -21,6 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,12 +81,17 @@ data class ConnectedSeniorDeviceUiState(
         }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectedDevicesScreen(
     selectedSeniorName: String? = null,
     selectedSeniorRelationship: String? = null,
     device: ConnectedSeniorDeviceUiState?,
     isDisconnecting: Boolean = false,
+    isRefreshing: Boolean = false,
+    awaitingFirstResult: Boolean = false,
+    refreshFailed: Boolean = false,
+    onRefresh: () -> Unit = {},
     onBackClick: () -> Unit,
     onEditInfoClick: () -> Unit,
     onDisconnectConfirm: () -> Unit,
@@ -104,43 +111,16 @@ fun ConnectedDevicesScreen(
             showShadow = false,
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SeniorOnColors.Background1)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(top = 24.dp, bottom = 24.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Text(
-                text = "연결된 시니어 기기",
-                style = SeniorOnTextStyles.HeadingXS,
-                color = SeniorOnColors.Gray800
+            ConnectedDevicesContent(
+                selectedSeniorName, selectedSeniorRelationship, device, isDisconnecting,
+                awaitingFirstResult, refreshFailed, onRefresh, onDeviceInfoClick, onEditInfoClick,
+                onDisconnectClick = { showDisconnectDialog = true },
             )
-
-            Spacer(modifier = Modifier.height(13.dp))
-
-            if (device != null) {
-                ConnectedSeniorDeviceCard(
-                    device = device,
-                    onDeviceInfoClick = onDeviceInfoClick,
-                    onEditInfoClick = onEditInfoClick,
-                    onDisconnectClick = { showDisconnectDialog = true }
-                )
-            } else if (selectedSeniorName != null) {
-                DisconnectedSeniorDeviceCard(
-                    name = selectedSeniorName,
-                    relationshipLabel = selectedSeniorRelationship,
-                    isDisconnecting = isDisconnecting,
-                    onDisconnectClick = { showDisconnectDialog = true },
-                )
-            } else {
-                Text(
-                    text = "연결된 시니어 기기가 없어요",
-                    style = SeniorOnTextStyles.BodyMMedium,
-                    color = SeniorOnColors.Gray500
-                )
-            }
         }
     }
 
@@ -149,11 +129,67 @@ fun ConnectedDevicesScreen(
             onDismiss = {
                 if (!isDisconnecting) showDisconnectDialog = false
             },
-            onConfirm = {
-                onDisconnectConfirm()
-            },
+            onConfirm = onDisconnectConfirm,
             isDisconnecting = isDisconnecting,
         )
+    }
+}
+
+@Composable
+private fun ConnectedDevicesContent(
+    selectedSeniorName: String?,
+    selectedSeniorRelationship: String?,
+    device: ConnectedSeniorDeviceUiState?,
+    isDisconnecting: Boolean,
+    awaitingFirstResult: Boolean,
+    refreshFailed: Boolean,
+    onRefresh: () -> Unit,
+    onDeviceInfoClick: () -> Unit,
+    onEditInfoClick: () -> Unit,
+    onDisconnectClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+            .background(SeniorOnColors.Background1)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+    ) {
+        Text(
+            text = "연결된 시니어 기기",
+            style = SeniorOnTextStyles.HeadingXS,
+            color = SeniorOnColors.Gray800
+        )
+
+        Spacer(modifier = Modifier.height(13.dp))
+
+        if (refreshFailed) {
+            androidx.compose.material3.TextButton(onClick = onRefresh) {
+                Text("기기 정보를 불러오지 못했어요. 다시 시도")
+            }
+        }
+        if (device == null && (refreshFailed || awaitingFirstResult)) return@Column
+        if (device != null) {
+            ConnectedSeniorDeviceCard(
+                device = device,
+                onDeviceInfoClick = onDeviceInfoClick,
+                onEditInfoClick = onEditInfoClick,
+                onDisconnectClick = onDisconnectClick
+            )
+
+        } else if (selectedSeniorName != null) {
+            DisconnectedSeniorDeviceCard(
+                name = selectedSeniorName,
+                relationshipLabel = selectedSeniorRelationship,
+                isDisconnecting = isDisconnecting,
+                onDisconnectClick = onDisconnectClick,
+            )
+        } else {
+            Text(
+                text = "연결된 시니어 기기가 없어요",
+                style = SeniorOnTextStyles.BodyMMedium,
+                color = SeniorOnColors.Gray500
+            )
+        }
     }
 }
 

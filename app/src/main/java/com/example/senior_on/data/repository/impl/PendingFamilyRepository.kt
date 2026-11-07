@@ -73,7 +73,7 @@ class PendingFamilyRepository(
         if (!create) return null
         check(accountId() == account) { "로그인 계정이 변경되었어요." }
         val created = delegate.createCode()
-        check(created.familyId != null && created.code.isNotBlank()) { "가족 공유코드를 확인하지 못했어요." }
+        check(created.familyId != null && created.code.isNotBlank()) { "시니어 코드를 확인하지 못했어요." }
         write(account, created)
         check(accountId() == account) { "로그인 계정이 변경되었어요." }
         return created

@@ -7,7 +7,7 @@ internal fun familyInvitationShareContent(
 ): ShareContent = ShareContent(
     text = buildString {
         appendLine("SeniorON 가족으로 초대했어요.")
-        appendLine("가족 공유 코드: $invitationCode")
+        appendLine("시니어 코드: $invitationCode")
         append("앱에서 코드를 입력해 가족을 연결해주세요.")
     },
     androidExecutionParams = mapOf(

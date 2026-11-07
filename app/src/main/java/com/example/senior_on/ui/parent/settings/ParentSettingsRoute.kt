@@ -136,7 +136,7 @@ fun ParentSettingsRoute(
         title = when (destination) {
             ParentSettingsDestination.Account -> "내 계정"
             ParentSettingsDestination.PermissionControl -> "권한 해제"
-            ParentSettingsDestination.ShareCode -> "가족 공유 코드"
+            ParentSettingsDestination.ShareCode -> "시니어 코드"
             else -> "설정"
         },
         onBackClick = {
@@ -167,13 +167,13 @@ fun ParentSettingsRoute(
                 Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     if (profileState.busy) CircularProgressIndicator()
-                    else Button(onClick = profileViewModel::loadShareCode) { Text("공유 코드 다시 불러오기") }
+                    else Button(onClick = profileViewModel::loadShareCode) { Text("시니어 코드 다시 불러오기") }
                     TextButton(onClick = ::back) { Text("뒤로") }
                 }
             } else ParentShareCodeScreen(code, ::back, {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("가족 공유 코드", code))
-                Toast.makeText(context, "공유 코드를 복사했어요.", Toast.LENGTH_SHORT).show()
+                clipboard.setPrimaryClip(ClipData.newPlainText("시니어 코드", code))
+                Toast.makeText(context, "시니어 코드를 복사했어요.", Toast.LENGTH_SHORT).show()
             }, modifier)
         }
         ParentSettingsDestination.PermissionControl -> {

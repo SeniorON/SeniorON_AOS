@@ -17,11 +17,11 @@ import com.example.senior_on.ui.theme.*
 
 @Composable
 fun ParentShareCodeScreen(code: String, onBackClick: () -> Unit, onCopyClick: () -> Unit, modifier: Modifier = Modifier, previewOnly: Boolean = false) {
-    ParentSettingsScaffold("공유코드 확인", onBackClick, modifier, previewOnly = previewOnly) {
+    ParentSettingsScaffold("시니어 코드 확인", onBackClick, modifier, previewOnly = previewOnly) {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp)) {
             Row {
                 Text("나의 ", style = SeniorOnTextStyles.HeadingS, color = SeniorOnColors.Gray800)
-                Text("가족 공유 코드", style = SeniorOnTextStyles.HeadingS, color = SeniorOnColors.Primary700)
+                Text("시니어 코드", style = SeniorOnTextStyles.HeadingS, color = SeniorOnColors.Primary700)
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth().background(SeniorOnColors.White, RoundedCornerShape(12.dp))
@@ -29,7 +29,7 @@ fun ParentShareCodeScreen(code: String, onBackClick: () -> Unit, onCopyClick: ()
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(code.ifBlank { "연동 전" }, Modifier.weight(1f), style = SeniorOnTextStyles.HeadingXXL, color = SeniorOnColors.Gray800)
                 IconButton(onClick = onCopyClick, enabled = code.isNotBlank()) {
-                    Icon(painterResource(R.drawable.ic_family_code_copy), "공유코드 복사", modifier = Modifier.size(34.dp), tint = SeniorOnColors.Gray400)
+                    Icon(painterResource(R.drawable.ic_family_code_copy), "시니어 코드 복사", modifier = Modifier.size(34.dp), tint = SeniorOnColors.Gray400)
                 }
             }
         }

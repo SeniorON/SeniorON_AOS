@@ -145,6 +145,7 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    selectedSeniorId: Long? = null,
     selectedSeniorName: String? = null,
     selectedSeniorRelationship: String? = null,
     tabReselectionToken: Int = 0,
@@ -379,6 +380,19 @@ fun SettingsTabRoute(
         }
     }
 
+    val canRefreshDevices = selectedSeniorId != null &&
+        selectedSeniorId == displayUiState.selectedSeniorId && !isDisconnectingRelationship
+    var manualDeviceRefresh by remember(destination, selectedSeniorId) { mutableStateOf(false) }
+    val deviceLoadInProgress = displayUiState.isRefreshing || displayUiState.isLoading
+    LaunchedEffect(deviceLoadInProgress) {
+        if (!deviceLoadInProgress) manualDeviceRefresh = false
+    }
+    LaunchedEffect(destination, selectedSeniorId, displayUiState.selectedSeniorId) {
+        if (destination == SettingsDestination.ConnectedDevices && canRefreshDevices) {
+            displayViewModel.refreshOverview()
+        }
+    }
+
     BackHandler(
         enabled = destination != SettingsDestination.Main,
         onBack = navigateBack
@@ -455,6 +469,15 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
+            isRefreshing = canRefreshDevices && deviceLoadInProgress && manualDeviceRefresh,
+            awaitingFirstResult = canRefreshDevices && !displayUiState.hasLoadedOverview,
+            refreshFailed = canRefreshDevices && displayUiState.queryError != null,
+            onRefresh = {
+                if (canRefreshDevices) {
+                    manualDeviceRefresh = true
+                    displayViewModel.refreshOverview()
+                }
+            },
             selectedSeniorName = selectedSeniorName,
             selectedSeniorRelationship = selectedSeniorRelationship,
             device = connectedDevice,

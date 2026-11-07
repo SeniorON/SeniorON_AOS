@@ -123,7 +123,7 @@ private fun FamilyShareCodeTitle(
         Text(
             text = buildAnnotatedString {
                 withStyle(SpanStyle(color = SeniorOnColors.Primary600)) {
-                    append("가족공유코드")
+                    append("시니어 코드")
                 }
                 append("가 있으신가요?")
             },

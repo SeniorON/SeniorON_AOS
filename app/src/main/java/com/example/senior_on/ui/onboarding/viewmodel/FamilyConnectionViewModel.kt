@@ -103,8 +103,8 @@ class FamilyConnectionViewModel(
 
     private companion object {
         const val CREATE_FAMILY_CODE_ERROR_MESSAGE =
-            "가족 공유 코드 생성에 실패했어요. 다시 시도해 주세요."
+            "시니어 코드 생성에 실패했어요. 다시 시도해 주세요."
         const val INVALID_FAMILY_CODE_MESSAGE =
-            "가족 공유 코드를 다시 확인해 주세요."
+            "시니어 코드를 다시 확인해 주세요."
     }
 }
