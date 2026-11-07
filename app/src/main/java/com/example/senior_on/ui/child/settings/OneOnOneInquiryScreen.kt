@@ -166,18 +166,11 @@ private fun OneOnOneInquiryScreen(
     var title by rememberSaveable { mutableStateOf("") }
     var content by rememberSaveable { mutableStateOf("") }
     var imageUris by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
-    var showSuccessDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(selectedTab) {
         if (selectedTab == OneOnOneInquiryTab.History) {
             onHistoryTabSelected()
         }
-    }
-
-    LaunchedEffect(submitCompleted) {
-        if (!submitCompleted) return@LaunchedEffect
-        onConsumeSubmitCompleted()
-        showSuccessDialog = true
     }
 
     val remainingSlots = (MaxInquiryImages - imageUris.size).coerceAtLeast(0)
@@ -198,7 +191,7 @@ private fun OneOnOneInquiryScreen(
             .take(MaxInquiryImages)
     }
 
-    val canSubmit = title.isNotBlank() && content.isNotBlank() && !isSubmitting
+    val canSubmit = title.isNotBlank() && content.isNotBlank() && !isSubmitting && !submitCompleted
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -275,14 +268,14 @@ private fun OneOnOneInquiryScreen(
             }
         }
 
-        if (showSuccessDialog) {
+        if (submitCompleted) {
             InquirySubmitSuccessDialog(
                 onConfirmClick = {
-                    showSuccessDialog = false
                     title = ""
                     content = ""
                     imageUris = emptyList()
                     selectedTab = OneOnOneInquiryTab.History
+                    onConsumeSubmitCompleted()
                 }
             )
         }

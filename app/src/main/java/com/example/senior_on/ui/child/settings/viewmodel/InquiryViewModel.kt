@@ -140,19 +140,13 @@ class InquiryViewModel(
         content: String,
         imageUris: List<String>,
     ) {
-        if (_uiState.value.isSubmitting) return
+        if (_uiState.value.isSubmitting || _uiState.value.submitCompleted) return
         val trimmedTitle = title.trim()
         val trimmedContent = content.trim()
         if (trimmedTitle.isBlank() || trimmedContent.isBlank()) return
 
+        _uiState.update { it.copy(isSubmitting = true, submitErrorMessage = null) }
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isSubmitting = true,
-                    submitErrorMessage = null,
-                    submitCompleted = false,
-                )
-            }
             runCatching {
                 inquiryRepository.createInquiry(
                     title = trimmedTitle,
