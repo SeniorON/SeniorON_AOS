@@ -46,7 +46,6 @@ import com.example.senior_on.domain.model.display.DisplayDevice
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
 import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator
-import com.example.senior_on.ui.common.time.toRelativeTimeLabel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.theme.SeniorOnBrushes
 import com.example.senior_on.ui.theme.SeniorOnColors
@@ -213,10 +212,7 @@ private fun DeviceStatusCard(
     }
     val statusDescription = when (status) {
         DisplayDeviceConnectionStatus.Online -> "연결됨"
-        DisplayDeviceConnectionStatus.Offline -> listOfNotNull(
-            "오프라인",
-            device.lastConnectedAtLabel.toRelativeTimeLabel(),
-        ).joinToString(" · ")
+        DisplayDeviceConnectionStatus.Offline -> "오프라인"
         DisplayDeviceConnectionStatus.LoginExpired -> "로그인 만료"
         null -> "가족 코드를 연결해주세요"
     }
@@ -317,38 +313,19 @@ private fun RelationshipTag(
 private fun DeviceInformationCard(device: DisplayDevice?) {
     val unavailableText = device.unavailableStatusText()
     val valuesHidden = device?.connectionStatus == DisplayDeviceConnectionStatus.LoginExpired
-    val lastConnected = if (valuesHidden) null else device?.lastConnectedAtLabel.toRelativeTimeLabel()
     val batteryLevel = if (valuesHidden) null else device?.batteryLevelPercent
-    val networkConnected = if (valuesHidden) null else device?.networkConnected
     val defaultHomeEnabled = if (valuesHidden) null else device?.defaultHomeEnabled
-    val sharingEnabled = if (valuesHidden) null else device?.deviceStatusSharingEnabled
 
     DeviceSectionCard(
         title = "기기 정보",
-        height = 230.dp,
+        height = 134.dp,
     ) {
-        DeviceInformationRow(
-            iconResId = R.drawable.ic_clock_2,
-            label = "마지막 접속",
-            value = lastConnected ?: unavailableText,
-            valueAvailable = lastConnected != null,
-        )
         DeviceInformationRow(
             iconResId = R.drawable.ic_battery,
             label = "배터리",
             value = batteryLevel?.let { "$it%" } ?: unavailableText,
             valueAvailable = batteryLevel != null,
             showChargingIcon = batteryLevel != null && device?.charging == true,
-        )
-        DeviceInformationRow(
-            iconResId = R.drawable.ic_wifi,
-            label = "인터넷 연결",
-            value = networkConnected.toDisplayText(
-                enabledText = "연결됨",
-                disabledText = "미연결",
-                unavailableText = unavailableText,
-            ),
-            valueAvailable = networkConnected != null,
         )
         DeviceInformationRow(
             iconResId = R.drawable.ic_device_status_home,
@@ -359,16 +336,6 @@ private fun DeviceInformationCard(device: DisplayDevice?) {
                 unavailableText = unavailableText,
             ),
             valueAvailable = defaultHomeEnabled != null,
-        )
-        DeviceInformationRow(
-            iconResId = R.drawable.ic_device_status_share,
-            label = "보호자에게 기기 상태 공유",
-            value = sharingEnabled.toDisplayText(
-                enabledText = "켜짐",
-                disabledText = "꺼짐",
-                unavailableText = unavailableText,
-            ),
-            valueAvailable = sharingEnabled != null,
         )
     }
 }
