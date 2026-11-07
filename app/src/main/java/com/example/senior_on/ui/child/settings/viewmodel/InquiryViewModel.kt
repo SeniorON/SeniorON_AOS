@@ -8,6 +8,7 @@ import com.example.senior_on.domain.model.inquiry.InquiryDetail
 import com.example.senior_on.domain.model.inquiry.InquiryStatus
 import com.example.senior_on.domain.model.inquiry.InquirySummary
 import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.domain.repository.inquiry.InquiryResultUnknownException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -29,13 +30,24 @@ data class InquiryHistoryUiItem(
     val isDetailLoading: Boolean = false,
 )
 
+data class InquiryDraft(val title: String = "", val content: String = "", val images: List<String> = emptyList())
+enum class InquiryPage { Write, History }
+enum class InquiryNotice(val message: String, val action: String, val page: InquiryPage) {
+    Success("문의가 등록됐어요.", "내역 보기", InquiryPage.History),
+    Failed("문의를 등록하지 못했어요.", "작성 화면으로", InquiryPage.Write),
+    Unknown("등록 여부를 확인하지 못했어요.", "내 문의내역 확인", InquiryPage.History),
+}
+
 data class InquiryUiState(
+    val draft: InquiryDraft = InquiryDraft(),
+    val needsHistoryCheck: Boolean = false,
+    val notice: InquiryNotice? = null,
+    val openPage: InquiryPage? = null,
     val historyItems: List<InquiryHistoryUiItem> = emptyList(),
     val isHistoryLoading: Boolean = false,
     val historyErrorMessage: String? = null,
     val detailErrorMessage: String? = null,
     val isSubmitting: Boolean = false,
-    val submitErrorMessage: String? = null,
     val submitCompleted: Boolean = false,
 )
 
@@ -47,9 +59,29 @@ class InquiryViewModel(
     val uiState: StateFlow<InquiryUiState> = _uiState.asStateFlow()
 
     private val detailLoadingIds = mutableSetOf<String>()
+    private var writeVisible = false
+    private var submissionNumber = 0L
+
+    fun setWriteVisible(visible: Boolean) {
+        writeVisible = visible
+        if (!visible && _uiState.value.submitCompleted) {
+            _uiState.update { it.copy(submitCompleted = false, notice = InquiryNotice.Success) }
+        }
+    }
+
+    fun editDraft(draft: InquiryDraft) {
+        _uiState.update { if (it.isSubmitting) it else it.copy(draft = draft) }
+    }
+
+    fun openPage(page: InquiryPage) = _uiState.update { it.copy(openPage = page) }
+    fun consumePage() = _uiState.update { it.copy(openPage = null) }
+    fun consumeNotice(notice: InquiryNotice) = _uiState.update {
+        if (it.notice == notice) it.copy(notice = null) else it
+    }
 
     fun loadInquiries() {
         if (_uiState.value.isHistoryLoading) return
+        val checkSubmission = submissionNumber.takeIf { _uiState.value.needsHistoryCheck }
         _uiState.update { it.copy(isHistoryLoading = true, historyErrorMessage = null) }
         viewModelScope.launch {
             runCatching {
@@ -58,6 +90,7 @@ class InquiryViewModel(
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
+                        needsHistoryCheck = it.needsHistoryCheck && checkSubmission != submissionNumber,
                         historyItems = inquiries.map { summary -> summary.toUiItem() },
                     )
                 }
@@ -140,12 +173,14 @@ class InquiryViewModel(
         content: String,
         imageUris: List<String>,
     ) {
-        if (_uiState.value.isSubmitting || _uiState.value.submitCompleted) return
+        if (_uiState.value.isSubmitting || _uiState.value.submitCompleted || _uiState.value.needsHistoryCheck) return
         val trimmedTitle = title.trim()
         val trimmedContent = content.trim()
         if (trimmedTitle.isBlank() || trimmedContent.isBlank()) return
 
-        _uiState.update { it.copy(isSubmitting = true, submitErrorMessage = null) }
+        submissionNumber++
+        _uiState.update { it.copy(isSubmitting = true, notice = null,
+            draft = InquiryDraft(title, content, imageUris.toList())) }
         viewModelScope.launch {
             runCatching {
                 inquiryRepository.createInquiry(
@@ -157,15 +192,20 @@ class InquiryViewModel(
                 _uiState.update {
                     it.copy(
                         isSubmitting = false,
-                        submitCompleted = true,
+                        draft = InquiryDraft(),
+                        submitCompleted = writeVisible,
+                        notice = if (writeVisible) null else InquiryNotice.Success,
                     )
                 }
             }.onFailure { throwable ->
-                Log.e(Tag, "Failed to submit inquiry", throwable)
+                if (throwable is CancellationException) throw throwable
+                logFailure("Failed to submit inquiry", throwable)
+                val uncertain = throwable is InquiryResultUnknownException
                 _uiState.update {
                     it.copy(
                         isSubmitting = false,
-                        submitErrorMessage = "문의 등록에 실패했습니다.",
+                        needsHistoryCheck = uncertain,
+                        notice = if (uncertain) InquiryNotice.Unknown else InquiryNotice.Failed,
                     )
                 }
             }
@@ -174,10 +214,6 @@ class InquiryViewModel(
 
     fun consumeDetailError() {
         _uiState.update { it.copy(detailErrorMessage = null) }
-    }
-
-    fun consumeSubmitError() {
-        _uiState.update { it.copy(submitErrorMessage = null) }
     }
 
     fun consumeSubmitCompleted() {

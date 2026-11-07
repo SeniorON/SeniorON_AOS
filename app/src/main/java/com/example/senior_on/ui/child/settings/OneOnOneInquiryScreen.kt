@@ -60,10 +60,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import android.widget.Toast
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.senior_on.R
-import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryDraft
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryPage
 import com.example.senior_on.ui.child.settings.viewmodel.InquiryHistoryUiItem
 import com.example.senior_on.ui.child.settings.viewmodel.InquiryViewModel
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
@@ -107,16 +107,11 @@ private val SampleAnsweredInquiry = InquiryHistoryItem(
 
 @Composable
 fun OneOnOneInquiryRoute(
-    inquiryRepository: InquiryRepository,
+    viewModel: InquiryViewModel,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onBusyChanged: (Boolean) -> Unit = {},
 ) {
-    val viewModel: InquiryViewModel = viewModel(
-        factory = InquiryViewModel.factory(inquiryRepository),
-    )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    androidx.compose.runtime.SideEffect { onBusyChanged(uiState.isSubmitting) }
     val context = LocalContext.current
 
     LaunchedEffect(uiState.detailErrorMessage) {
@@ -125,13 +120,13 @@ fun OneOnOneInquiryRoute(
         viewModel.consumeDetailError()
     }
 
-    LaunchedEffect(uiState.submitErrorMessage) {
-        val message = uiState.submitErrorMessage ?: return@LaunchedEffect
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        viewModel.consumeSubmitError()
-    }
-
     OneOnOneInquiryScreen(
+        draft = uiState.draft,
+        onDraftChange = viewModel::editDraft,
+        onWriteVisible = viewModel::setWriteVisible,
+        openPage = uiState.openPage,
+        onPageOpened = viewModel::consumePage,
+        needsHistoryCheck = uiState.needsHistoryCheck,
         onBackClick = onBackClick,
         historyItems = uiState.historyItems.map { it.toHistoryItem() },
         isHistoryLoading = uiState.isHistoryLoading,
@@ -150,6 +145,12 @@ fun OneOnOneInquiryRoute(
 @Composable
 private fun OneOnOneInquiryScreen(
     onBackClick: () -> Unit,
+    draft: InquiryDraft = InquiryDraft(),
+    onDraftChange: (InquiryDraft) -> Unit = {},
+    onWriteVisible: (Boolean) -> Unit = {},
+    openPage: InquiryPage? = null,
+    onPageOpened: () -> Unit = {},
+    needsHistoryCheck: Boolean = false,
     modifier: Modifier = Modifier,
     historyItems: List<InquiryHistoryItem> = emptyList(),
     isHistoryLoading: Boolean = false,
@@ -163,9 +164,19 @@ private fun OneOnOneInquiryScreen(
     onConsumeSubmitCompleted: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(OneOnOneInquiryTab.Write) }
-    var title by rememberSaveable { mutableStateOf("") }
-    var content by rememberSaveable { mutableStateOf("") }
-    var imageUris by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    val (title, content, imageUris) = draft
+    androidx.compose.runtime.DisposableEffect(selectedTab) {
+        onWriteVisible(selectedTab == OneOnOneInquiryTab.Write)
+        onDispose { onWriteVisible(false) }
+    }
+    LaunchedEffect(openPage) {
+        if (openPage != null) {
+            val next = if (openPage == InquiryPage.History) OneOnOneInquiryTab.History else OneOnOneInquiryTab.Write
+            if (next == selectedTab && next == OneOnOneInquiryTab.History) onHistoryTabSelected()
+            selectedTab = next
+            onPageOpened()
+        }
+    }
 
     LaunchedEffect(selectedTab) {
         if (selectedTab == OneOnOneInquiryTab.History) {
@@ -178,17 +189,13 @@ private fun OneOnOneInquiryScreen(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MaxInquiryImages)
     ) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
-        imageUris = (imageUris + uris.map(Uri::toString))
-            .distinct()
-            .take(MaxInquiryImages)
+        onDraftChange(draft.copy(images = (imageUris + uris.map(Uri::toString)).distinct().take(MaxInquiryImages)))
     }
     val singleImagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        imageUris = (imageUris + uri.toString())
-            .distinct()
-            .take(MaxInquiryImages)
+        onDraftChange(draft.copy(images = (imageUris + uri.toString()).distinct().take(MaxInquiryImages)))
     }
 
     val canSubmit = title.isNotBlank() && content.isNotBlank() && !isSubmitting && !submitCompleted
@@ -216,11 +223,12 @@ private fun OneOnOneInquiryScreen(
             when (selectedTab) {
                 OneOnOneInquiryTab.Write -> OneOnOneInquiryWriteContent(
                     title = title,
-                    onTitleChange = { title = it },
+                    onTitleChange = { onDraftChange(draft.copy(title = it)) },
                     content = content,
-                    onContentChange = { content = it },
+                    onContentChange = { onDraftChange(draft.copy(content = it)) },
                     imageUris = imageUris,
                     onAddImageClick = {
+                        if (isSubmitting) return@OneOnOneInquiryWriteContent
                         when {
                             remainingSlots <= 0 -> Unit
                             remainingSlots == 1 -> singleImagePicker.launch(
@@ -236,9 +244,11 @@ private fun OneOnOneInquiryScreen(
                         }
                     },
                     canSubmit = canSubmit,
+                    needsHistoryCheck = needsHistoryCheck,
                     isSubmitting = isSubmitting,
                     onSubmitClick = {
-                        onSubmitInquiry(title, content, imageUris)
+                        if (needsHistoryCheck) selectedTab = OneOnOneInquiryTab.History
+                        else onSubmitInquiry(title, content, imageUris)
                     },
                     modifier = Modifier.weight(1f)
                 )
@@ -271,9 +281,6 @@ private fun OneOnOneInquiryScreen(
         if (submitCompleted) {
             InquirySubmitSuccessDialog(
                 onConfirmClick = {
-                    title = ""
-                    content = ""
-                    imageUris = emptyList()
                     selectedTab = OneOnOneInquiryTab.History
                     onConsumeSubmitCompleted()
                 }
@@ -375,6 +382,7 @@ private fun OneOnOneInquiryWriteContent(
     imageUris: List<String>,
     onAddImageClick: () -> Unit,
     canSubmit: Boolean,
+    needsHistoryCheck: Boolean = false,
     isSubmitting: Boolean,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -489,8 +497,8 @@ private fun OneOnOneInquiryWriteContent(
         }
 
         SettingsPrimaryButton(
-            text = "문의하기",
-            enabled = canSubmit,
+            text = if (needsHistoryCheck) "내 문의내역 먼저 확인" else "문의하기",
+            enabled = needsHistoryCheck || canSubmit,
             isLoading = isSubmitting,
             onClick = onSubmitClick,
             modifier = Modifier
