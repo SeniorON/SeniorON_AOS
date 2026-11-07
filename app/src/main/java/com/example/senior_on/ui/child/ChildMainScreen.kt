@@ -103,6 +103,11 @@ import com.example.senior_on.ui.child.notification.route.NotificationRoute
 import com.example.senior_on.ui.child.settings.SettingsProfileUiState
 import com.example.senior_on.ui.child.settings.SettingsScreen
 import com.example.senior_on.ui.child.settings.SettingsTabRoute
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryViewModel
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 import com.example.senior_on.ui.theme.SENIOR_ONTheme
 import com.example.senior_on.ui.child.settings.ConnectedSeniorDeviceUiState
 import com.example.senior_on.ui.child.settings.toConnectedSeniorDeviceUiState
@@ -172,6 +177,21 @@ fun ChildMainScreen(
         }
     }
     val childSessionViewModelKey = "$authenticatedUserId:$sessionInstance"
+    val inquiryViewModel: InquiryViewModel = viewModel(
+        viewModelStoreOwner = rememberSeniorScopedViewModelStoreOwner("inquiries:$childSessionViewModelKey"),
+        factory = InquiryViewModel.factory(inquiryRepository),
+    )
+    val inquiryState by inquiryViewModel.uiState.collectAsStateWithLifecycle()
+    val inquirySnackbar = remember(childSessionViewModelKey) { SnackbarHostState() }
+    LaunchedEffect(inquiryViewModel, inquiryState.notice) {
+        val notice = inquiryState.notice ?: return@LaunchedEffect
+        val result = inquirySnackbar.showSnackbar(notice.message, notice.action, duration = SnackbarDuration.Long)
+        inquiryViewModel.consumeNotice(notice)
+        if (result == SnackbarResult.ActionPerformed) {
+            inquiryViewModel.openPage(notice.page)
+            selectedTab = ChildMainTab.Setting
+        }
+    }
     val selectionRepository = remember(context.applicationContext) {
         com.example.senior_on.data.repository.impl.SelectedSeniorRepositoryImpl(context)
     }
@@ -622,7 +642,7 @@ fun ChildMainScreen(
                 authRepository = authRepository,
                 sessionRepository = sessionRepository,
                 deviceRegistrationRepository = deviceRegistrationRepository,
-                inquiryRepository = inquiryRepository,
+                inquiryViewModel = inquiryViewModel,
                 userSettingsRepository = userSettingsRepository,
                 familyPhotoUploadPreparer = familyPhotoUploadPreparer,
                 deviceRepository = deviceRepository,
@@ -650,6 +670,7 @@ fun ChildMainScreen(
             )
         }
 
+        SnackbarHost(inquirySnackbar)
         if (
             !showSeniorManagement &&
             (
@@ -755,7 +776,7 @@ private fun ChildMainTabContent(
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
     deviceRegistrationRepository: DeviceRegistrationRepository,
-    inquiryRepository: InquiryRepository,
+    inquiryViewModel: InquiryViewModel,
     userSettingsRepository: UserSettingsRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     deviceRepository: DeviceRepository?,
@@ -947,7 +968,7 @@ private fun ChildMainTabContent(
             authRepository = authRepository,
             sessionRepository = sessionRepository,
             deviceRegistrationRepository = deviceRegistrationRepository,
-            inquiryRepository = inquiryRepository,
+            inquiryViewModel = inquiryViewModel,
             userSettingsRepository = userSettingsRepository,
             familyPhotoUploadPreparer = familyPhotoUploadPreparer,
             addressSearchViewModel = addressSearchViewModel,

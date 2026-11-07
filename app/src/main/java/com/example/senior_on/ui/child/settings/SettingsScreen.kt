@@ -77,7 +77,7 @@ import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
-import com.example.senior_on.domain.repository.inquiry.InquiryRepository
+import com.example.senior_on.ui.child.settings.viewmodel.InquiryViewModel
 import com.example.senior_on.domain.repository.server.UserSettingsRepository
 import com.example.senior_on.domain.model.parent.ParentInfo
 import com.example.senior_on.ui.child.display.ConnectionGuideScreen
@@ -156,7 +156,7 @@ fun SettingsTabRoute(
     authRepository: AuthRepository,
     sessionRepository: SessionRepository,
     deviceRegistrationRepository: DeviceRegistrationRepository,
-    inquiryRepository: InquiryRepository,
+    inquiryViewModel: InquiryViewModel,
     userSettingsRepository: UserSettingsRepository,
     familyPhotoUploadPreparer: FamilyPhotoUploadPreparer,
     addressSearchViewModel: AddressSearchViewModel,
@@ -283,6 +283,12 @@ fun SettingsTabRoute(
 
     var destination by rememberSaveable(sessionKey) {
         mutableStateOf(SettingsDestination.Main)
+    }
+    val inquiryState by inquiryViewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(inquiryState.openPage) {
+        if (inquiryState.openPage != null && destination != SettingsDestination.Feedback) {
+            destination = SettingsDestination.OneOnOneInquiry
+        }
     }
     var connectionGuideReturnDestination by rememberSaveable(sessionKey) {
         mutableStateOf(SettingsDestination.HelpInquiry)
@@ -590,14 +596,13 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.OneOnOneInquiry -> OneOnOneInquiryRoute(
-            onBusyChanged = { childFormBusy = it },
-            inquiryRepository = inquiryRepository,
+            viewModel = inquiryViewModel,
             onBackClick = navigateBack,
             modifier = Modifier.fillMaxSize()
         )
 
         SettingsDestination.Feedback -> OneOnOneInquiryRoute(
-            inquiryRepository = inquiryRepository,
+            viewModel = inquiryViewModel,
             onBackClick = navigateBack,
             modifier = Modifier.fillMaxSize()
         )
