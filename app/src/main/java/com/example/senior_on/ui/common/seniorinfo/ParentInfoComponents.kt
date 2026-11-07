@@ -296,6 +296,7 @@ internal fun SeniorInfoPhoneTextField(
             keyboardType = KeyboardType.Phone,
             imeAction = ImeAction.Next
         ),
+        visualTransformation = PhoneVisualTransformation,
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
