@@ -30,6 +30,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,12 +119,6 @@ fun OneOnOneInquiryRoute(
     androidx.compose.runtime.SideEffect { onBusyChanged(uiState.isSubmitting) }
     val context = LocalContext.current
 
-    LaunchedEffect(uiState.historyErrorMessage) {
-        val message = uiState.historyErrorMessage ?: return@LaunchedEffect
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        viewModel.consumeHistoryError()
-    }
-
     LaunchedEffect(uiState.detailErrorMessage) {
         val message = uiState.detailErrorMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -139,6 +135,7 @@ fun OneOnOneInquiryRoute(
         onBackClick = onBackClick,
         historyItems = uiState.historyItems.map { it.toHistoryItem() },
         isHistoryLoading = uiState.isHistoryLoading,
+        historyError = uiState.historyErrorMessage,
         onHistoryTabSelected = viewModel::loadInquiries,
         onInquiryExpand = viewModel::loadInquiryDetail,
         isSubmitting = uiState.isSubmitting,
@@ -149,12 +146,14 @@ fun OneOnOneInquiryRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OneOnOneInquiryScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     historyItems: List<InquiryHistoryItem> = emptyList(),
     isHistoryLoading: Boolean = false,
+    historyError: String? = null,
     onHistoryTabSelected: () -> Unit = {},
     onInquiryExpand: (String) -> Unit = {},
     isSubmitting: Boolean = false,
@@ -251,12 +250,28 @@ private fun OneOnOneInquiryScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                OneOnOneInquiryTab.History -> OneOnOneInquiryHistoryContent(
-                    items = historyItems,
-                    isLoading = isHistoryLoading,
-                    onInquiryExpand = onInquiryExpand,
-                    modifier = Modifier.weight(1f)
-                )
+                OneOnOneInquiryTab.History -> PullToRefreshBox(
+                    isRefreshing = isHistoryLoading && historyItems.isNotEmpty(),
+                    onRefresh = onHistoryTabSelected,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        if (historyError != null) {
+                            androidx.compose.material3.TextButton(onClick = onHistoryTabSelected) {
+                                Text("$historyError  다시 시도")
+                            }
+                        }
+                        if (historyError == null || historyItems.isNotEmpty()) {
+                            OneOnOneInquiryHistoryContent(
+                                items = historyItems,
+                                isLoading = isHistoryLoading && historyItems.isEmpty(),
+                                onInquiryExpand = onInquiryExpand,
+                            )
+                        } else {
+                            Spacer(Modifier.fillMaxSize().verticalScroll(rememberScrollState()))
+                        }
+                    }
+                }
             }
         }
 
@@ -717,6 +732,7 @@ private fun OneOnOneInquiryHistoryContent(
             modifier = modifier
                 .fillMaxSize()
                 .background(SeniorOnColors.White)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -740,6 +756,11 @@ private fun OneOnOneInquiryHistoryContent(
     }
 
     var expandedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val expanded = items.firstOrNull { it.id == expandedId && it.status == InquiryAnswerStatus.Answered }
+    // A refreshed summary has no cached answer; reload only the open card.
+    LaunchedEffect(expanded?.id, expanded?.answer) {
+        if (expanded != null && expanded.answer == null) onInquiryExpand(expanded.id)
+    }
 
     Column(
         modifier = modifier
@@ -757,9 +778,6 @@ private fun OneOnOneInquiryHistoryContent(
                     if (item.status != InquiryAnswerStatus.Answered) return@InquiryHistoryCard
                     val willExpand = expandedId != item.id
                     expandedId = if (willExpand) item.id else null
-                    if (willExpand) {
-                        onInquiryExpand(item.id)
-                    }
                 }
             )
         }

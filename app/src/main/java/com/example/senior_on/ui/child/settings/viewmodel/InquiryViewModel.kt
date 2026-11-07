@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 data class InquiryHistoryUiItem(
     val id: String,
@@ -40,6 +41,7 @@ data class InquiryUiState(
 
 class InquiryViewModel(
     private val inquiryRepository: InquiryRepository,
+    private val logFailure: (String, Throwable) -> Unit = { message, cause -> Log.e(Tag, message, cause) },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(InquiryUiState())
     val uiState: StateFlow<InquiryUiState> = _uiState.asStateFlow()
@@ -48,28 +50,20 @@ class InquiryViewModel(
 
     fun loadInquiries() {
         if (_uiState.value.isHistoryLoading) return
+        _uiState.update { it.copy(isHistoryLoading = true, historyErrorMessage = null) }
         viewModelScope.launch {
-            val previousAnswers = _uiState.value.historyItems
-                .associate { it.id to it.answer }
-            _uiState.update {
-                it.copy(
-                    isHistoryLoading = true,
-                    historyErrorMessage = null,
-                )
-            }
             runCatching {
                 inquiryRepository.getInquiries()
             }.onSuccess { inquiries ->
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
-                        historyItems = inquiries.map { summary ->
-                            summary.toUiItem(previousAnswer = previousAnswers[summary.id.toString()])
-                        },
+                        historyItems = inquiries.map { summary -> summary.toUiItem() },
                     )
                 }
             }.onFailure { throwable ->
-                Log.e(Tag, "Failed to load inquiries", throwable)
+                if (throwable is CancellationException) throw throwable
+                logFailure("Failed to load inquiries", throwable)
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
@@ -120,7 +114,8 @@ class InquiryViewModel(
                         )
                     }
                 }.onFailure { throwable ->
-                    Log.e(Tag, "Failed to load inquiry detail", throwable)
+                    if (throwable is CancellationException) throw throwable
+                    logFailure("Failed to load inquiry detail", throwable)
                     _uiState.update { state ->
                         state.copy(
                             historyItems = state.historyItems.map { item ->
@@ -183,10 +178,6 @@ class InquiryViewModel(
         }
     }
 
-    fun consumeHistoryError() {
-        _uiState.update { it.copy(historyErrorMessage = null) }
-    }
-
     fun consumeDetailError() {
         _uiState.update { it.copy(detailErrorMessage = null) }
     }
@@ -199,13 +190,12 @@ class InquiryViewModel(
         _uiState.update { it.copy(submitCompleted = false) }
     }
 
-    private fun InquirySummary.toUiItem(previousAnswer: String?): InquiryHistoryUiItem =
+    private fun InquirySummary.toUiItem(): InquiryHistoryUiItem =
         InquiryHistoryUiItem(
             id = id.toString(),
             isAnswered = status == InquiryStatus.Completed,
             createdAtLabel = formatCreatedAt(createdAt),
             question = title,
-            answer = previousAnswer,
         )
 
     private fun InquiryDetail.toAnswerText(): String? {
