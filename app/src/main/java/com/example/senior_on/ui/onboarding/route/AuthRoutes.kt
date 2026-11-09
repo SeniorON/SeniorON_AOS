@@ -105,6 +105,9 @@ fun LoginRoute(
             }
         },
         onSocialSignupRequired = onSocialSignupRequired,
+        hasSocialAccountConflict = {
+            com.example.senior_on.ui.onboarding.viewmodel.ExistingAccountNotice.fromCode(viewModel.uiState.value.errorCode) != null
+        },
     )
 }
 

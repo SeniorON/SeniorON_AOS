@@ -712,6 +712,18 @@ private fun OnboardingContent(
         }
     }
 
+    if (currentRoute in SignupStateRoutes || currentRoute == SeniorOnRoute.Signup || currentRoute == SeniorOnRoute.Login) {
+        com.example.senior_on.ui.onboarding.viewmodel.ExistingAccountNotice.fromCode(authUiState.errorCode)?.let { notice ->
+            com.example.senior_on.ui.onboarding.familycode.OnboardingNoticeDialog(
+                title = notice.title, description = notice.guidance, onDismiss = {},
+                onConfirm = {
+                    resetOnboardingDraft()
+                    clearSavedRouteStates(setOf(SeniorOnRoute.Signup))
+                    currentRoute = SeniorOnRoute.Login
+                },
+            )
+        }
+    }
     if (showFamilyCodeRequiredDialog && currentRoute == SeniorOnRoute.FamilyShareCode) {
         com.example.senior_on.ui.onboarding.familycode.FamilyCodeRequiredDialog(
             onDismiss = { showFamilyCodeRequiredDialog = false },
