@@ -16,6 +16,59 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ParentFamilyPhotoViewModelTest {
+    @Test fun reportOnlyRemovesTheConfirmedScope() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            for (target in SeniorReportTarget.entries) for (hide in listOf(false, true)) {
+                val reports = mutableListOf<String>()
+                val repository = stub<FamilyServerRepository> { name, args ->
+                    when (name) {
+                        "getPhotoAlbums" -> listOf(7L, 8L).map { ServerFamilyPhotoAlbum(it, "가족", "thumb", 2, false) }
+                        "getPhotos" -> ServerFamilyPhotoPage(listOf(10L, 11L).map {
+                            ServerFamilyPhoto(it, "photo", 7, "가족", "", "2026-09-19T10:00:00", false, false)
+                        }, 2, null, false)
+                        "reportPhoto", "reportUploader" -> {
+                            reports += name
+                            assertEquals(10L, args[0])
+                            assertEquals(hide, args[3])
+                            if (reports.size == 1) throw java.io.IOException()
+                            Unit
+                        }
+                        else -> error(name)
+                    }
+                }
+                val vm = ParentFamilyPhotoViewModel(repository, ParentSeniorProfileRepository { 42L })
+                store.put("photos", vm)
+                vm.loadAlbums()
+                advanceUntilIdle()
+                vm.selectMember("7")
+                advanceUntilIdle()
+                val photo = vm.uiState.value.members.first().photos.first()
+                vm.beginReport(photo, target)
+                val reason = com.example.senior_on.domain.model.family.FamilyPhotoReportReason.Abuse
+                vm.submitReport(reason, "", hide)
+                advanceUntilIdle()
+                assertNotNull(vm.report.value?.error)
+                assertFalse(vm.report.value!!.accepted)
+                vm.submitReport(reason, "", hide)
+                vm.submitReport(reason, "", hide)
+                advanceUntilIdle()
+                assertTrue(vm.report.value!!.accepted)
+                assertEquals(List(2) { if (target == SeniorReportTarget.Photo) "reportPhoto" else "reportUploader" }, reports)
+                assertEquals(2, vm.uiState.value.members.first().photos.size)
+                vm.confirmReport()
+                advanceUntilIdle()
+                val members = vm.uiState.value.members
+                assertTrue(members.any { it.memberId == "8" })
+                when {
+                    !hide -> assertEquals(2, members.first().photos.size)
+                    target == SeniorReportTarget.Author -> assertFalse(members.any { it.memberId == "7" })
+                    else -> assertEquals(listOf("11"), members.first().photos.map { it.id })
+                }
+            }
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
     @Test fun sendsOwnSeniorIdForAlbumsPagesAndViewedThenRefreshes() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()

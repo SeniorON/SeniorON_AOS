@@ -95,20 +95,25 @@ internal fun SeniorPhotoReportForm(
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
     initialReason: FamilyPhotoReportReason? = null,
+    sending: Boolean = false,
+    accepted: Boolean = false,
+    error: String? = null,
+    onSubmit: (FamilyPhotoReportReason, String, Boolean) -> Unit = { _, _, _ -> },
 ) {
     var reason by rememberSaveable(target) { mutableStateOf(initialReason) }
     var detail by rememberSaveable(target) { mutableStateOf("") }
     var hide by rememberSaveable(target) { mutableStateOf(false) }
-    var complete by rememberSaveable(target) { mutableStateOf(false) }
-    BackHandler(onBack = onBack)
+    val editable = !sending && !accepted
+    val back = { if (editable) onBack() }
+    BackHandler(onBack = back)
     Column(modifier.fillMaxSize().background(SeniorOnColors.White).safeDrawingPadding().clipToBounds().imePadding()) {
-        ParentDetailTopBar(title = "${target.title} 사유", onBackClick = onBack)
+        ParentDetailTopBar(title = "${target.title} 사유", onBackClick = back)
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             Column(Modifier.selectableGroup()) {
                 FamilyPhotoReportReason.entries.forEachIndexed { index, option ->
                     val selected = option == reason
                     if (index > 0) HorizontalDivider(color = SeniorOnColors.Gray200)
-                    Row(Modifier.fillMaxWidth().selectable(selected, role = Role.RadioButton) { reason = option }
+                    Row(Modifier.fillMaxWidth().selectable(selected, enabled = editable, role = Role.RadioButton) { reason = option }
                         .padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(painterResource(if (selected) R.drawable.ic_radio_button_1 else R.drawable.ic_radio_button_2),
                             null, Modifier.size(30.dp), tint = if (selected) SeniorOnColors.Red300 else SeniorOnColors.Gray200)
@@ -119,12 +124,13 @@ internal fun SeniorPhotoReportForm(
             }
             if (reason == FamilyPhotoReportReason.Etc) {
                 OutlinedTextField(detail, { detail = it.take(200) }, Modifier.fillMaxWidth().heightIn(min = 154.dp),
+                    enabled = editable,
                     placeholder = { Text("신고 사유를 입력해 주세요", style = SeniorOnTextStyles.HeadingXXS) },
                     textStyle = SeniorOnTextStyles.HeadingXXS, shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SeniorOnColors.Gray600,
                         unfocusedBorderColor = SeniorOnColors.Gray200))
             }
-            Row(Modifier.fillMaxWidth().toggleable(hide, role = Role.Checkbox) { hide = it }
+            Row(Modifier.fillMaxWidth().toggleable(hide, enabled = editable, role = Role.Checkbox) { hide = it }
                 .heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(if (hide) R.drawable.ic_check_filled else R.drawable.ic_check_unfilled), null,
                     Modifier.size(26.dp), tint = if (hide) SeniorOnColors.Red300 else SeniorOnColors.Gray300)
@@ -134,14 +140,14 @@ internal fun SeniorPhotoReportForm(
             Text("•  신고는 반대 의견을 표시하는 기능이 아닙니다.\n•  허위 신고 또는 반복적인 악의적 신고는 제한될 수 있습니다.",
                 Modifier.padding(horizontal = 8.dp), style = SeniorOnTextStyles.BodyLRegular, color = SeniorOnColors.Gray500)
         }
-        SeniorOnActionButton(text = "신고하기", onClick = { complete = true },
+        if (error != null) Text(error, Modifier.padding(horizontal = 16.dp), color = SeniorOnColors.Red300)
+        SeniorOnActionButton(text = if (sending) "접수 중…" else "신고하기", onClick = { reason?.let { onSubmit(it, detail, hide) } },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), minHeight = 107.dp,
-            enabled = reason != null && (reason != FamilyPhotoReportReason.Etc || detail.isNotBlank()),
+            enabled = editable && reason != null && (reason != FamilyPhotoReportReason.Etc || detail.isNotBlank()),
             textStyle = SeniorOnTextStyles.HeadingXL, containerColor = SeniorOnColors.Red300,
             shape = RoundedCornerShape(16.dp))
     }
-    // Design-review flow only. No report or hide request is sent.
-    if (complete) Dialog(onDismissRequest = onFinished) { Receipt(onFinished) }
+    if (accepted) Dialog(onDismissRequest = {}) { Receipt(onFinished) }
 }
 
 @Composable

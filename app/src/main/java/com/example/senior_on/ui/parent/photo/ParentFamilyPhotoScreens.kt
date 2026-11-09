@@ -336,11 +336,12 @@ private fun ParentPhotoGridItem(
 }
 
 @Composable
-fun ParentPhotoViewerScreen(
+internal fun ParentPhotoViewerScreen(
     member: ParentPhotoMemberUiModel,
     initialPhotoId: String,
     onBackClick: () -> Unit,
     onPhotoViewed: (String) -> Unit = {},
+    onReport: (ParentFamilyPhotoUiModel, SeniorReportTarget) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val initialPage = remember(initialPhotoId, member.photos) {
@@ -358,15 +359,9 @@ fun ParentPhotoViewerScreen(
     }
 
     var showTargets by androidx.compose.runtime.saveable.rememberSaveable(currentPhoto?.id) { mutableStateOf(false) }
-    var target by androidx.compose.runtime.saveable.rememberSaveable(currentPhoto?.id) { mutableStateOf<SeniorReportTarget?>(null) }
-    target?.let { selected ->
-        SeniorPhotoReportForm(selected, onBack = { target = null; showTargets = true },
-            onFinished = { target = null }, modifier = modifier)
-        return
-    }
     if (showTargets) SeniorPhotoReportSheet(
         onDismiss = { showTargets = false },
-        onSelect = { showTargets = false; target = it },
+        onSelect = { showTargets = false; if (currentPhoto != null) onReport(currentPhoto, it) },
     )
     Column(
         modifier = modifier
@@ -379,7 +374,7 @@ fun ParentPhotoViewerScreen(
     ) {
         Box(Modifier.fillMaxWidth()) {
             ParentDetailTopBar(title = "", onBackClick = onBackClick)
-            if (com.example.senior_on.BuildConfig.DEBUG && currentPhoto != null) {
+            if (currentPhoto?.canReport == true) {
                 SeniorPhotoReportAction(
                     onClick = { showTargets = true },
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
