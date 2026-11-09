@@ -2,6 +2,7 @@ package com.example.senior_on.ui.common.account
 
 import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
@@ -646,9 +647,10 @@ internal fun FindAccountScaffold(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(SeniorOnColors.White)
+            .systemBarsPadding()
             .onSizeChanged { totalHeight = it.height }
             .padding(bottom = with(density) { lift.toDp() })
-            .background(SeniorOnColors.White)
             .clearFocusOnBackgroundTap(focusManager)
     ) {
         Column(Modifier.onSizeChanged { headerHeight = it.height }) {

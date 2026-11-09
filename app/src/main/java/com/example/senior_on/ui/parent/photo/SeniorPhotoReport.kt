@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -100,7 +101,7 @@ internal fun SeniorPhotoReportForm(
     var hide by rememberSaveable(target) { mutableStateOf(false) }
     var complete by rememberSaveable(target) { mutableStateOf(false) }
     BackHandler(onBack = onBack)
-    Column(modifier.fillMaxSize().background(SeniorOnColors.White).safeDrawingPadding().imePadding()) {
+    Column(modifier.fillMaxSize().background(SeniorOnColors.White).safeDrawingPadding().clipToBounds().imePadding()) {
         ParentDetailTopBar(title = "${target.title} 사유", onBackClick = onBack)
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             Column(Modifier.selectableGroup()) {

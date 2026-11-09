@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -92,6 +93,7 @@ fun ParentFamilyMembersPhotoScreen(
             .fillMaxSize()
             .background(SeniorOnColors.White)
             .safeDrawingPadding()
+            .clipToBounds()
     ) {
         ParentDetailTopBar(
             title = "가족 사진",
@@ -230,6 +232,7 @@ fun ParentMemberPhotoGridScreen(
             .fillMaxSize()
             .background(SeniorOnColors.White)
             .safeDrawingPadding()
+            .clipToBounds()
     ) {
         ParentDetailTopBar(
             title = member.memberName,
@@ -368,8 +371,11 @@ fun ParentPhotoViewerScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(SeniorOnColors.SupportWhite100)
+            .statusBarsPadding()
             .background(SeniorOnColors.Background2)
             .safeDrawingPadding()
+            .clipToBounds()
     ) {
         Box(Modifier.fillMaxWidth()) {
             ParentDetailTopBar(title = "", onBackClick = onBackClick)
