@@ -354,21 +354,37 @@ fun ParentPhotoViewerScreen(
         currentPhoto?.id?.let(onPhotoViewed)
     }
 
+    var showTargets by androidx.compose.runtime.saveable.rememberSaveable(currentPhoto?.id) { mutableStateOf(false) }
+    var target by androidx.compose.runtime.saveable.rememberSaveable(currentPhoto?.id) { mutableStateOf<SeniorReportTarget?>(null) }
+    target?.let { selected ->
+        SeniorPhotoReportForm(selected, onBack = { target = null; showTargets = true },
+            onFinished = { target = null }, modifier = modifier)
+        return
+    }
+    if (showTargets) SeniorPhotoReportSheet(
+        onDismiss = { showTargets = false },
+        onSelect = { showTargets = false; target = it },
+    )
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
             .safeDrawingPadding()
     ) {
-        ParentDetailTopBar(
-            title = "",
-            onBackClick = onBackClick
-        )
+        Box(Modifier.fillMaxWidth()) {
+            ParentDetailTopBar(title = "", onBackClick = onBackClick)
+            if (com.example.senior_on.BuildConfig.DEBUG && currentPhoto != null) {
+                SeniorPhotoReportAction(
+                    onClick = { showTargets = true },
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
+                )
+            }
+        }
 
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp)
+                .padding(top = 10.dp)
         ) {
             val photoWidth = maxWidth - 64.dp
             val photoHeight = photoWidth * (380f / 295f)
@@ -417,40 +433,35 @@ fun ParentPhotoViewerScreen(
         ) {
             Canvas(
                 modifier = Modifier
-                    .width(90.dp)
+                    .width((member.photos.size.coerceAtMost(5) * 22).dp)
                     .height(12.dp)
                     .clipToBounds()
             ) {
                 val pagePosition =
                     pagerState.currentPage + pagerState.currentPageOffsetFraction
-                val slotWidth = 20.dp.toPx()
+                val slotWidth = 22.dp.toPx()
                 val dotRadius = 6.dp.toPx()
-                val centerX = size.width / 2f
+                val slots = member.photos.size.coerceAtMost(5)
+                val start = (pagePosition - slots / 2).coerceIn(0f, (member.photos.size - slots).toFloat())
                 val centerY = size.height / 2f
 
                 member.photos.indices.forEach { pageIndex ->
                     val relativePosition = pageIndex - pagePosition
                     val distanceFromCenter = kotlin.math.abs(relativePosition)
-                    val alpha = when {
-                        distanceFromCenter <= 1f -> 1f
-                        distanceFromCenter >= 2f -> 0.45f
-                        else -> 1f - ((distanceFromCenter - 1f) * 0.55f)
-                    }
                     val selectedFraction =
                         (1f - distanceFromCenter).coerceIn(0f, 1f)
                     val dotColor = androidx.compose.ui.graphics.lerp(
-                        SeniorOnColors.Gray200.copy(alpha = alpha),
+                        SeniorOnColors.Gray200,
                         SeniorOnColors.Primary600,
                         selectedFraction
                     )
-
-                    drawCircle(
+                    val halfWidth = dotRadius + 4.dp.toPx() * selectedFraction
+                    val centerX = (pageIndex - start + 0.5f) * slotWidth
+                    drawRoundRect(
                         color = dotColor,
-                        radius = dotRadius,
-                        center = androidx.compose.ui.geometry.Offset(
-                            x = centerX + (relativePosition * slotWidth),
-                            y = centerY
-                        )
+                        topLeft = androidx.compose.ui.geometry.Offset(centerX - halfWidth, centerY - dotRadius),
+                        size = androidx.compose.ui.geometry.Size(halfWidth * 2, dotRadius * 2),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(dotRadius),
                     )
                 }
             }
@@ -487,7 +498,7 @@ fun ParentPhotoViewerScreen(
                 ) {
                     Text(
                         text = photo.memberName,
-                        style = SeniorOnTextStyles.HeadingL,
+                        style = SeniorOnTextStyles.HeadingM,
                         color = SeniorOnColors.Gray600
                     )
                     Text(
@@ -498,7 +509,7 @@ fun ParentPhotoViewerScreen(
                     Text(
                         text = photo.message,
                         modifier = Modifier.padding(top = 12.dp),
-                        style = SeniorOnTextStyles.HeadingXXXL,
+                        style = SeniorOnTextStyles.HeadingXXL,
                         color = SeniorOnColors.Gray800
                     )
                 }
@@ -786,14 +797,17 @@ private fun ParentMemberPhotoGridPreview() {
 }
 
 @Preview(
-    name = "Photo Viewer",
+    name = "사진 상세 · 신고",
     showBackground = true,
     widthDp = 360,
-    heightDp = 720
+    heightDp = 800
 )
 @Composable
 private fun ParentPhotoViewerPreview() {
-    val member = parentPhotoPreviewMember()
+    val sample = parentPhotoPreviewMember(memberName = "김지은")
+    val member = sample.copy(photos = sample.photos.take(4).mapIndexed { index, photo ->
+        if (index == 0) photo.copy(message = "나 보드게임 카페야") else photo
+    })
     SENIOR_ONTheme {
         ParentPhotoViewerScreen(
             member = member,
