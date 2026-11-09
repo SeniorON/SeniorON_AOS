@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.senior_on.domain.model.family.FamilyImageSource
+import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
+import com.example.senior_on.ui.parent.photo.SeniorReportTarget
 import com.example.senior_on.domain.model.server.ServerFamilyPhoto
 import com.example.senior_on.domain.model.server.ServerFamilyPhotoCursor
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
@@ -31,6 +33,17 @@ data class ParentFamilyPhotoUiModel(
     val message: String,
     val isNew: Boolean,
     val thumbnailSource: FamilyImageSource? = null,
+    val canReport: Boolean = true,
+)
+
+internal data class PhotoReportSession(
+    val photo: ParentFamilyPhotoUiModel,
+    val target: SeniorReportTarget,
+    val sending: Boolean = false,
+    val accepted: Boolean = false,
+    val hide: Boolean = false,
+    val error: String? = null,
+    val toastMessage: String? = null,
 )
 
 data class ParentPhotoMemberUiModel(
@@ -70,6 +83,77 @@ class ParentFamilyPhotoViewModel(
     private var notificationPhotoJob: Job? = null
     private var notificationViewedJob: Job? = null
     private val deletedPhotoIds = mutableSetOf<Long>()
+    private val hiddenPhotos = mutableSetOf<Long>()
+    private val hiddenAuthors = mutableSetOf<String>()
+    private val _report = MutableStateFlow<PhotoReportSession?>(null)
+    internal val report = _report.asStateFlow()
+
+    internal fun beginReport(photo: ParentFamilyPhotoUiModel, target: SeniorReportTarget) {
+        if (photo.canReport && _report.value == null) _report.value = PhotoReportSession(photo, target)
+    }
+
+    internal fun dismissReport() {
+        if (_report.value?.let { !it.sending && !it.accepted } == true) _report.value = null
+    }
+
+    internal fun consumeReportToast() {
+        _report.update { it?.copy(toastMessage = null) }
+    }
+
+    internal fun submitReport(reason: FamilyPhotoReportReason, text: String, hide: Boolean) {
+        val session = _report.value?.copy(error = null, toastMessage = null) ?: return
+        if (session.sending || session.accepted) return
+        _report.value = session.copy(sending = true, error = null)
+        viewModelScope.launch {
+            try {
+                val id = session.photo.id.toLong()
+                val detail = text.trim().takeIf { reason == FamilyPhotoReportReason.Etc && it.isNotEmpty() }
+                when (session.target) {
+                    SeniorReportTarget.Photo -> repository.reportPhoto(id, reason, detail, hide)
+                    SeniorReportTarget.Author -> repository.reportUploader(id, reason, detail, hide)
+                }
+                _report.value = session.copy(accepted = true, hide = hide)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val duplicateMessage = when ((e as? com.example.senior_on.domain.model.auth.RemoteRequestException)?.code) {
+                    "FAMILY_PHOTO409_1" -> "이미 신고한 사진이에요."
+                    "FAMILY_PHOTO409_2" -> "이미 신고한 게시자예요."
+                    else -> null
+                }
+                if (duplicateMessage != null) {
+                    _report.value = session.copy(toastMessage = duplicateMessage)
+                    return@launch
+                }
+                val message = when (e) {
+                    is com.example.senior_on.domain.model.auth.RemoteRequestException -> e.message
+                    is java.io.IOException -> "네트워크 연결을 확인한 후 다시 시도해 주세요."
+                    else -> null
+                }
+                _report.value = session.copy(error = message ?: "신고를 접수하지 못했어요. 다시 시도해 주세요.")
+            }
+        }
+    }
+
+    internal fun confirmReport() {
+        val session = _report.value?.takeIf { it.accepted } ?: return
+        if (session.hide) {
+            val photo = session.photo
+            if (session.target == SeniorReportTarget.Author) hiddenAuthors += photo.memberId
+            else hiddenPhotos += photo.id.toLong()
+            _uiState.update { state ->
+                state.copy(members = state.members.mapNotNull { member ->
+                    if (member.memberId != photo.memberId) return@mapNotNull member
+                    if (member.memberId in hiddenAuthors || member.photoCount <= 1) return@mapNotNull null
+                    val kept = member.photos.filterNot { it.id == photo.id }
+                    member.copy(photos = kept, photoCount = member.photoCount - 1,
+                        latestPhotoSource = kept.firstOrNull()?.let { it.thumbnailSource ?: it.imageSource })
+                })
+            }
+            loadAlbumsInternal(background = true)
+        }
+        _report.value = null
+    }
 
     suspend fun isPhotoMissing(photoId: Long): Boolean = try {
         repository.getPhoto(photoId)
@@ -102,6 +186,7 @@ class ParentFamilyPhotoViewModel(
                 val photo = repository.getPhoto(photoId)
                 check(photo.id == photoId)
                 check(photoId !in deletedPhotoIds) { "Deleted photo" }
+                check(photoId !in hiddenPhotos && photo.uploaderId.toString() !in hiddenAuthors)
                 _uiState.update { it.copy(notificationPhoto = photo.toParentUiModel(), notificationPhotoLoading = false) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -163,7 +248,7 @@ class ParentFamilyPhotoViewModel(
                 .onSuccess { albums ->
                     _uiState.update { state ->
                         state.copy(
-                            members = albums.map { album ->
+                            members = albums.filterNot { it.uploaderId.toString() in hiddenAuthors }.map { album ->
                                 val previous = state.members.firstOrNull {
                                     it.memberId == album.uploaderId.toString()
                                 }
@@ -302,7 +387,9 @@ class ParentFamilyPhotoViewModel(
                 )
             }.onSuccess { page ->
                 nextCursor = page.nextCursor
-                val mapped = page.photos.filterNot { it.id in deletedPhotoIds }.map(ServerFamilyPhoto::toParentUiModel)
+                val mapped = page.photos.filterNot {
+                    it.id in deletedPhotoIds || it.id in hiddenPhotos || it.uploaderId.toString() in hiddenAuthors
+                }.map(ServerFamilyPhoto::toParentUiModel)
                 _uiState.update { state ->
                     state.copy(
                         members = state.members.map { member ->
@@ -348,6 +435,7 @@ private fun ServerFamilyPhoto.toParentUiModel() = ParentFamilyPhotoUiModel(
     imageSource = FamilyImageSource.Remote(imageUrl),
     message = description,
     isNew = isNew,
+    canReport = !canDelete,
     thumbnailSource = thumbnailUrl
         ?.trim()
         ?.takeIf(String::isNotEmpty)

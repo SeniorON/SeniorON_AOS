@@ -37,6 +37,7 @@ fun ParentFamilyPhotoRoute(
         factory = ParentFamilyPhotoViewModel.factory(repository, profileRepository)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val report by viewModel.report.collectAsStateWithLifecycle()
     var destination by rememberSaveable {
         mutableStateOf(ParentPhotoDestination.FamilyMembers)
     }
@@ -45,6 +46,27 @@ fun ParentFamilyPhotoRoute(
     var visiblePhotoId by rememberSaveable { mutableStateOf<String?>(null) }
     val deletedIds by FamilyPhotoSharedEventStore.deletedPhotoIds.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
+    report?.let { session ->
+        session.toastMessage?.let { message ->
+            LaunchedEffect(message) {
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                viewModel.consumeReportToast()
+            }
+        }
+        SeniorPhotoReportForm(
+            target = session.target, sending = session.sending, accepted = session.accepted, error = session.error,
+            onSubmit = viewModel::submitReport, onBack = viewModel::dismissReport, modifier = modifier,
+            onFinished = {
+                viewModel.confirmReport()
+                selectedPhotoId = null
+                visiblePhotoId = null
+                destination = if (viewModel.uiState.value.members.any { it.memberId == selectedMemberId })
+                    ParentPhotoDestination.MemberPhotos else ParentPhotoDestination.FamilyMembers
+                if (notificationPhotoId != null) onNotificationPhotoClosed()
+            },
+        )
+        return
+    }
     LaunchedEffect(deletedIds, notificationPhotoId, destination) {
         val activePhoto = notificationPhotoId ?: visiblePhotoId?.toLongOrNull()
         if (activePhoto in deletedIds &&
@@ -88,6 +110,7 @@ fun ParentFamilyPhotoRoute(
                 initialPhotoId = photo.id,
                 onBackClick = onNotificationPhotoClosed,
                 onPhotoViewed = viewModel::markNotificationPhotoViewed,
+                onReport = viewModel::beginReport,
                 modifier = modifier,
             )
         }
@@ -196,8 +219,9 @@ fun ParentFamilyPhotoRoute(
             } else {
                 ParentPhotoViewerScreen(
                     member = member,
-                    initialPhotoId = photoId,
+                    initialPhotoId = visiblePhotoId ?: photoId,
                     onBackClick = ::goBack,
+                    onReport = viewModel::beginReport,
                     onPhotoViewed = { id ->
                         visiblePhotoId = id
                         viewModel.markPhotoViewed(id)
