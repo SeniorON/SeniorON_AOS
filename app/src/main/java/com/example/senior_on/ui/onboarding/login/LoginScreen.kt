@@ -88,6 +88,7 @@ fun LoginScreen(
         onResult: (SocialLoginResult?) -> Unit,
     ) -> Unit = { _, _ -> },
     onSocialSignupRequired: () -> Unit = {},
+    hasSocialAccountConflict: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
     var userId by rememberSaveable { mutableStateOf("") }
@@ -137,7 +138,7 @@ fun LoginScreen(
     val handleSocialLoginResult: (SocialLoginResult?) -> Unit = { result ->
         isLoggingIn = false
         when {
-            result == null -> loginError = LoginFieldError.InvalidCredentials
+            result == null -> loginError = if (hasSocialAccountConflict()) LoginFieldError.None else LoginFieldError.InvalidCredentials
             result.isNewUser -> onSocialSignupRequired()
             result.mode != null && result.mode != selectedMode -> {
                 wrongModeDialogType = when (result.mode) {

@@ -19,6 +19,12 @@ import com.example.senior_on.ui.theme.*
 
 @Composable
 internal fun FamilyCodeRequiredDialog(onDismiss: () -> Unit) {
+    OnboardingNoticeDialog("자녀에게 시니어 코드를\n발급받아 주세요",
+        "자녀가 앱에서 발급한 시니어 코드를 전달받은 후 입력해 주세요.", onDismiss, onDismiss)
+}
+
+@Composable
+internal fun OnboardingNoticeDialog(title: String, description: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -34,14 +40,14 @@ internal fun FamilyCodeRequiredDialog(onDismiss: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "자녀에게 시니어 코드를\n발급받아 주세요",
+                title,
                 style = SeniorOnTextStyles.BodyLBold,
                 color = SeniorOnColors.Gray800,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "자녀가 앱에서 발급한 시니어 코드를 전달받은 후 입력해 주세요.",
+                description,
                 style = SeniorOnTextStyles.BodySMedium,
                 color = SeniorOnColors.Gray500,
                 textAlign = TextAlign.Center,
@@ -49,7 +55,7 @@ internal fun FamilyCodeRequiredDialog(onDismiss: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             SeniorOnActionButton(
                 text = "확인",
-                onClick = onDismiss,
+                onClick = onConfirm,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
