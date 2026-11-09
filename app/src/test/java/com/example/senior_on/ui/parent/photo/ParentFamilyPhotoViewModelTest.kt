@@ -33,6 +33,10 @@ class ParentFamilyPhotoViewModelTest {
                             assertEquals(10L, args[0])
                             assertEquals(hide, args[3])
                             if (reports.size == 1) throw java.io.IOException()
+                            if (reports.size == 2) throw com.example.senior_on.domain.model.auth.RemoteRequestException(
+                                409, if (target == SeniorReportTarget.Photo) "FAMILY_PHOTO409_1" else "FAMILY_PHOTO409_2",
+                                null, "이미 신고했습니다.", IllegalStateException(),
+                            )
                             Unit
                         }
                         else -> error(name)
@@ -52,10 +56,18 @@ class ParentFamilyPhotoViewModelTest {
                 assertNotNull(vm.report.value?.error)
                 assertFalse(vm.report.value!!.accepted)
                 vm.submitReport(reason, "", hide)
+                advanceUntilIdle()
+                assertNull(vm.report.value?.error)
+                assertEquals(if (target == SeniorReportTarget.Photo) "이미 신고한 사진이에요." else "이미 신고한 게시자예요.",
+                    vm.report.value?.toastMessage)
+                vm.consumeReportToast()
+                assertNull(vm.report.value?.toastMessage)
+                assertFalse(vm.report.value!!.accepted)
+                vm.submitReport(reason, "", hide)
                 vm.submitReport(reason, "", hide)
                 advanceUntilIdle()
                 assertTrue(vm.report.value!!.accepted)
-                assertEquals(List(2) { if (target == SeniorReportTarget.Photo) "reportPhoto" else "reportUploader" }, reports)
+                assertEquals(List(3) { if (target == SeniorReportTarget.Photo) "reportPhoto" else "reportUploader" }, reports)
                 assertEquals(2, vm.uiState.value.members.first().photos.size)
                 vm.confirmReport()
                 advanceUntilIdle()

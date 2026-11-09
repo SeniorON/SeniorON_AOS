@@ -43,6 +43,7 @@ internal data class PhotoReportSession(
     val accepted: Boolean = false,
     val hide: Boolean = false,
     val error: String? = null,
+    val toastMessage: String? = null,
 )
 
 data class ParentPhotoMemberUiModel(
@@ -95,8 +96,12 @@ class ParentFamilyPhotoViewModel(
         if (_report.value?.let { !it.sending && !it.accepted } == true) _report.value = null
     }
 
+    internal fun consumeReportToast() {
+        _report.update { it?.copy(toastMessage = null) }
+    }
+
     internal fun submitReport(reason: FamilyPhotoReportReason, text: String, hide: Boolean) {
-        val session = _report.value ?: return
+        val session = _report.value?.copy(error = null, toastMessage = null) ?: return
         if (session.sending || session.accepted) return
         _report.value = session.copy(sending = true, error = null)
         viewModelScope.launch {
@@ -111,6 +116,15 @@ class ParentFamilyPhotoViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                val duplicateMessage = when ((e as? com.example.senior_on.domain.model.auth.RemoteRequestException)?.code) {
+                    "FAMILY_PHOTO409_1" -> "이미 신고한 사진이에요."
+                    "FAMILY_PHOTO409_2" -> "이미 신고한 게시자예요."
+                    else -> null
+                }
+                if (duplicateMessage != null) {
+                    _report.value = session.copy(toastMessage = duplicateMessage)
+                    return@launch
+                }
                 val message = when (e) {
                     is com.example.senior_on.domain.model.auth.RemoteRequestException -> e.message
                     is java.io.IOException -> "네트워크 연결을 확인한 후 다시 시도해 주세요."

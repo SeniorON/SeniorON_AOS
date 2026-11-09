@@ -47,6 +47,12 @@ fun ParentFamilyPhotoRoute(
     val deletedIds by FamilyPhotoSharedEventStore.deletedPhotoIds.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     report?.let { session ->
+        session.toastMessage?.let { message ->
+            LaunchedEffect(message) {
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                viewModel.consumeReportToast()
+            }
+        }
         SeniorPhotoReportForm(
             target = session.target, sending = session.sending, accepted = session.accepted, error = session.error,
             onSubmit = viewModel::submitReport, onBack = viewModel::dismissReport, modifier = modifier,
