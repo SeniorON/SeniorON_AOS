@@ -64,7 +64,7 @@ class ParentEmergencySharingTest {
     @Test fun offSkipsLocationAndOnIncludesCoordinates() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
-            for (enabled in listOf(false, true)) {
+            for ((enabled, locationAvailable) in listOf(false to false, true to true, true to false)) {
                 var locations = 0
                 var sent: List<Any?>? = null
                 val events = stub<EventRepository> { name, args ->
@@ -79,6 +79,7 @@ class ParentEmergencySharingTest {
                 val vm = ParentEmergencyAlertViewModel(events, object : LocationRepository {
                     override suspend fun getCurrentLocation(): GeoLocation {
                         locations++
+                        check(locationAvailable) { "system location disabled" }
                         return GeoLocation(37.0, 127.0)
                     }
                 }, devices, ParentSharingGuard(
@@ -88,13 +89,36 @@ class ParentEmergencySharingTest {
                 vm.sendEmergencyAlert()
                 advanceUntilIdle()
                 assertEquals(if (enabled) 1 else 0, locations)
-                assertEquals(listOf(if (enabled) 37.0 else null, if (enabled) 127.0 else null, 70), sent)
+                assertEquals(listOf(if (locationAvailable) 37.0 else null, if (locationAvailable) 127.0 else null, 70), sent)
                 assertEquals(ParentEmergencyAlertStatus.Sent, vm.uiState.value.status)
                 vm.reset()
             }
         } finally {
             Dispatchers.resetMain()
         }
+    }
+
+    @Test fun countdownSendsOnceWithoutCoordinatesWhenAndroidPermissionIsDenied() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val requests = mutableListOf<List<Any?>>()
+        val vm = ParentEmergencyAlertViewModel(
+            stub<EventRepository> { method, args ->
+                check(method == "createSos")
+                requests.add(args.take(2))
+                SafetyEvent(1L, "SOS", null, null, null, null, 70)
+            },
+            object : LocationRepository {
+                override suspend fun getCurrentLocation(): GeoLocation = throw SecurityException()
+            },
+            stub<DeviceRepository> { _, _ -> 70 },
+            ParentSharingGuard(load = { SeniorPermissionSettings(1L, true, true) }, save = { error("unused") }),
+        )
+        try {
+            vm.startCountdown()
+            advanceUntilIdle()
+            assertEquals(listOf(listOf(null, null)), requests)
+            assertEquals(ParentEmergencyAlertStatus.Sent, vm.uiState.value.status)
+        } finally { vm.reset(); Dispatchers.resetMain() }
     }
 
     private inline fun <reified T> stub(crossinline call: (String, Array<out Any?>) -> Any?): T =

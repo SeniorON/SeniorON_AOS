@@ -10,7 +10,7 @@ internal fun locationUnavailableMessage(
     !locationSharingEnabled -> "위치 정보 공유가 중단되었어요."
     latitude == null || longitude == null ||
         latitude !in -90.0..90.0 || longitude !in -180.0..180.0 ->
-        "알 수 없는 오류로 위치를 불러오지 못했어요.\n다시 시도해 주세요."
+        "저장된 위치 정보가 없어요."
     else -> null
 }
 

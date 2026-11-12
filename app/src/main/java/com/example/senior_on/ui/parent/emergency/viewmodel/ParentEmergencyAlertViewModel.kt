@@ -90,9 +90,15 @@ class ParentEmergencyAlertViewModel(
             }
 
             runCatching {
-                val currentLocation = if (sharingGuard?.refresh()?.locationEnabled == true) {
-                    locationRepository.getCurrentLocation()
-                } else null
+                val currentLocation = try {
+                    if (sharingGuard?.refresh()?.locationEnabled == true) {
+                        locationRepository.getCurrentLocation()
+                    } else null
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null // Location is optional; never block the SOS or assume sharing is enabled.
+                }
                 repository.createSos(
                     latitude = currentLocation?.latitude,
                     longitude = currentLocation?.longitude,
@@ -118,23 +124,6 @@ class ParentEmergencyAlertViewModel(
                     }
                 }
         }
-    }
-
-    fun onLocationPermissionDenied() {
-        countdownJob?.cancel()
-        countdownJob = null
-        _uiState.update {
-            it.copy(
-                status = ParentEmergencyAlertStatus.Failed,
-                errorMessage = "긴급알림에 현재 위치를 보내려면 위치 권한이 필요합니다.",
-            )
-        }
-    }
-
-    fun onSharingCheckFailed() {
-        countdownJob?.cancel()
-        _uiState.update { it.copy(status = ParentEmergencyAlertStatus.Failed,
-            errorMessage = "공유 상태를 확인하지 못했어요. 다시 시도해 주세요.") }
     }
 
     fun cancel() {
