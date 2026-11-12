@@ -50,8 +50,11 @@ import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -707,14 +710,13 @@ internal fun ButtonNameEditBottomSheet(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
-    var name by rememberSaveable(initialName) {
-        mutableStateOf(initialName)
+    var name by rememberSaveable(initialName, stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(initialName, selection = TextRange(initialName.length)))
     }
-    val saveEnabled = name.isNotBlank()
+    val saveEnabled = name.text.isNotBlank()
     val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
     val saveName: () -> Unit = {
-        name.trim()
+        name.text.trim()
             .takeIf { trimmedName ->
                 trimmedName.isNotEmpty()
             }
@@ -732,6 +734,9 @@ internal fun ButtonNameEditBottomSheet(
             topEnd = 20.dp,
         ),
     ) {
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val sheetWindowFocused = LocalWindowInfo.current.isWindowFocused
+        var initialFocusApplied by remember { mutableStateOf(false) }
         ButtonNameEditSheetContent(
             name = name,
             title = title,
@@ -745,20 +750,23 @@ internal fun ButtonNameEditBottomSheet(
                 .navigationBarsPadding(),
             inputModifier = Modifier.focusRequester(focusRequester),
         )
-    }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-        keyboardController?.show()
+        LaunchedEffect(sheetWindowFocused) {
+            if (sheetWindowFocused && !initialFocusApplied) {
+                focusRequester.requestFocus()
+                name = name.copy(selection = TextRange(name.text.length))
+                initialFocusApplied = true
+                keyboardController?.show()
+            }
+        }
     }
 }
 
 @Composable
 private fun ButtonNameEditSheetContent(
-    name: String,
+    name: TextFieldValue,
     title: String,
     saveEnabled: Boolean,
-    onNameChange: (String) -> Unit,
+    onNameChange: (TextFieldValue) -> Unit,
     onCancelClick: () -> Unit,
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -855,7 +863,7 @@ private fun ButtonNameEditSheetContent(
                             .weight(1f),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                        if (name.isEmpty()) {
+                        if (name.text.isEmpty()) {
                             Text(
                                 text = "이름",
                                 style = SeniorOnTextStyles.BodyMMedium,
@@ -1055,7 +1063,7 @@ private fun ButtonEditMoreMenuPreview() {
 )
 @Composable
 private fun ButtonNameEditSheetContentPreview() {
-    var name by rememberSaveable { mutableStateOf("") }
+    var name by remember { mutableStateOf(TextFieldValue()) }
 
     SENIOR_ONTheme {
         Box(
@@ -1067,7 +1075,7 @@ private fun ButtonNameEditSheetContentPreview() {
             ButtonNameEditSheetContent(
                 name = name,
                 title = "이름 편집",
-                saveEnabled = name.isNotBlank(),
+                saveEnabled = name.text.isNotBlank(),
                 onNameChange = { name = it },
                 onCancelClick = {},
                 onSaveClick = {},
