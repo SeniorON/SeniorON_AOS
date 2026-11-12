@@ -203,6 +203,7 @@ class SeniorRepositoryImplTest {
         assertEquals(42L, dataSource.updateSeniorId)
         assertEquals(
             UpdateSeniorRelationRequest(
+                seniorId = 42L,
                 relation = SeniorRelation.OTHER,
                 customRelation = "이모",
             ),
@@ -241,9 +242,9 @@ class SeniorRepositoryImplTest {
 
         override suspend fun updateSeniorRelation(
             authorization: String,
-            seniorId: Long,
             request: UpdateSeniorRelationRequest,
         ): UpdateSeniorRelationResponse {
+            val seniorId = request.seniorId
             updateAuthorization = authorization
             updateSeniorId = seniorId
             updateRequest = request

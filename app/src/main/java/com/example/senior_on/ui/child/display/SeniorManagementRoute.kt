@@ -94,7 +94,20 @@ internal fun SeniorManagementRoute(
                 modifier = modifier,
             )
             SeniorManagementDestination.CodeInput -> {
-                if (uiState.joinedFamilyId != null) {
+                val pending = uiState.awaitingRelationship
+                if (pending != null) {
+                    androidx.compose.runtime.key(pending.familyId, pending.seniorId) {
+                        com.example.senior_on.ui.common.seniorinfo.CaregiverRelationshipInputScreen(
+                            seniorName = pending.name,
+                            onBackClick = ::navigateBack,
+                            onNextClick = { viewModel.saveJoinedRelationship(it, ::finish) },
+                            isSubmitting = uiState.isSubmitting,
+                            errorMessage = uiState.errorMessage,
+                            onInputChange = viewModel::clearError,
+                            modifier = modifier,
+                        )
+                    }
+                } else if (uiState.joinedFamilyId != null) {
                     com.example.senior_on.ui.common.QueryRetryContent(
                         loading = uiState.isSubmitting,
                         error = uiState.errorMessage,

@@ -14,6 +14,7 @@ data class CreateSeniorRequest(
 )
 
 data class UpdateSeniorRelationRequest(
+    @com.google.gson.annotations.SerializedName("senior_id") val seniorId: Long,
     val relation: SeniorRelation,
     val customRelation: String?
 )

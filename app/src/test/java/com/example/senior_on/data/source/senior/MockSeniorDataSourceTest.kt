@@ -57,8 +57,8 @@ class MockSeniorDataSourceTest {
 
         source.updateSeniorRelation(
             authorization = "Bearer token",
-            seniorId = 7L,
             request = UpdateSeniorRelationRequest(
+                seniorId = 7L,
                 relation = SeniorRelation.OTHER,
                 customRelation = "이모",
             ),

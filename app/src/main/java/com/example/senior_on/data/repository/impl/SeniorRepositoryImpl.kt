@@ -70,8 +70,8 @@ class SeniorRepositoryImpl(
     ): SeniorRelationUpdate {
         val response = dataSource.updateSeniorRelation(
             authorization = accessToken.toBearerToken(),
-            seniorId = seniorId,
             request = UpdateSeniorRelationRequest(
+                seniorId = seniorId,
                 relation = relationship.relation.toDto(),
                 customRelation = relationship.customRelation
                     .normalizedCustomRelation(relationship.relation)
