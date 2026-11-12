@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.settings
 
 import android.net.Uri
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -165,9 +167,12 @@ private fun OneOnOneInquiryScreen(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(OneOnOneInquiryTab.Write) }
     val (title, content, imageUris) = draft
-    androidx.compose.runtime.DisposableEffect(selectedTab) {
+    val activity = LocalActivity.current
+    androidx.compose.runtime.DisposableEffect(selectedTab, activity) {
         onWriteVisible(selectedTab == OneOnOneInquiryTab.Write)
-        onDispose { onWriteVisible(false) }
+        onDispose {
+            if (activity?.isChangingConfigurations != true) onWriteVisible(false)
+        }
     }
     LaunchedEffect(openPage) {
         if (openPage != null) {
@@ -227,6 +232,7 @@ private fun OneOnOneInquiryScreen(
                     content = content,
                     onContentChange = { onDraftChange(draft.copy(content = it)) },
                     imageUris = imageUris,
+                    onRemoveImage = { uri -> onDraftChange(draft.copy(images = imageUris - uri)) },
                     onAddImageClick = {
                         if (isSubmitting) return@OneOnOneInquiryWriteContent
                         when {
@@ -381,6 +387,7 @@ private fun OneOnOneInquiryWriteContent(
     onContentChange: (String) -> Unit,
     imageUris: List<String>,
     onAddImageClick: () -> Unit,
+    onRemoveImage: (String) -> Unit,
     canSubmit: Boolean,
     needsHistoryCheck: Boolean = false,
     isSubmitting: Boolean,
@@ -488,8 +495,8 @@ private fun OneOnOneInquiryWriteContent(
                 if (imageUris.size < MaxInquiryImages) {
                     InquiryAddImageButton(onClick = onAddImageClick)
                 }
-                imageUris.forEach { uri ->
-                    InquiryImageThumbnail(uri = uri)
+                imageUris.forEachIndexed { index, uri ->
+                    InquiryImageThumbnail(uri, index, !isSubmitting) { onRemoveImage(uri) }
                 }
             }
 
@@ -609,17 +616,35 @@ private fun InquiryAddImageButton(
 @Composable
 private fun InquiryImageThumbnail(
     uri: String,
-    modifier: Modifier = Modifier
+    index: Int,
+    enabled: Boolean,
+    onRemove: () -> Unit,
 ) {
-    AsyncImage(
-        model = uri,
-        contentDescription = null,
-        modifier = modifier
-            .size(60.dp)
-            .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .border(1.dp, SeniorOnColors.Gray200, RoundedCornerShape(SeniorOnRadius.Small)),
-        contentScale = ContentScale.Crop
-    )
+    Box(modifier = Modifier.size(60.dp)) {
+        val shape = RoundedCornerShape(SeniorOnRadius.Small)
+        AsyncImage(
+            model = uri,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().clip(shape).border(1.dp, SeniorOnColors.Gray200, shape),
+            contentScale = ContentScale.Crop
+        )
+        Box(
+            modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
+                .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onRemove)
+                .padding(2.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.property_1_minus),
+                contentDescription = "${index + 1}번째 첨부 사진 제거",
+                modifier = Modifier
+                    .size(20.dp)
+                    .background(SeniorOnColors.White, CircleShape)
+                    .border(1.dp, SeniorOnColors.Black, CircleShape),
+                tint = SeniorOnColors.Red300
+            )
+        }
+    }
 }
 
 @Composable

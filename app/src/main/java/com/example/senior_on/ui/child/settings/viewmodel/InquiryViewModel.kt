@@ -63,9 +63,16 @@ class InquiryViewModel(
     private var submissionNumber = 0L
 
     fun setWriteVisible(visible: Boolean) {
+        val leftWrite = writeVisible && !visible
         writeVisible = visible
-        if (!visible && _uiState.value.submitCompleted) {
-            _uiState.update { it.copy(submitCompleted = false, notice = InquiryNotice.Success) }
+        if (leftWrite) {
+            _uiState.update {
+                it.copy(
+                    draft = InquiryDraft(),
+                    submitCompleted = false,
+                    notice = if (it.submitCompleted) InquiryNotice.Success else it.notice,
+                )
+            }
         }
     }
 
