@@ -402,6 +402,7 @@ private fun DaysLeftBadge(
 
 @Composable
 internal fun HospitalScheduleSection(
+    loadingSelectedDate: Boolean = false,
     displayedMonth: YearMonth,
     selectedDay: Int,
     appointmentDays: Set<Int>,
@@ -426,6 +427,7 @@ internal fun HospitalScheduleSection(
         )
         Spacer(modifier = Modifier.height(12.dp))
         HospitalCalendarCard(
+            loadingSelectedDate = loadingSelectedDate,
             displayedMonth = displayedMonth,
             selectedDay = selectedDay,
             appointmentDays = appointmentDays,
@@ -442,6 +444,7 @@ internal fun HospitalScheduleSection(
 
 @Composable
 private fun HospitalCalendarCard(
+    loadingSelectedDate: Boolean,
     displayedMonth: YearMonth,
     selectedDay: Int,
     appointmentDays: Set<Int>,
@@ -491,7 +494,14 @@ private fun HospitalCalendarCard(
                     .height(2.dp)
                     .background(SeniorOnColors.Gray100)
             )
-            if (selectedAppointments.isEmpty()) {
+            if (loadingSelectedDate) {
+                Text(
+                    text = "병원 일정을 불러오는 중이에요",
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    style = SeniorOnTextStyles.BodyMMedium,
+                    color = SeniorOnColors.Gray500,
+                )
+            } else if (selectedAppointments.isEmpty()) {
                 EmptyAppointmentContent(
                     displayedMonth = displayedMonth,
                     selectedDay = selectedDay,
