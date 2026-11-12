@@ -167,6 +167,10 @@ fun NotificationScreen(
                             com.example.senior_on.logging.AppLog.d("NotificationToggle",
                                 "screen category=${section.category} target=$isEnabling registered=${uiState.isParentPhoneRegistered} online=${uiState.isParentPhoneInternetConnected} sharingRevoked=${uiState.isSeniorSharingRevoked} hasAddress=${uiState.hasHomeAddress}")
                             when {
+                                !uiState.isParentPhoneRegistered -> {
+                                    showParentPhoneInternetRequiredDialog = true
+                                }
+
                                 section.category == NotificationCategory.Outing &&
                                     isEnabling &&
                                     !uiState.hasHomeAddress -> {
@@ -174,9 +178,8 @@ fun NotificationScreen(
                                     android.widget.Toast.makeText(context, HomeLocationMissingMessage, android.widget.Toast.LENGTH_SHORT).show()
                                 }
 
-                                !uiState.isParentPhoneRegistered ||
-                                    !uiState.isParentPhoneInternetConnected -> {
-                                    com.example.senior_on.logging.AppLog.d("NotificationToggle", "blocked: parent_unregistered_or_offline")
+                                !uiState.isParentPhoneInternetConnected -> {
+                                    com.example.senior_on.logging.AppLog.d("NotificationToggle", "blocked: parent_offline")
                                     showParentPhoneInternetRequiredDialog = true
                                 }
 
@@ -236,6 +239,7 @@ fun NotificationScreen(
 
     if (showParentPhoneInternetRequiredDialog) {
         ParentPhoneInternetRequiredDialog(
+            isSeniorUnlinked = !uiState.isParentPhoneRegistered,
             onConfirmClick = { showParentPhoneInternetRequiredDialog = false }
         )
     }

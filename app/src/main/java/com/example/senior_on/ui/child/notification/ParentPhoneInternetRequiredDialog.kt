@@ -35,6 +35,7 @@ import com.example.senior_on.ui.theme.SeniorOnTextStyles
 fun ParentPhoneInternetRequiredDialog(
     onConfirmClick: () -> Unit,
     obscureBackgroundContent: Boolean = false,
+    isSeniorUnlinked: Boolean = false,
 ) {
     val scrimColor = if (obscureBackgroundContent) {
         SeniorOnColors.Gray500
@@ -48,13 +49,14 @@ fun ParentPhoneInternetRequiredDialog(
             .background(scrimColor),
         contentAlignment = Alignment.Center
     ) {
-        ParentPhoneInternetRequiredDialogContent(onConfirmClick = onConfirmClick)
+        ParentPhoneInternetRequiredDialogContent(onConfirmClick = onConfirmClick, isSeniorUnlinked = isSeniorUnlinked)
     }
 }
 
 @Composable
 private fun ParentPhoneInternetRequiredDialogContent(
     onConfirmClick: () -> Unit,
+    isSeniorUnlinked: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -63,7 +65,7 @@ private fun ParentPhoneInternetRequiredDialogContent(
             .height(283.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
             .background(SeniorOnColors.SupportWhite100)
-            .padding(horizontal = 16.dp, vertical = 32.dp),
+            .padding(start = 16.dp, top = 32.dp, end = 16.dp, bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -76,7 +78,7 @@ private fun ParentPhoneInternetRequiredDialogContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "인터넷 연결이 필요합니다",
+            text = if (isSeniorUnlinked) "시니어가 연결되지 않았어요" else "인터넷 연결이 필요합니다",
             style = SeniorOnTextStyles.BodyLBold,
             color = SeniorOnColors.Gray800,
             textAlign = TextAlign.Center
@@ -85,13 +87,17 @@ private fun ParentPhoneInternetRequiredDialogContent(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = "시니어 휴대폰이 인터넷에\n연결되어 있지 않아 정보 반영이\n지연될 수 있습니다.",
+            text = if (isSeniorUnlinked) {
+                "아직 시니어 휴대폰이 연결되지 않아\n알림을 설정할 수 없어요.\n휴대폰을 연결한 뒤 다시 시도해 주세요."
+            } else {
+                "시니어 휴대폰이 인터넷에\n연결되어 있지 않아 정보 반영이\n지연될 수 있습니다."
+            },
             style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.Gray500,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(26.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
         Box(
             modifier = Modifier
