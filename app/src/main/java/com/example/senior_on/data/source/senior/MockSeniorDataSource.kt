@@ -45,9 +45,9 @@ class MockSeniorDataSource(
 
     override suspend fun updateSeniorRelation(
         authorization: String,
-        seniorId: Long,
         request: UpdateSeniorRelationRequest
     ): UpdateSeniorRelationResponse {
+        val seniorId = request.seniorId
         val seniorName = managedSeniors
             .firstOrNull { it.seniorId == seniorId }
             ?.name

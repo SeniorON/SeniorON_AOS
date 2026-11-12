@@ -37,6 +37,10 @@ class AndroidLocationDataSource(
 
     override suspend fun getCurrentLocation(): GeoLocation {
         val runningOnEmulator = isEmulator()
+        val manager = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        check(androidx.core.location.LocationManagerCompat.isLocationEnabled(manager)) {
+            "기기의 위치 설정이 꺼져 있습니다."
+        }
 
         if (!context.hasLocationPermission()) {
             throw SecurityException("현재 위치를 전송하려면 위치 권한이 필요합니다.")

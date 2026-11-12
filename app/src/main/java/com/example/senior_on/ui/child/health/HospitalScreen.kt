@@ -21,6 +21,7 @@ import java.time.YearMonth
 fun HospitalScreen(
     modifier: Modifier = Modifier,
     appointments: List<HospitalAppointmentUiState> = previewHospitalAppointments(),
+    loadingSelectedDate: Boolean = false,
     upcomingAppointments: List<HospitalAppointmentUiState> = appointments,
     displayedMonth: YearMonth = koreaYearMonth(),
     selectedDate: LocalDate = koreaToday(),
@@ -55,6 +56,7 @@ fun HospitalScreen(
             onAppointmentClick = onAppointmentClick
         )
         HospitalScheduleSection(
+            loadingSelectedDate = loadingSelectedDate,
             displayedMonth = displayedMonth,
             selectedDay = selectedDate.dayOfMonth,
             appointmentDays = appointmentDays,

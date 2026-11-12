@@ -1,6 +1,7 @@
 package com.example.senior_on.ui.child.display.viewmodel
 
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
+import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.parent.SeniorRelationType
 import com.example.senior_on.domain.model.senior.ManagedSenior
@@ -119,7 +120,7 @@ class SeniorManagementViewModelTest {
         try {
             val seniors = FakeSeniorRepository(listOf(managedSenior(3L)))
             val family = FakeFamilyRepository(joinResult = FamilyCodeInfo(104L, "ABCD1234"))
-            val vm = SeniorManagementViewModel(seniors, family)
+            val vm = SeniorManagementViewModel(seniors, family, needsRelationship = { false })
             advanceUntilIdle()
             seniors.managedSeniors = listOf(managedSenior(3L), managedSenior(4L))
             var selected: ManagedSenior? = null
@@ -140,7 +141,7 @@ class SeniorManagementViewModelTest {
         try {
             val seniors = FakeSeniorRepository(listOf(managedSenior(3L)))
             val family = FakeFamilyRepository(joinResult = FamilyCodeInfo(104L, "ABCD1234"))
-            val vm = SeniorManagementViewModel(seniors, family)
+            val vm = SeniorManagementViewModel(seniors, family, needsRelationship = { false })
             advanceUntilIdle()
             seniors.failList = true
             var selected: ManagedSenior? = null
@@ -158,6 +159,29 @@ class SeniorManagementViewModelTest {
             assertEquals(1, family.joinCount)
             assertEquals(4L, selected?.seniorId)
             assertNull(vm.uiState.value.joinedFamilyId)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `sub joining by code chooses own relation even when server returns father`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val seniors = FakeSeniorRepository(listOf(managedSenior(4L).copy(
+                relationship = CaregiverRelationship(SeniorRelationType.FATHER)
+            )))
+            val family = FakeFamilyRepository(joinResult = FamilyCodeInfo(104L, "ABCD1234"))
+            val vm = SeniorManagementViewModel(seniors, family, { requiresRelationshipAfterCodeJoin(CareManagerType.Sub) }, { "token" })
+            var selected: ManagedSenior? = null
+            vm.joinSenior("ABCD1234") { selected = it }
+            advanceUntilIdle()
+            assertNull(selected)
+            assertEquals(4L, vm.uiState.value.awaitingRelationship?.seniorId)
+            val relation = CaregiverRelationship(SeniorRelationType.OTHER, "이모")
+            vm.saveJoinedRelationship(relation) { selected = it }
+            advanceUntilIdle()
+            assertEquals(relation, selected?.relationship)
+            assertNull(vm.uiState.value.awaitingRelationship)
+            assertEquals(1, family.joinCount)
         } finally { Dispatchers.resetMain() }
     }
 

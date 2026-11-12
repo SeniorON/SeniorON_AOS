@@ -9,7 +9,7 @@ class NotificationAccessPresentationTest {
     }
 
     @Test fun locationOnWithoutCoordinatesRequestsRetry() {
-        val expected = "알 수 없는 오류로 위치를 불러오지 못했어요.\n다시 시도해 주세요."
+        val expected = "저장된 위치 정보가 없어요."
         assertEquals(expected, locationUnavailableMessage(true, true, null, null))
         assertEquals(expected, locationUnavailableMessage(true, true, 37.0, null))
         assertEquals(expected, locationUnavailableMessage(true, true, Double.NaN, 127.0))

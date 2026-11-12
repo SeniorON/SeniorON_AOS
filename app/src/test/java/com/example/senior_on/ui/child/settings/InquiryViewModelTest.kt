@@ -74,12 +74,23 @@ class InquiryViewModelTest {
         assertNull(vm.uiState.value.historyErrorMessage)
     }
 
+    @Test fun leavingWriteClearsTitleContentAndAttachmentsBeforeReentry() {
+        val vm = InquiryViewModel(FakeRepository()) { _, _ -> }
+        vm.setWriteVisible(true)
+        vm.editDraft(InquiryDraft("제목", "내용", listOf("photo")))
+        vm.setWriteVisible(false)
+        assertEquals(InquiryDraft(), vm.uiState.value.draft)
+        vm.setWriteVisible(true)
+        assertEquals(InquiryDraft(), vm.uiState.value.draft)
+    }
+
     @Test fun leavingWriteWhileSendingShowsSuccessNoticeWithoutReposting() = runTest(dispatcher) {
         val repo = FakeRepository()
         val vm = InquiryViewModel(repo) { _, _ -> }
         vm.setWriteVisible(true)
         vm.submitInquiry("제목", "내용", listOf("photo"))
         vm.setWriteVisible(false)
+        assertEquals(InquiryDraft(), vm.uiState.value.draft)
         advanceUntilIdle()
         assertEquals(InquiryNotice.Success, vm.uiState.value.notice)
         assertFalse(vm.uiState.value.submitCompleted)

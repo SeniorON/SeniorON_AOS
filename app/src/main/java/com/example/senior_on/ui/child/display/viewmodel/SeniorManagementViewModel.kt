@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.display.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.senior.ManagedSenior
 import com.example.senior_on.domain.model.senior.SeniorRegistration
@@ -29,6 +30,7 @@ data class SeniorManagementUiState(
     val disconnectRefreshPending: Boolean = false,
     val disconnectRefreshError: String? = null,
     val joinedFamilyId: Long? = null,
+    val awaitingRelationship: ManagedSenior? = null,
     val withdrawalNotices: List<com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice> = emptyList(),
     val withdrawalDialog: com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice? = null,
     val isAcknowledgingWithdrawal: Boolean = false,
@@ -39,6 +41,8 @@ data class SeniorManagementUiState(
 class SeniorManagementViewModel(
     private val seniorRepository: SeniorRepository,
     private val familyRepository: FamilyServerRepository,
+    private val needsRelationship: suspend (ManagedSenior) -> Boolean = { error("담당자 관계를 확인하지 못했어요.") },
+    private val accessToken: () -> String? = { null },
 ) : ViewModel() {
     private var refreshJob: Job? = null
     private var noticeJob: Job? = null
@@ -317,13 +321,15 @@ class SeniorManagementViewModel(
                     _uiState.update { it.copy(joinedFamilyId = joinedId) }
                 }
                 val seniors = seniorRepository.getManagedSeniors()
-                val joined = seniors.firstOrNull { it.familyId == familyId && it.seniorId > 0 }
+                val joined = seniors.firstOrNull { it.familyId == familyId && it.seniorId > 0 && !it.withdrawn }
                     ?: error("연결된 가족에 등록된 시니어가 없어요. 주담당자의 등록 후 다시 시도해 주세요.")
+                val needsInput = needsRelationship(joined)
                 _uiState.update { it.copy(
                     managedSeniors = seniors, isLoading = false, listError = null,
-                    joinedFamilyId = null, errorMessage = null,
+                    joinedFamilyId = familyId.takeIf { needsInput },
+                    awaitingRelationship = joined.takeIf { needsInput }, errorMessage = null,
                 ) }
-                onSuccess(joined)
+                if (!needsInput) onSuccess(joined)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -339,9 +345,33 @@ class SeniorManagementViewModel(
         }
     }
 
+    fun saveJoinedRelationship(relationship: CaregiverRelationship, onSuccess: (ManagedSenior) -> Unit) {
+        val senior = _uiState.value.awaitingRelationship ?: return
+        if (_uiState.value.isSubmitting) return
+        _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
+        viewModelScope.launch {
+            try {
+                val result = seniorRepository.updateRelation(
+                    requireNotNull(accessToken()) { "로그인 상태를 확인해 주세요." }, senior.seniorId, relationship,
+                )
+                val updated = senior.copy(relationship = CaregiverRelationship(result.relation, result.customRelation))
+                _uiState.update { it.copy(managedSeniors = it.managedSeniors.map { item ->
+                    if (item.seniorId == updated.seniorId) updated else item
+                }, joinedFamilyId = null, awaitingRelationship = null) }
+                onSuccess(updated)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                _uiState.update { it.copy(errorMessage = failure.toSeniorManagementError("관계를 저장하지 못했어요.")) }
+            } finally {
+                _uiState.update { it.copy(isSubmitting = false) }
+            }
+        }
+    }
+
     fun clearError() {
         // Keep the read-retry prompt if the add flow is closed and reopened after a successful join.
-        if (_uiState.value.joinedFamilyId != null) return
+        if (_uiState.value.joinedFamilyId != null && _uiState.value.awaitingRelationship == null) return
         _uiState.update { it.copy(errorMessage = null) }
     }
 
@@ -418,6 +448,8 @@ class SeniorManagementViewModel(
     class Factory(
         private val seniorRepository: SeniorRepository,
         private val familyRepository: FamilyServerRepository,
+        private val authRepository: com.example.senior_on.domain.repository.auth.AuthRepository,
+        private val accessToken: () -> String?,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -425,9 +457,21 @@ class SeniorManagementViewModel(
             return SeniorManagementViewModel(
                 seniorRepository = seniorRepository,
                 familyRepository = familyRepository,
+                needsRelationship = { senior ->
+                    val family = requireNotNull(authRepository.getOnboardingStatus().families.orEmpty()
+                        .singleOrNull { it.familyId == senior.familyId && it.seniorId == senior.seniorId })
+                    requiresRelationshipAfterCodeJoin(family.managerType)
+                },
+                accessToken = accessToken,
             ) as T
         }
     }
+}
+
+internal fun requiresRelationshipAfterCodeJoin(role: CareManagerType): Boolean = when (role) {
+    CareManagerType.Sub -> true
+    CareManagerType.Primary -> false
+    CareManagerType.None -> error("담당자 유형을 확인하지 못했어요.")
 }
 
 private fun List<ManagedSenior>.upsert(senior: ManagedSenior): List<ManagedSenior> =

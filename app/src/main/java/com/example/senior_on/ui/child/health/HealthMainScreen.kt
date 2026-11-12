@@ -76,7 +76,7 @@ fun HealthMainScreen(
             loading = if (medicationSelected) medicationUiState.isLoading || medicationUiState.isRefreshing
                 else hospitalUiState.isLoading || hospitalUiState.isRefreshing,
             hasContent = if (medicationSelected) medicationUiState.hasLoadedContent
-                else hospitalUiState.hasLoadedContent && hospitalUiState.hasLoadedSelectedDate,
+                else hospitalUiState.hasLoadedContent,
             onRetry = if (medicationSelected) onMedicationRetry else onHospitalRetry,
             modifier = Modifier.weight(1f).fillMaxWidth(),
         ) {
@@ -114,6 +114,7 @@ fun HealthMainScreen(
                     .fillMaxSize(),
             ) {
                 HospitalScreen(
+                    loadingSelectedDate = !hospitalUiState.hasLoadedSelectedDate,
                     appointments = hospitalUiState.monthlyAppointments,
                     selectedAppointments = hospitalUiState.selectedDateAppointments,
                     upcomingAppointments = hospitalUiState.upcomingAppointments,

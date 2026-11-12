@@ -137,6 +137,7 @@ fun DisplayButtonAddScreen(
     }
     var limitMessageEvent by remember { mutableIntStateOf(0) }
     var showLimitMessage by remember { mutableStateOf(false) }
+    var minimumWarningCount by remember(initialSelectedButtons) { mutableStateOf<Int?>(null) }
 
     val candidateByKey = candidateButtons.associateBy(DisplayHomeButton::stableKey)
     val selectedButtonCount = buttonAddSelectedCount(selectedButtonKeys.size)
@@ -144,6 +145,13 @@ fun DisplayButtonAddScreen(
     val canSave = buttonAddCanContinue(selectedButtonKeys.size)
     val orderedButtons = selectedButtonKeys.mapNotNull(candidateByKey::get) +
         candidateButtons.filterNot { it.stableKey in selectedButtonKeys }
+
+    LaunchedEffect(minimumWarningCount) {
+        if (minimumWarningCount != null) {
+            delay(1_500)
+            minimumWarningCount = null
+        }
+    }
 
     LaunchedEffect(limitMessageEvent) {
         if (limitMessageEvent > 0) {
@@ -170,6 +178,7 @@ fun DisplayButtonAddScreen(
             return@LaunchedEffect
         }
         selectedButtonKeys = selectedButtonKeys + key
+        minimumWarningCount = null
     }
 
     fun toggleMusic(button: SeniorHomeButtonType) {
@@ -180,6 +189,8 @@ fun DisplayButtonAddScreen(
         val key = button.stableKey
         if (key in selectedButtonKeys) {
             selectedButtonKeys = selectedButtonKeys - key
+            minimumWarningCount = buttonAddSelectedCount(selectedButtonKeys.size)
+                .takeIf { it < MinimumButtonSelectionCount }
             return
         }
         if (selectedButtonCount >= maximumButtonCount) {
@@ -187,6 +198,7 @@ fun DisplayButtonAddScreen(
             return
         }
         selectedButtonKeys = selectedButtonKeys + key
+        minimumWarningCount = null
         if (selectedButtonCount + 1 == maximumButtonCount) {
             limitMessageEvent += 1
         }
@@ -258,7 +270,7 @@ fun DisplayButtonAddScreen(
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 16.dp, vertical = 16.dp),
             )
-        } else if (!canSave) {
+        } else if (minimumWarningCount != null) {
             ButtonSelectionMessage(
                 text = "전체 버튼을 ${MinimumButtonSelectionCount}개 이상 담아 주세요.",
                 modifier = Modifier

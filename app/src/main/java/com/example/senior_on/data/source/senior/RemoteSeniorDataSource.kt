@@ -37,13 +37,11 @@ class RemoteSeniorDataSource(
 
     override suspend fun updateSeniorRelation(
         authorization: String,
-        seniorId: Long,
         request: UpdateSeniorRelationRequest
     ): UpdateSeniorRelationResponse {
         return remoteRequest {
             seniorApi.updateSeniorRelation(
                 authorization = authorization,
-                seniorId = seniorId,
                 request = request
             ).requireData()
         }

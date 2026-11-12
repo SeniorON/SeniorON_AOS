@@ -19,7 +19,6 @@ interface SeniorDataSource {
 
     suspend fun updateSeniorRelation(
         authorization: String,
-        seniorId: Long,
         request: UpdateSeniorRelationRequest
     ): UpdateSeniorRelationResponse
 }

@@ -261,6 +261,8 @@ fun ChildMainScreen(
         factory = SeniorManagementViewModel.Factory(
             seniorRepository = seniorRepository,
             familyRepository = familyServerRepository,
+            authRepository = authRepository,
+            accessToken = com.example.senior_on.data.local.AccessTokenStore::getBearerToken,
         ),
     )
     val seniorManagementUiState by
