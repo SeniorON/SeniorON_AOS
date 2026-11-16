@@ -52,11 +52,13 @@ data class FamilyPhotoReportRequest(
     val reason: String,
     val detail: String?,
     val hide: Boolean,
+    val seniorId: Long,
 )
 data class FamilyUserReportRequest(
     val reason: String,
     val detail: String?,
     val hide: Boolean,
+    val seniorId: Long,
 )
 data class FamilyPhotoCursorResponse(val createdAt: String?, val familyPhotoId: Long?)
 data class FamilyPhotoListResponse(

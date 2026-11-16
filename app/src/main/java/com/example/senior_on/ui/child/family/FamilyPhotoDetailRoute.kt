@@ -67,6 +67,7 @@ fun FamilyPhotoDetailRoute(
     var completedReportTarget by remember { mutableStateOf<FamilyPhotoReportTarget?>(null) }
     var completedReportHide by remember { mutableStateOf(false) }
     var completedReportUploaderId by remember { mutableStateOf<Long?>(null) }
+    var submittedReportUploaderId by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(seniorId, photoId) {
         viewModel.ensurePhotoLoaded(photoId)
@@ -81,7 +82,8 @@ fun FamilyPhotoDetailRoute(
         if (familyUiState.reportedPhotoId == displayedPhotoId) {
             completedReportTarget = reportTarget
             completedReportHide = hideReportedContent
-            completedReportUploaderId = displayedPhoto?.authorId
+            completedReportUploaderId = submittedReportUploaderId ?: displayedPhoto?.authorId
+            submittedReportUploaderId = null
             reportTarget = null
             selectedReportReason = null
             reportDetail = ""
@@ -214,21 +216,25 @@ fun FamilyPhotoDetailRoute(
                 selectedReportReason = null
                 reportDetail = ""
                 hideReportedContent = false
+                submittedReportUploaderId = null
             },
             onSubmit = {
                 selectedReportReason?.let { reason ->
+                    submittedReportUploaderId = photo.authorId
                     when (currentReportTarget) {
                         FamilyPhotoReportTarget.Post -> viewModel.reportPhoto(
                             photoId = photo.id,
                             reason = reason,
                             detail = reportDetail,
                             hide = hideReportedContent,
+                            seniorId = seniorId,
                         )
                         FamilyPhotoReportTarget.Author -> viewModel.reportUploader(
                             photoId = photo.id,
                             reason = reason,
                             detail = reportDetail,
                             hide = hideReportedContent,
+                            seniorId = seniorId,
                         )
                     }
                 }

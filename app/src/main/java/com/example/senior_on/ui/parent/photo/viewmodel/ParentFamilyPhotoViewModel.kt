@@ -107,10 +107,11 @@ class ParentFamilyPhotoViewModel(
         viewModelScope.launch {
             try {
                 val id = session.photo.id.toLong()
+                val seniorId = requireOwnSeniorId()
                 val detail = text.trim().takeIf { reason == FamilyPhotoReportReason.Etc && it.isNotEmpty() }
                 when (session.target) {
-                    SeniorReportTarget.Photo -> repository.reportPhoto(id, reason, detail, hide)
-                    SeniorReportTarget.Author -> repository.reportUploader(id, reason, detail, hide)
+                    SeniorReportTarget.Photo -> repository.reportPhoto(id, reason, detail, hide, seniorId)
+                    SeniorReportTarget.Author -> repository.reportUploader(id, reason, detail, hide, seniorId)
                 }
                 _report.value = session.copy(accepted = true, hide = hide)
             } catch (e: CancellationException) {

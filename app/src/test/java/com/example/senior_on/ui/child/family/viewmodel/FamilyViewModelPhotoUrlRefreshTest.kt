@@ -46,6 +46,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 photoId = PHOTO_ID.toString(),
                 reason = FamilyPhotoReportReason.Privacy,
                 detail = "  개인정보가 노출됐어요.  ",
+                seniorId = SENIOR_ID,
             )
             runCurrent()
 
@@ -53,6 +54,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
             assertEquals(FamilyPhotoReportReason.Privacy, repository.reportedReason)
             assertEquals("개인정보가 노출됐어요.", repository.reportedDetail)
             assertTrue(repository.reportedHide == true)
+            assertEquals(SENIOR_ID, repository.reportedSeniorId)
             assertEquals(PHOTO_ID.toString(), viewModel.uiState.value.reportedPhotoId)
             assertEquals(null, viewModel.uiState.value.photoReportErrorMessage)
         } finally {
@@ -77,6 +79,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
                 reason = FamilyPhotoReportReason.Abuse,
                 detail = "  욕설이 담긴 사진을 계속 올려요.  ",
                 hide = false,
+                seniorId = SENIOR_ID,
             )
             runCurrent()
 
@@ -84,10 +87,140 @@ class FamilyViewModelPhotoUrlRefreshTest {
             assertEquals(FamilyPhotoReportReason.Abuse, repository.reportedUploaderReason)
             assertEquals("욕설이 담긴 사진을 계속 올려요.", repository.reportedUploaderDetail)
             assertFalse(repository.reportedUploaderHide == true)
+            assertEquals(SENIOR_ID, repository.reportedUploaderSeniorId)
             assertEquals(PHOTO_ID.toString(), viewModel.uiState.value.reportedPhotoId)
             assertEquals(null, viewModel.uiState.value.photoReportErrorMessage)
 
+            viewModel.clearPhotoReportFeedback()
+            assertEquals(listOf(PHOTO_ID.toString()), viewModel.uiState.value.sharedPhotos.map { it.id })
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `deletion excludes a photo from stale home and gallery responses`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val firstPageStarted = CompletableDeferred<Unit>()
+            val releaseFirstPage = CompletableDeferred<Unit>()
+            val photo = serverPhoto(url = FRESH_URL)
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = photo,
+                refreshedPhoto = photo,
+                photoPageProvider = { requestCount ->
+                    if (requestCount == 1) {
+                        firstPageStarted.complete(Unit)
+                        withContext(NonCancellable) { releaseFirstPage.await() }
+                    }
+                    ServerFamilyPhotoPage(listOf(photo), 1, null, false)
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            runCurrent()
+            firstPageStarted.await()
+
+            viewModel.deletePhoto(PHOTO_ID.toString())
+            runCurrent()
+            releaseFirstPage.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(PHOTO_ID.toString(), viewModel.uiState.value.deletedPhotoId)
+            assertTrue(viewModel.uiState.value.recentPhotos.isEmpty())
+            assertTrue(viewModel.uiState.value.sharedPhotos.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `photo hide survives a stale gallery refresh`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val reported = serverPhoto(url = FRESH_URL)
+            val other = reported.copy(id = 92L)
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = reported,
+                refreshedPhoto = reported,
+                photoPageProvider = { ServerFamilyPhotoPage(listOf(reported, other), 2, null, false) },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.reportPhoto(PHOTO_ID.toString(), FamilyPhotoReportReason.Privacy, "", true, SENIOR_ID)
+            advanceUntilIdle()
+            viewModel.clearPhotoReportFeedback(removeReportedPhoto = true)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.recentPhotos.isEmpty())
+            assertEquals(listOf("92"), viewModel.uiState.value.sharedPhotos.map { it.id })
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `uploader hide excludes all of that uploader's photos after refresh`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val reported = serverPhoto(url = FRESH_URL)
+            val sameUploader = reported.copy(id = 92L)
+            val otherUploader = reported.copy(id = 93L, uploaderId = 12L)
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = reported,
+                refreshedPhoto = reported,
+                photoPageProvider = {
+                    ServerFamilyPhotoPage(listOf(reported, sameUploader, otherUploader), 3, null, false)
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            viewModel.reportUploader(PHOTO_ID.toString(), FamilyPhotoReportReason.Abuse, "", true, SENIOR_ID)
+            advanceUntilIdle()
             viewModel.clearPhotoReportFeedback(hiddenUploaderId = 11L)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.recentPhotos.isEmpty())
+            assertEquals(listOf("93"), viewModel.uiState.value.sharedPhotos.map { it.id })
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `fresh home and gallery results replace photos deleted on another device`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var deletedRemotely = false
+            val photo = serverPhoto(url = FRESH_URL)
+            val repository = FakeFamilyServerRepository(
+                initialPhoto = photo,
+                refreshedPhoto = photo,
+                homeProvider = {
+                    ServerFamilyHome(emptyList(), if (deletedRemotely) emptyList() else listOf(photo))
+                },
+                photoPageProvider = {
+                    ServerFamilyPhotoPage(if (deletedRemotely) emptyList() else listOf(photo), 1, null, false)
+                },
+            )
+            val viewModel = FamilyViewModel(repository)
+            viewModel.loadFamilyOverview(SENIOR_ID)
+            viewModel.loadPhotoGallery(SENIOR_ID)
+            advanceUntilIdle()
+
+            deletedRemotely = true
+            viewModel.loadLatestFamilyOverview(SENIOR_ID)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.recentPhotos.isEmpty())
             assertTrue(viewModel.uiState.value.sharedPhotos.isEmpty())
         } finally {
             Dispatchers.resetMain()
@@ -124,7 +257,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
-    fun `family tab reentry exposes failed refresh after successful load`() = runTest {
+    fun `family tab reentry retains cached content when refresh fails`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             var fail = false
@@ -141,11 +274,11 @@ class FamilyViewModelPhotoUrlRefreshTest {
             advanceUntilIdle()
             fail = true
             vm.loadLatestFamilyOverview(SENIOR_ID)
-            assertTrue(vm.uiState.value.isLoading)
-            assertFalse(vm.uiState.value.hasLoadedOverview)
+            runCurrent()
+            assertTrue(vm.uiState.value.hasLoadedOverview)
             advanceUntilIdle()
             assertEquals("가족 정보를 불러오지 못했어요.", vm.uiState.value.errorMessage)
-            assertFalse(vm.uiState.value.hasLoadedOverview)
+            assertTrue(vm.uiState.value.hasLoadedOverview)
             fail = false
             vm.loadFamilyOverview(SENIOR_ID)
             advanceUntilIdle()
@@ -154,7 +287,7 @@ class FamilyViewModelPhotoUrlRefreshTest {
     }
 
     @Test
-    fun `family tab reentry hides cached content until fresh response succeeds`() = runTest {
+    fun `family tab reentry retains cached content until fresh response succeeds`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
             var requestCount = 0
@@ -181,13 +314,11 @@ class FamilyViewModelPhotoUrlRefreshTest {
 
             assertTrue(viewModel.uiState.value.hasLoadedOverview)
             viewModel.loadLatestFamilyOverview(SENIOR_ID)
-            assertTrue(viewModel.uiState.value.isLoading)
-            assertFalse(viewModel.uiState.value.hasLoadedOverview)
             runCurrent()
             secondRequestStarted.await()
 
-            assertTrue(viewModel.uiState.value.isLoading)
-            assertFalse(viewModel.uiState.value.hasLoadedOverview)
+            assertTrue(viewModel.uiState.value.isRefreshing)
+            assertTrue(viewModel.uiState.value.hasLoadedOverview)
             assertEquals(1, viewModel.uiState.value.sharedPhotos.size)
 
             releaseSecondRequest.complete(Unit)
@@ -548,6 +679,8 @@ private class FakeFamilyServerRepository(
         private set
     var reportedHide: Boolean? = null
         private set
+    var reportedSeniorId: Long? = null
+        private set
     var reportedUploaderPhotoId: Long? = null
         private set
     var reportedUploaderReason: FamilyPhotoReportReason? = null
@@ -555,6 +688,8 @@ private class FakeFamilyServerRepository(
     var reportedUploaderDetail: String? = null
         private set
     var reportedUploaderHide: Boolean? = null
+        private set
+    var reportedUploaderSeniorId: Long? = null
         private set
 
     override suspend fun join(code: String) = FamilyCodeInfo(1L, code)
@@ -607,11 +742,13 @@ private class FakeFamilyServerRepository(
         reason: FamilyPhotoReportReason,
         detail: String?,
         hide: Boolean,
+        seniorId: Long,
     ) {
         reportedPhotoId = photoId
         reportedReason = reason
         reportedDetail = detail
         reportedHide = hide
+        reportedSeniorId = seniorId
     }
 
     override suspend fun reportUploader(
@@ -619,10 +756,12 @@ private class FakeFamilyServerRepository(
         reason: FamilyPhotoReportReason,
         detail: String?,
         hide: Boolean,
+        seniorId: Long,
     ) {
         reportedUploaderPhotoId = photoId
         reportedUploaderReason = reason
         reportedUploaderDetail = detail
         reportedUploaderHide = hide
+        reportedUploaderSeniorId = seniorId
     }
 }

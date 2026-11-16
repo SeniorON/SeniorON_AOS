@@ -32,6 +32,7 @@ class ParentFamilyPhotoViewModelTest {
                             reports += name
                             assertEquals(10L, args[0])
                             assertEquals(hide, args[3])
+                            assertEquals(42L, args[4])
                             if (reports.size == 1) throw java.io.IOException()
                             if (reports.size == 2) throw com.example.senior_on.domain.model.auth.RemoteRequestException(
                                 409, if (target == SeniorReportTarget.Photo) "FAMILY_PHOTO409_1" else "FAMILY_PHOTO409_2",

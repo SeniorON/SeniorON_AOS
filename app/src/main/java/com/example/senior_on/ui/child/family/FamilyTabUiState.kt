@@ -48,6 +48,7 @@ data class SharedFamilyPhotoUiModel(
 @Immutable
 data class FamilyTabUiState(
     val members: List<FamilyMemberUiModel> = emptyList(),
+    val recentPhotos: List<SharedFamilyPhotoUiModel> = emptyList(),
     val sharedPhotos: List<SharedFamilyPhotoUiModel> = emptyList(),
     val seniorId: Long? = null,
     val invitationCode: String = "",
@@ -80,10 +81,10 @@ data class FamilyTabUiState(
         get() = (VisibleFamilyMemberCount - visibleMembers.size).coerceAtLeast(0)
 
     val visibleSharedPhotos: List<SharedFamilyPhotoUiModel>
-        get() = sharedPhotos.take(VisibleSharedPhotoCount)
+        get() = recentPhotos.take(VisibleSharedPhotoCount)
 
     val shouldShowMorePhotos: Boolean
-        get() = sharedPhotos.size >= VisibleSharedPhotoCount
+        get() = recentPhotos.size >= VisibleSharedPhotoCount
 
     val currentUserRole: FamilyCaregiverRole?
         get() = members.firstOrNull(FamilyMemberUiModel::isCurrentUser)?.role

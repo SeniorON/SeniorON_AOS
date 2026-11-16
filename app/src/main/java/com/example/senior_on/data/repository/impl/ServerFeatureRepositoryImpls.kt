@@ -410,12 +410,14 @@ class FamilyServerRepositoryImpl(
         reason: FamilyPhotoReportReason,
         detail: String?,
         hide: Boolean,
+        seniorId: Long,
     ) = source.reportPhoto(
         photoId = photoId,
         request = FamilyPhotoReportRequest(
             reason = reason.toApiValue(),
             detail = detail,
             hide = hide,
+            seniorId = seniorId,
         ),
     )
     override suspend fun reportUploader(
@@ -423,12 +425,14 @@ class FamilyServerRepositoryImpl(
         reason: FamilyPhotoReportReason,
         detail: String?,
         hide: Boolean,
+        seniorId: Long,
     ) = source.reportUploader(
         photoId = photoId,
         request = FamilyUserReportRequest(
             reason = reason.toApiValue(),
             detail = detail,
             hide = hide,
+            seniorId = seniorId,
         ),
     )
 }
