@@ -105,6 +105,7 @@ data class HospitalAppointment(
     val date: String,
     val time: String,
     val reminderType: String,
+    val reminderTime: String? = null,
 )
 
 data class HospitalUpcomingGroup(

@@ -28,4 +28,5 @@ data class HospitalAppointmentDraft(
     val date: LocalDate,
     val time: LocalTime,
     val reminder: HospitalReminder,
+    val reminderTime: LocalTime? = null,
 )

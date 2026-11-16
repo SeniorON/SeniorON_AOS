@@ -39,4 +39,5 @@ private fun HospitalAppointmentUiState.toDraft() = HospitalAppointmentDraft(
     date = date,
     time = time,
     reminder = reminder,
+    reminderTime = reminderTime,
 )

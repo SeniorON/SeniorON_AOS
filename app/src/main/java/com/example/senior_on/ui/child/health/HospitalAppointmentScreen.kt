@@ -86,14 +86,19 @@ fun HospitalAppointmentScreen(
     var specialty by rememberSaveable { mutableStateOf(initialDraft?.specialty.orEmpty()) }
     var specialtyOptions by remember { mutableStateOf(emptyList<String>()) }
     var isSpecialtyDirectInput by rememberSaveable { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(initialDraft?.date ?: initialDate) }
-    var selectedTime by remember { mutableStateOf(initialDraft?.time) }
+    var selectedDate by rememberSaveable { mutableStateOf(initialDraft?.date ?: initialDate) }
+    var selectedTime by rememberSaveable { mutableStateOf(initialDraft?.time) }
+    var selectedReminderTime by rememberSaveable {
+        mutableStateOf(initialDraft?.reminderTime ?: initialDraft?.time ?: LocalTime.of(9, 0))
+    }
     var reminder by rememberSaveable {
         mutableStateOf(initialDraft?.reminder ?: HospitalReminder.DayBefore)
     }
     var showSpecialtySheet by rememberSaveable { mutableStateOf(false) }
     var showDateSheet by rememberSaveable { mutableStateOf(false) }
     var showTimeSheet by rememberSaveable { mutableStateOf(false) }
+    var showReminderSheet by rememberSaveable { mutableStateOf(false) }
+    val reminderTime = selectedReminderTime.takeUnless { reminder == HospitalReminder.None }
     var showExitDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -108,7 +113,8 @@ fun HospitalAppointmentScreen(
             specialty != initial.specialty ||
             selectedDate != initial.date ||
             selectedTime != initial.time ||
-            reminder != initial.reminder
+            reminder != initial.reminder ||
+            (reminder != HospitalReminder.None && reminderTime != (initial.reminderTime ?: initial.time))
     } ?: false
     val saveDraft: () -> Unit = {
         val time = selectedTime
@@ -119,7 +125,8 @@ fun HospitalAppointmentScreen(
                     specialty = specialty,
                     date = selectedDate,
                     time = time,
-                    reminder = reminder
+                    reminder = reminder,
+                    reminderTime = reminderTime
                 )
             )
         }
@@ -239,6 +246,23 @@ fun HospitalAppointmentScreen(
                     },
                     enabled = true
                 )
+                if (reminder != HospitalReminder.None) {
+                    val date = if (reminder == HospitalReminder.DayBefore) selectedDate.minusDays(1) else selectedDate
+                    Spacer(Modifier.height(8.dp))
+                    androidx.compose.material3.HorizontalDivider(color = SeniorOnColors.Gray200)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable(enabled = !isSaving) {
+                            focusManager.clearFocus()
+                            showReminderSheet = true
+                        }.padding(horizontal = 10.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("${date.monthValue}월 ${date.dayOfMonth}일 ${selectedReminderTime.toKoreanTime()}",
+                            style = SeniorOnTextStyles.BodySSemiBold, color = SeniorOnColors.Gray600)
+                        Text("변경", style = SeniorOnTextStyles.BodySSemiBold, color = SeniorOnColors.Primary600)
+                    }
+                }
             }
         }
 
@@ -320,6 +344,16 @@ fun HospitalAppointmentScreen(
             onConfirm = {
                 selectedTime = it
                 showTimeSheet = false
+            }
+        )
+    }
+    if (showReminderSheet && reminder != HospitalReminder.None) {
+        ScheduleTimePickerBottomSheet(
+            initialTime = selectedReminderTime,
+            onDismiss = { showReminderSheet = false },
+            onConfirm = {
+                selectedReminderTime = it
+                showReminderSheet = false
             }
         )
     }

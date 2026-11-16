@@ -51,6 +51,7 @@ data class HospitalAppointmentUiState(
     val daysLeft: Int,
     val highlighted: Boolean = false,
     val reminder: HospitalReminder = HospitalReminder.DayBefore,
+    val reminderTime: LocalTime? = null,
 ) {
     val departmentAndTime: String
         get() = "$specialty · ${time.toKoreanTime()}"

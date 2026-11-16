@@ -971,20 +971,20 @@ private fun HomeButtonResponse.toDomain() = ServerButton(
 )
 private fun HospitalListResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
-    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty()
+    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty(), reminderTime
 )
 private fun HospitalDetailResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
-    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty()
+    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty(), reminderTime
 )
 private fun HospitalCreateResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
-    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty()
+    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty(), reminderTime
 )
 private fun HospitalAppointment.toCreateRequest() =
-    HospitalCreateRequest(hospitalName.trim(), department.trim(), date, time, reminderType)
+    HospitalCreateRequest(hospitalName.trim(), department.trim(), date, time, reminderType, reminderTime)
 private fun HospitalAppointment.toUpdateRequest() =
-    HospitalUpdateRequest(hospitalName.trim(), department.trim(), date, time, reminderType)
+    HospitalUpdateRequest(hospitalName.trim(), department.trim(), date, time, reminderType, reminderTime)
 private fun MedicationInfo.toCreateRequest() =
     MedicationCreateRequest(
         medicineName = name.trim(),
