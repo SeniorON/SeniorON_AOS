@@ -22,72 +22,25 @@ class DisplayButtonAddPolicyTest {
     }
 
     @Test
-    fun musicSectionContainsAllSupportedMusicAppsInRequestedOrder() {
-        assertEquals(
-            listOf(
-                SeniorHomeButtonType.Melon,
-                SeniorHomeButtonType.Genie,
-                SeniorHomeButtonType.YouTubeMusic,
-                SeniorHomeButtonType.Spotify,
-                SeniorHomeButtonType.Flo,
-                SeniorHomeButtonType.Vibe,
-                SeniorHomeButtonType.Bugs,
-                SeniorHomeButtonType.SamsungMusic,
-                SeniorHomeButtonType.KakaoMusic,
-            ),
-            MusicButtons,
-        )
-        assertTrue(MusicButtons.all(SeniorHomeButtonType::isMusicButton))
-    }
-
-    @Test
-    fun importedSupportedMusicAppTargetsTheTopMusicSection() {
-        val melon = DisplayHomeButton(
-            name = "멜론",
-            actionType = "DEFAULT",
-            actionValue = "MELON",
-            type = SeniorHomeButtonType.Melon,
-        )
-
-        assertEquals(
-            SeniorHomeButtonType.Melon,
-            melon.importedMusicButtonTypeOrNull(),
-        )
-    }
-
-    @Test
-    fun importedUnknownAppStaysInTheGeneralAppSection() {
-        val unknownMusicApp = DisplayHomeButton(
-            name = "새 음악 앱",
-            actionType = "APP",
-            actionValue = "com.example.music",
-            packageName = "com.example.music",
-            type = null,
-        )
-
-        assertEquals(null, unknownMusicApp.importedMusicButtonTypeOrNull())
-    }
-
-    @Test
-    fun importedMusicSelectionReplacesThePreviousTopMusicApp() {
+    fun twoInstalledMusicAppsCanBeSelectedAndRemovedIndependently() {
         val spotify = DisplayHomeButton(
-            name = "스포티파이",
-            actionType = "DEFAULT",
-            actionValue = "SPOTIFY",
+            name = "Spotify",
+            actionType = "APP",
+            actionValue = "com.spotify.music",
+            packageName = "com.spotify.music",
             type = SeniorHomeButtonType.Spotify,
         )
-
-        val result = createInitialButtonOrder(
-            currentButtons = listOf(spotify),
-            musicButton = SeniorHomeButtonType.Melon,
-            appButtons = emptyList(),
+        val melon = DisplayHomeButton(
+            name = "Melon",
+            actionType = "APP",
+            actionValue = "com.iloen.melon",
+            packageName = "com.iloen.melon",
         )
+        val draft = createInitialButtonOrder(listOf(spotify), listOf(spotify, melon))
+        assertEquals(listOf(spotify, melon), draft.filter { it.actionType == "APP" })
 
-        assertEquals(
-            listOf(SeniorHomeButtonType.Melon),
-            result.mapNotNull(DisplayHomeButton::type)
-                .filter(SeniorHomeButtonType::isMusicButton),
-        )
+        val edited = mergeSelectedButtonEdits(draft, listOf(melon))
+        assertEquals(listOf(melon), edited.filter { it.actionType == "APP" })
     }
 
     @Test

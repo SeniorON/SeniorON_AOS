@@ -89,8 +89,7 @@ private val ProvidedButtonNames = ProvidedButtons.map(
 private fun DisplayHomeButton.isProtectedFromSelectedButtonEditing(): Boolean =
     type in ProvidedButtons ||
         isDefaultAction("SCHEDULE") ||
-        isDefaultAction("EMERGENCY") ||
-        type.isMusicButton()
+        isDefaultAction("EMERGENCY")
 
 internal fun mergeSelectedButtonEdits(
     initialButtons: List<DisplayHomeButton>,

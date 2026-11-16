@@ -94,9 +94,6 @@ fun DisplayTabRoute(
         mutableStateOf<PickedInstalledApp?>(null)
     }
     var autoSelectKey by remember { mutableStateOf<String?>(null) }
-    var autoSelectMusicButton by remember {
-        mutableStateOf<SeniorHomeButtonType?>(null)
-    }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
     com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
         if (!uiState.isSaving && !isDisconnectingRelationship &&
@@ -112,20 +109,11 @@ fun DisplayTabRoute(
     }
 
     fun importButton(button: DisplayHomeButton) {
-        val importedMusicButton = button.importedMusicButtonTypeOrNull()
-        if (importedMusicButton != null) {
-            autoSelectKey = null
-            autoSelectMusicButton = importedMusicButton
-            autoSelectEvent += 1
-            return
-        }
-
         if (button.actionType.equals("APP", ignoreCase = true)) {
             transientImportedButtons = (
                 transientImportedButtons + button
                 ).distinctBy(DisplayHomeButton::stableKey)
         }
-        autoSelectMusicButton = null
         autoSelectKey = button.stableKey
         autoSelectEvent += 1
     }
@@ -162,7 +150,6 @@ fun DisplayTabRoute(
             )
             transientImportedButtons = emptyList()
             autoSelectKey = null
-            autoSelectMusicButton = null
             saveableStateHolder.removeState(DisplayDestination.ButtonAdd.name)
         }
         destination = when (destination) {
@@ -205,7 +192,6 @@ fun DisplayTabRoute(
         buttonAddEntryItems = emptyList()
         transientImportedButtons = emptyList()
         autoSelectKey = null
-        autoSelectMusicButton = null
         listOf(
             DisplayDestination.ButtonEditGuide,
             DisplayDestination.ButtonEditSelected,
@@ -309,7 +295,6 @@ fun DisplayTabRoute(
                             buttonAddEntryItems = emptyList()
                             transientImportedButtons = emptyList()
                             autoSelectKey = null
-                            autoSelectMusicButton = null
                             destination = DisplayDestination.ButtonEditGuide
                             onButtonEditClick()
                         }
@@ -469,7 +454,6 @@ fun DisplayTabRoute(
                     buttonAddEntryItems = buttons
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
-                    autoSelectMusicButton = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -482,13 +466,8 @@ fun DisplayTabRoute(
                 initialSelectedButtons = buttonEditDraftItems
                     .ifEmpty { uiState.configuredButtonItems }
                     .filter(DisplayHomeButton::isSelectableAppButton),
-                initialMusicButton = buttonEditDraftItems
-                    .ifEmpty { uiState.configuredButtonItems }
-                    .mapNotNull(DisplayHomeButton::type)
-                    .firstOrNull(SeniorHomeButtonType::isMusicButton),
                 transientImportedButtons = transientImportedButtons,
                 autoSelectKey = autoSelectKey,
-                autoSelectMusicButton = autoSelectMusicButton,
                 autoSelectEvent = autoSelectEvent,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
@@ -503,12 +482,11 @@ fun DisplayTabRoute(
                         ).show()
                     }
                 },
-                onSaveClick = { musicButton, appButtons ->
+                onSaveClick = { appButtons ->
                     val currentDraftButtons = buttonEditDraftItems
                         .ifEmpty { uiState.configuredButtonItems }
                     val selectedButtons = createInitialButtonOrder(
                         currentButtons = currentDraftButtons,
-                        musicButton = musicButton,
                         appButtons = appButtons,
                     )
                     buttonEditDraftItems = resolveButtonEditDraftAfterButtonAdd(
@@ -518,7 +496,6 @@ fun DisplayTabRoute(
                     )
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
-                    autoSelectMusicButton = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -600,19 +577,11 @@ internal fun shouldShowDisplayInitialLoading(
 
 internal fun createInitialButtonOrder(
     currentButtons: List<DisplayHomeButton>,
-    musicButton: SeniorHomeButtonType?,
     appButtons: List<DisplayHomeButton>,
 ): List<DisplayHomeButton> {
-    val musicItem = musicButton?.let { selectedMusic ->
-        currentButtons.firstOrNull { it.type == selectedMusic }
-            ?: selectedMusic.toMusicDisplayButton()
-    }
     val schedule = currentButtons.firstOrNull { it.isDefaultAction("SCHEDULE") }
         ?: requiredDisplayButton(SeniorHomeButtonType.Schedule)
-    val leadingButtons = buildList {
-        musicItem?.let(::add)
-        add(schedule)
-    }
+    val leadingButtons = listOf(schedule)
     val requiredButtons = listOf(
         SeniorHomeButtonType.Settings,
         SeniorHomeButtonType.Medication,
@@ -642,14 +611,10 @@ internal fun List<DisplayHomeButton>.withRequiredSeniorHomeButtons():
     List<DisplayHomeButton> {
     val distinctButtons = distinctBy(DisplayHomeButton::stableKey)
         .filterNot { it.isDefaultAction("EMERGENCY") }
-    val musicButton = distinctButtons.firstOrNull(DisplayHomeButton::isMusicButton)
     val schedule = distinctButtons.firstOrNull { it.isDefaultAction("SCHEDULE") }
         ?: requiredDisplayButton(SeniorHomeButtonType.Schedule)
     val gridButtons = distinctButtons
-        .filterNot { button ->
-            button.isMusicButton() ||
-                button.isDefaultAction("SCHEDULE")
-        }
+        .filterNot { it.isDefaultAction("SCHEDULE") }
         .toMutableList()
 
     listOf(
@@ -666,7 +631,6 @@ internal fun List<DisplayHomeButton>.withRequiredSeniorHomeButtons():
         ?: requiredDisplayButton(SeniorHomeButtonType.Emergency)
 
     return buildList {
-        musicButton?.let(::add)
         add(schedule)
         addAll(gridButtons.withEmergencyAtFixedGridSlot(emergency))
     }
@@ -684,15 +648,14 @@ private fun DisplayHomeButton.isSelectableDefaultOption(): Boolean =
         )
 
 private fun DisplayHomeButton.isSelectableAppButton(): Boolean =
-    !isMusicButton() &&
-        actionValue.uppercase() !in setOf(
-            "SCHEDULE",
-            "COMPANION",
-            "SETTINGS",
-            "MEDICATION",
-            "PHOTO",
-            "EMERGENCY",
-        )
+    actionValue.uppercase() !in setOf(
+        "SCHEDULE",
+        "COMPANION",
+        "SETTINGS",
+        "MEDICATION",
+        "PHOTO",
+        "EMERGENCY",
+    )
 
 private fun requiredDisplayButton(type: SeniorHomeButtonType): DisplayHomeButton {
     val (name, actionValue) = when (type) {
@@ -708,35 +671,5 @@ private fun requiredDisplayButton(type: SeniorHomeButtonType): DisplayHomeButton
         actionType = "DEFAULT",
         actionValue = actionValue,
         type = type,
-    )
-}
-
-private fun SeniorHomeButtonType.toMusicDisplayButton(): DisplayHomeButton {
-    val (label, actionValue, packageName) = when (this) {
-        SeniorHomeButtonType.Melon -> Triple("멜론", "MELON", "com.iloen.melon")
-        SeniorHomeButtonType.Genie -> Triple("지니뮤직", "GENIE", "com.ktmusic.geniemusic")
-        SeniorHomeButtonType.YouTubeMusic -> Triple(
-            "유튜브뮤직",
-            "YOUTUBE_MUSIC",
-            "com.google.android.apps.youtube.music",
-        )
-        SeniorHomeButtonType.Spotify -> Triple("스포티파이", "SPOTIFY", "com.spotify.music")
-        SeniorHomeButtonType.Flo -> Triple("플로", "FLO", "skplanet.musicmate")
-        SeniorHomeButtonType.Vibe -> Triple("바이브", "VIBE", "com.naver.vibe")
-        SeniorHomeButtonType.Bugs -> Triple("벅스", "BUGS", "com.neowiz.android.bugs")
-        SeniorHomeButtonType.SamsungMusic -> Triple(
-            "삼성뮤직",
-            "SAMSUNG_MUSIC",
-            "com.sec.android.app.music",
-        )
-        SeniorHomeButtonType.KakaoMusic -> Triple("카카오뮤직", "KAKAO_MUSIC", "com.kakao.music")
-        else -> error("음악 버튼이 아닙니다: $this")
-    }
-    return DisplayHomeButton(
-        name = label,
-        actionType = "APP",
-        actionValue = actionValue,
-        packageName = packageName,
-        type = this,
     )
 }

@@ -89,17 +89,14 @@ internal fun List<DisplayHomeButton>.withEmergencyAtFixedGridSlot(
 internal fun List<DisplayHomeButton>.withFixedButtonOrderSections():
     List<DisplayHomeButton> {
     val distinctButtons = distinctBy(DisplayHomeButton::stableKey)
-    val musicButton = distinctButtons.firstOrNull(DisplayHomeButton::isMusicButton)
     val scheduleButton = distinctButtons.firstOrNull(DisplayHomeButton::isScheduleButton)
     val emergencyButton = distinctButtons.firstOrNull(DisplayHomeButton::isEmergencyButton)
     val gridButtons = distinctButtons.filterNot { button ->
-        button.isMusicButton() ||
-            button.isScheduleButton() ||
+        button.isScheduleButton() ||
             button.isEmergencyButton()
     }
 
     return buildList {
-        musicButton?.let(::add)
         scheduleButton?.let(::add)
         if (emergencyButton == null) {
             addAll(gridButtons)
@@ -123,8 +120,6 @@ fun DisplayButtonOrderScreen(
     val buttonByKey = remember(normalizedInitialButtons) {
         normalizedInitialButtons.associateBy(DisplayHomeButton::stableKey)
     }
-    val musicButton = normalizedInitialButtons
-        .firstOrNull(DisplayHomeButton::isMusicButton)
     val scheduleButton = normalizedInitialButtons
         .firstOrNull(DisplayHomeButton::isScheduleButton)
     val emergencyButton = normalizedInitialButtons
@@ -133,8 +128,7 @@ fun DisplayButtonOrderScreen(
         mutableStateOf(
             normalizedInitialButtons
                 .filterNot { button ->
-                    button.isMusicButton() ||
-                        button.isScheduleButton() ||
+                    button.isScheduleButton() ||
                         button.isEmergencyButton()
                 }
                 .map(DisplayHomeButton::stableKey),
@@ -166,7 +160,6 @@ fun DisplayButtonOrderScreen(
                 onSaveClick = {
                     onSaveClick(
                         buildList {
-                            musicButton?.let(::add)
                             scheduleButton?.let(::add)
                             addAll(orderedButtonKeys.mapNotNull(buttonByKey::get))
                             emergencyButton?.let(::add)
@@ -253,23 +246,10 @@ fun DisplayButtonOrderScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
-                musicButton?.let { button ->
-                    ButtonOrderCard(
-                        button = button,
-                        featured = true,
-                        fixed = true,
-                        isDragging = false,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
                 scheduleButton?.let { schedule ->
-                    if (musicButton != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
                     ButtonOrderCard(
                         button = schedule,
-                        featured = musicButton == null,
+                        featured = true,
                         fixed = true,
                         showDescription = true,
                         isDragging = false,
@@ -516,7 +496,7 @@ private fun ButtonOrderCard(
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (button.isMusicButton()) "노래 듣기" else button.name,
+                text = button.name,
                 style = if (featured || showDescription) SeniorOnTextStyles.HeadingM
                 else SeniorOnTextStyles.HeadingS,
                 color = contentColor,
@@ -533,21 +513,8 @@ private fun ButtonOrderCard(
                 )
             }
         }
-        if (featured && button.isMusicButton()) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_big_play),
-                contentDescription = null,
-                modifier = Modifier.size(34.dp),
-                tint = SeniorOnColors.White,
-            )
-        }
     }
 }
-
-internal fun SeniorHomeButtonType?.isMusicButton(): Boolean = this in MusicButtons
-
-internal fun DisplayHomeButton?.isMusicButton(): Boolean =
-    this?.type.isMusicButton()
 
 private fun DisplayHomeButton.isScheduleButton(): Boolean =
     isDefaultAction("SCHEDULE")

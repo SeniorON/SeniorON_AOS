@@ -8,6 +8,16 @@ import org.junit.Test
 
 class HomeDtosTest {
     @Test
+    fun legacyMusicCardDoesNotAffectSeniorHomeButtons() {
+        val home = Gson().fromJson(
+            """{"music_card":{"enabled":true},"buttons":[{"button_id":7}]}""",
+            SeniorHomeResponse::class.java,
+        )
+
+        assertEquals(7L, home.buttons?.single()?.button_id)
+    }
+
+    @Test
     fun buttonRequestSerializesNullPackageNameExplicitly() {
         val request = HomeButtonSaveRequest(
             seniorId = TEST_SENIOR_ID,

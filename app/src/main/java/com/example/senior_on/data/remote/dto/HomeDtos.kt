@@ -42,7 +42,7 @@ class ButtonRequestJsonAdapter : TypeAdapter<ButtonRequest>() {
 
 data class HomeButtonSaveRequest(
     @SerializedName("senior_id") val seniorId: Long,
-    val musicApp: String?,
+    val musicApp: String? = null,
     val buttons: List<ButtonRequest>,
 )
 data class HomeFontSizeUpdateRequest(
@@ -72,11 +72,6 @@ data class HomeButtonResponse(
     val button_name: String?, val action_type: String?, val action_value: String?,
     val package_name: String? = null,
 )
-data class MusicCardResponse(
-    val enabled: Boolean?, val icon: String?, val music_app: String?,
-    val app_name: String?, val action_type: String?, val action_value: String?,
-    val package_name: String?,
-)
 data class TodayScheduleResponse(
     val title: String?, val description: String?, val schedule_count: Int?,
     val display_type: String?, val schedule_id: Long?, val scheduled_time: String?
@@ -89,12 +84,12 @@ data class SeniorProfileResponse(
 data class HomeResponse(
     val connection: ConnectionResponse?, val buttons: List<HomeButtonResponse>?,
     val user_name: String?, val senior_profile: SeniorProfileResponse?,
-    val font_size: String?, val music_card: MusicCardResponse?,
+    val font_size: String?,
     val today_schedule: TodayScheduleResponse?
 )
 data class SeniorHomeResponse(
     val buttons: List<HomeButtonResponse>?, val font_size: String?,
-    val music_card: MusicCardResponse?, val today_schedule: TodayScheduleResponse?
+    val today_schedule: TodayScheduleResponse?
 )
 data class ButtonOptionResponse(
     val icon: String?, val option_id: Long?, val button_name: String?,

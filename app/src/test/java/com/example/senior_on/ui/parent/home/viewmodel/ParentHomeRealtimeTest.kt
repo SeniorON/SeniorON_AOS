@@ -158,7 +158,7 @@ class ParentHomeRealtimeTest {
             todaySchedule: ServerTodaySchedule? = null,
         ) = SeniorHomeSnapshot(
             buttons = listOf(ServerButton(1, order = 0, name = label, icon = null, actionType = "DEFAULT", actionValue = "PHONE")),
-            fontSize = "MEDIUM", musicCard = null, todaySchedule = todaySchedule,
+            fontSize = "MEDIUM", todaySchedule = todaySchedule,
         )
         private fun unusedRepository() = Proxy.newProxyInstance(
             HomeServerRepository::class.java.classLoader, arrayOf(HomeServerRepository::class.java),

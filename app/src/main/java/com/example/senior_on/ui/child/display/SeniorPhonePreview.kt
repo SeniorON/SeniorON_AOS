@@ -125,8 +125,6 @@ private fun SeniorPhoneDesign(
         configuration = configuration,
         buttonItems = buttonItems,
     )
-    val musicButton = previewButtons.firstOrNull { it.type.isMusicButton() }
-    val buttons = previewButtons.filterNot { it.type.isMusicButton() }
 
     Column(
         modifier = Modifier
@@ -149,11 +147,9 @@ private fun SeniorPhoneDesign(
             SeniorHomeContent(
                 now = now,
                 configuration = configuration,
-                musicButton = musicButton,
-                buttons = buttons,
+                buttons = previewButtons,
                 scheduleUiState = todaySchedule.toPreviewScheduleUiState(),
                 interactionEnabled = false,
-                onMusicClick = {},
                 onScheduleClick = {},
                 onButtonClick = {},
             )

@@ -8,7 +8,6 @@ import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.domain.model.server.ServerButton
-import com.example.senior_on.domain.model.server.ServerMusicCard
 import com.example.senior_on.domain.model.server.ServerTodaySchedule
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
@@ -42,7 +41,6 @@ data class ParentHomeButtonUiModel(
 
 data class ParentHomeUiState(
     val screenConfiguration: SeniorScreenConfiguration = SeniorScreenConfiguration(),
-    val musicButton: ParentHomeButtonUiModel? = null,
     val buttons: List<ParentHomeButtonUiModel> = defaultOfflineHomeButtons(),
     val schedule: ParentHomeScheduleUiState = ParentHomeScheduleUiState(),
     val isLoading: Boolean = true,
@@ -153,9 +151,6 @@ class ParentHomeViewModel(
                         fontSize = home.fontSize.toFontSize(),
                         buttons = emptyList(),
                     ),
-                    musicButton = home.musicCard
-                        ?.takeIf { musicCard -> musicCard.enabled }
-                        ?.toUiModel(),
                     buttons = home.buttons
                         .map(ServerButton::toUiModel)
                         .ifEmpty(::defaultOfflineHomeButtons),
@@ -184,7 +179,6 @@ class ParentHomeViewModel(
                 _uiState.update {
                     it.copy(
                         screenConfiguration = it.screenConfiguration.copy(fontSize = home.fontSize.toFontSize()),
-                        musicButton = home.musicCard?.takeIf { card -> card.enabled }?.toUiModel(),
                         buttons = home.buttons.map(ServerButton::toUiModel).ifEmpty(::defaultOfflineHomeButtons),
                         schedule = home.todaySchedule.toUiState(),
                         isLoading = false,
@@ -244,15 +238,6 @@ private fun ServerTodaySchedule?.toUiState() = ParentHomeScheduleUiState(
     description = this?.description,
     scheduledTime = this?.scheduledTime.toLocalTimeOrNull(),
     isLoading = false,
-)
-
-private fun ServerMusicCard.toUiModel() = ParentHomeButtonUiModel(
-    id = 0,
-    type = resolveButtonType(actionValue, packageName),
-    label = "노래 듣기",
-    actionType = actionType,
-    actionValue = actionValue,
-    packageName = packageName,
 )
 
 private fun ServerButton.toUiModel() = ParentHomeButtonUiModel(

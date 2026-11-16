@@ -59,14 +59,12 @@ fun ParentHomeRoute(
 
     ParentHomeScreen(
         configuration = uiState.screenConfiguration,
-        musicButton = uiState.musicButton,
         buttons = uiState.buttons,
         scheduleUiState = uiState.schedule,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refresh,
         onExitHomeClick = exitHome,
         onSettingsClick = onSettingsClick,
-        onMusicClick = { openParentHomeButton(context, it) },
         onScheduleClick = onScheduleClick,
         onButtonClick = { button ->
             when (button.type) {

@@ -13,7 +13,7 @@ class DisplayButtonOrderTest {
     }
 
     @Test
-    fun musicAndScheduleArePlacedBeforeDynamicButtons() {
+    fun scheduleIsPlacedBeforeDynamicButtons() {
         val call = defaultButton(SeniorHomeButtonType.Call)
         val message = defaultButton(SeniorHomeButtonType.Message)
         val result = createInitialButtonOrder(
@@ -23,13 +23,11 @@ class DisplayButtonOrderTest {
                 defaultButton(SeniorHomeButtonType.ChatBuddy),
                 defaultButton(SeniorHomeButtonType.Medication),
             ),
-            musicButton = SeniorHomeButtonType.Melon,
             appButtons = listOf(call, message),
         )
 
-        assertEquals(SeniorHomeButtonType.Melon, result[0].type)
-        assertEquals("SCHEDULE", result[1].actionValue)
-        assertEquals(listOf("PHONE", "MESSAGE"), result.drop(2).take(2).map { it.actionValue })
+        assertEquals("SCHEDULE", result.first().actionValue)
+        assertEquals(listOf("PHONE", "MESSAGE"), result.drop(1).take(2).map { it.actionValue })
     }
 
     @Test
@@ -42,7 +40,6 @@ class DisplayButtonOrderTest {
         )
         val result = createInitialButtonOrder(
             currentButtons = emptyList(),
-            musicButton = null,
             appButtons = listOf(imported),
         )
 
@@ -61,7 +58,7 @@ class DisplayButtonOrderTest {
             appButton("네이버", "com.nhn.android.search"),
         ).withRequiredSeniorHomeButtons()
 
-        val grid = result.filterNot { it.isMusicButton() || it.isDefaultAction("SCHEDULE") }
+        val grid = result.filterNot { it.isDefaultAction("SCHEDULE") }
         assertEquals("EMERGENCY", grid[7].actionValue)
         assertEquals(
             setOf(
@@ -100,8 +97,8 @@ class DisplayButtonOrderTest {
     }
 
     @Test
-    fun musicAndScheduleStayAboveGridWhileEmergencyKeepsItsFixedSlot() {
-        val music = defaultButton(SeniorHomeButtonType.Melon)
+    fun installedMusicAppKeepsItsGridPositionWhileEmergencyKeepsItsFixedSlot() {
+        val music = appButton("Spotify", "com.spotify.music")
         val schedule = defaultButton(SeniorHomeButtonType.Schedule)
         val emergency = defaultButton(SeniorHomeButtonType.Emergency)
         val regularButtons = listOf(
@@ -123,21 +120,19 @@ class DisplayButtonOrderTest {
                 music
             ).withFixedButtonOrderSections()
 
-        assertEquals(music, result[0])
-        assertEquals(schedule, result[1])
-        assertEquals(emergency, result.drop(2)[7])
+        assertEquals(schedule, result.first())
+        assertEquals(emergency, result.drop(1)[7])
         assertEquals(
-            regularButtons,
+            regularButtons + music,
             result.filterNot { button ->
-                button.isMusicButton() ||
-                    button.isDefaultAction("SCHEDULE") ||
+                button.isDefaultAction("SCHEDULE") ||
                     button.isDefaultAction("EMERGENCY")
             },
         )
     }
 
     @Test
-    fun scheduleStaysFeaturedWhenMusicIsNotSelected() {
+    fun scheduleStaysFeatured() {
         val schedule = defaultButton(SeniorHomeButtonType.Schedule)
         val call = defaultButton(SeniorHomeButtonType.Call)
 
