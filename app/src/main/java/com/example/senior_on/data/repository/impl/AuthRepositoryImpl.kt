@@ -23,7 +23,8 @@ import com.example.senior_on.domain.model.auth.VerificationRequestGate
 import com.example.senior_on.domain.model.auth.RemoteRequestException
 
 class AuthRepositoryImpl(
-    private val dataSource: AuthDataSource
+    private val dataSource: AuthDataSource,
+    private val onChildSignup: (Long) -> Unit,
 ) : AuthRepository {
     override suspend fun isLoginIdAvailable(loginId: String): Boolean {
         return dataSource.checkLoginId(loginId.trim()).available
@@ -76,6 +77,7 @@ class AuthRepositoryImpl(
                 agreeMarketing = credentials.agreeMarketing
             )
         )
+        if (response.role == UserRole.CHILD && response.usersId > 0) onChildSignup(response.usersId)
         return SignupResult(
             usersId = response.usersId,
             name = response.name,

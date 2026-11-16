@@ -12,7 +12,8 @@ import com.example.senior_on.domain.model.auth.SocialSignupCredentials
 import com.example.senior_on.domain.repository.auth.SocialAuthRepository
 
 class SocialAuthRepositoryImpl(
-    private val dataSource: SocialAuthDataSource
+    private val dataSource: SocialAuthDataSource,
+    private val onChildSignup: (Long) -> Unit,
 ) : SocialAuthRepository {
     override suspend fun loginWithKakao(
         kakaoAccessToken: String,
@@ -80,6 +81,9 @@ class SocialAuthRepositoryImpl(
                 deviceIdentifier = credentials.deviceIdentifier,
             )
         )
+        if ((response.role?.toAppUserMode() ?: credentials.mode) == AppUserMode.Child) {
+            response.usersId?.takeIf { it > 0 }?.let(onChildSignup)
+        }
         return SocialLoginResult(
             provider = credentials.provider,
             accessToken = response.accessToken,

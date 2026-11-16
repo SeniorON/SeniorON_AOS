@@ -129,6 +129,8 @@ internal enum class ChildFamilyDestination {
 
 @Composable
 fun ChildMainScreen(
+    seniorAddTutorialPending: Boolean = false,
+    onFinishSeniorAddTutorial: () -> Unit = {},
     authenticatedUserId: String,
     sessionInstance: Int,
     familyServerRepository: FamilyServerRepository,
@@ -267,6 +269,11 @@ fun ChildMainScreen(
     )
     val seniorManagementUiState by
         seniorManagementViewModel.uiState.collectAsStateWithLifecycle()
+    val alreadyHasSeniors = !seniorManagementUiState.isLoading &&
+        seniorManagementUiState.listError == null && seniorManagementUiState.managedSeniors.isNotEmpty()
+    LaunchedEffect(seniorAddTutorialPending, alreadyHasSeniors) {
+        if (seniorAddTutorialPending && alreadyHasSeniors) onFinishSeniorAddTutorial()
+    }
     var showSeniorManagement by rememberSaveable { mutableStateOf(false) }
 
     val withdrawalRevision by com.example.senior_on.notification.SeniorWithdrawalEventStore.changes.collectAsStateWithLifecycle()
@@ -540,6 +547,8 @@ fun ChildMainScreen(
             }
         } else {
             ChildMainTabContent(
+                seniorAddTutorialPending = seniorAddTutorialPending,
+                onFinishSeniorAddTutorial = onFinishSeniorAddTutorial,
                 selectedTab = selectedTab,
                 authenticatedUserId = authenticatedUserId,
                 onHealthSavingChanged = { isHealthSaving = it },
@@ -738,6 +747,8 @@ internal fun isChildMainNavigationEnabled(
 
 @Composable
 private fun ChildMainTabContent(
+    seniorAddTutorialPending: Boolean,
+    onFinishSeniorAddTutorial: () -> Unit,
     selectedTab: ChildMainTab,
     authenticatedUserId: String,
     onHealthSavingChanged: (Boolean) -> Unit,
@@ -801,6 +812,8 @@ private fun ChildMainTabContent(
     if (selectedTab == ChildMainTab.Screen) {
         key(selectedSeniorId) {
             DisplayTabRoute(
+                seniorAddTutorialPending = seniorAddTutorialPending && !listRefreshFailed,
+                onFinishSeniorAddTutorial = onFinishSeniorAddTutorial,
                 expectedSeniorId = selectedSeniorId,
                 onProfileSaved = onProfileSaved,
                 tabReselectionToken = tabReselectionToken,

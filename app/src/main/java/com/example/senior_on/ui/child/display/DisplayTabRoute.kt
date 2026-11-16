@@ -17,6 +17,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
@@ -61,6 +65,8 @@ fun DisplayTabRoute(
     isSeniorAccountsLoading: Boolean = false,
     isRefreshingList: Boolean = false,
     onRefreshEmptyList: () -> Unit = {},
+    seniorAddTutorialPending: Boolean = false,
+    onFinishSeniorAddTutorial: () -> Unit = {},
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
     isDisconnectingRelationship: Boolean = false,
@@ -81,6 +87,8 @@ fun DisplayTabRoute(
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var showInternetRequiredDialog by remember { mutableStateOf(false) }
     var showLargePreview by rememberSaveable { mutableStateOf(false) }
+    var tutorialAnchor by remember { mutableStateOf<Rect?>(null) }
+    val emptySeniorList = seniorAccounts.isEmpty() && expectedSeniorId == null && !isSeniorAccountsLoading
     var buttonEditDraftItems by remember {
         mutableStateOf<List<DisplayHomeButton>>(emptyList())
     }
@@ -172,7 +180,7 @@ fun DisplayTabRoute(
     }
 
     fun runWhenParentPhoneConnected(action: () -> Unit) {
-        val status = uiState.device?.connectionStatus
+        val status = uiState.device?.connectionStatus.takeUnless { emptySeniorList }
         when {
             status.allowsDisplayPreviewAndEditing() -> action()
             status == DisplayDeviceConnectionStatus.LoginExpired ->
@@ -237,69 +245,82 @@ fun DisplayTabRoute(
                         modifier = modifier,
                     )
 
-                else -> DisplayTabScreen(
-                    uiState = uiState,
-                    canEditScreen = uiState.canEditScreen,
-                    showScreenEditActions = uiState.canEditScreen &&
-                        !uiState.isEditPermissionLoading &&
-                        !uiState.isLoading &&
-                        !uiState.isSaving,
-                    isRefreshing = if (expectedSeniorId == null) isRefreshingList else uiState.isRefreshing,
-                    onRefresh = if (expectedSeniorId == null) onRefreshEmptyList else viewModel::refreshOverview,
-                    seniorAccounts = seniorAccounts,
-                    onSeniorAccountClick = onSeniorAccountClick,
-                    onAddSeniorAccountClick = onAddSeniorAccountClick,
-                    modifier = modifier,
-                    onDeviceClick = {
-                        if (uiState.device == null) {
-                            navigateToSeniorAppInstallGuide()
-                        } else {
-                            viewModel.refreshDevice()
-                            destination = DisplayDestination.DeviceConnection
-                        }
-                    },
-                    onParentInfoClick = {
-                        if (uiState.device == null) {
-                            navigateToSeniorAppInstallGuide()
-                        } else {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.ParentInfoEdit.name
-                            )
-                            selectedAddress = uiState.parentInfo?.address.orEmpty()
-                            selectedAddressLatitude = uiState.parentInfo?.addressLatitude
-                            selectedAddressLongitude = uiState.parentInfo?.addressLongitude
-                            destination = DisplayDestination.ParentInfoEdit
-                        }
-                    },
-                    onLargePreviewClick = {
-                        runWhenParentPhoneConnected {
-                            showLargePreview = true
-                            onLargePreviewClick()
-                        }
-                    },
-                    onFontEditClick = {
-                        runWhenParentPhoneConnected {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.FontEdit.name
-                            )
-                            destination = DisplayDestination.FontEdit
-                            onFontEditClick()
-                        }
-                    },
-                    onButtonEditClick = {
-                        runWhenParentPhoneConnected {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.ButtonEditGuide.name
-                            )
-                            buttonEditDraftItems = emptyList()
-                            buttonAddEntryItems = emptyList()
-                            transientImportedButtons = emptyList()
-                            autoSelectKey = null
-                            destination = DisplayDestination.ButtonEditGuide
-                            onButtonEditClick()
-                        }
-                    },
-                )
+                else -> {
+                    val showTutorial = emptySeniorList && seniorAddTutorialPending && !isRefreshingList
+                    DisplayTabScreen(
+                        uiState = uiState,
+                        emptySeniorList = emptySeniorList,
+                        tutorialAnchorModifier = if (showTutorial) Modifier.onGloballyPositioned {
+                            tutorialAnchor = Rect(it.positionOnScreen(), it.size.toSize())
+                        } else Modifier,
+                        canEditScreen = uiState.canEditScreen,
+                        showScreenEditActions = uiState.canEditScreen &&
+                            !uiState.isEditPermissionLoading &&
+                            !uiState.isLoading &&
+                            !uiState.isSaving,
+                        isRefreshing = if (expectedSeniorId == null) isRefreshingList else uiState.isRefreshing,
+                        onRefresh = if (expectedSeniorId == null) onRefreshEmptyList else viewModel::refreshOverview,
+                        seniorAccounts = seniorAccounts,
+                        onSeniorAccountClick = onSeniorAccountClick,
+                        onAddSeniorAccountClick = onAddSeniorAccountClick,
+                        modifier = modifier,
+                        onDeviceClick = {
+                            if (emptySeniorList || uiState.device == null) {
+                                navigateToSeniorAppInstallGuide()
+                            } else {
+                                viewModel.refreshDevice()
+                                destination = DisplayDestination.DeviceConnection
+                            }
+                        },
+                        onParentInfoClick = {
+                            if (emptySeniorList || uiState.device == null) {
+                                navigateToSeniorAppInstallGuide()
+                            } else {
+                                saveableStateHolder.removeState(
+                                    DisplayDestination.ParentInfoEdit.name
+                                )
+                                selectedAddress = uiState.parentInfo?.address.orEmpty()
+                                selectedAddressLatitude = uiState.parentInfo?.addressLatitude
+                                selectedAddressLongitude = uiState.parentInfo?.addressLongitude
+                                destination = DisplayDestination.ParentInfoEdit
+                            }
+                        },
+                        onLargePreviewClick = {
+                            runWhenParentPhoneConnected {
+                                showLargePreview = true
+                                onLargePreviewClick()
+                            }
+                        },
+                        onFontEditClick = {
+                            runWhenParentPhoneConnected {
+                                saveableStateHolder.removeState(
+                                    DisplayDestination.FontEdit.name
+                                )
+                                destination = DisplayDestination.FontEdit
+                                onFontEditClick()
+                            }
+                        },
+                        onButtonEditClick = {
+                            runWhenParentPhoneConnected {
+                                saveableStateHolder.removeState(
+                                    DisplayDestination.ButtonEditGuide.name
+                                )
+                                buttonEditDraftItems = emptyList()
+                                buttonAddEntryItems = emptyList()
+                                transientImportedButtons = emptyList()
+                                autoSelectKey = null
+                                destination = DisplayDestination.ButtonEditGuide
+                                onButtonEditClick()
+                            }
+                        },
+                    )
+                    if (showTutorial) tutorialAnchor?.let { anchor ->
+                        SeniorAddTutorial(anchor, onAdd = {
+                            onFinishSeniorAddTutorial()
+                            onAddSeniorAccountClick()
+                        }, onSkip = onFinishSeniorAddTutorial)
+                    }
+                }
             }
 
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
@@ -549,11 +570,12 @@ fun DisplayTabRoute(
     }
 
     if (showLargePreview) {
+        val preview = if (emptySeniorList) DisplayTabUiState() else uiState
         SeniorScreenLargePreviewDialog(
-            configuration = uiState.screenConfiguration,
-            buttonItems = uiState.configuredButtonItems,
+            configuration = preview.screenConfiguration,
+            buttonItems = preview.configuredButtonItems,
             onDismiss = { showLargePreview = false },
-            todaySchedule = uiState.todaySchedule,
+            todaySchedule = preview.todaySchedule,
         )
     }
 }
