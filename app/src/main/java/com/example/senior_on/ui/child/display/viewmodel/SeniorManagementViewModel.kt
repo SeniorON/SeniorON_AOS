@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 data class SeniorManagementUiState(
     val managedSeniors: List<ManagedSenior> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshingList: Boolean = false,
     val isCreatingFamilyCode: Boolean = false,
     val isSubmitting: Boolean = false,
     val createdFamilyId: Long? = null,
@@ -149,19 +150,28 @@ class SeniorManagementViewModel(
     private fun ManagedSenior.withProfile(profile: com.example.senior_on.domain.model.parent.ParentInfo) =
         copy(name = profile.name, relationship = CaregiverRelationship.fromDisplayLabel(profile.relationshipLabel))
 
-    fun refreshSeniors() {
+    fun refreshSeniors() = loadSeniors(pullToRefresh = false)
+
+    fun refreshEmptyList() = loadSeniors(pullToRefresh = true)
+
+    private fun loadSeniors(pullToRefresh: Boolean) {
         if (_uiState.value.isAcknowledgingWithdrawal || _uiState.value.withdrawalAcknowledged) return
         if (pendingDisconnectRefresh != null) {
             retryDisconnectRefresh()
             return
         }
-        if (refreshJob?.isActive == true || _uiState.value.isDisconnecting || _uiState.value.isSubmitting) return
+        if (_uiState.value.isDisconnecting || _uiState.value.isSubmitting) return
+        if (refreshJob?.isActive == true) {
+            if (pullToRefresh) _uiState.update { it.copy(isRefreshingList = it.isLoading) }
+            return
+        }
 
         refreshJob = viewModelScope.launch {
             val requestRevision = profileRevision
             _uiState.update {
                 it.copy(
                     isLoading = true,
+                    isRefreshingList = pullToRefresh,
                     listError = null,
                     errorMessage = null,
                 )
@@ -180,14 +190,17 @@ class SeniorManagementViewModel(
                         },
                         listError = null,
                         isLoading = false,
+                        isRefreshingList = false,
                     )
                 }
             } catch (cancellation: CancellationException) {
+                _uiState.update { it.copy(isLoading = false, isRefreshingList = false) }
                 throw cancellation
             } catch (throwable: Throwable) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshingList = false,
                         errorMessage = throwable.toSeniorManagementError(),
                         listError = "시니어 목록을 불러오지 못했어요.",
                     )

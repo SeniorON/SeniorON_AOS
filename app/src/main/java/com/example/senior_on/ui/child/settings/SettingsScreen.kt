@@ -145,6 +145,9 @@ private data class SettingsMenuItem(
 
 @Composable
 fun SettingsTabRoute(
+    isRefreshingList: Boolean = false,
+    listRefreshFailed: Boolean = false,
+    onRefreshEmptyList: () -> Unit = {},
     selectedSeniorId: Long? = null,
     selectedSeniorName: String? = null,
     selectedSeniorRelationship: String? = null,
@@ -469,11 +472,13 @@ fun SettingsTabRoute(
         )
 
         SettingsDestination.ConnectedDevices -> ConnectedDevicesScreen(
-            isRefreshing = canRefreshDevices && deviceLoadInProgress && manualDeviceRefresh,
+            isRefreshing = if (selectedSeniorId == null) isRefreshingList else canRefreshDevices && deviceLoadInProgress && manualDeviceRefresh,
             awaitingFirstResult = canRefreshDevices && !displayUiState.hasLoadedOverview,
-            refreshFailed = canRefreshDevices && displayUiState.queryError != null,
+            refreshFailed = if (selectedSeniorId == null) listRefreshFailed else canRefreshDevices && displayUiState.queryError != null,
             onRefresh = {
-                if (canRefreshDevices) {
+                if (selectedSeniorId == null) {
+                    onRefreshEmptyList()
+                } else if (canRefreshDevices) {
                     manualDeviceRefresh = true
                     displayViewModel.refreshOverview()
                 }

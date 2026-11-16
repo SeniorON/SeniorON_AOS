@@ -507,7 +507,7 @@ fun ChildMainScreen(
             )
         } else if (selectedTab != ChildMainTab.Setting &&
             seniorManagementUiState.managedSeniors.isEmpty() &&
-            (seniorManagementUiState.isLoading || seniorManagementUiState.listError != null)) {
+            ((seniorManagementUiState.isLoading && !seniorManagementUiState.isRefreshingList) || seniorManagementUiState.listError != null)) {
             com.example.senior_on.ui.common.QueryRetryContent(
                 error = seniorManagementUiState.listError,
                 loading = seniorManagementUiState.isLoading,
@@ -603,7 +603,10 @@ fun ChildMainScreen(
                     }
                 },
                 seniorAccounts = seniorManagementUiState.managedSeniors,
-                isSeniorAccountsLoading = seniorManagementUiState.isLoading,
+                isSeniorAccountsLoading = seniorManagementUiState.isLoading && !seniorManagementUiState.isRefreshingList,
+                isRefreshingList = seniorManagementUiState.isRefreshingList,
+                listRefreshFailed = seniorManagementUiState.listError != null,
+                onRefreshEmptyList = seniorManagementViewModel::refreshEmptyList,
                 onSeniorAccountClick = { senior ->
                     if (senior.withdrawn) seniorManagementViewModel.showWithdrawal(senior)
                     else selectionViewModel.select(senior.seniorId)
@@ -755,6 +758,9 @@ private fun ChildMainTabContent(
     onDisconnectRelationship: (() -> Unit) -> Unit,
     seniorAccounts: List<ManagedSenior>,
     isSeniorAccountsLoading: Boolean,
+    isRefreshingList: Boolean,
+    listRefreshFailed: Boolean,
+    onRefreshEmptyList: () -> Unit,
     onSeniorAccountClick: (ManagedSenior) -> Unit,
     onAddSeniorAccountClick: () -> Unit,
     selectedSeniorId: Long?,
@@ -804,6 +810,8 @@ private fun ChildMainTabContent(
                 addressSearchViewModel = addressSearchViewModel,
                 seniorAccounts = seniorAccounts,
                 isSeniorAccountsLoading = isSeniorAccountsLoading,
+                isRefreshingList = isRefreshingList,
+                onRefreshEmptyList = onRefreshEmptyList,
                 onSeniorAccountClick = onSeniorAccountClick,
                 onAddSeniorAccountClick = onAddSeniorAccountClick,
                 modifier = modifier,
@@ -957,6 +965,9 @@ private fun ChildMainTabContent(
 
     if (selectedTab == ChildMainTab.Setting) {
         SettingsTabRoute(
+            isRefreshingList = isRefreshingList,
+            listRefreshFailed = listRefreshFailed,
+            onRefreshEmptyList = onRefreshEmptyList,
             selectedSeniorId = activeSeniorId,
             selectedSeniorName = seniorAccounts.firstOrNull { it.seniorId == activeSeniorId }?.name,
             selectedSeniorRelationship = seniorAccounts.firstOrNull { it.seniorId == activeSeniorId }?.relationship?.displayLabel,

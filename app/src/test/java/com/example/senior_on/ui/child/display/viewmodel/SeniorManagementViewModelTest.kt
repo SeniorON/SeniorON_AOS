@@ -33,6 +33,31 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorManagementViewModelTest {
+    @Test fun `empty list pull refresh stops on success or failure and can discover a senior`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repo = FakeSeniorRepository()
+            val vm = SeniorManagementViewModel(repo, FakeFamilyRepository())
+            advanceUntilIdle()
+            for (attempt in 1..3) {
+                repo.failList = attempt == 2
+                if (attempt == 3) repo.managedSeniors = listOf(managedSenior(7))
+                val gate = CompletableDeferred<Unit>()
+                repo.listGate = gate
+                vm.refreshEmptyList()
+                runCurrent()
+                vm.refreshEmptyList()
+                assertTrue(vm.uiState.value.isRefreshingList)
+                assertEquals(1 + attempt, repo.managedListRequestCount)
+                gate.complete(Unit)
+                advanceUntilIdle()
+                assertFalse(vm.uiState.value.isRefreshingList)
+                assertEquals(attempt == 2, vm.uiState.value.listError != null)
+                assertEquals(repo.managedSeniors, vm.uiState.value.managedSeniors)
+            }
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `withdrawal ack is single flight and refresh retry never repeats ack`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -512,6 +537,7 @@ private class FakeSeniorRepository(
         if (failAck) error("ack failed")
     }
     var managedListRequestCount = 0
+    var listGate: CompletableDeferred<Unit>? = null
     var failList = false
     var createRequestCount = 0
     var createdFamilyId: Long? = null
@@ -538,6 +564,7 @@ private class FakeSeniorRepository(
 
     override suspend fun getManagedSeniors(): List<ManagedSenior> {
         managedListRequestCount += 1
+        listGate?.await()
         if (failList) error("network failed")
         return managedSeniors
     }

@@ -59,6 +59,8 @@ fun DisplayTabRoute(
     onButtonEditClick: () -> Unit = {},
     seniorAccounts: List<ManagedSenior> = emptyList(),
     isSeniorAccountsLoading: Boolean = false,
+    isRefreshingList: Boolean = false,
+    onRefreshEmptyList: () -> Unit = {},
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
     isDisconnectingRelationship: Boolean = false,
@@ -256,8 +258,8 @@ fun DisplayTabRoute(
                         !uiState.isEditPermissionLoading &&
                         !uiState.isLoading &&
                         !uiState.isSaving,
-                    isRefreshing = uiState.isRefreshing,
-                    onRefresh = viewModel::refreshOverview,
+                    isRefreshing = if (expectedSeniorId == null) isRefreshingList else uiState.isRefreshing,
+                    onRefresh = if (expectedSeniorId == null) onRefreshEmptyList else viewModel::refreshOverview,
                     seniorAccounts = seniorAccounts,
                     onSeniorAccountClick = onSeniorAccountClick,
                     onAddSeniorAccountClick = onAddSeniorAccountClick,
