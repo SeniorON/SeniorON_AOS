@@ -8,6 +8,8 @@ import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.model.display.SeniorScreenConfiguration
 import com.example.senior_on.domain.model.server.ServerButton
+import com.example.senior_on.data.local.CachedHomeLayout
+import com.example.senior_on.data.local.HomeLayoutCache
 import com.example.senior_on.domain.model.server.ServerTodaySchedule
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
@@ -28,6 +30,7 @@ data class ParentHomeScheduleUiState(
     val description: String? = null,
     val scheduledTime: LocalTime? = null,
     val isLoading: Boolean = true,
+    val unavailable: Boolean = false,
 )
 
 data class ParentHomeButtonUiModel(
@@ -51,6 +54,7 @@ data class ParentHomeUiState(
 class ParentHomeViewModel(
     private val repository: HomeServerRepository,
     private val updatesRepository: ParentHomeUpdatesRepository,
+    private val cache: HomeLayoutCache? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentHomeUiState())
     val uiState = _uiState.asStateFlow()
@@ -64,6 +68,9 @@ class ParentHomeViewModel(
 
     init {
         viewModelScope.launch {
+            cancellableResult { cache?.read() }.getOrNull()?.let { layout ->
+                _uiState.update { it.withLayout(layout).copy(isLoading = false) }
+            }
             for (signal in refreshSignals) {
                 // Coalesce a burst without dropping an update received during an HTTP request.
                 delay(150)
@@ -76,9 +83,9 @@ class ParentHomeViewModel(
                 pendingScheduleRefresh = false
                 pendingConfigurationRefresh = false
                 refreshSignals.tryReceive()
-                if (fullRefresh) loadHome(homeOnly = false, showRefresh = visibleRefresh)
+                if (fullRefresh) loadHome(showRefresh = visibleRefresh)
                 else {
-                    if (configurationRefresh) refreshHomeConfiguration()
+                    if (configurationRefresh) loadHome(showRefresh = false)
                     if (scheduleRefresh && !configurationRefresh) refreshSchedule()
                 }
             }
@@ -129,68 +136,26 @@ class ParentHomeViewModel(
             }
     }
 
-    private suspend fun loadHome(homeOnly: Boolean, showRefresh: Boolean) {
-        if (homeOnly) {
-            refreshHomeConfiguration()
-            return
-        }
-        _uiState.update {
-            it.copy(
-                isRefreshing = showRefresh,
-                schedule = it.schedule.copy(isLoading = it.isLoading || showRefresh),
-                errorMessage = null,
-            )
-        }
-
-        val homeResult = cancellableResult { repository.getSeniorHome() }
-
-        homeResult
-            .onSuccess { home ->
-                _uiState.value = ParentHomeUiState(
-                    screenConfiguration = SeniorScreenConfiguration(
-                        fontSize = home.fontSize.toFontSize(),
-                        buttons = emptyList(),
-                    ),
-                    buttons = home.buttons
-                        .map(ServerButton::toUiModel)
-                        .ifEmpty(::defaultOfflineHomeButtons),
-                    schedule = home.todaySchedule.toUiState(),
-                    isLoading = false,
-                    isRefreshing = false,
-                )
-            }
-            .onFailure { throwable ->
-                _uiState.update {
-                    it.copy(
-                        buttons = it.buttons.ifEmpty(::defaultOfflineHomeButtons),
-                        isLoading = false,
-                        isRefreshing = false,
-                        schedule = it.schedule.copy(isLoading = false),
-                        errorMessage = throwable.message
-                            ?: "부모님 홈 정보를 불러오지 못했어요.",
-                    )
-                }
-            }
-    }
-
-    private suspend fun refreshHomeConfiguration() {
+    private suspend fun loadHome(showRefresh: Boolean) {
+        if (showRefresh) _uiState.update { it.copy(isRefreshing = true) }
         cancellableResult { repository.getSeniorHome() }
             .onSuccess { home ->
-                _uiState.update {
-                    it.copy(
-                        screenConfiguration = it.screenConfiguration.copy(fontSize = home.fontSize.toFontSize()),
-                        buttons = home.buttons.map(ServerButton::toUiModel).ifEmpty(::defaultOfflineHomeButtons),
-                        schedule = home.todaySchedule.toUiState(),
-                        isLoading = false,
-                        errorMessage = null,
-                    )
-                }
+                val layout = CachedHomeLayout(home.fontSize, home.buttons)
+                _uiState.update { it.withLayout(layout).copy(
+                    schedule = home.todaySchedule.toUiState(),
+                    isLoading = false, isRefreshing = false, errorMessage = null,
+                ) }
+                // A cache write failure must not turn a successful network load into a failure.
+                cancellableResult { cache?.write(layout) }
             }
             .onFailure { error ->
-                _uiState.update { it.copy(errorMessage = error.message ?: "홈 변경사항을 불러오지 못했어요.") }
+                _uiState.update { it.copy(
+                    isLoading = false, isRefreshing = false,
+                    schedule = it.schedule.copy(isLoading = false, unavailable = it.schedule.isLoading || it.schedule.unavailable),
+                    errorMessage = error.message ?: "부모님 홈 정보를 불러오지 못했어요.",
+                ) }
             }
     }
-
     private suspend fun <T> cancellableResult(block: suspend () -> T): Result<T> = try {
         Result.success(block())
     } catch (cancelled: CancellationException) {
@@ -200,8 +165,8 @@ class ParentHomeViewModel(
     }
 
     companion object {
-        fun factory(repository: HomeServerRepository, updatesRepository: ParentHomeUpdatesRepository) = viewModelFactory {
-            initializer { ParentHomeViewModel(repository, updatesRepository) }
+        fun factory(repository: HomeServerRepository, updatesRepository: ParentHomeUpdatesRepository, cache: HomeLayoutCache) = viewModelFactory {
+            initializer { ParentHomeViewModel(repository, updatesRepository, cache) }
         }
     }
 }
@@ -238,6 +203,11 @@ private fun ServerTodaySchedule?.toUiState() = ParentHomeScheduleUiState(
     description = this?.description,
     scheduledTime = this?.scheduledTime.toLocalTimeOrNull(),
     isLoading = false,
+)
+
+private fun ParentHomeUiState.withLayout(layout: CachedHomeLayout) = copy(
+    screenConfiguration = screenConfiguration.copy(fontSize = layout.fontSize.toFontSize()),
+    buttons = layout.buttons.map(ServerButton::toUiModel).ifEmpty(::defaultOfflineHomeButtons),
 )
 
 private fun ServerButton.toUiModel() = ParentHomeButtonUiModel(

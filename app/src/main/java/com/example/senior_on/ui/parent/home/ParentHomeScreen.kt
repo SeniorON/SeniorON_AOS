@@ -310,7 +310,7 @@ private fun ParentTodayScheduleCard(
             )
 
             scheduleCount == 0 -> Text(
-                text = "오늘은 일정이 없어요",
+                text = if (uiState.unavailable) "오늘 일정을 확인할 수 없어요" else "오늘은 일정이 없어요",
                 modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.HeadingL,
                 color = SeniorOnColors.SupportWhite80,

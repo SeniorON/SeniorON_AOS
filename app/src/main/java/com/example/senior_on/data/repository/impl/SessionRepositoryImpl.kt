@@ -29,7 +29,7 @@ class SessionRepositoryImpl(
         mode: AppUserMode,
     ) {
         com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
-        AccessTokenStore.save(accessToken)
+        AccessTokenStore.save(accessToken, isParent = mode == AppUserMode.Senior)
         dataSource.saveSession(
             SavedSession(
                 role = when (mode) {
@@ -56,6 +56,7 @@ class SessionRepositoryImpl(
             accessToken = accessToken,
             newRefreshToken = refreshToken,
             newDeviceIdentifier = deviceIdentifier,
+            isParent = mode == AppUserMode.Senior,
         )
 
         if (!tokensPersisted) {
@@ -63,6 +64,7 @@ class SessionRepositoryImpl(
                 accessToken = accessToken,
                 newRefreshToken = refreshToken,
                 newDeviceIdentifier = deviceIdentifier,
+                isParent = mode == AppUserMode.Senior,
             )
         }
         // Metadata identifies the account to in-process consumers; it cannot restore

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -15,6 +16,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.R
+import com.example.senior_on.data.local.parentHomeLayoutCache
+import com.example.senior_on.data.local.AccessTokenStore
+import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.domain.repository.server.HomeServerRepository
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
@@ -38,8 +42,11 @@ fun ParentHomeRoute(
 ) {
     val context = LocalContext.current
     val exitHome = rememberExitParentHomeAction()
+    val scope = AccessTokenStore.homeLayoutScope()
+    val cache = remember(context, scope) { parentHomeLayoutCache(context.applicationContext) }
     val viewModel: ParentHomeViewModel = viewModel(
-        factory = ParentHomeViewModel.factory(repository, updatesRepository)
+        key = "senior-home:$scope",
+        factory = ParentHomeViewModel.factory(repository, updatesRepository, cache)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhotoSource by rememberSaveable { mutableStateOf(false) }
@@ -57,6 +64,10 @@ fun ParentHomeRoute(
         }
     }
 
+    if (uiState.isLoading) {
+        ParentFamilyMembershipLoadingScreen(modifier)
+        return
+    }
     ParentHomeScreen(
         configuration = uiState.screenConfiguration,
         buttons = uiState.buttons,

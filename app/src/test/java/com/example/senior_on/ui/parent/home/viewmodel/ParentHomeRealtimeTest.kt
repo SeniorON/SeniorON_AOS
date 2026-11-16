@@ -1,6 +1,9 @@
 package com.example.senior_on.ui.parent.home.viewmodel
 
 import androidx.lifecycle.ViewModelStore
+import com.example.senior_on.data.local.CachedHomeLayout
+import com.example.senior_on.data.local.HomeLayoutCache
+import com.example.senior_on.domain.model.display.SeniorFontSize
 import com.example.senior_on.domain.model.server.*
 import com.example.senior_on.domain.repository.parent.*
 import com.example.senior_on.domain.repository.server.HomeServerRepository
@@ -14,6 +17,39 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ParentHomeRealtimeTest {
+    @Test fun restoresLayoutBeforeNetworkAndKeepsItOnFailure() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            val cached = CachedHomeLayout("SMALL", snapshot("보호자가 정한 이름").buttons)
+            val writes = mutableListOf<CachedHomeLayout>()
+            val cache = object : HomeLayoutCache {
+                override suspend fun read() = cached
+                override suspend fun write(layout: CachedHomeLayout) { writes += layout }
+            }
+            val repo = FakeHome().apply { next = { throw IOException("offline") } }
+            val vm = ParentHomeViewModel(repo, FakeUpdates(), cache)
+            store.put("home", vm)
+            runCurrent()
+            assertEquals(0, repo.homeCalls)
+            assertFalse(vm.uiState.value.isLoading)
+            assertTrue(vm.uiState.value.schedule.isLoading)
+            assertEquals(SeniorFontSize.Small, vm.uiState.value.screenConfiguration.fontSize)
+            advanceUntilIdle()
+            assertEquals("보호자가 정한 이름", vm.uiState.value.buttons.single().label)
+            assertTrue(vm.uiState.value.schedule.unavailable)
+            assertTrue(writes.isEmpty())
+            repo.next = { snapshot("새 이름") }
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals("새 이름", writes.single().buttons.single().name)
+            assertFalse(vm.uiState.value.schedule.unavailable)
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun burstOnlyRefreshesHomeAndPreservesScreenWhileLoading() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()

@@ -1,5 +1,7 @@
 package com.example.senior_on.data.repository.impl
 
+import com.example.senior_on.data.local.AccessTokenStore
+
 import com.example.senior_on.data.remote.api.ParentSettingsApi
 import com.example.senior_on.data.remote.api.SeniorPermissionUpdate
 import com.example.senior_on.data.source.remoteRequest
@@ -23,12 +25,14 @@ class ParentSettingsRepository(
     }
 
     suspend fun disconnect() = remoteRequest {
+        val scope = AccessTokenStore.homeLayoutScope()
         val gate = com.example.senior_on.data.local.ParentConnectionGate
         val wasReady = gate.isReady()
         val version = gate.hold()
         try {
             val response = api.disconnect()
             if (!response.isSuccessful) throw HttpException(response)
+            AccessTokenStore.invalidateHomeLayout(scope)
         } catch (error: Exception) {
             if (wasReady) gate.approve(version)
             throw error
