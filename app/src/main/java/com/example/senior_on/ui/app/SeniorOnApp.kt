@@ -75,7 +75,10 @@ fun SeniorOnApp(
             )
         }
 
-        AppDestination.ChildMain -> ChildMainRoute(
+        AppDestination.ChildMain -> if (com.example.senior_on.data.local.AccessTokenStore.getBearerToken() == null) {
+            // Android can restore the destination even though a process-only login is gone.
+            LaunchedEffect(Unit) { openOnboarding() }
+        } else ChildMainRoute(
             appContainer = appContainer,
             userId = authenticatedUserId,
             sessionInstance = authenticatedSessionInstance,

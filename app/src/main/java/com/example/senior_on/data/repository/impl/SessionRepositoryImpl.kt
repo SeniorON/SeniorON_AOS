@@ -51,34 +51,27 @@ class SessionRepositoryImpl(
         usersId: Long?,
     ) {
         com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
-        // Even when automatic login is not requested, keep the access token across
-        // process death for the remainder of its server-defined lifetime. Omitting
-        // the refresh token prevents that session from being extended after expiry.
-        val tokensPersisted = AccessTokenStore.saveLoginTokens(
+        val persistLogin = keepLoggedIn || mode == AppUserMode.Senior
+        val tokensPersisted = persistLogin && AccessTokenStore.saveLoginTokens(
             accessToken = accessToken,
-            newRefreshToken = refreshToken.takeIf { keepLoggedIn },
+            newRefreshToken = refreshToken,
             newDeviceIdentifier = deviceIdentifier,
         )
 
-        if (tokensPersisted) {
-            dataSource.saveSession(
-                SavedSession(
-                    role = when (mode) {
-                        AppUserMode.Child -> UserRole.CHILD
-                        AppUserMode.Senior -> UserRole.PARENT
-                    },
-                    userId = userId,
-                    usersId = usersId,
-                )
-            )
-        } else {
-            dataSource.clearSession()
+        if (!tokensPersisted) {
             AccessTokenStore.saveTransientLoginTokens(
                 accessToken = accessToken,
-                newRefreshToken = refreshToken.takeIf { keepLoggedIn },
+                newRefreshToken = refreshToken,
                 newDeviceIdentifier = deviceIdentifier,
             )
         }
+        // Metadata identifies the account to in-process consumers; it cannot restore
+        // authentication without a token and is cleared on cold start in that case.
+        dataSource.saveSession(SavedSession(
+            role = if (mode == AppUserMode.Senior) UserRole.PARENT else UserRole.CHILD,
+            userId = userId,
+            usersId = usersId,
+        ))
     }
 
     override fun clearSession() {
