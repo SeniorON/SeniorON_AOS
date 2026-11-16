@@ -177,12 +177,14 @@ class FamilyServerRepositoryImplTest {
             reason = FamilyPhotoReportReason.Copyright,
             detail = "저작권을 침해한 사진입니다.",
             hide = true,
+            seniorId = 7L,
         )
 
         assertEquals(93L, source.reportedPhotoId)
         assertEquals("COPYRIGHT", source.reportRequest?.reason)
         assertEquals("저작권을 침해한 사진입니다.", source.reportRequest?.detail)
         assertTrue(source.reportRequest?.hide == true)
+        assertEquals(7L, source.reportRequest?.seniorId)
     }
 
     @Test
@@ -194,12 +196,14 @@ class FamilyServerRepositoryImplTest {
             reason = FamilyPhotoReportReason.Abuse,
             detail = "욕설이 담긴 사진을 계속 올려요.",
             hide = false,
+            seniorId = 8L,
         )
 
         assertEquals(93L, source.reportedUploaderPhotoId)
         assertEquals("ABUSE", source.uploaderReportRequest?.reason)
         assertEquals("욕설이 담긴 사진을 계속 올려요.", source.uploaderReportRequest?.detail)
         assertFalse(source.uploaderReportRequest?.hide == true)
+        assertEquals(8L, source.uploaderReportRequest?.seniorId)
     }
 
     @Test

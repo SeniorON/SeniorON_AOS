@@ -63,6 +63,7 @@ interface FamilyServerRepository {
         reason: FamilyPhotoReportReason,
         detail: String?,
         hide: Boolean,
+        seniorId: Long,
     ) {
         error("Family photo reporting is not implemented")
     }
@@ -71,6 +72,7 @@ interface FamilyServerRepository {
         reason: FamilyPhotoReportReason,
         detail: String?,
         hide: Boolean,
+        seniorId: Long,
     ) {
         error("Family photo uploader reporting is not implemented")
     }

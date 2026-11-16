@@ -48,16 +48,19 @@ class FamilyViewModel(
     private var nextPhotoCursorAt: String? = null
     private var nextPhotoCursorId: Long? = null
     private var hasNextPhotoPage = false
+    private var homeRequestGeneration = 0L
+    private var photoRequestGeneration = 0L
+    private var photoMutationVersion = 0L
+    private val removedPhotoIds = mutableSetOf<String>()
+    private val hiddenUploaderIds = mutableSetOf<Long>()
     private val photoUrlRefreshJobs = mutableMapOf<String, Job>()
     private val lastRetriedImageUrlByPhotoId = mutableMapOf<String, String>()
 
     fun loadLatestFamilyOverview(seniorId: Long) {
-        // A new entry must validate the cached overview before displaying it again.
-        _uiState.update {
-            it.copy(isLoading = true, isRefreshing = false, hasLoadedOverview = false, errorMessage = null)
+        loadFamilyOverview(seniorId = seniorId, isPullRefresh = _uiState.value.hasLoadedOverview)
+        if ((isPhotoGalleryLoaded && loadedPhotoSeniorId == seniorId) || photoLoadJob?.isActive == true) {
+            loadPhotoGallery(seniorId = seniorId, force = true)
         }
-        if (homeLoadJob?.isActive == true && _uiState.value.seniorId == seniorId) return
-        loadFamilyOverview(seniorId)
     }
 
     fun loadFamilyOverview(seniorId: Long) {
@@ -65,13 +68,17 @@ class FamilyViewModel(
     }
 
     fun refreshFamilyOverview(seniorId: Long) {
-        if (homeLoadJob?.isActive == true && _uiState.value.seniorId == seniorId) return
         loadFamilyOverview(seniorId = seniorId, isPullRefresh = true)
+        if ((isPhotoGalleryLoaded && loadedPhotoSeniorId == seniorId) || photoLoadJob?.isActive == true) {
+            loadPhotoGallery(seniorId = seniorId, force = true)
+        }
     }
 
     private fun loadFamilyOverview(seniorId: Long, isPullRefresh: Boolean) {
         require(seniorId > 0L) { "선택된 시니어 정보가 올바르지 않습니다." }
         val isSeniorChanged = activateSenior(seniorId)
+        val requestGeneration = ++homeRequestGeneration
+        val requestPhotoMutationVersion = photoMutationVersion
         homeLoadJob?.cancel()
         homeLoadJob = viewModelScope.launch {
             _uiState.update {
@@ -89,7 +96,7 @@ class FamilyViewModel(
 
             try {
                 val home = repository.getHome(seniorId)
-                if (!isActiveSenior(seniorId)) return@launch
+                if (!isActiveSenior(seniorId) || requestGeneration != homeRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@launch
                 val members = home.members.mapNotNull { member ->
                     if (
                         member.id <= 0L ||
@@ -116,21 +123,17 @@ class FamilyViewModel(
                             ?.let(FamilyImageSource::Remote),
                     )
                 }
-                val recentPhotos = home.recentPhotos.mapNotNull { photo ->
+                val recentPhotos = visiblePhotos(home.recentPhotos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
                     photo.toSharedFamilyPhotoUiModel()
-                }
+                })
                 _uiState.update { currentState ->
-                    if (!isActiveSenior(seniorId)) return@update currentState
+                    if (!isActiveSenior(seniorId) || requestGeneration != homeRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@update currentState
                     currentState.copy(
                         seniorId = seniorId,
                         members = members,
-                        sharedPhotos = if (isPhotoGalleryLoaded) {
-                            (recentPhotos + currentState.sharedPhotos)
-                                .distinctBy(SharedFamilyPhotoUiModel::id)
-                        } else {
-                            recentPhotos
-                        },
+                        recentPhotos = recentPhotos,
+                        sharedPhotos = if (isPhotoGalleryLoaded) currentState.sharedPhotos else recentPhotos,
                         isLoading = false,
                         isRefreshing = false,
                         hasLoadedOverview = true,
@@ -141,7 +144,7 @@ class FamilyViewModel(
                 throw exception
             } catch (exception: Exception) {
                 _uiState.update {
-                    if (!isActiveSenior(seniorId)) return@update it
+                    if (!isActiveSenior(seniorId) || requestGeneration != homeRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@update it
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
@@ -339,7 +342,6 @@ class FamilyViewModel(
     }
 
     fun refreshPhotoGallery(seniorId: Long) {
-        if (photoLoadJob?.isActive == true && loadedPhotoSeniorId == seniorId) return
         loadPhotoGallery(seniorId = seniorId, force = true, isPullRefresh = true)
     }
 
@@ -362,6 +364,8 @@ class FamilyViewModel(
             hasNextPhotoPage = false
         }
 
+        val requestGeneration = ++photoRequestGeneration
+        val requestPhotoMutationVersion = photoMutationVersion
         photoLoadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -373,11 +377,11 @@ class FamilyViewModel(
             runCatching {
                 repository.getPhotos(size = PHOTO_PAGE_SIZE, seniorId = seniorId)
             }.onSuccess { page ->
-                if (!isActiveSenior(seniorId)) return@onSuccess
-                val photos = page.photos.mapNotNull { photo ->
+                if (!isActiveSenior(seniorId) || requestGeneration != photoRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@onSuccess
+                val photos = visiblePhotos(page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
                     photo.toSharedFamilyPhotoUiModel()
-                }
+                })
                 isPhotoGalleryLoaded = true
                 loadedPhotoSeniorId = seniorId
                 nextPhotoCursorAt = page.nextCursor?.createdAt
@@ -395,7 +399,7 @@ class FamilyViewModel(
                 }
             }.onFailure { exception ->
                 if (exception is CancellationException) throw exception
-                if (!isActiveSenior(seniorId)) return@onFailure
+                if (!isActiveSenior(seniorId) || requestGeneration != photoRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@onFailure
                 _uiState.update {
                     it.copy(
                         isPhotoLoading = false,
@@ -414,6 +418,8 @@ class FamilyViewModel(
         val cursorAt = nextPhotoCursorAt ?: return
         val cursorId = nextPhotoCursorId ?: return
 
+        val requestGeneration = ++photoRequestGeneration
+        val requestPhotoMutationVersion = photoMutationVersion
         photoLoadJob = viewModelScope.launch {
             _uiState.update { it.copy(isPhotoLoading = true) }
             runCatching {
@@ -424,17 +430,17 @@ class FamilyViewModel(
                     seniorId = seniorId,
                 )
             }.onSuccess { page ->
-                if (!isActiveSenior(seniorId)) return@onSuccess
-                val photos = page.photos.mapNotNull { photo ->
+                if (!isActiveSenior(seniorId) || requestGeneration != photoRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@onSuccess
+                val photos = visiblePhotos(page.photos.mapNotNull { photo ->
                     if (photo.id <= 0L) return@mapNotNull null
                     photo.toSharedFamilyPhotoUiModel()
-                }
+                })
                 nextPhotoCursorAt = page.nextCursor?.createdAt
                 nextPhotoCursorId = page.nextCursor?.photoId
                 hasNextPhotoPage = page.hasNext && page.nextCursor != null
                 _uiState.update { state ->
                     state.copy(
-                        sharedPhotos = (state.sharedPhotos + photos)
+                        sharedPhotos = visiblePhotos(state.sharedPhotos + photos)
                             .distinctBy(SharedFamilyPhotoUiModel::id),
                         isPhotoLoading = false,
                         photoErrorMessage = null,
@@ -443,7 +449,7 @@ class FamilyViewModel(
                 }
             }.onFailure { exception ->
                 if (exception is CancellationException) throw exception
-                if (!isActiveSenior(seniorId)) return@onFailure
+                if (!isActiveSenior(seniorId) || requestGeneration != photoRequestGeneration || requestPhotoMutationVersion != photoMutationVersion) return@onFailure
                 _uiState.update {
                     it.copy(
                         isPhotoLoading = false,
@@ -456,6 +462,7 @@ class FamilyViewModel(
 
     fun ensurePhotoLoaded(photoId: String) {
         val requestSeniorId = activeSeniorId ?: return
+        if (photoId in removedPhotoIds) return
         if (_uiState.value.sharedPhotos.any { it.id == photoId }) return
         if (detailLoadJob?.isActive == true) return
         val serverPhotoId = photoId.toLongOrNull() ?: run {
@@ -485,7 +492,7 @@ class FamilyViewModel(
                 if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update { state ->
                     state.copy(
-                        sharedPhotos = (state.sharedPhotos + photo)
+                        sharedPhotos = visiblePhotos(state.sharedPhotos + photo)
                             .distinctBy(SharedFamilyPhotoUiModel::id)
                             .sortedByDescending(SharedFamilyPhotoUiModel::createdAt),
                         loadingPhotoId = null,
@@ -530,13 +537,15 @@ class FamilyViewModel(
         if (normalizedPhotoId.isEmpty() || normalizedFailedUrl.isEmpty()) return
         if (photoUrlRefreshJobs[normalizedPhotoId]?.isActive == true) return
 
-        val currentPhoto = _uiState.value.sharedPhotos
-            .firstOrNull { it.id == normalizedPhotoId }
-            ?: return
-        val currentUrls = listOfNotNull(
-            currentPhoto.thumbnailSource as? FamilyImageSource.Remote,
-            currentPhoto.imageSource as? FamilyImageSource.Remote,
-        ).map { it.url.trim() }
+        val currentPhotos = (_uiState.value.recentPhotos + _uiState.value.sharedPhotos)
+            .filter { it.id == normalizedPhotoId }
+        if (currentPhotos.isEmpty()) return
+        val currentUrls = currentPhotos.flatMap { photo ->
+            listOfNotNull(
+                photo.thumbnailSource as? FamilyImageSource.Remote,
+                photo.imageSource as? FamilyImageSource.Remote,
+            ).map { it.url.trim() }
+        }
         if (normalizedFailedUrl !in currentUrls) return
         if (lastRetriedImageUrlByPhotoId[normalizedPhotoId] == normalizedFailedUrl) return
 
@@ -552,8 +561,12 @@ class FamilyViewModel(
                 photo.toSharedFamilyPhotoUiModel()
             }.onSuccess { refreshedPhoto ->
                 if (!isActiveSenior(requestSeniorId)) return@onSuccess
+                if (refreshedPhoto.id in removedPhotoIds || refreshedPhoto.authorId?.let(hiddenUploaderIds::contains) == true) return@onSuccess
                 _uiState.update { state ->
                     state.copy(
+                        recentPhotos = state.recentPhotos.map { photo ->
+                            if (photo.id == normalizedPhotoId) refreshedPhoto else photo
+                        },
                         sharedPhotos = state.sharedPhotos.map { photo ->
                             if (photo.id == normalizedPhotoId) refreshedPhoto else photo
                         },
@@ -590,15 +603,17 @@ class FamilyViewModel(
             runCatching { repository.deletePhoto(serverPhotoId) }
                 .onSuccess {
                     if (!isActiveSenior(requestSeniorId)) return@onSuccess
+                    removedPhotoIds += photoId
+                    photoMutationVersion++
                     _uiState.update { state ->
                         state.copy(
-                            sharedPhotos = state.sharedPhotos.filterNot {
-                                photo -> photo.id == photoId
-                            },
+                            recentPhotos = visiblePhotos(state.recentPhotos),
+                            sharedPhotos = visiblePhotos(state.sharedPhotos),
                             deletingPhotoId = null,
                             deletedPhotoId = photoId,
                         )
                     }
+                    refreshPhotosAfterMutation(requestSeniorId)
                 }
                 .onFailure { exception ->
                     if (exception is CancellationException) throw exception
@@ -618,11 +633,13 @@ class FamilyViewModel(
         reason: FamilyPhotoReportReason,
         detail: String,
         hide: Boolean = true,
+        seniorId: Long,
     ) = submitPhotoReport(
         photoId = photoId,
         reason = reason,
         detail = detail,
         hide = hide,
+        seniorId = seniorId,
         subject = FamilyReportSubject.Photo,
         submit = repository::reportPhoto,
     )
@@ -632,11 +649,13 @@ class FamilyViewModel(
         reason: FamilyPhotoReportReason,
         detail: String,
         hide: Boolean = true,
+        seniorId: Long,
     ) = submitPhotoReport(
         photoId = photoId,
         reason = reason,
         detail = detail,
         hide = hide,
+        seniorId = seniorId,
         subject = FamilyReportSubject.Uploader,
         submit = repository::reportUploader,
     )
@@ -646,10 +665,12 @@ class FamilyViewModel(
         reason: FamilyPhotoReportReason,
         detail: String,
         hide: Boolean,
+        seniorId: Long,
         subject: FamilyReportSubject,
-        submit: suspend (Long, FamilyPhotoReportReason, String?, Boolean) -> Unit,
+        submit: suspend (Long, FamilyPhotoReportReason, String?, Boolean, Long) -> Unit,
     ) {
         val requestSeniorId = activeSeniorId ?: return
+        if (requestSeniorId != seniorId) return
         if (_uiState.value.reportingPhotoId != null) return
         val serverPhotoId = photoId.toLongOrNull()?.takeIf { it > 0L } ?: run {
             _uiState.update {
@@ -671,7 +692,7 @@ class FamilyViewModel(
                 )
             }
             runCatching {
-                submit(serverPhotoId, reason, normalizedDetail, hide)
+                submit(serverPhotoId, reason, normalizedDetail, hide, seniorId)
             }.onSuccess {
                 if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update {
@@ -700,15 +721,30 @@ class FamilyViewModel(
         hiddenUploaderId: Long? = null,
     ) {
         val reportedPhotoId = _uiState.value.reportedPhotoId
+        val seniorId = activeSeniorId
+        if (removeReportedPhoto && reportedPhotoId != null) removedPhotoIds += reportedPhotoId
+        if (hiddenUploaderId != null) hiddenUploaderIds += hiddenUploaderId
+        val shouldRefresh = (removeReportedPhoto && reportedPhotoId != null) || hiddenUploaderId != null
+        if (shouldRefresh) photoMutationVersion++
         _uiState.update { state ->
             state.copy(
-                sharedPhotos = state.sharedPhotos.filterNot { photo ->
-                    (removeReportedPhoto && reportedPhotoId != null && photo.id == reportedPhotoId) ||
-                        (hiddenUploaderId != null && photo.authorId == hiddenUploaderId)
-                },
+                recentPhotos = visiblePhotos(state.recentPhotos),
+                sharedPhotos = visiblePhotos(state.sharedPhotos),
                 reportedPhotoId = null,
                 photoReportErrorMessage = null,
             )
+        }
+        if (shouldRefresh && seniorId != null) refreshPhotosAfterMutation(seniorId)
+    }
+
+    private fun visiblePhotos(photos: List<SharedFamilyPhotoUiModel>) = photos.filterNot { photo ->
+        photo.id in removedPhotoIds || photo.authorId?.let(hiddenUploaderIds::contains) == true
+    }
+
+    private fun refreshPhotosAfterMutation(seniorId: Long) {
+        loadFamilyOverview(seniorId)
+        if ((isPhotoGalleryLoaded && loadedPhotoSeniorId == seniorId) || photoLoadJob?.isActive == true) {
+            loadPhotoGallery(seniorId = seniorId, force = true)
         }
     }
 
@@ -741,6 +777,8 @@ class FamilyViewModel(
         if (activeSeniorId == seniorId) return false
 
         activeSeniorId = seniorId
+        homeRequestGeneration++
+        photoRequestGeneration++
         homeLoadJob?.cancel()
         memberLoadJob?.cancel()
         memberMutationJob?.cancel()
@@ -817,6 +855,9 @@ internal fun FamilyOverview.toFamilyTabUiState(): FamilyTabUiState = FamilyTabUi
             isCurrentUser = member.isCurrentUser,
             imageSource = member.imageSource
         )
+    },
+    recentPhotos = sharedPhotos.map { photo ->
+        photo.toFamilyPhotoUiModel()
     },
     sharedPhotos = sharedPhotos.map { photo ->
         photo.toFamilyPhotoUiModel()

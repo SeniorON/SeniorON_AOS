@@ -11,6 +11,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
 
 @Composable
 fun FamilyTabRoute(
@@ -26,8 +29,14 @@ fun FamilyTabRoute(
     viewModel: FamilyViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
     var isPhotoSourceSheetVisible by rememberSaveable(seniorId) { mutableStateOf(false) }
-    var entryLoadStarted by remember(viewModel, seniorId) { mutableStateOf(false) }
+    var entryLoadStarted by remember(viewModel, seniorId) {
+        mutableStateOf(uiState.seniorId == seniorId && uiState.hasLoadedOverview)
+    }
+    var skipInitialResume by remember(viewModel, seniorId, lifecycleOwner) {
+        mutableStateOf(!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+    }
     val presentedUiState = if (entryLoadStarted && uiState.seniorId == seniorId) {
         uiState
     } else {
@@ -37,6 +46,13 @@ fun FamilyTabRoute(
     LaunchedEffect(viewModel, seniorId) {
         viewModel.loadLatestFamilyOverview(seniorId)
         entryLoadStarted = true
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (skipInitialResume) {
+            skipInitialResume = false
+        } else {
+            viewModel.loadLatestFamilyOverview(seniorId)
+        }
     }
 
     FamilyTabScreen(

@@ -5,6 +5,12 @@ import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -19,9 +25,20 @@ fun FamilyPhotoGalleryRoute(
     viewModel: FamilyViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var skipInitialResume by remember(viewModel, seniorId, lifecycleOwner) {
+        mutableStateOf(!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+    }
 
     LaunchedEffect(viewModel, seniorId) {
         viewModel.loadPhotoGallery(seniorId)
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (skipInitialResume) {
+            skipInitialResume = false
+        } else {
+            viewModel.loadPhotoGallery(seniorId = seniorId, force = true)
+        }
     }
 
     FamilyPhotoGalleryScreen(

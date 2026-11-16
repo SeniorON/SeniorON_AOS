@@ -56,32 +56,36 @@ class FamilyDtosTest {
     }
 
     @Test
-    fun `photo report sends backend reason detail and hide fields`() {
+    fun `photo report sends backend reason detail hide and seniorId fields`() {
         val json = gson.toJsonTree(
             FamilyPhotoReportRequest(
                 reason = "ADVERTISEMENT",
                 detail = "광고 사진이 반복해서 올라와요.",
                 hide = true,
+                seniorId = 7L,
             )
         ).asJsonObject
 
         assertEquals("ADVERTISEMENT", json["reason"].asString)
         assertEquals("광고 사진이 반복해서 올라와요.", json["detail"].asString)
         assertEquals(true, json["hide"].asBoolean)
+        assertEquals(7L, json["seniorId"].asLong)
     }
 
     @Test
-    fun `uploader report sends backend reason detail and hide fields`() {
+    fun `uploader report sends backend reason detail hide and seniorId fields`() {
         val json = gson.toJsonTree(
             FamilyUserReportRequest(
                 reason = "ABUSE",
                 detail = "욕설이 담긴 사진을 계속 올려요.",
                 hide = false,
+                seniorId = 8L,
             )
         ).asJsonObject
 
         assertEquals("ABUSE", json["reason"].asString)
         assertEquals("욕설이 담긴 사진을 계속 올려요.", json["detail"].asString)
         assertEquals(false, json["hide"].asBoolean)
+        assertEquals(8L, json["seniorId"].asLong)
     }
 }
