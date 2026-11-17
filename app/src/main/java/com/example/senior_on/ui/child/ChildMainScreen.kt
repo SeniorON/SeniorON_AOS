@@ -567,6 +567,7 @@ fun ChildMainScreen(
                 displayViewModel = displayViewModel,
                 isDisconnectingRelationship = seniorManagementUiState.isDisconnecting,
                 onDisconnectRelationship = { finished ->
+                    val fromSettings = selectedTab == ChildMainTab.Setting
                     activeSeniorId?.let { seniorId ->
                         val disconnectedSeniorName = seniorManagementViewModel.uiState.value.managedSeniors
                             .firstOrNull { it.seniorId == seniorId }?.name?.trim()
@@ -574,8 +575,14 @@ fun ChildMainScreen(
                         seniorManagementViewModel.disconnectRelationship(
                             seniorId = seniorId,
                             validateRelationship = { id ->
-                                val member = familyServerRepository.getMembers(id).firstOrNull { it.isMe }
+                                val members = familyServerRepository.getMembers(id)
+                                val member = members.firstOrNull { it.isMe }
                                     ?: error("담당자 정보를 확인하지 못했어요. 다시 시도해 주세요.")
+                                if (fromSettings && member.managerType.equals("PRIMARY", true) &&
+                                    members.size == 2 && members.any { !it.isMe && it.role.equals("PARENT", true) }
+                                ) {
+                                    error("시니어가 탈퇴하면 자동으로 탈퇴가 가능합니다.")
+                                }
                                 require(member.managerType.equals("PRIMARY", true) || member.managerType.equals("SUB", true)) {
                                     "담당자 정보를 확인하지 못했어요."
                                 }
