@@ -151,6 +151,7 @@ fun ParentLauncherRoute(
 
         ParentFamilyMembershipStatus.NotConnected ->
             FamilyShareCodeInputRoute(
+                topBarTitle = "시니어 코드 입력",
                 appContainer = appContainer,
                 userId = ParentFamilyConnectionViewModelKey,
                 onBackClick = onExitToOnboarding,

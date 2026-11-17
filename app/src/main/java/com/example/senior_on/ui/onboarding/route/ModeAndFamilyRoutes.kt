@@ -24,14 +24,16 @@ fun ModeSelectionRoute(
 
 @Composable
 fun FamilyShareCodeRoute(
+    topBarTitle: String,
     onBackClick: () -> Unit,
     onNextClick: (FamilyShareCodeOption) -> Unit
 ) {
-    FamilyShareCodeScreen(onBackClick = onBackClick, onNextClick = onNextClick)
+    FamilyShareCodeScreen(onBackClick = onBackClick, onNextClick = onNextClick, topBarTitle = topBarTitle)
 }
 
 @Composable
 fun FamilyShareCodeInputRoute(
+    topBarTitle: String,
     appContainer: AppContainer,
     userId: String,
     onBackClick: () -> Unit,
@@ -49,6 +51,7 @@ fun FamilyShareCodeInputRoute(
     }
 
     FamilyShareCodeInputScreen(
+        topBarTitle = topBarTitle,
         onBackClick = {
             viewModel.clearError()
             onBackClick()

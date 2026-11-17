@@ -622,6 +622,7 @@ private fun OnboardingContent(
                 }
             )
             SeniorOnRoute.FamilyShareCode -> FamilyShareCodeRoute(
+                topBarTitle = if (selectedUserMode == AppUserMode.Senior) "시니어 연결" else "로그인",
                 onBackClick = { handlePostLoginRootBack() },
                 onNextClick = { selectedOption ->
                     currentRoute = when (selectedOption) {
@@ -638,6 +639,7 @@ private fun OnboardingContent(
                 }
             )
             SeniorOnRoute.FamilyShareCodeInput -> FamilyShareCodeInputRoute(
+                topBarTitle = if (selectedUserMode == AppUserMode.Senior) "시니어 코드 입력" else "로그인",
                 appContainer = appContainer,
                 userId = authenticatedUserId,
                 onBackClick = ::navigateBackInOnboarding,
