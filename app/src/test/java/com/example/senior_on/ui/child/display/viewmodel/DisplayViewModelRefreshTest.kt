@@ -31,6 +31,33 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class DisplayViewModelRefreshTest {
     @Test
+    fun `같은 시니어의 새 관계는 즉시 표시되고 늦게 온 홈 응답에도 유지된다`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val old = MockSeniorFixtures.mother.copy(relationshipLabel = "아버지")
+            val profiles = ParentInfoRepositoryImpl(MockParentInfoDataSource(old))
+            val gate = CompletableDeferred<Unit>()
+            val repository = RecordingDisplayRepository().apply {
+                overview = overview.copy(parentInfo = old)
+                overviewGate = gate
+            }
+            val vm = DisplayViewModel(profiles, repository)
+            runCurrent()
+            vm.selectSenior(old.seniorId, "어머니")
+            fun assertUpdated() {
+                assertEquals("어머니", vm.uiState.value.relationshipLabel)
+                assertEquals("어머니", vm.uiState.value.parentInfo?.relationshipLabel)
+                assertEquals("어머니", profiles.parentInfo.value?.relationshipLabel)
+            }
+            assertUpdated()
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertUpdated()
+            assertEquals(1, repository.overviewRequestCount)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
     fun `disconnect with no remaining senior never refreshes the previous selection`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

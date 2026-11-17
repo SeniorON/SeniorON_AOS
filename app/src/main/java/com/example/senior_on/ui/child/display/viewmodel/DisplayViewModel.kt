@@ -86,13 +86,16 @@ class DisplayViewModel(
             if (validatedParentInfoSeed != null) {
                 selectedParentInfoSeed = validatedParentInfoSeed
             }
-            if (
-                _uiState.value.relationshipLabel.isNullOrBlank() &&
-                normalizedRelationshipLabel != null
-            ) {
+            if (normalizedRelationshipLabel != null) {
                 selectedRelationshipLabel = normalizedRelationshipLabel
-                _uiState.update {
-                    it.copy(relationshipLabel = normalizedRelationshipLabel)
+                cachedParentInfoFor(seniorId)?.takeIf { it.relationshipLabel != normalizedRelationshipLabel }?.let {
+                    shareParentInfo(it.copy(relationshipLabel = normalizedRelationshipLabel))
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        relationshipLabel = normalizedRelationshipLabel,
+                        parentInfo = state.parentInfo?.copy(relationshipLabel = normalizedRelationshipLabel),
+                    )
                 }
             }
             if (!_uiState.value.hasLoadedOverview) {
