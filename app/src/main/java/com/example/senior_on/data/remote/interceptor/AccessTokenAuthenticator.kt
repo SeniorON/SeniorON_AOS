@@ -2,17 +2,14 @@ package com.example.senior_on.data.remote.interceptor
 
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.local.SessionExpirationEventStore
-import com.example.senior_on.data.remote.api.UserApi
-import com.example.senior_on.data.remote.dto.TokenRefreshRequest
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 
 class AccessTokenAuthenticator(
-    private val userApi: UserApi,
+    private val tokenRefresher: SessionTokenRefresher,
 ) : Authenticator {
-    private val refreshLock = Any()
 
     override fun authenticate(route: Route?, response: Response): Request? {
         val failedAuthorization = response.request.header(AUTHORIZATION_HEADER) ?: return null
@@ -22,48 +19,13 @@ class AccessTokenAuthenticator(
             return null
         }
 
-        return synchronized(refreshLock) {
-            val currentAuthorization = AccessTokenStore.getBearerToken() ?: return@synchronized null
-
-            if (failedAuthorization != currentAuthorization) {
-                return@synchronized response.request.withAuthorization(currentAuthorization)
+        return when (tokenRefresher.refresh(failedAuthorization)) {
+            SessionRecoveryResult.Ready -> AccessTokenStore.getBearerToken()?.let {
+                response.request.withAuthorization(it)
             }
-
-            val refreshToken = AccessTokenStore.getRefreshToken()
-                ?: return@synchronized expireSession()
-            val refreshResponse = runCatching {
-                userApi.refreshToken(
-                    TokenRefreshRequest(
-                        refreshToken = refreshToken,
-                        deviceIdentifier = AccessTokenStore.getDeviceIdentifier(),
-                    )
-                ).execute()
-            }.getOrNull() ?: return@synchronized null
-
-            if (!refreshResponse.isSuccessful) {
-                if (refreshResponse.code() in INVALID_REFRESH_TOKEN_STATUS_CODES) {
-                    expireSession()
-                }
-                refreshResponse.errorBody()?.close()
-                return@synchronized null
-            }
-
-            val refreshedTokens = refreshResponse.body()?.data ?: return@synchronized null
-            val newAccessToken = refreshedTokens.accessToken
-                ?.removePrefix(BEARER_PREFIX)
-                ?.trim()
-                ?.takeIf(String::isNotEmpty)
-                ?: return@synchronized expireSession()
-            val newRefreshToken = refreshedTokens.refreshToken
-                ?.trim()
-                ?.takeIf(String::isNotEmpty)
-                ?: refreshToken
-
-            AccessTokenStore.saveRefreshedTokens(
-                accessToken = newAccessToken,
-                newRefreshToken = newRefreshToken,
-            )
-            response.request.withAuthorization("$BEARER_PREFIX$newAccessToken")
+            SessionRecoveryResult.Expired -> null // The refresher already invalidated this session atomically.
+            // Do not leak the original 401 to callers that interpret it as a permanent logout.
+            SessionRecoveryResult.Retry -> throw java.io.IOException("인증 서버에 연결하지 못했어요. 다시 시도해 주세요.")
         }
     }
 
@@ -90,8 +52,6 @@ class AccessTokenAuthenticator(
 
     private companion object {
         const val AUTHORIZATION_HEADER = "Authorization"
-        const val BEARER_PREFIX = "Bearer "
         const val MAX_AUTH_ATTEMPTS = 2
-        val INVALID_REFRESH_TOKEN_STATUS_CODES = setOf(400, 401, 403)
     }
 }

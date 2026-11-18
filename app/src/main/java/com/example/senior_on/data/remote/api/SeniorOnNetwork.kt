@@ -37,6 +37,12 @@ object SeniorOnNetwork {
             .create(UserApi::class.java)
     }
 
+    val sessionTokenRefresher by lazy {
+        com.example.senior_on.data.remote.interceptor.SessionTokenRefresher {
+            refreshUserApi.refreshToken(it).execute()
+        }
+    }
+
     private val okHttpClient by lazy {
         configuredClientBuilder()
             .addInterceptor { chain ->
@@ -55,7 +61,7 @@ object SeniorOnNetwork {
                     }
                 chain.proceed(authenticatedRequest)
             }
-            .authenticator(AccessTokenAuthenticator(refreshUserApi))
+            .authenticator(AccessTokenAuthenticator(sessionTokenRefresher))
             .addInterceptor(
                 HttpLoggingInterceptorFactory.create(tag = "SeniorOnHttp")
             )

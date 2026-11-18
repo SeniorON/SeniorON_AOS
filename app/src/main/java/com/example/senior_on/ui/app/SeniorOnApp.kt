@@ -31,6 +31,7 @@ fun SeniorOnApp(
     onOpenParentLauncher: () -> Unit,
     startAtParentLogin: Boolean = false,
 ) {
+    if (SessionRecoveryGate()) return
     val context = LocalContext.current
     val notificationNavigationEvent by
         NotificationNavigationEventStore.pendingEvent.collectAsStateWithLifecycle()
@@ -76,7 +77,7 @@ fun SeniorOnApp(
         }
 
         AppDestination.ChildMain -> if (com.example.senior_on.data.local.AccessTokenStore.getBearerToken() == null) {
-            // Android can restore the destination even though a process-only login is gone.
+            // Android can restore the destination after the credentials were cleared.
             LaunchedEffect(Unit) { openOnboarding() }
         } else ChildMainRoute(
             appContainer = appContainer,

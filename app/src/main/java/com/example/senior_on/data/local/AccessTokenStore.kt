@@ -6,7 +6,7 @@ import com.example.senior_on.data.remote.dto.UserRole
 import com.example.senior_on.data.source.auth.PersistedSessionStore
 import java.util.UUID
 
-object AccessTokenStore {
+object AccessTokenStore : RefreshTokenStore {
     @Volatile
     private var token: String? = null
     @Volatile
@@ -42,7 +42,7 @@ object AccessTokenStore {
         deviceIdentifier = readSecureValue(DEVICE_IDENTIFIER_KEY) {
             trim().takeIf(String::isNotEmpty)
         }
-        persistTokens = token != null
+        persistTokens = token != null || refreshToken != null
         layoutScope = if (!persistTokens) null else {
             // Upgrade a login saved before cache scopes existed. An empty marker is a child login.
             val marker = preferences?.getString(LAYOUT_SCOPE_KEY, null) ?: newLayoutMarker(
@@ -123,7 +123,7 @@ object AccessTokenStore {
     }
 
     @Synchronized
-    fun saveRefreshedTokens(
+    override fun saveRefreshedTokens(
         accessToken: String,
         newRefreshToken: String,
     ) {
@@ -150,11 +150,11 @@ object AccessTokenStore {
         refreshToken = normalizedRefreshToken
     }
 
-    fun getBearerToken(): String? = token?.let { "$BEARER_PREFIX$it" }
+    override fun getBearerToken(): String? = token?.let { "$BEARER_PREFIX$it" }
 
-    fun getRefreshToken(): String? = refreshToken
+    override fun getRefreshToken(): String? = refreshToken
 
-    fun getDeviceIdentifier(): String? = deviceIdentifier
+    override fun getDeviceIdentifier(): String? = deviceIdentifier
 
     @Synchronized
     internal fun homeLayoutScope(): String? = layoutScope.takeIf { token != null }
@@ -170,7 +170,7 @@ object AccessTokenStore {
     private fun newLayoutMarker(isParent: Boolean) = if (isParent) UUID.randomUUID().toString() else ""
 
     @Synchronized
-    fun clear() {
+    override fun clear() {
         ParentConnectionGate.hold()
         clearMemoryValues()
         clearPersistedValues()

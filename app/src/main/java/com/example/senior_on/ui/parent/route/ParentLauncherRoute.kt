@@ -67,7 +67,7 @@ fun ParentLauncherRoute(
     homeRequest: Int = 0,
     onActivityRecordingEligibilityChanged: (Boolean) -> Unit = {},
 ) {
-
+    if (com.example.senior_on.ui.app.SessionRecoveryGate(modifier)) return
     val sessionExpirationEvent by
         SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
     var needsLogin by remember { mutableStateOf(AccessTokenStore.getBearerToken() == null) }
