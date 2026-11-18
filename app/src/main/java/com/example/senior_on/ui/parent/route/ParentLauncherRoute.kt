@@ -158,10 +158,20 @@ fun ParentLauncherRoute(
                 onJoinSuccess = { familyMembershipViewModel.onFamilyJoined() },
             )
 
-        ParentFamilyMembershipStatus.Error ->
-            ParentLauncherContent(
-                homeRequest = homeRequest,
+        ParentFamilyMembershipStatus.Error -> {
+            val exitHome = com.example.senior_on.ui.parent.home.rememberExitParentHomeAction()
+            BackHandler(onBack = exitHome)
+            com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipErrorScreen(
+                onRetryClick = familyMembershipViewModel::checkFamilyMembership,
+                onExitHomeClick = exitHome,
+                modifier = modifier,
+            )
+        }
+
+        ParentFamilyMembershipStatus.ProfilePending ->
+            com.example.senior_on.ui.parent.home.ParentProfilePendingRoute(
                 appContainer = appContainer,
+                onRetry = familyMembershipViewModel::checkFamilyMembership,
                 onSessionEnded = ::onSessionEnded,
                 modifier = modifier,
             )

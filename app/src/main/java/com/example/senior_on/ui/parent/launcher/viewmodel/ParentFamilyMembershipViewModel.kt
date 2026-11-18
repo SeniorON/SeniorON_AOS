@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 enum class ParentFamilyMembershipStatus {
     Checking,
     Connected,
+    ProfilePending,
     NotConnected,
     Error,
 }
@@ -26,6 +27,7 @@ class ParentFamilyMembershipViewModel(
     private val repository: AuthRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ParentFamilyMembershipUiState())
+    private var checking = false
     val uiState = _uiState.asStateFlow()
 
     init {
@@ -33,37 +35,37 @@ class ParentFamilyMembershipViewModel(
     }
 
     fun checkFamilyMembership() {
+        if (checking) return
+        checking = true
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(status = ParentFamilyMembershipStatus.Checking)
+            try {
+                _uiState.update { it.copy(status = ParentFamilyMembershipStatus.Checking) }
+                // Family membership alone does not mean that the senior profile exists.
+                val status = repository.getOnboardingStatus()
+                val families = status.families
+                val hasFamily = families?.isNotEmpty() ?: status.hasFamily
+                val profileReady = families?.any {
+                    it.seniorProfileCompleted && it.seniorId != null
+                } ?: (status.seniorProfileCompleted && status.seniorId != null)
+                _uiState.update {
+                    it.copy(status = when {
+                        !hasFamily -> ParentFamilyMembershipStatus.NotConnected
+                        profileReady -> ParentFamilyMembershipStatus.Connected
+                        else -> ParentFamilyMembershipStatus.ProfilePending
+                    })
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update { it.copy(status = ParentFamilyMembershipStatus.Error) }
+            } finally {
+                checking = false
             }
-            // Membership does not require a selected senior or the full member list.
-            // Parent accounts may have a family before a senior profile is available.
-            runCatching { repository.getOnboardingStatus().hasFamily }
-                .onSuccess { hasFamily ->
-                    _uiState.update {
-                        it.copy(
-                            status = if (hasFamily) {
-                                ParentFamilyMembershipStatus.Connected
-                            } else {
-                                ParentFamilyMembershipStatus.NotConnected
-                            },
-                        )
-                    }
-                }
-                .onFailure {
-                    if (it is CancellationException) throw it
-                    _uiState.update {
-                        it.copy(status = ParentFamilyMembershipStatus.Error)
-                    }
-                }
         }
     }
 
     fun onFamilyJoined() {
-        _uiState.update {
-            it.copy(status = ParentFamilyMembershipStatus.Connected)
-        }
+        checkFamilyMembership()
     }
 
     companion object {
