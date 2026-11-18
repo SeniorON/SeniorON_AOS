@@ -43,9 +43,21 @@ internal fun SeniorManagementRoute(
     onClose: () -> Unit,
     onSeniorCreated: (ManagedSenior) -> Unit,
     modifier: Modifier = Modifier,
+    onPendingFamilyJoined: (Long) -> Unit = {},
 ) {
     var destination by rememberSaveable {
-        mutableStateOf(if (uiState.joinedFamilyId != null) SeniorManagementDestination.CodeInput else SeniorManagementDestination.CodeChoice)
+        mutableStateOf(when {
+            uiState.resumeProfileFamilyId != null -> SeniorManagementDestination.ParentInfoInput
+            uiState.joinedFamilyId != null -> SeniorManagementDestination.CodeInput
+            else -> SeniorManagementDestination.CodeChoice
+        })
+    }
+    LaunchedEffect(uiState.pendingJoinedFamilyId) {
+        uiState.pendingJoinedFamilyId?.let {
+            viewModel.consumePendingJoin()
+            onPendingFamilyJoined(it)
+            onClose()
+        }
     }
     var selectedAddress by rememberSaveable { mutableStateOf("") }
     var selectedAddressLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
@@ -58,6 +70,10 @@ internal fun SeniorManagementRoute(
 
     fun navigateBack() {
         if (uiState.isSubmitting || uiState.isCreatingFamilyCode) return
+        if (uiState.resumeProfileFamilyId != null && destination == SeniorManagementDestination.ParentInfoInput) {
+            onClose()
+            return
+        }
         if (uiState.joinedFamilyId != null) {
             onClose()
             return

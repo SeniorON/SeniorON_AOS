@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.senior_on.domain.model.auth.CareManagerType
 import com.example.senior_on.domain.model.parent.CaregiverRelationship
 import com.example.senior_on.domain.model.senior.ManagedSenior
+import com.example.senior_on.domain.model.senior.PendingSeniorFamily
 import com.example.senior_on.domain.model.senior.SeniorRegistration
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.server.FamilyServerRepository
@@ -19,6 +20,9 @@ import kotlinx.coroutines.launch
 
 data class SeniorManagementUiState(
     val managedSeniors: List<ManagedSenior> = emptyList(),
+    val pendingFamilies: List<PendingSeniorFamily> = emptyList(),
+    val resumeProfileFamilyId: Long? = null,
+    val pendingJoinedFamilyId: Long? = null,
     val isLoading: Boolean = true,
     val isRefreshingList: Boolean = false,
     val isCreatingFamilyCode: Boolean = false,
@@ -44,6 +48,7 @@ class SeniorManagementViewModel(
     private val familyRepository: FamilyServerRepository,
     private val needsRelationship: suspend (ManagedSenior) -> Boolean = { error("담당자 관계를 확인하지 못했어요.") },
     private val accessToken: () -> String? = { null },
+    private val familyRole: suspend (Long) -> CareManagerType = { error("담당자 유형을 확인하지 못했어요.") },
 ) : ViewModel() {
     private var refreshJob: Job? = null
     private var noticeJob: Job? = null
@@ -107,10 +112,12 @@ class SeniorManagementViewModel(
                     seniorRepository.acknowledgeWithdrawal(notice.withdrawalNoticeId)
                     _uiState.update { it.copy(withdrawalAcknowledged = true) }
                 }
-                val seniors = seniorRepository.getManagedSeniors()
+                val families = seniorRepository.getManagedFamilies()
+                val seniors = families.seniors
                 saveSelection(seniors.filterNot { it.withdrawn }.map { it.seniorId })
                 _uiState.update { it.copy(
                     managedSeniors = seniors,
+                    pendingFamilies = families.pendingFamilies,
                     withdrawalNotices = it.withdrawalNotices.filterNot { item -> item.withdrawalNoticeId == notice.withdrawalNoticeId },
                     withdrawalDialog = null, withdrawalAcknowledged = false,
                     listError = null, errorMessage = null,
@@ -177,9 +184,15 @@ class SeniorManagementViewModel(
                 )
             }
             try {
-                val managedSeniors = seniorRepository.getManagedSeniors()
+                val families = seniorRepository.getManagedFamilies()
+                val managedSeniors = families.seniors
                 _uiState.update {
                     it.copy(
+                        pendingFamilies = families.pendingFamilies.map { family ->
+                            it.withdrawalNotices.firstOrNull { notice -> notice.familyId == family.familyId }
+                                ?.let { notice -> family.copy(withdrawn = true, withdrawalNoticeId = notice.withdrawalNoticeId) }
+                                ?: family
+                        },
                         // A list request started before a successful edit must not restore the old label.
                         managedSeniors = managedSeniors.map { senior ->
                             val notice = it.withdrawalNotices.firstOrNull { item -> item.seniorId == senior.seniorId }
@@ -301,6 +314,8 @@ class SeniorManagementViewModel(
                 _uiState.update { state ->
                     state.copy(
                         managedSeniors = state.managedSeniors.upsert(managedSenior),
+                        pendingFamilies = state.pendingFamilies.filterNot { it.familyId == familyId },
+                        resumeProfileFamilyId = null,
                         isSubmitting = false,
                         createdFamilyId = null,
                         familyCode = null,
@@ -333,12 +348,19 @@ class SeniorManagementViewModel(
                 ) { "연결된 가족 정보를 확인하지 못했어요." }.also { joinedId ->
                     _uiState.update { it.copy(joinedFamilyId = joinedId) }
                 }
-                val seniors = seniorRepository.getManagedSeniors()
+                val families = seniorRepository.getManagedFamilies()
+                val seniors = families.seniors
+                if (families.pendingFamilies.any { it.familyId == familyId && !it.withdrawn }) {
+                    _uiState.update { it.copy(managedSeniors = seniors, pendingFamilies = families.pendingFamilies,
+                        joinedFamilyId = null, awaitingRelationship = null, pendingJoinedFamilyId = familyId,
+                        isLoading = false, listError = null) }
+                    return@launch
+                }
                 val joined = seniors.firstOrNull { it.familyId == familyId && it.seniorId > 0 && !it.withdrawn }
                     ?: error("연결된 가족에 등록된 시니어가 없어요. 주담당자의 등록 후 다시 시도해 주세요.")
                 val needsInput = needsRelationship(joined)
                 _uiState.update { it.copy(
-                    managedSeniors = seniors, isLoading = false, listError = null,
+                    managedSeniors = seniors, pendingFamilies = families.pendingFamilies, isLoading = false, listError = null,
                     joinedFamilyId = familyId.takeIf { needsInput },
                     awaitingRelationship = joined.takeIf { needsInput }, errorMessage = null,
                 ) }
@@ -388,6 +410,78 @@ class SeniorManagementViewModel(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
+    /** Reset only navigation state. The account-scoped issued-code cache stays intact. */
+    fun startFreshAddition() {
+        if (_uiState.value.isSubmitting || _uiState.value.isCreatingFamilyCode) return
+        _uiState.update { it.copy(joinedFamilyId = null, awaitingRelationship = null,
+            createdFamilyId = null, familyCode = null, resumeProfileFamilyId = null,
+            pendingJoinedFamilyId = null, errorMessage = null) }
+    }
+
+    fun consumePendingJoin() { _uiState.update { it.copy(pendingJoinedFamilyId = null) } }
+
+    fun finishPendingRegistration(senior: ManagedSenior, onRelationship: () -> Unit, onReady: () -> Unit, onMessage: (String) -> Unit) {
+        if (_uiState.value.isSubmitting) return
+        _uiState.update { it.copy(isSubmitting = true) }
+        viewModelScope.launch {
+            try {
+                if (needsRelationship(senior)) {
+                    _uiState.update { it.copy(joinedFamilyId = senior.familyId, awaitingRelationship = senior,
+                        resumeProfileFamilyId = null, errorMessage = null) }
+                    onRelationship()
+                } else onReady()
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (failure: Exception) { onMessage(failure.toSeniorManagementError())
+            } finally { _uiState.update { it.copy(isSubmitting = false) } }
+        }
+    }
+
+    fun resumePendingFamily(familyId: Long, onReady: () -> Unit, onMessage: (String) -> Unit) {
+        if (_uiState.value.isSubmitting) return
+        _uiState.update { it.copy(isSubmitting = true) }
+        viewModelScope.launch {
+            try {
+                when (familyRole(familyId)) {
+                    CareManagerType.Primary -> {
+                        _uiState.update { it.copy(createdFamilyId = familyId, familyCode = null,
+                            joinedFamilyId = null, awaitingRelationship = null,
+                            resumeProfileFamilyId = familyId, errorMessage = null) }
+                        onReady()
+                    }
+                    CareManagerType.Sub -> onMessage("주담당자가 시니어 정보를 등록하고 있어요.\n등록이 완료된 후 이용할 수 있어요.")
+                    else -> error("담당자 유형을 확인하지 못했어요.")
+                }
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (failure: Exception) { onMessage(failure.toSeniorManagementError())
+            } finally { _uiState.update { it.copy(isSubmitting = false) } }
+        }
+    }
+
+    fun showPendingWithdrawal(family: PendingSeniorFamily) {
+        val id = family.withdrawalNoticeId ?: return
+        _uiState.update { it.copy(withdrawalDialog = com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice(
+            id, family.familyId, null, "등록 중인 시니어", ""), withdrawalError = null) }
+    }
+
+    fun disconnectPendingFamily(familyId: Long, onSuccess: () -> Unit, onMessage: (String) -> Unit) {
+        if (_uiState.value.isDisconnecting || _uiState.value.isSubmitting) return
+        _uiState.update { it.copy(isDisconnecting = true) }
+        viewModelScope.launch {
+            try {
+                refreshJob?.cancel(); refreshJob?.join()
+                familyRepository.disconnectFamily(familyId)
+                _uiState.update { it.copy(pendingFamilies = it.pendingFamilies.filterNot { f -> f.familyId == familyId }) }
+                startFreshAddition()
+                onSuccess()
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (failure: Exception) { onMessage(failure.toSeniorManagementError("연결 해제 결과를 확인하지 못했어요. 목록을 다시 확인해 주세요."))
+            } finally {
+                _uiState.update { it.copy(isDisconnecting = false) }
+                refreshSeniors()
+            }
+        }
+    }
+
     fun disconnectRelationship(
         seniorId: Long,
         validateRelationship: suspend (Long) -> Unit,
@@ -414,9 +508,10 @@ class SeniorManagementViewModel(
                 removeRelationship(seniorId)
                 // Once DELETE succeeds, retries must never send it again.
                 pendingDisconnectRefresh = {
-                    val seniors = seniorRepository.getManagedSeniors()
+                    val families = seniorRepository.getManagedFamilies()
+                    val seniors = families.seniors
                     saveSelection(seniors.map { it.seniorId })
-                    _uiState.update { it.copy(managedSeniors = seniors, listError = null, errorMessage = null) }
+                    _uiState.update { it.copy(managedSeniors = seniors, pendingFamilies = families.pendingFamilies, listError = null, errorMessage = null) }
                     onSuccess()
                 }
                 _uiState.update { it.copy(disconnectRefreshPending = true) }
@@ -476,6 +571,8 @@ class SeniorManagementViewModel(
                     requiresRelationshipAfterCodeJoin(family.managerType)
                 },
                 accessToken = accessToken,
+                familyRole = { familyId -> requireNotNull(authRepository.getOnboardingStatus().families.orEmpty()
+                    .singleOrNull { it.familyId == familyId }).managerType },
             ) as T
         }
     }

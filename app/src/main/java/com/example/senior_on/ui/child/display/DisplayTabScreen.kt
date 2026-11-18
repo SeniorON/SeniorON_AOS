@@ -91,6 +91,8 @@ fun DisplayTabScreen(
     onAddSeniorAccountClick: () -> Unit = {},
     emptySeniorList: Boolean = false,
     tutorialAnchorModifier: Modifier = Modifier,
+    pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
+    onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
 ) {
     var showSeniorAccountSwitcher by rememberSaveable(emptySeniorList) { mutableStateOf(false) }
     val displayState = if (emptySeniorList) remember { DisplayTabUiState() } else uiState
@@ -146,6 +148,7 @@ fun DisplayTabScreen(
                 item {
                     ScreenEditSection(
                         emptySeniorList = emptySeniorList,
+                        profileMissing = !emptySeniorList && displayState.parentInfo == null,
                         relationshipLabel = displayState.relationshipLabel,
                         configuration = displayState.screenConfiguration,
                         buttonItems = displayState.configuredButtonItems,
@@ -164,6 +167,8 @@ fun DisplayTabScreen(
     if (!emptySeniorList && showSeniorAccountSwitcher) {
         SeniorAccountSwitcherBottomSheet(
             accounts = accountItems,
+            pendingFamilies = pendingFamilies,
+            onPendingFamilyClick = { showSeniorAccountSwitcher = false; onPendingFamilyClick(it) },
             onDismiss = { showSeniorAccountSwitcher = false },
             onAccountClick = { account ->
                 showSeniorAccountSwitcher = false
@@ -626,24 +631,71 @@ private fun EmptyParentInformationCard(onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(126.dp)
+            .height(134.dp)
+            .dropShadow(
+                shape = shape,
+                shadow = Shadow(
+                    radius = 14.dp,
+                    spread = 0.dp,
+                    color = Color(0xFFB5C69C).copy(alpha = 0.9f),
+                    offset = DpOffset(x = 0.dp, y = 4.dp),
+                ),
+            )
             .clip(shape)
             .background(SeniorOnColors.Primary600)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 18.dp),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "-",
+                modifier = Modifier.weight(1f),
+                style = SeniorOnTextStyles.HeadingS,
+                color = SeniorOnColors.White,
+            )
+            Icon(
+                painter = painterResource(R.drawable.ic_sm_arrow_right),
+                contentDescription = "시니어 정보 입력",
+                modifier = Modifier.size(24.dp),
+                tint = SeniorOnColors.White,
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "부모님 정보가 없습니다",
-            style = SeniorOnTextStyles.HeadingS,
+            text = "생년월일 정보 없음",
+            style = SeniorOnTextStyles.BodySMedium,
             color = SeniorOnColors.White,
         )
+        Spacer(modifier = Modifier.weight(1f))
+        Box(
+            modifier = Modifier.fillMaxWidth().height(1.dp)
+                .background(SeniorOnColors.SupportWhite20),
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(R.drawable.ic_home),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = SeniorOnColors.Primary200,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "주소 정보 없음",
+                style = SeniorOnTextStyles.CaptionMedium,
+                color = SeniorOnColors.White,
+            )
+        }
     }
 }
 
 @Composable
 private fun ScreenEditSection(
     emptySeniorList: Boolean,
+    profileMissing: Boolean,
     relationshipLabel: String?,
     configuration: SeniorScreenConfiguration,
     buttonItems: List<DisplayHomeButton>,
@@ -671,7 +723,7 @@ private fun ScreenEditSection(
                 Spacer(modifier = Modifier.width(4.dp))
 
                 Text(
-                    text = if (emptySeniorList) "시니어 화면" else "화면 편집",
+                    text = if (emptySeniorList || profileMissing) "시니어 화면" else "화면 편집",
                     style = SeniorOnTextStyles.HeadingS,
                     color = SeniorOnColors.Gray800,
                 )
@@ -1024,6 +1076,14 @@ private fun DisplayTabOfflineDialogPreview() {
 private fun DisplayTabEmptyPreview() {
     SENIOR_ONTheme {
         DisplayTabPreviewFrame(uiState = DisplayTabUiState(), emptySeniorList = true)
+    }
+}
+
+@Preview(name = "Display Profile Missing - Primary", showBackground = true, widthDp = 360, heightDp = 888)
+@Composable
+private fun DisplayTabProfileMissingPreview() {
+    SENIOR_ONTheme {
+        DisplayTabPreviewFrame(uiState = DisplayTabUiState())
     }
 }
 

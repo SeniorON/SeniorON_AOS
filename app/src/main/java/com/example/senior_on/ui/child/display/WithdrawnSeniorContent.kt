@@ -32,6 +32,8 @@ internal fun WithdrawnSeniorContent(
     onConfirm: () -> Unit,
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
+    pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
+    onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
 ) {
     var showAccounts by remember { mutableStateOf(false) }
     Column(modifier.fillMaxSize().background(SeniorOnColors.White)) {
@@ -81,6 +83,8 @@ internal fun WithdrawnSeniorContent(
     }
     if (showAccounts) SeniorAccountSwitcherBottomSheet(
         accounts = accounts,
+        pendingFamilies = pendingFamilies,
+        onPendingFamilyClick = { showAccounts = false; onPendingFamilyClick(it) },
         onDismiss = { showAccounts = false },
         onAccountClick = { showAccounts = false; onAccountClick(it) },
         onAddAccountClick = { showAccounts = false; onAdd() },

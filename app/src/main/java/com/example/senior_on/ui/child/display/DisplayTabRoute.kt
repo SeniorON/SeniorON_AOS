@@ -72,6 +72,8 @@ fun DisplayTabRoute(
     isDisconnectingRelationship: Boolean = false,
     onDisconnectRelationship: (() -> Unit) -> Unit = {},
     onProfileSaved: (com.example.senior_on.domain.model.parent.ParentInfo) -> Unit = {},
+    pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
+    onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -248,6 +250,8 @@ fun DisplayTabRoute(
                 else -> {
                     val showTutorial = emptySeniorList && seniorAddTutorialPending && !isRefreshingList
                     DisplayTabScreen(
+                pendingFamilies = pendingFamilies,
+                onPendingFamilyClick = onPendingFamilyClick,
                         uiState = uiState,
                         emptySeniorList = emptySeniorList,
                         tutorialAnchorModifier = if (showTutorial) Modifier.onGloballyPositioned {

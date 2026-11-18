@@ -17,6 +17,18 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SeniorRepositoryImplTest {
+    @Test fun `pending families keep distinct family identities including withdrawn without senior`() = runBlocking {
+        val responses = Gson().fromJson("""[
+            {"familyId":2,"seniorId":null,"seniorName":null},
+            {"familyId":3,"seniorId":null,"withdrawn":true,"withdrawalNoticeId":9}
+        ]""", Array<ManagedSeniorResponse>::class.java)
+        val source = RecordingSeniorDataSource().apply { managedSeniorResponses = responses.toList() }
+        val result = SeniorRepositoryImpl(source).getManagedFamilies()
+        assertEquals(emptyList<Any>(), result.seniors)
+        assertEquals(listOf(2L, 3L), result.pendingFamilies.map { it.familyId })
+        assertEquals(true, result.pendingFamilies.last().withdrawn)
+        assertEquals(9L, result.pendingFamilies.last().withdrawalNoticeId)
+    }
     @Test fun `withdrawal marker and notice id survive mapping`() = runBlocking {
         val response = Gson().fromJson(
             """{"familyId":1,"seniorId":3,"seniorName":"탈퇴 시니어","withdrawn":true,"withdrawalNoticeId":42}""",

@@ -17,6 +17,8 @@ interface SeniorRepository {
     ): SeniorInfo
 
     suspend fun getManagedSeniors(): List<ManagedSenior>
+    suspend fun getManagedFamilies(): com.example.senior_on.domain.model.senior.ManagedFamilyList =
+        com.example.senior_on.domain.model.senior.ManagedFamilyList(getManagedSeniors())
 
     suspend fun updateRelation(
         accessToken: String,
