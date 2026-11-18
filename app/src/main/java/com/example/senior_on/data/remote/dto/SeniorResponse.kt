@@ -5,8 +5,8 @@ import com.google.gson.annotations.SerializedName
 data class SeniorWithdrawalNoticeResponse(
     val withdrawalNoticeId: Long,
     val familyId: Long,
-    val seniorId: Long,
-    val seniorName: String,
+    val seniorId: Long?,
+    val seniorName: String?,
     val withdrawnAt: String,
 )
 

@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.child.health
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.example.senior_on.ui.theme.SeniorOnDimensions
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -116,6 +118,7 @@ fun MedicationDetailScreen(
     onDeleteClick: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
     var category by rememberSaveable(initialDraft) { mutableStateOf(initialDraft.category) }
     var name by rememberSaveable(initialDraft) { mutableStateOf(initialDraft.name) }
     var times by rememberSaveable(initialDraft, stateSaver = LocalTimeListSaver) {
@@ -144,7 +147,12 @@ fun MedicationDetailScreen(
             )
         )
     }
-    var showTimeSheet by rememberSaveable { mutableStateOf(false) }
+    // null: closed, -1: adding, otherwise the index of the card being edited.
+    var timePickerIndex by rememberSaveable(initialDraft) { mutableStateOf<Int?>(null) }
+    fun openTimePicker(index: Int = -1) {
+        focusManager.clearFocus()
+        timePickerIndex = index
+    }
     var showDateSheet by rememberSaveable { mutableStateOf(false) }
     var showRepeatSheet by rememberSaveable { mutableStateOf(false) }
     var showExitDialog by rememberSaveable { mutableStateOf(false) }
@@ -304,8 +312,7 @@ fun MedicationDetailScreen(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.clickable {
-                                    focusManager.clearFocus()
-                                    showTimeSheet = true
+                                    openTimePicker()
                                 }
                             ) {
                                 Icon(
@@ -327,19 +334,17 @@ fun MedicationDetailScreen(
                     when {
                         times.isEmpty() && isEditable -> {
                             MedicationTimePickerField(
-                                isFocused = showTimeSheet,
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    showTimeSheet = true
-                                }
+                                isFocused = timePickerIndex != null,
+                                onClick = { openTimePicker() }
                             )
                         }
                         else -> {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                times.forEach { time ->
+                                times.forEachIndexed { index, time ->
                                     if (isEditable) {
                                         MedicationEditableTimeChip(
                                             text = time.toMedicationTime(),
+                                            onEditClick = { openTimePicker(index) },
                                             onDeleteClick = {
                                                 times = times.filterNot { it == time }
                                             }
@@ -440,17 +445,20 @@ fun MedicationDetailScreen(
         }
     }
 
-    if (showTimeSheet) {
+    timePickerIndex?.let { index ->
         ScheduleTimePickerBottomSheet(
-            initialTime = times.lastOrNull() ?: LocalTime.of(8, 0),
-            onDismiss = { showTimeSheet = false },
+            initialTime = times.getOrNull(index) ?: times.lastOrNull() ?: LocalTime.of(8, 0),
+            onDismiss = { timePickerIndex = null },
             onConfirm = { selected ->
-                if (selected in times) {
-                    snackbarMessage = "이미 등록된 복용 시간입니다."
+                if (times.withIndex().any { (i, time) ->
+                        i != index && time.hour == selected.hour && time.minute == selected.minute
+                    }) {
+                    Toast.makeText(context, "이미 존재하는 시간입니다.", Toast.LENGTH_SHORT).show()
                 } else {
-                    times = (times + selected).sorted()
+                    times = if (index < 0) (times + selected).sorted()
+                    else times.mapIndexed { i, time -> if (i == index) selected else time }.sorted()
+                    timePickerIndex = null
                 }
-                showTimeSheet = false
             }
         )
     }
@@ -599,6 +607,7 @@ private fun MedicationStartDateField(
 @Composable
 private fun MedicationEditableTimeChip(
     text: String,
+    onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(SeniorOnRadius.Small)
@@ -608,6 +617,7 @@ private fun MedicationEditableTimeChip(
             .height(43.dp)
             .clip(shape)
             .background(SeniorOnColors.Background2)
+            .clickable(onClick = onEditClick)
             .padding(start = 12.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

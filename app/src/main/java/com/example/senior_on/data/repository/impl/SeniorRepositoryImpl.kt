@@ -18,7 +18,8 @@ class SeniorRepositoryImpl(
 ) : SeniorRepository {
     override suspend fun getWithdrawalNotices() = dataSource.getWithdrawalNotices().map {
         com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice(
-            it.withdrawalNoticeId, it.familyId, it.seniorId, it.seniorName, it.withdrawnAt,
+            it.withdrawalNoticeId, it.familyId, it.seniorId,
+            it.seniorName?.takeIf(String::isNotBlank) ?: "등록 중인 시니어", it.withdrawnAt,
         )
     }
     override suspend fun acknowledgeWithdrawal(noticeId: Long) = dataSource.acknowledgeWithdrawal(noticeId)
@@ -58,9 +59,18 @@ class SeniorRepositoryImpl(
     }
 
     override suspend fun getManagedSeniors(): List<ManagedSenior> {
-        return dataSource.getManagedSeniors()
-            .mapNotNull { response -> response.toDomain() }
-            .distinctBy(ManagedSenior::seniorId)
+        return getManagedFamilies().seniors
+    }
+
+    override suspend fun getManagedFamilies(): com.example.senior_on.domain.model.senior.ManagedFamilyList {
+        val responses = dataSource.getManagedSeniors()
+        return com.example.senior_on.domain.model.senior.ManagedFamilyList(
+            seniors = responses.mapNotNull { it.toDomain() }.distinctBy(ManagedSenior::seniorId),
+            pendingFamilies = responses.filter { it.seniorId == null || it.seniorId <= 0L }
+                .map { com.example.senior_on.domain.model.senior.PendingSeniorFamily(
+                    it.familyId, it.withdrawn, it.withdrawalNoticeId,
+                ) }.distinctBy { it.familyId },
+        )
     }
 
     override suspend fun updateRelation(

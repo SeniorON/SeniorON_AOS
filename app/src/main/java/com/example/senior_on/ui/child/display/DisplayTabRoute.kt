@@ -17,6 +17,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
@@ -59,11 +63,17 @@ fun DisplayTabRoute(
     onButtonEditClick: () -> Unit = {},
     seniorAccounts: List<ManagedSenior> = emptyList(),
     isSeniorAccountsLoading: Boolean = false,
+    isRefreshingList: Boolean = false,
+    onRefreshEmptyList: () -> Unit = {},
+    seniorAddTutorialPending: Boolean = false,
+    onFinishSeniorAddTutorial: () -> Unit = {},
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
     isDisconnectingRelationship: Boolean = false,
     onDisconnectRelationship: (() -> Unit) -> Unit = {},
     onProfileSaved: (com.example.senior_on.domain.model.parent.ParentInfo) -> Unit = {},
+    pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
+    onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,6 +89,8 @@ fun DisplayTabRoute(
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var showInternetRequiredDialog by remember { mutableStateOf(false) }
     var showLargePreview by rememberSaveable { mutableStateOf(false) }
+    var tutorialAnchor by remember { mutableStateOf<Rect?>(null) }
+    val emptySeniorList = seniorAccounts.isEmpty() && expectedSeniorId == null && !isSeniorAccountsLoading
     var buttonEditDraftItems by remember {
         mutableStateOf<List<DisplayHomeButton>>(emptyList())
     }
@@ -92,9 +104,6 @@ fun DisplayTabRoute(
         mutableStateOf<PickedInstalledApp?>(null)
     }
     var autoSelectKey by remember { mutableStateOf<String?>(null) }
-    var autoSelectMusicButton by remember {
-        mutableStateOf<SeniorHomeButtonType?>(null)
-    }
     var autoSelectEvent by remember { mutableIntStateOf(0) }
     com.example.senior_on.ui.child.TabReselectionEffect(tabReselectionToken) {
         if (!uiState.isSaving && !isDisconnectingRelationship &&
@@ -110,20 +119,11 @@ fun DisplayTabRoute(
     }
 
     fun importButton(button: DisplayHomeButton) {
-        val importedMusicButton = button.importedMusicButtonTypeOrNull()
-        if (importedMusicButton != null) {
-            autoSelectKey = null
-            autoSelectMusicButton = importedMusicButton
-            autoSelectEvent += 1
-            return
-        }
-
         if (button.actionType.equals("APP", ignoreCase = true)) {
             transientImportedButtons = (
                 transientImportedButtons + button
                 ).distinctBy(DisplayHomeButton::stableKey)
         }
-        autoSelectMusicButton = null
         autoSelectKey = button.stableKey
         autoSelectEvent += 1
     }
@@ -160,7 +160,6 @@ fun DisplayTabRoute(
             )
             transientImportedButtons = emptyList()
             autoSelectKey = null
-            autoSelectMusicButton = null
             saveableStateHolder.removeState(DisplayDestination.ButtonAdd.name)
         }
         destination = when (destination) {
@@ -183,7 +182,7 @@ fun DisplayTabRoute(
     }
 
     fun runWhenParentPhoneConnected(action: () -> Unit) {
-        val status = uiState.device?.connectionStatus
+        val status = uiState.device?.connectionStatus.takeUnless { emptySeniorList }
         when {
             status.allowsDisplayPreviewAndEditing() -> action()
             status == DisplayDeviceConnectionStatus.LoginExpired ->
@@ -203,7 +202,6 @@ fun DisplayTabRoute(
         buttonAddEntryItems = emptyList()
         transientImportedButtons = emptyList()
         autoSelectKey = null
-        autoSelectMusicButton = null
         listOf(
             DisplayDestination.ButtonEditGuide,
             DisplayDestination.ButtonEditSelected,
@@ -249,70 +247,84 @@ fun DisplayTabRoute(
                         modifier = modifier,
                     )
 
-                else -> DisplayTabScreen(
-                    uiState = uiState,
-                    canEditScreen = uiState.canEditScreen,
-                    showScreenEditActions = uiState.canEditScreen &&
-                        !uiState.isEditPermissionLoading &&
-                        !uiState.isLoading &&
-                        !uiState.isSaving,
-                    isRefreshing = uiState.isRefreshing,
-                    onRefresh = viewModel::refreshOverview,
-                    seniorAccounts = seniorAccounts,
-                    onSeniorAccountClick = onSeniorAccountClick,
-                    onAddSeniorAccountClick = onAddSeniorAccountClick,
-                    modifier = modifier,
-                    onDeviceClick = {
-                        if (uiState.device == null) {
-                            navigateToSeniorAppInstallGuide()
-                        } else {
-                            viewModel.refreshDevice()
-                            destination = DisplayDestination.DeviceConnection
-                        }
-                    },
-                    onParentInfoClick = {
-                        if (uiState.device == null) {
-                            navigateToSeniorAppInstallGuide()
-                        } else {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.ParentInfoEdit.name
-                            )
-                            selectedAddress = uiState.parentInfo?.address.orEmpty()
-                            selectedAddressLatitude = uiState.parentInfo?.addressLatitude
-                            selectedAddressLongitude = uiState.parentInfo?.addressLongitude
-                            destination = DisplayDestination.ParentInfoEdit
-                        }
-                    },
-                    onLargePreviewClick = {
-                        runWhenParentPhoneConnected {
-                            showLargePreview = true
-                            onLargePreviewClick()
-                        }
-                    },
-                    onFontEditClick = {
-                        runWhenParentPhoneConnected {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.FontEdit.name
-                            )
-                            destination = DisplayDestination.FontEdit
-                            onFontEditClick()
-                        }
-                    },
-                    onButtonEditClick = {
-                        runWhenParentPhoneConnected {
-                            saveableStateHolder.removeState(
-                                DisplayDestination.ButtonEditGuide.name
-                            )
-                            buttonEditDraftItems = emptyList()
-                            buttonAddEntryItems = emptyList()
-                            transientImportedButtons = emptyList()
-                            autoSelectKey = null
-                            autoSelectMusicButton = null
-                            destination = DisplayDestination.ButtonEditGuide
-                            onButtonEditClick()
-                        }
-                    },
-                )
+                else -> {
+                    val showTutorial = emptySeniorList && seniorAddTutorialPending && !isRefreshingList
+                    DisplayTabScreen(
+                pendingFamilies = pendingFamilies,
+                onPendingFamilyClick = onPendingFamilyClick,
+                        uiState = uiState,
+                        emptySeniorList = emptySeniorList,
+                        tutorialAnchorModifier = if (showTutorial) Modifier.onGloballyPositioned {
+                            tutorialAnchor = Rect(it.positionOnScreen(), it.size.toSize())
+                        } else Modifier,
+                        canEditScreen = uiState.canEditScreen,
+                        showScreenEditActions = uiState.canEditScreen &&
+                            !uiState.isEditPermissionLoading &&
+                            !uiState.isLoading &&
+                            !uiState.isSaving,
+                        isRefreshing = if (expectedSeniorId == null) isRefreshingList else uiState.isRefreshing,
+                        onRefresh = if (expectedSeniorId == null) onRefreshEmptyList else viewModel::refreshOverview,
+                        seniorAccounts = seniorAccounts,
+                        onSeniorAccountClick = onSeniorAccountClick,
+                        onAddSeniorAccountClick = onAddSeniorAccountClick,
+                        modifier = modifier,
+                        onDeviceClick = {
+                            if (emptySeniorList || uiState.device == null) {
+                                navigateToSeniorAppInstallGuide()
+                            } else {
+                                viewModel.refreshDevice()
+                                destination = DisplayDestination.DeviceConnection
+                            }
+                        },
+                        onParentInfoClick = {
+                            if (emptySeniorList || uiState.device == null) {
+                                navigateToSeniorAppInstallGuide()
+                            } else {
+                                saveableStateHolder.removeState(
+                                    DisplayDestination.ParentInfoEdit.name
+                                )
+                                selectedAddress = uiState.parentInfo?.address.orEmpty()
+                                selectedAddressLatitude = uiState.parentInfo?.addressLatitude
+                                selectedAddressLongitude = uiState.parentInfo?.addressLongitude
+                                destination = DisplayDestination.ParentInfoEdit
+                            }
+                        },
+                        onLargePreviewClick = {
+                            runWhenParentPhoneConnected {
+                                showLargePreview = true
+                                onLargePreviewClick()
+                            }
+                        },
+                        onFontEditClick = {
+                            runWhenParentPhoneConnected {
+                                saveableStateHolder.removeState(
+                                    DisplayDestination.FontEdit.name
+                                )
+                                destination = DisplayDestination.FontEdit
+                                onFontEditClick()
+                            }
+                        },
+                        onButtonEditClick = {
+                            runWhenParentPhoneConnected {
+                                saveableStateHolder.removeState(
+                                    DisplayDestination.ButtonEditGuide.name
+                                )
+                                buttonEditDraftItems = emptyList()
+                                buttonAddEntryItems = emptyList()
+                                transientImportedButtons = emptyList()
+                                autoSelectKey = null
+                                destination = DisplayDestination.ButtonEditGuide
+                                onButtonEditClick()
+                            }
+                        },
+                    )
+                    if (showTutorial) tutorialAnchor?.let { anchor ->
+                        SeniorAddTutorial(anchor, onAdd = {
+                            onFinishSeniorAddTutorial()
+                            onAddSeniorAccountClick()
+                        }, onSkip = onFinishSeniorAddTutorial)
+                    }
+                }
             }
 
             DisplayDestination.DeviceConnection -> DeviceConnectionScreen(
@@ -467,7 +479,6 @@ fun DisplayTabRoute(
                     buttonAddEntryItems = buttons
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
-                    autoSelectMusicButton = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -480,13 +491,8 @@ fun DisplayTabRoute(
                 initialSelectedButtons = buttonEditDraftItems
                     .ifEmpty { uiState.configuredButtonItems }
                     .filter(DisplayHomeButton::isSelectableAppButton),
-                initialMusicButton = buttonEditDraftItems
-                    .ifEmpty { uiState.configuredButtonItems }
-                    .mapNotNull(DisplayHomeButton::type)
-                    .firstOrNull(SeniorHomeButtonType::isMusicButton),
                 transientImportedButtons = transientImportedButtons,
                 autoSelectKey = autoSelectKey,
-                autoSelectMusicButton = autoSelectMusicButton,
                 autoSelectEvent = autoSelectEvent,
                 modifier = modifier,
                 onBackClick = ::navigateBack,
@@ -501,12 +507,11 @@ fun DisplayTabRoute(
                         ).show()
                     }
                 },
-                onSaveClick = { musicButton, appButtons ->
+                onSaveClick = { appButtons ->
                     val currentDraftButtons = buttonEditDraftItems
                         .ifEmpty { uiState.configuredButtonItems }
                     val selectedButtons = createInitialButtonOrder(
                         currentButtons = currentDraftButtons,
-                        musicButton = musicButton,
                         appButtons = appButtons,
                     )
                     buttonEditDraftItems = resolveButtonEditDraftAfterButtonAdd(
@@ -516,7 +521,6 @@ fun DisplayTabRoute(
                     )
                     transientImportedButtons = emptyList()
                     autoSelectKey = null
-                    autoSelectMusicButton = null
                     saveableStateHolder.removeState(
                         DisplayDestination.ButtonAdd.name
                     )
@@ -570,11 +574,12 @@ fun DisplayTabRoute(
     }
 
     if (showLargePreview) {
+        val preview = if (emptySeniorList) DisplayTabUiState() else uiState
         SeniorScreenLargePreviewDialog(
-            configuration = uiState.screenConfiguration,
-            buttonItems = uiState.configuredButtonItems,
+            configuration = preview.screenConfiguration,
+            buttonItems = preview.configuredButtonItems,
             onDismiss = { showLargePreview = false },
-            todaySchedule = uiState.todaySchedule,
+            todaySchedule = preview.todaySchedule,
         )
     }
 }
@@ -598,19 +603,11 @@ internal fun shouldShowDisplayInitialLoading(
 
 internal fun createInitialButtonOrder(
     currentButtons: List<DisplayHomeButton>,
-    musicButton: SeniorHomeButtonType?,
     appButtons: List<DisplayHomeButton>,
 ): List<DisplayHomeButton> {
-    val musicItem = musicButton?.let { selectedMusic ->
-        currentButtons.firstOrNull { it.type == selectedMusic }
-            ?: selectedMusic.toMusicDisplayButton()
-    }
     val schedule = currentButtons.firstOrNull { it.isDefaultAction("SCHEDULE") }
         ?: requiredDisplayButton(SeniorHomeButtonType.Schedule)
-    val leadingButtons = buildList {
-        musicItem?.let(::add)
-        add(schedule)
-    }
+    val leadingButtons = listOf(schedule)
     val requiredButtons = listOf(
         SeniorHomeButtonType.Settings,
         SeniorHomeButtonType.Medication,
@@ -640,14 +637,10 @@ internal fun List<DisplayHomeButton>.withRequiredSeniorHomeButtons():
     List<DisplayHomeButton> {
     val distinctButtons = distinctBy(DisplayHomeButton::stableKey)
         .filterNot { it.isDefaultAction("EMERGENCY") }
-    val musicButton = distinctButtons.firstOrNull(DisplayHomeButton::isMusicButton)
     val schedule = distinctButtons.firstOrNull { it.isDefaultAction("SCHEDULE") }
         ?: requiredDisplayButton(SeniorHomeButtonType.Schedule)
     val gridButtons = distinctButtons
-        .filterNot { button ->
-            button.isMusicButton() ||
-                button.isDefaultAction("SCHEDULE")
-        }
+        .filterNot { it.isDefaultAction("SCHEDULE") }
         .toMutableList()
 
     listOf(
@@ -664,7 +657,6 @@ internal fun List<DisplayHomeButton>.withRequiredSeniorHomeButtons():
         ?: requiredDisplayButton(SeniorHomeButtonType.Emergency)
 
     return buildList {
-        musicButton?.let(::add)
         add(schedule)
         addAll(gridButtons.withEmergencyAtFixedGridSlot(emergency))
     }
@@ -682,15 +674,14 @@ private fun DisplayHomeButton.isSelectableDefaultOption(): Boolean =
         )
 
 private fun DisplayHomeButton.isSelectableAppButton(): Boolean =
-    !isMusicButton() &&
-        actionValue.uppercase() !in setOf(
-            "SCHEDULE",
-            "COMPANION",
-            "SETTINGS",
-            "MEDICATION",
-            "PHOTO",
-            "EMERGENCY",
-        )
+    actionValue.uppercase() !in setOf(
+        "SCHEDULE",
+        "COMPANION",
+        "SETTINGS",
+        "MEDICATION",
+        "PHOTO",
+        "EMERGENCY",
+    )
 
 private fun requiredDisplayButton(type: SeniorHomeButtonType): DisplayHomeButton {
     val (name, actionValue) = when (type) {
@@ -706,35 +697,5 @@ private fun requiredDisplayButton(type: SeniorHomeButtonType): DisplayHomeButton
         actionType = "DEFAULT",
         actionValue = actionValue,
         type = type,
-    )
-}
-
-private fun SeniorHomeButtonType.toMusicDisplayButton(): DisplayHomeButton {
-    val (label, actionValue, packageName) = when (this) {
-        SeniorHomeButtonType.Melon -> Triple("멜론", "MELON", "com.iloen.melon")
-        SeniorHomeButtonType.Genie -> Triple("지니뮤직", "GENIE", "com.ktmusic.geniemusic")
-        SeniorHomeButtonType.YouTubeMusic -> Triple(
-            "유튜브뮤직",
-            "YOUTUBE_MUSIC",
-            "com.google.android.apps.youtube.music",
-        )
-        SeniorHomeButtonType.Spotify -> Triple("스포티파이", "SPOTIFY", "com.spotify.music")
-        SeniorHomeButtonType.Flo -> Triple("플로", "FLO", "skplanet.musicmate")
-        SeniorHomeButtonType.Vibe -> Triple("바이브", "VIBE", "com.naver.vibe")
-        SeniorHomeButtonType.Bugs -> Triple("벅스", "BUGS", "com.neowiz.android.bugs")
-        SeniorHomeButtonType.SamsungMusic -> Triple(
-            "삼성뮤직",
-            "SAMSUNG_MUSIC",
-            "com.sec.android.app.music",
-        )
-        SeniorHomeButtonType.KakaoMusic -> Triple("카카오뮤직", "KAKAO_MUSIC", "com.kakao.music")
-        else -> error("음악 버튼이 아닙니다: $this")
-    }
-    return DisplayHomeButton(
-        name = label,
-        actionType = "APP",
-        actionValue = actionValue,
-        packageName = packageName,
-        type = this,
     )
 }

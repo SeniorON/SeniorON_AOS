@@ -59,41 +59,4 @@ class InstalledAppPickerTest {
 
         assertEquals(false, pickedApp.requiresManualNameInput)
     }
-
-    @Test
-    fun `지니뮤직 패키지는 지원 음악 앱으로 판별한다`() {
-        val pickedApp = PickedInstalledApp(
-            packageName = "com.ktmusic.geniemusic",
-            label = "지니뮤직",
-        )
-
-        assertEquals(
-            com.example.senior_on.domain.model.display.SeniorHomeButtonType.Genie,
-            pickedApp.supportedMusicButtonTypeOrNull(),
-        )
-    }
-
-    @Test
-    fun `알려진 패키지가 아니어도 지니뮤직 표시명은 지원 음악 앱으로 판별한다`() {
-        val pickedApp = PickedInstalledApp(
-            packageName = "com.example.genie.variant",
-            label = "지니뮤직",
-        )
-
-        assertEquals(
-            com.example.senior_on.domain.model.display.SeniorHomeButtonType.Genie,
-            pickedApp.supportedMusicButtonTypeOrNull(),
-        )
-    }
-
-    @Test
-    fun `일반 앱은 지원 음악 앱으로 오인하지 않는다`() {
-        val pickedApp = PickedInstalledApp(
-            packageName = "com.netflix.mediaclient",
-            label = "넷플릭스",
-        )
-
-        assertNull(pickedApp.supportedMusicButtonTypeOrNull())
-    }
-
 }

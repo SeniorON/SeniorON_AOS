@@ -13,7 +13,6 @@ import com.example.senior_on.data.remote.dto.HomeButtonResponse
 import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
-import com.example.senior_on.data.remote.dto.MusicCardResponse
 import com.example.senior_on.data.remote.dto.SeniorHomeResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
@@ -296,85 +295,6 @@ class DisplayRepositoryImplTest {
     }
 
     @Test
-    fun allSupportedMusicAppsUseBackendEnumValuesAndMapBackToButtons() = runBlocking {
-        val musicCases = listOf(
-            SeniorHomeButtonType.Melon to "MELON",
-            SeniorHomeButtonType.Genie to "GENIE",
-            SeniorHomeButtonType.YouTubeMusic to "YOUTUBE_MUSIC",
-            SeniorHomeButtonType.Spotify to "SPOTIFY",
-            SeniorHomeButtonType.Flo to "FLO",
-            SeniorHomeButtonType.Vibe to "VIBE",
-            SeniorHomeButtonType.Bugs to "BUGS",
-            SeniorHomeButtonType.SamsungMusic to "SAMSUNG_MUSIC",
-            SeniorHomeButtonType.KakaoMusic to "KAKAO_MUSIC",
-        )
-
-        musicCases.forEach { (button, apiValue) ->
-            val savingHomeDataSource = FakeHomeDataSource()
-            val savingRepository = DisplayRepositoryImpl(
-                homeDataSource = savingHomeDataSource,
-                deviceDataSource = FakeDeviceDataSource(),
-            )
-
-            savingRepository.saveButtons(
-                seniorId = TEST_SENIOR_ID,
-                buttons = listOf(
-                    button,
-                    SeniorHomeButtonType.Call,
-                    SeniorHomeButtonType.Message,
-                    SeniorHomeButtonType.Camera,
-                    SeniorHomeButtonType.YouTube,
-                    SeniorHomeButtonType.ChatBuddy,
-                    SeniorHomeButtonType.Medication,
-                    SeniorHomeButtonType.Photo,
-                    SeniorHomeButtonType.Emergency,
-                ),
-                customButtonLabels = emptyMap(),
-            )
-
-            assertEquals(
-                apiValue,
-                savingHomeDataSource.savedButtonRequests.single().musicApp,
-            )
-
-            val loadingRepository = DisplayRepositoryImpl(
-                homeDataSource = FakeHomeDataSource(
-                    homeResponse = HomeResponse(
-                        connection = null,
-                        buttons = emptyList(),
-                        user_name = null,
-                        senior_profile = null,
-                        font_size = "MEDIUM",
-                        music_card = MusicCardResponse(
-                            enabled = true,
-                            icon = null,
-                            music_app = apiValue,
-                            app_name = button.name,
-                            action_type = "APP",
-                            action_value = apiValue.lowercase(),
-                            package_name = null,
-                        ),
-                        today_schedule = null,
-                    )
-                ),
-                deviceDataSource = FakeDeviceDataSource(),
-            )
-
-            assertEquals(
-                button,
-                loadingRepository
-                    .getOverview(
-                        seniorId = TEST_SENIOR_ID,
-                        currentParentInfo = null,
-                    )
-                    .screenConfiguration
-                    .buttons
-                    .first(),
-            )
-        }
-    }
-
-    @Test
     fun offlineDeviceWithConnectionHistoryIsKept() = runBlocking {
         val lastConnectedAt = "2026-08-07T18:05:57.484865"
         val homeDataSource = FakeHomeDataSource(
@@ -550,7 +470,6 @@ class DisplayRepositoryImplTest {
                     detail_address = "101동 202호",
                 ),
                 font_size = "LARGE",
-                music_card = null,
                 today_schedule = null,
             )
         )
@@ -600,7 +519,6 @@ class DisplayRepositoryImplTest {
                         detail_address = null,
                     ),
                     font_size = "MEDIUM",
-                    music_card = null,
                     today_schedule = null,
                 )
             ),
@@ -633,7 +551,6 @@ class DisplayRepositoryImplTest {
                 user_name = null,
                 senior_profile = null,
                 font_size = "LARGE",
-                music_card = null,
                 today_schedule = TodayScheduleResponse(
                     title = "병원 일정",
                     description = "연세세브란스병원",
@@ -701,7 +618,6 @@ class DisplayRepositoryImplTest {
             repository.saveButtons(
                 seniorId = TEST_SENIOR_ID,
                 buttons = listOf(
-                    SeniorHomeButtonType.Melon,
                     SeniorHomeButtonType.Schedule,
                     SeniorHomeButtonType.Call,
                     SeniorHomeButtonType.Emergency,
@@ -715,7 +631,7 @@ class DisplayRepositoryImplTest {
             )
 
             val request = homeDataSource.savedButtonRequests.single()
-            assertEquals("MELON", request.musicApp)
+            assertNull(request.musicApp)
             assertEquals((1..8).toList(), request.buttons.map { it.buttonOrder })
             assertEquals(
                 listOf(
@@ -812,7 +728,6 @@ class DisplayRepositoryImplTest {
                     user_name = null,
                     senior_profile = null,
                     font_size = "LARGE",
-                    music_card = null,
                     today_schedule = null,
                 )
             )
@@ -836,7 +751,7 @@ class DisplayRepositoryImplTest {
         }
 
     @Test
-    fun saveButtonsAllowsTwelveGeneralButtonsWithScheduleAndMusicExcluded() =
+    fun saveButtonsAllowsTwelveGeneralButtonsWithScheduleExcluded() =
         runBlocking {
             val homeDataSource = FakeHomeDataSource()
             val repository = DisplayRepositoryImpl(
@@ -856,15 +771,12 @@ class DisplayRepositoryImplTest {
 
             repository.saveButtons(
                 seniorId = TEST_SENIOR_ID,
-                buttons = listOf(
-                    SeniorHomeButtonType.Melon,
-                    SeniorHomeButtonType.Schedule,
-                ) + optionalButtons,
+                buttons = listOf(SeniorHomeButtonType.Schedule) + optionalButtons,
                 customButtonLabels = emptyMap(),
             )
 
             val request = homeDataSource.savedButtonRequests.single()
-            assertEquals("MELON", request.musicApp)
+            assertNull(request.musicApp)
             assertEquals(12, request.buttons.size)
             assertFalse(request.buttons.any { it.actionValue == "SCHEDULE" })
             assertEquals(
@@ -902,10 +814,7 @@ class DisplayRepositoryImplTest {
         val result = runCatching {
             repository.saveButtons(
                 seniorId = TEST_SENIOR_ID,
-                buttons = listOf(
-                    SeniorHomeButtonType.Spotify,
-                    SeniorHomeButtonType.Schedule,
-                ) + optionalButtons,
+                buttons = listOf(SeniorHomeButtonType.Schedule) + optionalButtons,
                 customButtonLabels = emptyMap(),
             )
         }
@@ -995,7 +904,6 @@ class DisplayRepositoryImplTest {
                 user_name = "담당자",
                 senior_profile = null,
                 font_size = "MEDIUM",
-                music_card = null,
                 today_schedule = null,
             )
         )
@@ -1191,7 +1099,6 @@ private fun homeResponse(connection: ConnectionResponse?) = HomeResponse(
     user_name = null,
     senior_profile = null,
     font_size = "LARGE",
-    music_card = null,
     today_schedule = null,
 )
 
@@ -1224,7 +1131,6 @@ private class FakeHomeDataSource(
         user_name = null,
         senior_profile = null,
         font_size = "LARGE",
-        music_card = null,
         today_schedule = null,
     ),
     private val deviceResponse: DeviceDetailResponse =
@@ -1266,7 +1172,7 @@ private class FakeHomeDataSource(
     }
 
     override suspend fun getSeniorHome() =
-        SeniorHomeResponse(emptyList(), "LARGE", null, null)
+        SeniorHomeResponse(emptyList(), "LARGE", null)
 
     override suspend fun getTodayHospitals(
         seniorId: Long,

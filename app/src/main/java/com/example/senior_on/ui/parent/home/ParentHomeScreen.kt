@@ -70,10 +70,8 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 internal fun ParentHomeScreen(
     configuration: SeniorScreenConfiguration,
-    musicButton: ParentHomeButtonUiModel?,
     buttons: List<ParentHomeButtonUiModel>,
     scheduleUiState: ParentHomeScheduleUiState,
-    onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     isRefreshing: Boolean = false,
@@ -105,10 +103,8 @@ internal fun ParentHomeScreen(
             SeniorHomeContent(
                 now = now,
                 configuration = configuration,
-                musicButton = musicButton,
                 buttons = buttons,
                 scheduleUiState = scheduleUiState,
-                onMusicClick = onMusicClick,
                 onScheduleClick = onScheduleClick,
                 onButtonClick = onButtonClick,
                 onExitHomeClick = onExitHomeClick,
@@ -122,10 +118,8 @@ internal fun ParentHomeScreen(
 internal fun ColumnScope.SeniorHomeContent(
     now: LocalDateTime,
     configuration: SeniorScreenConfiguration,
-    musicButton: ParentHomeButtonUiModel?,
     buttons: List<ParentHomeButtonUiModel>,
     scheduleUiState: ParentHomeScheduleUiState,
-    onMusicClick: (ParentHomeButtonUiModel) -> Unit,
     onScheduleClick: () -> Unit,
     onButtonClick: (ParentHomeButtonUiModel) -> Unit,
     interactionEnabled: Boolean = true,
@@ -144,17 +138,8 @@ internal fun ColumnScope.SeniorHomeContent(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    musicButton?.let { button ->
-        ParentMusicCard(
-            enabled = interactionEnabled,
-            onClick = { onMusicClick(button) },
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-    }
-
     ParentTodayScheduleCard(
         uiState = scheduleUiState,
-        isFeatured = musicButton == null,
         interactionEnabled = interactionEnabled,
         onClick = onScheduleClick,
     )
@@ -268,69 +253,12 @@ private fun ParentDateSettingsHeader(
 }
 
 @Composable
-private fun ParentMusicCard(
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(90.dp)
-            .dropShadow(
-                shape = ParentFeatureCardShape,
-                shadow = Shadow(
-                    radius = 12.dp,
-                    color = Color(0xB2B1C595),
-                    offset = DpOffset(x = 0.dp, y = 4.dp),
-                ),
-            )
-            .clip(ParentFeatureCardShape)
-            .background(SeniorOnColors.Primary700)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "노래 듣기",
-                style = SeniorOnTextStyles.HeadingL,
-                color = SeniorOnColors.SupportWhite100,
-                maxLines = 1,
-            )
-        }
-        Icon(
-            painter = painterResource(R.drawable.ic_big_play),
-            contentDescription = "노래 듣기 실행",
-            modifier = Modifier.size(42.dp),
-            tint = SeniorOnColors.White,
-        )
-    }
-}
-
-@Composable
 private fun ParentTodayScheduleCard(
     uiState: ParentHomeScheduleUiState,
-    isFeatured: Boolean,
     interactionEnabled: Boolean,
     onClick: () -> Unit,
 ) {
     val scheduleCount = uiState.count
-    val backgroundColor = if (isFeatured) {
-        SeniorOnColors.Primary700
-    } else {
-        SeniorOnColors.White
-    }
-    val primaryContentColor = if (isFeatured) {
-        SeniorOnColors.SupportWhite100
-    } else {
-        SeniorOnColors.Gray800
-    }
-    val secondaryContentColor = if (isFeatured) {
-        SeniorOnColors.SupportWhite80
-    } else {
-        SeniorOnColors.Gray600
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -344,12 +272,7 @@ private fun ParentTodayScheduleCard(
                 ),
             )
             .clip(ParentFeatureCardShape)
-            .background(backgroundColor)
-            .border(
-                width = 1.dp,
-                color = if (isFeatured) Color.Transparent else SeniorOnColors.White,
-                shape = ParentFeatureCardShape,
-            )
+            .background(SeniorOnColors.Primary700)
             .clickable(
                 enabled = interactionEnabled && !uiState.isLoading && scheduleCount > 0,
                 onClick = onClick,
@@ -360,11 +283,7 @@ private fun ParentTodayScheduleCard(
         if (uiState.isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(30.dp),
-                color = if (isFeatured) {
-                    SeniorOnColors.SupportWhite100
-                } else {
-                    SeniorOnColors.Schedule
-                },
+                color = SeniorOnColors.SupportWhite100,
                 strokeWidth = 3.dp,
             )
         } else {
@@ -372,14 +291,10 @@ private fun ParentTodayScheduleCard(
                 painter = painterResource(R.drawable.ic_big_schedule),
                 contentDescription = null,
                 modifier = Modifier.size(34.dp),
-                tint = if (isFeatured && scheduleCount == 0) {
+                tint = if (scheduleCount == 0) {
                     SeniorOnColors.SupportWhite80
-                } else if (isFeatured) {
-                    SeniorOnColors.SupportWhite100
-                } else if (scheduleCount == 0) {
-                    SeniorOnColors.Gray300
                 } else {
-                    SeniorOnColors.Schedule
+                    SeniorOnColors.SupportWhite100
                 },
             )
         }
@@ -391,22 +306,14 @@ private fun ParentTodayScheduleCard(
                 text = "오늘 일정을 불러오고 있어요",
                 modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.HeadingL,
-                color = if (isFeatured) {
-                    SeniorOnColors.SupportWhite80
-                } else {
-                    SeniorOnColors.Gray300
-                },
+                color = SeniorOnColors.SupportWhite80,
             )
 
             scheduleCount == 0 -> Text(
-                text = "오늘은 일정이 없어요",
+                text = if (uiState.unavailable) "오늘 일정을 확인할 수 없어요" else "오늘은 일정이 없어요",
                 modifier = Modifier.weight(1f),
                 style = SeniorOnTextStyles.HeadingL,
-                color = if (isFeatured) {
-                    SeniorOnColors.SupportWhite80
-                } else {
-                    SeniorOnColors.Gray300
-                },
+                color = SeniorOnColors.SupportWhite80,
                 maxLines = 1,
             )
 
@@ -417,7 +324,7 @@ private fun ParentTodayScheduleCard(
                     text = uiState.scheduledTime?.toParentDisplayTime()
                         ?: "오늘 일정이 있어요",
                     style = SeniorOnTextStyles.HeadingL,
-                    color = primaryContentColor,
+                    color = SeniorOnColors.SupportWhite100,
                     maxLines = 1,
                 )
                 Text(
@@ -426,7 +333,7 @@ private fun ParentTodayScheduleCard(
                         uiState.description?.takeIf(String::isNotBlank),
                     ).joinToString(" · "),
                     style = SeniorOnTextStyles.HeadingXS,
-                    color = secondaryContentColor,
+                    color = SeniorOnColors.SupportWhite80,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -437,7 +344,7 @@ private fun ParentTodayScheduleCard(
                     text = "오늘 일정 ${scheduleCount}개 있어요",
                     modifier = Modifier.weight(1f),
                     style = SeniorOnTextStyles.HeadingL,
-                    color = primaryContentColor,
+                    color = SeniorOnColors.SupportWhite100,
                     maxLines = 1,
                 )
                 Spacer(modifier = Modifier.width(11.dp))
@@ -446,11 +353,7 @@ private fun ParentTodayScheduleCard(
                     painter = painterResource(R.drawable.ic_sm_arrow_right),
                     contentDescription = "일정 목록 보기",
                     modifier = Modifier.size(34.dp),
-                    tint = if (isFeatured) {
-                        SeniorOnColors.SupportWhite100
-                    } else {
-                        SeniorOnColors.Gray700
-                    },
+                    tint = SeniorOnColors.SupportWhite100,
                 )
             }
         }
@@ -557,16 +460,7 @@ private fun ParentHomeScreenPreview() {
     SENIOR_ONTheme {
         ParentHomeScreen(
             configuration = MockDisplayFixtures.defaultScreenConfiguration,
-            musicButton = ParentHomeButtonUiModel(
-                id = 0,
-                type = SeniorHomeButtonType.Melon,
-                label = "노래 듣기",
-                actionType = "APP",
-                actionValue = "MELON",
-                packageName = "com.iloen.melon",
-            ),
             buttons = MockDisplayFixtures.defaultScreenConfiguration.buttons
-                .filterNot { it == SeniorHomeButtonType.Melon }
                 .mapIndexed { index, type ->
                     ParentHomeButtonUiModel(
                         id = index.toLong(),
@@ -578,7 +472,6 @@ private fun ParentHomeScreenPreview() {
                     )
                 },
             scheduleUiState = ParentHomeScheduleUiState(isLoading = false),
-            onMusicClick = {},
             onScheduleClick = {},
             onButtonClick = {},
         )

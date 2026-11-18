@@ -48,17 +48,6 @@ class HomeServerRepositoryImpl(
                 .sortedBy { button -> button.button_order }
                 .map(HomeButtonResponse::toDomain),
             fontSize = it.font_size.orEmpty(),
-            musicCard = it.music_card?.let { card ->
-                ServerMusicCard(
-                    enabled = card.enabled == true,
-                    icon = card.icon,
-                    musicApp = card.music_app,
-                    appName = card.app_name,
-                    actionType = card.action_type,
-                    actionValue = card.action_value,
-                    packageName = card.package_name,
-                )
-            },
             todaySchedule = it.today_schedule?.let { schedule ->
                 ServerTodaySchedule(
                     title = schedule.title,
@@ -101,13 +90,11 @@ class HomeServerRepositoryImpl(
     }
     override suspend fun saveButtons(
         seniorId: Long,
-        musicApp: String?,
         buttons: List<ServerButton>,
     ) =
         source.saveButtons(
             request = HomeButtonSaveRequest(
                 seniorId = seniorId,
-                musicApp = musicApp,
                 buttons = buttons.map { button ->
                     ButtonRequest(
                         buttonOrder = button.order,
@@ -971,20 +958,20 @@ private fun HomeButtonResponse.toDomain() = ServerButton(
 )
 private fun HospitalListResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
-    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty()
+    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty(), reminderTime
 )
 private fun HospitalDetailResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
-    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty()
+    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty(), reminderTime
 )
 private fun HospitalCreateResponse.toDomain() = HospitalAppointment(
     hospitalId ?: 0, hospitalName.orEmpty(), department.orEmpty(),
-    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty()
+    scheduleDate.orEmpty(), scheduleTime.orEmpty(), reminderType.orEmpty(), reminderTime
 )
 private fun HospitalAppointment.toCreateRequest() =
-    HospitalCreateRequest(hospitalName.trim(), department.trim(), date, time, reminderType)
+    HospitalCreateRequest(hospitalName.trim(), department.trim(), date, time, reminderType, reminderTime)
 private fun HospitalAppointment.toUpdateRequest() =
-    HospitalUpdateRequest(hospitalName.trim(), department.trim(), date, time, reminderType)
+    HospitalUpdateRequest(hospitalName.trim(), department.trim(), date, time, reminderType, reminderTime)
 private fun MedicationInfo.toCreateRequest() =
     MedicationCreateRequest(
         medicineName = name.trim(),

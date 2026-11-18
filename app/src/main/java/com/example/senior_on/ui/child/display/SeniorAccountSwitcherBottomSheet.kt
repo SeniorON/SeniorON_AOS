@@ -56,6 +56,8 @@ internal fun SeniorAccountSwitcherBottomSheet(
     onDismiss: () -> Unit,
     onAccountClick: (ManagedSenior) -> Unit,
     onAddAccountClick: () -> Unit,
+    pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
+    onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -72,6 +74,8 @@ internal fun SeniorAccountSwitcherBottomSheet(
             accounts = accounts,
             onAccountClick = onAccountClick,
             onAddAccountClick = onAddAccountClick,
+            pendingFamilies = pendingFamilies,
+            onPendingFamilyClick = onPendingFamilyClick,
         )
     }
 }
@@ -82,6 +86,8 @@ private fun SeniorAccountSwitcherSheetContent(
     onAccountClick: (ManagedSenior) -> Unit,
     onAddAccountClick: () -> Unit,
     modifier: Modifier = Modifier,
+    pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
+    onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -109,6 +115,16 @@ private fun SeniorAccountSwitcherSheetContent(
                 SeniorAccountDivider()
             }
 
+            items(pendingFamilies.size, key = { "family-${pendingFamilies[it].familyId}" }) { index ->
+                val family = pendingFamilies[index]
+                SeniorAccountRow(
+                    name = if (family.withdrawn) "탈퇴한 시니어" else "등록 중인 시니어",
+                    subtitle = if (family.withdrawn) "탈퇴 안내 확인" else "정보 등록 대기",
+                    withdrawn = family.withdrawn,
+                    onClick = { onPendingFamilyClick(family) },
+                )
+                SeniorAccountDivider()
+            }
             item(key = "add-senior-account") {
                 AddSeniorAccountOption(onClick = onAddAccountClick)
             }
@@ -139,38 +155,51 @@ private fun SeniorAccountSheetDragHandle() {
 private fun SeniorAccountOption(
     account: ManagedSenior,
     onClick: () -> Unit,
+) = SeniorAccountRow(
+    name = account.name,
+    subtitle = if (account.withdrawn) "탈퇴한 시니어" else account.relationship.displayLabel,
+    withdrawn = account.withdrawn,
+    onClick = onClick,
+)
+
+@Composable
+private fun SeniorAccountRow(
+    name: String,
+    subtitle: String,
+    withdrawn: Boolean,
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 67.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Small))
-            .background(if (account.withdrawn) SeniorOnColors.Gray100 else SeniorOnColors.White)
+            .background(if (withdrawn) SeniorOnColors.Gray100 else SeniorOnColors.White)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 role = Role.Button,
-                onClickLabel = if (account.withdrawn) "탈퇴 안내 확인" else "시니어 선택",
+                onClickLabel = if (withdrawn) "탈퇴 안내 확인" else "시니어 선택",
                 onClick = onClick,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SeniorAccountAvatar(withdrawn = account.withdrawn)
+        SeniorAccountAvatar(withdrawn = withdrawn)
 
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = account.name,
+                text = name,
                 style = SeniorOnTextStyles.BodyLSemiBold,
-                color = if (account.withdrawn) SeniorOnColors.Gray500 else SeniorOnColors.Gray800,
+                color = if (withdrawn) SeniorOnColors.Gray500 else SeniorOnColors.Gray800,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (account.withdrawn) "탈퇴한 시니어" else account.relationship.displayLabel,
+                text = subtitle,
                 style = SeniorOnTextStyles.BodySMedium,
-                color = if (account.withdrawn) SeniorOnColors.Gray500 else SeniorOnColors.Gray400,
+                color = if (withdrawn) SeniorOnColors.Gray500 else SeniorOnColors.Gray400,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -265,6 +294,7 @@ private fun SeniorAccountSwitcherSheetPreview() {
             ),
             onAccountClick = {},
             onAddAccountClick = {},
+            pendingFamilies = listOf(com.example.senior_on.domain.model.senior.PendingSeniorFamily(3L)),
             modifier = Modifier.background(SeniorOnColors.White),
         )
     }

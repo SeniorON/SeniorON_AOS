@@ -385,6 +385,7 @@ private fun HospitalAppointment.toUiState(highlighted: Boolean): HospitalAppoint
         daysLeft = daysLeft,
         highlighted = highlighted,
         reminder = reminderType.toHospitalReminder(),
+        reminderTime = reminderTime.toLocalTimeOrNull(),
     )
 }
 
@@ -396,6 +397,7 @@ private fun HospitalAppointmentDraft.toDomain(id: Long): HospitalAppointment =
         date = date.toString(),
         time = time.format(TimeFormatter),
         reminderType = reminder.toApiValue(),
+        reminderTime = if (reminder == HospitalReminder.None) null else (reminderTime ?: time).format(TimeFormatter),
     )
 
 private fun HospitalReminder.toApiValue(): String = when (this) {

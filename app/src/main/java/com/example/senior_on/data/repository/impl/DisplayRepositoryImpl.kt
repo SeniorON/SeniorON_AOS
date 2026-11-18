@@ -9,7 +9,6 @@ import com.example.senior_on.data.remote.dto.HomeButtonResponse
 import com.example.senior_on.data.remote.dto.HomeButtonSaveRequest
 import com.example.senior_on.data.remote.dto.HomeFontSizeUpdateRequest
 import com.example.senior_on.data.remote.dto.HomeResponse
-import com.example.senior_on.data.remote.dto.MusicCardResponse
 import com.example.senior_on.data.remote.dto.SeniorHomeResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileResponse
 import com.example.senior_on.data.remote.dto.SeniorProfileUpdateRequest
@@ -214,11 +213,6 @@ class DisplayRepositoryImpl private constructor(
         }
 
         val distinctButtons = buttons.distinct()
-        val musicButtons = distinctButtons.filter(SeniorHomeButtonType::isMusic)
-        require(musicButtons.size <= 1) {
-            "음악 앱은 하나만 선택할 수 있습니다."
-        }
-        val musicButton = musicButtons.singleOrNull()
         val normalizedButtons = distinctButtons.normalizeButtonsForSave()
         require(normalizedButtons.size >= MINIMUM_BUTTON_COUNT) {
             "홈 화면 일반 버튼은 최소 ${MINIMUM_BUTTON_COUNT}개 이상이어야 합니다."
@@ -261,7 +255,6 @@ class DisplayRepositoryImpl private constructor(
         requireNotNull(homeDataSource).saveButtons(
             request = HomeButtonSaveRequest(
                 seniorId = seniorId,
-                musicApp = musicButton?.toMusicAppValue(),
                 buttons = requests,
             )
         )
@@ -285,10 +278,6 @@ class DisplayRepositoryImpl private constructor(
         }
 
         val distinctButtons = buttons.distinctBy(DisplayHomeButton::stableKey)
-        val musicButtons = distinctButtons.filter(DisplayHomeButton::isMusicButton)
-        require(musicButtons.size <= 1) {
-            "음악 앱은 하나만 선택할 수 있습니다."
-        }
         val normalizedButtons = distinctButtons.normalizeButtonItemsForSave()
         require(normalizedButtons.size >= MINIMUM_BUTTON_COUNT) {
             "홈 화면 일반 버튼은 최소 ${MINIMUM_BUTTON_COUNT}개 이상이어야 합니다."
@@ -334,7 +323,6 @@ class DisplayRepositoryImpl private constructor(
         requireNotNull(homeDataSource).saveButtons(
             request = HomeButtonSaveRequest(
                 seniorId = seniorId,
-                musicApp = musicButtons.singleOrNull()?.type?.toMusicAppValue(),
                 buttons = requests,
             )
         )
@@ -359,18 +347,12 @@ private fun HomeResponse.toDisplayOverview(
     currentParentInfo: ParentInfo?,
     buttonOptions: List<ButtonOptionResponse>,
 ): DisplayOverview {
-    val musicButton = music_card
-        ?.takeIf { it.enabled != false }
-        ?.music_app
-        .toMusicButtonType()
     val savedAppButtons = buttons
         .orEmpty()
         .sortedBy { it.button_order ?: Int.MAX_VALUE }
         .mapNotNull { response ->
             response.toButtonType()
-                ?.takeIf {
-                    !it.isMusic() && it != SeniorHomeButtonType.Schedule
-                }
+                ?.takeUnless { it == SeniorHomeButtonType.Schedule }
                 ?.let { button -> button to response }
         }
         .distinctBy { (button, _) -> button }
@@ -387,7 +369,6 @@ private fun HomeResponse.toDisplayOverview(
         }
     }.toMap()
     val configuredButtons = buildList {
-        musicButton?.let(::add)
         add(SeniorHomeButtonType.Schedule)
         addAll(
             savedAppButtons
@@ -397,7 +378,6 @@ private fun HomeResponse.toDisplayOverview(
     }.distinct()
 
     val configuredButtonItems = buildList {
-        music_card.toDisplayHomeButton()?.let(::add)
         add(SeniorHomeButtonType.Schedule.toDisplayHomeButton())
         buttons.orEmpty()
             .sortedBy { it.button_order ?: Int.MAX_VALUE }
@@ -413,7 +393,7 @@ private fun HomeResponse.toDisplayOverview(
         ),
         parentInfo = senior_profile.toParentInfo(currentParentInfo),
         todaySchedule = today_schedule.toDisplayTodaySchedule(),
-        availableButtonTypes = BUTTON_API_METADATA.keys + MUSIC_BUTTON_TYPES,
+        availableButtonTypes = BUTTON_API_METADATA.keys,
         configuredButtonItems = configuredButtonItems,
         availableButtonOptions = (
             buttonOptions
@@ -431,18 +411,12 @@ private fun HomeResponse.toDisplayOverview(
 
 private fun SeniorHomeResponse.toSeniorScreenConfiguration():
     SeniorScreenConfiguration {
-    val musicButton = music_card
-        ?.takeIf { it.enabled != false }
-        ?.music_app
-        .toMusicButtonType()
     val savedAppButtons = buttons
         .orEmpty()
         .sortedBy { it.button_order ?: Int.MAX_VALUE }
         .mapNotNull { response ->
             response.toButtonType()
-                ?.takeIf {
-                    !it.isMusic() && it != SeniorHomeButtonType.Schedule
-                }
+                ?.takeUnless { it == SeniorHomeButtonType.Schedule }
                 ?.let { button -> button to response }
         }
         .distinctBy { (button, _) -> button }
@@ -459,7 +433,6 @@ private fun SeniorHomeResponse.toSeniorScreenConfiguration():
         }
     }.toMap()
     val configuredButtons = buildList {
-        musicButton?.let(::add)
         add(SeniorHomeButtonType.Schedule)
         addAll(
             savedAppButtons
@@ -704,22 +677,6 @@ private fun ButtonOptionResponse.toDisplayHomeButton(): DisplayHomeButton? {
     )
 }
 
-private fun MusicCardResponse?.toDisplayHomeButton(): DisplayHomeButton? {
-    if (this == null || enabled == false) return null
-    val musicType = music_app.toMusicButtonType() ?: return null
-    return DisplayHomeButton(
-        name = app_name?.trim()?.takeIf(String::isNotEmpty)
-            ?: musicType.toMusicAppValue(),
-        icon = icon,
-        actionType = action_type?.trim()?.takeIf(String::isNotEmpty)
-            ?: APP_ACTION_TYPE,
-        actionValue = action_value?.trim()?.takeIf(String::isNotEmpty)
-            ?: musicType.toMusicAppValue(),
-        packageName = package_name?.trim()?.takeIf(String::isNotEmpty),
-        type = musicType,
-    )
-}
-
 private fun resolveButtonType(
     name: String?,
     actionType: String?,
@@ -774,42 +731,11 @@ private fun String?.toSeniorFontSize(): SeniorFontSize = when (
     else -> SeniorFontSize.Large
 }
 
-private fun SeniorHomeButtonType.isMusic(): Boolean = this in MUSIC_BUTTON_TYPES
-
-private fun SeniorHomeButtonType.toMusicAppValue(): String = when (this) {
-    SeniorHomeButtonType.Melon -> "MELON"
-    SeniorHomeButtonType.Genie -> "GENIE"
-    SeniorHomeButtonType.YouTubeMusic -> "YOUTUBE_MUSIC"
-    SeniorHomeButtonType.Spotify -> "SPOTIFY"
-    SeniorHomeButtonType.Flo -> "FLO"
-    SeniorHomeButtonType.Vibe -> "VIBE"
-    SeniorHomeButtonType.Bugs -> "BUGS"
-    SeniorHomeButtonType.SamsungMusic -> "SAMSUNG_MUSIC"
-    SeniorHomeButtonType.KakaoMusic -> "KAKAO_MUSIC"
-    else -> error("$name 버튼은 음악 앱이 아닙니다.")
-}
-
-private fun String?.toMusicButtonType(): SeniorHomeButtonType? = when (
-    this?.trim()?.uppercase()
-) {
-    "MELON" -> SeniorHomeButtonType.Melon
-    "GENIE" -> SeniorHomeButtonType.Genie
-    "YOUTUBE_MUSIC" -> SeniorHomeButtonType.YouTubeMusic
-    "SPOTIFY" -> SeniorHomeButtonType.Spotify
-    "FLO" -> SeniorHomeButtonType.Flo
-    "VIBE" -> SeniorHomeButtonType.Vibe
-    "BUGS" -> SeniorHomeButtonType.Bugs
-    "SAMSUNG_MUSIC" -> SeniorHomeButtonType.SamsungMusic
-    "KAKAO_MUSIC" -> SeniorHomeButtonType.KakaoMusic
-    else -> null
-}
-
 private fun List<SeniorHomeButtonType>.normalizeButtonsForSave():
     List<SeniorHomeButtonType> {
     val gridButtons = distinct()
         .filterNot { button ->
-            button.isMusic() ||
-                button == SeniorHomeButtonType.Schedule ||
+            button == SeniorHomeButtonType.Schedule ||
                 button == SeniorHomeButtonType.Emergency
         }
         .toMutableList()
@@ -833,8 +759,7 @@ private fun List<DisplayHomeButton>.normalizeButtonItemsForSave():
     List<DisplayHomeButton> {
     val gridButtons = distinctBy(DisplayHomeButton::stableKey)
         .filterNot { button ->
-            button.isMusicButton() ||
-                button.isDefaultAction("SCHEDULE") ||
+            button.isDefaultAction("SCHEDULE") ||
                 button.isDefaultAction("EMERGENCY")
         }
         .toMutableList()
@@ -853,21 +778,16 @@ private fun List<DisplayHomeButton>.normalizeButtonItemsForSave():
     return gridButtons
 }
 
-private fun DisplayHomeButton.isMusicButton(): Boolean =
-    type in MUSIC_BUTTON_TYPES
-
 private fun SeniorHomeButtonType.toDisplayHomeButton(
     customName: String? = null,
 ): DisplayHomeButton {
-    val isMusic = this in MUSIC_BUTTON_TYPES
-    val metadata = BUTTON_API_METADATA[this]
+    val metadata = BUTTON_API_METADATA.getValue(this)
     return DisplayHomeButton(
         name = customName?.trim()?.takeIf(String::isNotEmpty)
-            ?: metadata?.buttonName
-            ?: toMusicAppValue(),
-        actionType = if (isMusic) APP_ACTION_TYPE else toApiActionType(),
-        actionValue = if (isMusic) toMusicAppValue() else toApiActionValue(),
-        packageName = if (isMusic) null else metadata?.packageName,
+            ?: metadata.buttonName,
+        actionType = toApiActionType(),
+        actionValue = toApiActionValue(),
+        packageName = metadata.packageName,
         type = this,
     )
 }
@@ -882,6 +802,7 @@ private fun SeniorHomeButtonType.toApiActionType(): String =
 private fun SeniorHomeButtonType.toApiActionValue(): String =
     DEFAULT_BUTTON_ACTION_VALUES[this]
         ?: APP_BUTTON_ACTION_VALUES[this]
+        ?: BUTTON_API_METADATA[this]?.packageName
         ?: error("$name 버튼의 액션 값이 정의되지 않았습니다.")
 
 private fun String?.toRelationshipLabel(
@@ -910,18 +831,6 @@ private fun String?.toLocalDateOrNull(): LocalDate? =
 
 private fun String?.toButtonKey(): String =
     this.orEmpty().lowercase().filter(Char::isLetterOrDigit)
-
-private val MUSIC_BUTTON_TYPES = setOf(
-    SeniorHomeButtonType.Melon,
-    SeniorHomeButtonType.Genie,
-    SeniorHomeButtonType.YouTubeMusic,
-    SeniorHomeButtonType.Spotify,
-    SeniorHomeButtonType.Flo,
-    SeniorHomeButtonType.Vibe,
-    SeniorHomeButtonType.Bugs,
-    SeniorHomeButtonType.SamsungMusic,
-    SeniorHomeButtonType.KakaoMusic,
-)
 
 private val DEFAULT_INTENT_BUTTON_OPTIONS = listOf(
     defaultIntentButton("전화", "PHONE", SeniorHomeButtonType.Call),
@@ -1202,6 +1111,15 @@ private val BUTTON_API_METADATA = mapOf(
         buttonName = "카메라",
         packageName = null,
     ),
+    SeniorHomeButtonType.Melon to ButtonApiMetadata("멜론", "com.iloen.melon"),
+    SeniorHomeButtonType.Genie to ButtonApiMetadata("지니뮤직", "com.ktmusic.geniemusic"),
+    SeniorHomeButtonType.YouTubeMusic to ButtonApiMetadata("유튜브 뮤직", "com.google.android.apps.youtube.music"),
+    SeniorHomeButtonType.Spotify to ButtonApiMetadata("스포티파이", "com.spotify.music"),
+    SeniorHomeButtonType.Flo to ButtonApiMetadata("플로", "skplanet.musicmate"),
+    SeniorHomeButtonType.Vibe to ButtonApiMetadata("바이브", "com.naver.vibe"),
+    SeniorHomeButtonType.Bugs to ButtonApiMetadata("벅스", "com.neowiz.android.bugs"),
+    SeniorHomeButtonType.SamsungMusic to ButtonApiMetadata("삼성 뮤직", "com.sec.android.app.music"),
+    SeniorHomeButtonType.KakaoMusic to ButtonApiMetadata("카카오뮤직", "com.kakao.music"),
 )
 
 private val BUTTON_TYPE_BY_PACKAGE: Map<String, SeniorHomeButtonType> = buildMap {

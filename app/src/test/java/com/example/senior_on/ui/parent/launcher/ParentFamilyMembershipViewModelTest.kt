@@ -21,7 +21,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ParentFamilyMembershipViewModelTest {
     @Test
-    fun membershipUsesHasFamilyEvenWhenSeniorIdIsMissing() = runTest {
+    fun missingProfileWaitsInsteadOfOpeningHome() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()
         var hasFamily = true
@@ -33,12 +33,64 @@ class ParentFamilyMembershipViewModelTest {
         try {
             val vm = ParentFamilyMembershipViewModel(auth).also { store.put("membership", it) }
             advanceUntilIdle()
-            assertEquals(ParentFamilyMembershipStatus.Connected, vm.uiState.value.status)
+            assertEquals(ParentFamilyMembershipStatus.ProfilePending, vm.uiState.value.status)
             hasFamily = false
             vm.checkFamilyMembership()
             advanceUntilIdle()
             assertEquals(ParentFamilyMembershipStatus.NotConnected, vm.uiState.value.status)
             assertEquals(2, calls)
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun joiningRechecksAndOnlyCompletedProfileOpensHome() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        var ready = false
+        val auth = authStub {
+            OnboardingStatus(true, CareManagerType.None, if (ready) 3L else null,
+                ready, false, ready)
+        }
+        try {
+            val vm = ParentFamilyMembershipViewModel(auth).also { store.put("membership", it) }
+            advanceUntilIdle()
+            vm.onFamilyJoined()
+            advanceUntilIdle()
+            assertEquals(ParentFamilyMembershipStatus.ProfilePending, vm.uiState.value.status)
+            ready = true
+            vm.checkFamilyMembership()
+            advanceUntilIdle()
+            assertEquals(ParentFamilyMembershipStatus.Connected, vm.uiState.value.status)
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun familiesResponseOverridesLegacySummaryAndDuplicateRefreshIsIgnored() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        var calls = 0
+        val auth = authStub {
+            calls++
+            OnboardingStatus(true, CareManagerType.None, 3L, true, true, true,
+                families = listOf(com.example.senior_on.domain.model.auth.OnboardingFamilyStatus(
+                    familyId = 1L, managerType = CareManagerType.None, parentUserId = null,
+                    seniorId = null, seniorName = null, seniorProfileCompleted = false,
+                    relationRegistered = false,
+                )))
+        }
+        try {
+            val vm = ParentFamilyMembershipViewModel(auth).also { store.put("membership", it) }
+            vm.checkFamilyMembership()
+            vm.checkFamilyMembership()
+            advanceUntilIdle()
+            assertEquals(1, calls)
+            assertEquals(ParentFamilyMembershipStatus.ProfilePending, vm.uiState.value.status)
         } finally {
             store.clear()
             Dispatchers.resetMain()

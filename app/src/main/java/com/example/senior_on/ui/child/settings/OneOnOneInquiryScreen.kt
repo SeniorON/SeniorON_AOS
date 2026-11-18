@@ -132,6 +132,8 @@ fun OneOnOneInquiryRoute(
         onBackClick = onBackClick,
         historyItems = uiState.historyItems.map { it.toHistoryItem() },
         isHistoryLoading = uiState.isHistoryLoading,
+        isHistoryRefreshing = uiState.isHistoryRefreshing,
+        onHistoryRefresh = viewModel::refreshInquiries,
         historyError = uiState.historyErrorMessage,
         onHistoryTabSelected = viewModel::loadInquiries,
         onInquiryExpand = viewModel::loadInquiryDetail,
@@ -158,6 +160,8 @@ private fun OneOnOneInquiryScreen(
     isHistoryLoading: Boolean = false,
     historyError: String? = null,
     onHistoryTabSelected: () -> Unit = {},
+    isHistoryRefreshing: Boolean = false,
+    onHistoryRefresh: () -> Unit = onHistoryTabSelected,
     onInquiryExpand: (String) -> Unit = {},
     isSubmitting: Boolean = false,
     submitCompleted: Boolean = false,
@@ -260,8 +264,8 @@ private fun OneOnOneInquiryScreen(
                 )
 
                 OneOnOneInquiryTab.History -> PullToRefreshBox(
-                    isRefreshing = isHistoryLoading && historyItems.isNotEmpty(),
-                    onRefresh = onHistoryTabSelected,
+                    isRefreshing = isHistoryRefreshing,
+                    onRefresh = onHistoryRefresh,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
                     Column(Modifier.fillMaxSize()) {
@@ -273,7 +277,7 @@ private fun OneOnOneInquiryScreen(
                         if (historyError == null || historyItems.isNotEmpty()) {
                             OneOnOneInquiryHistoryContent(
                                 items = historyItems,
-                                isLoading = isHistoryLoading && historyItems.isEmpty(),
+                                isLoading = isHistoryLoading && !isHistoryRefreshing && historyItems.isEmpty(),
                                 onInquiryExpand = onInquiryExpand,
                             )
                         } else {

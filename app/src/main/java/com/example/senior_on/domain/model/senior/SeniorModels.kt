@@ -45,7 +45,19 @@ data class ManagedSenior(
 data class SeniorWithdrawalNotice(
     val withdrawalNoticeId: Long,
     val familyId: Long,
-    val seniorId: Long,
+    val seniorId: Long?,
     val seniorName: String,
     val withdrawnAt: String,
+)
+
+/** A family is selectable before a Senior profile exists; never invent a senior ID. */
+data class PendingSeniorFamily(
+    val familyId: Long,
+    val withdrawn: Boolean = false,
+    val withdrawalNoticeId: Long? = null,
+)
+
+data class ManagedFamilyList(
+    val seniors: List<ManagedSenior>,
+    val pendingFamilies: List<PendingSeniorFamily> = emptyList(),
 )

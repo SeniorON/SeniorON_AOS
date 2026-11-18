@@ -27,7 +27,6 @@ object MockDisplayFixtures {
 
     val defaultScreenConfiguration = SeniorScreenConfiguration(
         buttons = listOf(
-            SeniorHomeButtonType.Melon,
             SeniorHomeButtonType.Schedule,
         ) + previewGridButtons,
     )

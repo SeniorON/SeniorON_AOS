@@ -29,8 +29,12 @@ class SeniorOnApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AccessTokenStore.initialize(this)
+        val sessionStore = com.example.senior_on.data.source.auth.PersistedSessionStore(this)
+        val canRecoverSession = sessionStore.getSession() != null &&
+            AccessTokenStore.getRefreshToken() != null
+        if (AccessTokenStore.getBearerToken() == null && !canRecoverSession) sessionStore.clear()
         com.example.senior_on.data.local.ParentConnectionGate.initialize(
-            com.example.senior_on.data.source.auth.PersistedSessionStore(this).getSession()?.role ==
+            sessionStore.getSession()?.role ==
                 com.example.senior_on.data.remote.dto.UserRole.PARENT
         )
         FcmTokenSyncScheduler.enqueueIfLoggedIn(this)

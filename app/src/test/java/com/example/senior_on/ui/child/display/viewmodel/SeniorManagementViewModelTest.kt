@@ -33,6 +33,70 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeniorManagementViewModelTest {
+    @Test fun `pending join is listed and a new add does not resume old family`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repo = FakeSeniorRepository().apply {
+                pendingFamilies = listOf(com.example.senior_on.domain.model.senior.PendingSeniorFamily(31))
+            }
+            val families = FakeFamilyRepository(joinResult = FamilyCodeInfo(31L, "CODE"))
+            val vm = SeniorManagementViewModel(repo, families)
+            advanceUntilIdle()
+            vm.joinSenior("CODE") { error("No senior profile exists") }
+            advanceUntilIdle()
+            assertEquals(31L, vm.uiState.value.pendingJoinedFamilyId)
+            assertNull(vm.uiState.value.errorMessage)
+            assertEquals(1, vm.uiState.value.pendingFamilies.size)
+            vm.startFreshAddition()
+            assertNull(vm.uiState.value.joinedFamilyId)
+            assertNull(vm.uiState.value.pendingJoinedFamilyId)
+            assertEquals(1, vm.uiState.value.pendingFamilies.size)
+            assertEquals(0, families.createCodeRequestCount)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `only primary may resume pending family and exact family is retained`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            for (role in listOf(CareManagerType.Primary, CareManagerType.Sub)) {
+                val vm = SeniorManagementViewModel(FakeSeniorRepository(), FakeFamilyRepository(), familyRole = { role })
+                advanceUntilIdle()
+                var ready = false
+                var message: String? = null
+                vm.resumePendingFamily(42, { ready = true }, { message = it })
+                advanceUntilIdle()
+                assertEquals(role == CareManagerType.Primary, ready)
+                if (ready) assertEquals(42L, vm.uiState.value.createdFamilyId)
+                else { assertNull(vm.uiState.value.createdFamilyId); assertTrue(message != null) }
+            }
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `empty list pull refresh stops on success or failure and can discover a senior`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repo = FakeSeniorRepository()
+            val vm = SeniorManagementViewModel(repo, FakeFamilyRepository())
+            advanceUntilIdle()
+            for (attempt in 1..3) {
+                repo.failList = attempt == 2
+                if (attempt == 3) repo.managedSeniors = listOf(managedSenior(7))
+                val gate = CompletableDeferred<Unit>()
+                repo.listGate = gate
+                vm.refreshEmptyList()
+                runCurrent()
+                vm.refreshEmptyList()
+                assertTrue(vm.uiState.value.isRefreshingList)
+                assertEquals(1 + attempt, repo.managedListRequestCount)
+                gate.complete(Unit)
+                advanceUntilIdle()
+                assertFalse(vm.uiState.value.isRefreshingList)
+                assertEquals(attempt == 2, vm.uiState.value.listError != null)
+                assertEquals(repo.managedSeniors, vm.uiState.value.managedSeniors)
+            }
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `withdrawal ack is single flight and refresh retry never repeats ack`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -503,6 +567,10 @@ private class FakeSeniorRepository(
     var managedSeniors: List<ManagedSenior> = emptyList(),
     private val createGate: CompletableDeferred<Unit>? = null,
 ) : SeniorRepository {
+    var pendingFamilies = emptyList<com.example.senior_on.domain.model.senior.PendingSeniorFamily>()
+    override suspend fun getManagedFamilies() = com.example.senior_on.domain.model.senior.ManagedFamilyList(
+        getManagedSeniors(), pendingFamilies,
+    )
     var ackCount = 0
     var failAck = false
     var notices = emptyList<com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice>()
@@ -512,6 +580,7 @@ private class FakeSeniorRepository(
         if (failAck) error("ack failed")
     }
     var managedListRequestCount = 0
+    var listGate: CompletableDeferred<Unit>? = null
     var failList = false
     var createRequestCount = 0
     var createdFamilyId: Long? = null
@@ -538,6 +607,7 @@ private class FakeSeniorRepository(
 
     override suspend fun getManagedSeniors(): List<ManagedSenior> {
         managedListRequestCount += 1
+        listGate?.await()
         if (failList) error("network failed")
         return managedSeniors
     }

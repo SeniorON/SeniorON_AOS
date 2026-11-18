@@ -61,18 +61,6 @@ internal val ProvidedFeatureButtons = listOf(
     SeniorHomeButtonType.Schedule,
 )
 
-internal val MusicButtons = listOf(
-    SeniorHomeButtonType.Melon,
-    SeniorHomeButtonType.Genie,
-    SeniorHomeButtonType.YouTubeMusic,
-    SeniorHomeButtonType.Spotify,
-    SeniorHomeButtonType.Flo,
-    SeniorHomeButtonType.Vibe,
-    SeniorHomeButtonType.Bugs,
-    SeniorHomeButtonType.SamsungMusic,
-    SeniorHomeButtonType.KakaoMusic,
-)
-
 internal fun buttonAddSelectedCount(selectedAppCount: Int): Int =
     RequiredGeneralButtonCount + selectedAppCount
 
@@ -102,18 +90,13 @@ internal fun resolveButtonEditDraftAfterButtonAdd(
 fun DisplayButtonAddScreen(
     initialSelectedButtons: List<DisplayHomeButton>,
     modifier: Modifier = Modifier,
-    initialMusicButton: SeniorHomeButtonType? = null,
     availableDefaultButtons: List<DisplayHomeButton> = emptyList(),
     transientImportedButtons: List<DisplayHomeButton> = emptyList(),
     autoSelectKey: String? = null,
-    autoSelectMusicButton: SeniorHomeButtonType? = null,
     autoSelectEvent: Int = 0,
     onBackClick: () -> Unit = {},
     onImportAppClick: () -> Unit = {},
-    onSaveClick: (
-        musicButton: SeniorHomeButtonType?,
-        appButtons: List<DisplayHomeButton>,
-    ) -> Unit = { _, _ -> },
+    onSaveClick: (List<DisplayHomeButton>) -> Unit = {},
 ) {
     val candidateButtons = remember(
         availableDefaultButtons,
@@ -131,9 +114,6 @@ fun DisplayButtonAddScreen(
                 .map(DisplayHomeButton::stableKey)
                 .distinct(),
         )
-    }
-    var selectedMusicName by remember(initialMusicButton) {
-        mutableStateOf(initialMusicButton?.takeIf(MusicButtons::contains)?.name)
     }
     var limitMessageEvent by remember { mutableIntStateOf(0) }
     var showLimitMessage by remember { mutableStateOf(false) }
@@ -161,14 +141,7 @@ fun DisplayButtonAddScreen(
         }
     }
 
-    LaunchedEffect(autoSelectEvent, autoSelectKey, autoSelectMusicButton) {
-        autoSelectMusicButton
-            ?.takeIf(MusicButtons::contains)
-            ?.let { musicButton ->
-                selectedMusicName = musicButton.name
-                return@LaunchedEffect
-            }
-
+    LaunchedEffect(autoSelectEvent, autoSelectKey) {
         val key = autoSelectKey ?: return@LaunchedEffect
         if (key in selectedButtonKeys || key !in candidateByKey) {
             return@LaunchedEffect
@@ -179,10 +152,6 @@ fun DisplayButtonAddScreen(
         }
         selectedButtonKeys = selectedButtonKeys + key
         minimumWarningCount = null
-    }
-
-    fun toggleMusic(button: SeniorHomeButtonType) {
-        selectedMusicName = if (selectedMusicName == button.name) null else button.name
     }
 
     fun toggleAppButton(button: DisplayHomeButton) {
@@ -216,10 +185,7 @@ fun DisplayButtonAddScreen(
                 enabled = canSave,
                 onBackClick = onBackClick,
                 onSaveClick = {
-                    onSaveClick(
-                        selectedMusicName?.let(SeniorHomeButtonType::valueOf),
-                        selectedButtonKeys.mapNotNull(candidateByKey::get),
-                    )
+                    onSaveClick(selectedButtonKeys.mapNotNull(candidateByKey::get))
                 },
             )
 
@@ -236,19 +202,6 @@ fun DisplayButtonAddScreen(
                     FixedButtonSection(
                         title = "제공 기능",
                         buttons = ProvidedFeatureButtons,
-                        selectedButtonNames = emptySet(),
-                        rowType = ButtonAddRowType.Provided,
-                        onButtonClick = {},
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(20.dp)) }
-                item {
-                    FixedButtonSection(
-                        title = "상단 섹션",
-                        buttons = MusicButtons,
-                        selectedButtonNames = selectedMusicName?.let(::setOf).orEmpty(),
-                        rowType = ButtonAddRowType.Music,
-                        onButtonClick = ::toggleMusic,
                     )
                 }
                 item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -295,10 +248,7 @@ private fun DisplayHomeButton.isProtectedButton(): Boolean =
         "MEDICATION",
         "PHOTO",
         "EMERGENCY",
-    ) || type in MusicButtons
-
-internal fun DisplayHomeButton.importedMusicButtonTypeOrNull(): SeniorHomeButtonType? =
-    type?.takeIf(MusicButtons::contains)
+    )
 
 @Composable
 private fun AppButtonSection(
@@ -508,15 +458,10 @@ private fun ButtonAddTopBar(
     }
 }
 
-private enum class ButtonAddRowType { Provided, Music }
-
 @Composable
 private fun FixedButtonSection(
     title: String,
     buttons: List<SeniorHomeButtonType>,
-    selectedButtonNames: Set<String>,
-    rowType: ButtonAddRowType,
-    onButtonClick: (SeniorHomeButtonType) -> Unit,
 ) {
     Text(
         text = title,
@@ -541,12 +486,7 @@ private fun FixedButtonSection(
             .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
         buttons.forEachIndexed { index, button ->
-            FixedButtonRow(
-                button = button,
-                selected = button.name in selectedButtonNames,
-                rowType = rowType,
-                onClick = { onButtonClick(button) },
-            )
+            FixedButtonRow(button)
             if (index != buttons.lastIndex) {
                 Spacer(
                     modifier = Modifier
@@ -562,15 +502,8 @@ private fun FixedButtonSection(
 @Composable
 private fun FixedButtonRow(
     button: SeniorHomeButtonType,
-    selected: Boolean,
-    rowType: ButtonAddRowType,
-    onClick: () -> Unit,
 ) {
-    val clickable = rowType != ButtonAddRowType.Provided
-    val label = if (
-        rowType == ButtonAddRowType.Provided &&
-        button == SeniorHomeButtonType.Emergency
-    ) {
+    val label = if (button == SeniorHomeButtonType.Emergency) {
         "긴급 알림"
     } else {
         button.displayLabel()
@@ -578,35 +511,15 @@ private fun FixedButtonRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
-            .then(
-                if (clickable) Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ) else Modifier,
-            ),
+            .height(44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            style = if (selected) SeniorOnTextStyles.BodyLSemiBold
-            else SeniorOnTextStyles.BodyMMedium,
-            color = when {
-                rowType == ButtonAddRowType.Provided -> SeniorOnColors.Gray300
-                selected -> SeniorOnColors.Gray300
-                else -> SeniorOnColors.Gray800
-            },
+            style = SeniorOnTextStyles.BodyMMedium,
+            color = SeniorOnColors.Gray300,
         )
-        if (selected) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_check),
-                contentDescription = "$label 선택됨",
-                modifier = Modifier.size(24.dp),
-                tint = SeniorOnColors.Gray800,
-            )
-        }
     }
 }
 

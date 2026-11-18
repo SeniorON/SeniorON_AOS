@@ -34,7 +34,7 @@ class OnboardingFamiliesTest {
             check(method.name == "getOnboardingStatus")
             dto
         } as AuthDataSource
-        val mapped = AuthRepositoryImpl(source).getOnboardingStatus()
+        val mapped = AuthRepositoryImpl(source) {}.getOnboardingStatus()
         assertEquals(AppUserMode.Child, mapped.currentUserMode)
         assertEquals(2, mapped.families!!.size)
         val chosen = mapped.forUser(AppUserMode.Child)

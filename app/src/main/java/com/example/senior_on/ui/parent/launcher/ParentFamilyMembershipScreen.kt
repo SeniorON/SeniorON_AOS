@@ -35,6 +35,8 @@ internal fun ParentFamilyMembershipLoadingScreen(
 internal fun ParentFamilyMembershipErrorScreen(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
+    message: String = "가족 연결 상태를 확인하지 못했어요.",
+    onExitHomeClick: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -45,7 +47,7 @@ internal fun ParentFamilyMembershipErrorScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "가족 연결 상태를 확인하지 못했어요.",
+            text = message,
             style = SeniorOnTextStyles.HeadingM,
             color = SeniorOnColors.Gray800,
         )
@@ -57,6 +59,9 @@ internal fun ParentFamilyMembershipErrorScreen(
             ),
         ) {
             Text(text = "다시 시도")
+        }
+        onExitHomeClick?.let { exit ->
+            androidx.compose.material3.TextButton(onClick = exit) { Text("휴대폰 홈으로") }
         }
     }
 }

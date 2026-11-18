@@ -67,7 +67,7 @@ fun ParentLauncherRoute(
     homeRequest: Int = 0,
     onActivityRecordingEligibilityChanged: (Boolean) -> Unit = {},
 ) {
-
+    if (com.example.senior_on.ui.app.SessionRecoveryGate(modifier)) return
     val sessionExpirationEvent by
         SessionExpirationEventStore.pendingEvent.collectAsStateWithLifecycle()
     var needsLogin by remember { mutableStateOf(AccessTokenStore.getBearerToken() == null) }
@@ -151,16 +151,27 @@ fun ParentLauncherRoute(
 
         ParentFamilyMembershipStatus.NotConnected ->
             FamilyShareCodeInputRoute(
+                topBarTitle = "시니어 코드 입력",
                 appContainer = appContainer,
                 userId = ParentFamilyConnectionViewModelKey,
                 onBackClick = onExitToOnboarding,
                 onJoinSuccess = { familyMembershipViewModel.onFamilyJoined() },
             )
 
-        ParentFamilyMembershipStatus.Error ->
-            ParentLauncherContent(
-                homeRequest = homeRequest,
+        ParentFamilyMembershipStatus.Error -> {
+            val exitHome = com.example.senior_on.ui.parent.home.rememberExitParentHomeAction()
+            BackHandler(onBack = exitHome)
+            com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipErrorScreen(
+                onRetryClick = familyMembershipViewModel::checkFamilyMembership,
+                onExitHomeClick = exitHome,
+                modifier = modifier,
+            )
+        }
+
+        ParentFamilyMembershipStatus.ProfilePending ->
+            com.example.senior_on.ui.parent.home.ParentProfilePendingRoute(
                 appContainer = appContainer,
+                onRetry = familyMembershipViewModel::checkFamilyMembership,
                 onSessionEnded = ::onSessionEnded,
                 modifier = modifier,
             )

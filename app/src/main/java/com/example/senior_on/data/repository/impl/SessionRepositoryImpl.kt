@@ -9,7 +9,9 @@ import com.example.senior_on.domain.model.auth.AuthSession
 import com.example.senior_on.domain.repository.auth.SessionRepository
 
 class SessionRepositoryImpl(
-    private val dataSource: SessionDataSource
+    private val dataSource: SessionDataSource,
+    private val persistLoginTokens: (String, String?, String, Boolean) -> Boolean =
+        AccessTokenStore::saveLoginTokens,
 ) : SessionRepository {
     override suspend fun validateSavedSession(): AuthSession? {
         val session = dataSource.validateSavedSession() ?: return null
@@ -29,7 +31,7 @@ class SessionRepositoryImpl(
         mode: AppUserMode,
     ) {
         com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
-        AccessTokenStore.save(accessToken)
+        AccessTokenStore.save(accessToken, isParent = mode == AppUserMode.Senior)
         dataSource.saveSession(
             SavedSession(
                 role = when (mode) {
@@ -47,38 +49,19 @@ class SessionRepositoryImpl(
         deviceIdentifier: String,
         userId: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         usersId: Long?,
     ) {
         com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
-        // Even when automatic login is not requested, keep the access token across
-        // process death for the remainder of its server-defined lifetime. Omitting
-        // the refresh token prevents that session from being extended after expiry.
-        val tokensPersisted = AccessTokenStore.saveLoginTokens(
-            accessToken = accessToken,
-            newRefreshToken = refreshToken.takeIf { keepLoggedIn },
-            newDeviceIdentifier = deviceIdentifier,
-        )
-
-        if (tokensPersisted) {
-            dataSource.saveSession(
-                SavedSession(
-                    role = when (mode) {
-                        AppUserMode.Child -> UserRole.CHILD
-                        AppUserMode.Senior -> UserRole.PARENT
-                    },
-                    userId = userId,
-                    usersId = usersId,
-                )
-            )
-        } else {
+        if (!persistLoginTokens(accessToken, refreshToken, deviceIdentifier, mode == AppUserMode.Senior)) {
             dataSource.clearSession()
-            AccessTokenStore.saveTransientLoginTokens(
-                accessToken = accessToken,
-                newRefreshToken = refreshToken.takeIf { keepLoggedIn },
-                newDeviceIdentifier = deviceIdentifier,
-            )
+            throw java.io.IOException("로그인 정보를 저장하지 못했어요. 다시 시도해 주세요.")
         }
+        // Both roles persist credentials before publishing the authenticated account.
+        dataSource.saveSession(SavedSession(
+            role = if (mode == AppUserMode.Senior) UserRole.PARENT else UserRole.CHILD,
+            userId = userId,
+            usersId = usersId,
+        ))
     }
 
     override fun clearSession() {

@@ -45,6 +45,7 @@ data class InquiryUiState(
     val openPage: InquiryPage? = null,
     val historyItems: List<InquiryHistoryUiItem> = emptyList(),
     val isHistoryLoading: Boolean = false,
+    val isHistoryRefreshing: Boolean = false,
     val historyErrorMessage: String? = null,
     val detailErrorMessage: String? = null,
     val isSubmitting: Boolean = false,
@@ -86,10 +87,14 @@ class InquiryViewModel(
         if (it.notice == notice) it.copy(notice = null) else it
     }
 
-    fun loadInquiries() {
+    fun loadInquiries() = loadInquiries(fromPull = false)
+
+    fun refreshInquiries() = loadInquiries(fromPull = true)
+
+    private fun loadInquiries(fromPull: Boolean) {
         if (_uiState.value.isHistoryLoading) return
         val checkSubmission = submissionNumber.takeIf { _uiState.value.needsHistoryCheck }
-        _uiState.update { it.copy(isHistoryLoading = true, historyErrorMessage = null) }
+        _uiState.update { it.copy(isHistoryLoading = true, isHistoryRefreshing = fromPull, historyErrorMessage = null) }
         viewModelScope.launch {
             runCatching {
                 inquiryRepository.getInquiries()
@@ -97,16 +102,21 @@ class InquiryViewModel(
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
+                        isHistoryRefreshing = false,
                         needsHistoryCheck = it.needsHistoryCheck && checkSubmission != submissionNumber,
                         historyItems = inquiries.map { summary -> summary.toUiItem() },
                     )
                 }
             }.onFailure { throwable ->
-                if (throwable is CancellationException) throw throwable
+                if (throwable is CancellationException) {
+                    _uiState.update { it.copy(isHistoryLoading = false, isHistoryRefreshing = false) }
+                    throw throwable
+                }
                 logFailure("Failed to load inquiries", throwable)
                 _uiState.update {
                     it.copy(
                         isHistoryLoading = false,
+                        isHistoryRefreshing = false,
                         historyErrorMessage = "문의 목록을 불러오지 못했습니다.",
                     )
                 }

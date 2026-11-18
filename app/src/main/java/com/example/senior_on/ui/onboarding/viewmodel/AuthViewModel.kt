@@ -99,7 +99,6 @@ class AuthViewModel(
         loginId: String,
         password: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         onResult: (LoginResult?) -> Unit
     ) {
         launchRequest(
@@ -138,7 +137,6 @@ class AuthViewModel(
                         userId = result.loginId,
                         usersId = result.usersId,
                         mode = result.mode,
-                        keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                     )
                     onResult(result)
                 }
@@ -307,14 +305,12 @@ class AuthViewModel(
     fun loginWithKakao(
         kakaoAccessToken: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         onResult: (SocialLoginResult?) -> Unit,
     ) {
         loginWithSocial(
             provider = SocialProvider.Kakao,
             socialToken = kakaoAccessToken,
             mode = mode,
-            keepLoggedIn = keepLoggedIn,
             onResult = onResult,
         ) { fcmToken, deviceIdentifier ->
             socialAuthRepository.loginWithKakao(
@@ -328,14 +324,12 @@ class AuthViewModel(
     fun loginWithGoogle(
         firebaseIdToken: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         onResult: (SocialLoginResult?) -> Unit,
     ) {
         loginWithSocial(
             provider = SocialProvider.Google,
             socialToken = firebaseIdToken,
             mode = mode,
-            keepLoggedIn = keepLoggedIn,
             onResult = onResult,
         ) { fcmToken, deviceIdentifier ->
             socialAuthRepository.loginWithGoogle(
@@ -359,7 +353,6 @@ class AuthViewModel(
         provider: SocialProvider,
         socialToken: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         onResult: (SocialLoginResult?) -> Unit,
         request: suspend (
             fcmToken: String,
@@ -407,7 +400,6 @@ class AuthViewModel(
                     userId = resultUsersId.toString(),
                     usersId = resultUsersId,
                     mode = resultMode,
-                    keepLoggedIn = shouldPersistSession(mode, keepLoggedIn),
                 )
             } else {
                 accessToken = null
@@ -420,11 +412,6 @@ class AuthViewModel(
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
-
-    private fun shouldPersistSession(
-        mode: AppUserMode,
-        requestedByUser: Boolean,
-    ): Boolean = requestedByUser || mode == AppUserMode.Senior
 
     fun clearSignupEmailRequestError() {
         _uiState.update {

@@ -16,15 +16,6 @@ data class HomeSnapshot(
     val seniorName: String? = null,
     val seniorPhoneNumber: String? = null,
 )
-data class ServerMusicCard(
-    val enabled: Boolean,
-    val icon: String?,
-    val musicApp: String?,
-    val appName: String?,
-    val actionType: String?,
-    val actionValue: String?,
-    val packageName: String?,
-)
 data class ServerTodaySchedule(
     val title: String?,
     val description: String?,
@@ -36,7 +27,6 @@ data class ServerTodaySchedule(
 data class SeniorHomeSnapshot(
     val buttons: List<ServerButton>,
     val fontSize: String,
-    val musicCard: ServerMusicCard?,
     val todaySchedule: ServerTodaySchedule?,
 )
 data class TodayHospitalSchedule(
@@ -105,6 +95,7 @@ data class HospitalAppointment(
     val date: String,
     val time: String,
     val reminderType: String,
+    val reminderTime: String? = null,
 )
 
 data class HospitalUpcomingGroup(

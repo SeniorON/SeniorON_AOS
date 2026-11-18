@@ -69,6 +69,8 @@ import com.example.senior_on.domain.repository.parent.ParentInfoRepository
 import com.example.senior_on.domain.repository.parent.ParentHomeUpdatesRepository
 import com.example.senior_on.data.repository.impl.ParentHomeUpdatesRepositoryImpl
 import com.example.senior_on.data.source.auth.PersistedSessionStore
+import com.example.senior_on.data.local.ChildTutorialStore
+import com.example.senior_on.domain.repository.auth.ChildTutorialRepository
 import com.example.senior_on.domain.repository.parent.ParentLinkSafetyRepository
 import com.example.senior_on.domain.repository.senior.SeniorRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
@@ -89,6 +91,7 @@ interface AppContainer {
     val parentSeniorProfileRepository: com.example.senior_on.domain.repository.parent.ParentSeniorProfileRepository
         get() = com.example.senior_on.data.repository.impl.ParentSeniorProfileRepositoryImpl(SeniorOnNetwork.seniorApi)
     val sessionRepository: SessionRepository
+    val childTutorialRepository: ChildTutorialRepository
     val deviceRegistrationRepository: DeviceRegistrationRepository
     val homeServerRepository: HomeServerRepository
     val parentHomeUpdatesRepository: ParentHomeUpdatesRepository
@@ -149,11 +152,13 @@ class DefaultAppContainer(
         onLocationDisabled = { com.example.senior_on.location.tracking.ParentOutingTrackingController.reset(context) },
     )
 
-    override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource)
+    private val childTutorialStore = ChildTutorialStore(context)
+    override val childTutorialRepository: ChildTutorialRepository = childTutorialStore
+    override val authRepository: AuthRepository = AuthRepositoryImpl(authDataSource, childTutorialStore::markSignup)
     override val accountRecoveryRepository: AccountRecoveryRepository =
         AccountRecoveryRepositoryImpl(accountRecoveryDataSource)
     override val socialAuthRepository: SocialAuthRepository =
-        SocialAuthRepositoryImpl(socialAuthDataSource)
+        SocialAuthRepositoryImpl(socialAuthDataSource, childTutorialStore::markSignup)
     override val seniorRepository: SeniorRepository =
         SeniorRepositoryImpl(seniorDataSource)
     override val sessionRepository: SessionRepository =

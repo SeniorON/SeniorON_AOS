@@ -6,6 +6,7 @@ data class HospitalCreateRequest(
     val scheduleDate: String,
     val scheduleTime: String,
     val reminderType: String,
+    val reminderTime: String? = null,
 )
 
 data class HospitalUpdateRequest(
@@ -14,6 +15,7 @@ data class HospitalUpdateRequest(
     val scheduleDate: String,
     val scheduleTime: String,
     val reminderType: String,
+    val reminderTime: String? = null,
 )
 
 data class HospitalCreateResponse(
@@ -23,6 +25,7 @@ data class HospitalCreateResponse(
     val scheduleDate: String?,
     val scheduleTime: String?,
     val reminderType: String?,
+    val reminderTime: String? = null,
 )
 
 data class HospitalListResponse(
@@ -32,6 +35,7 @@ data class HospitalListResponse(
     val scheduleDate: String?,
     val scheduleTime: String?,
     val reminderType: String?,
+    val reminderTime: String? = null,
 )
 
 data class HospitalDetailResponse(
@@ -41,6 +45,7 @@ data class HospitalDetailResponse(
     val scheduleDate: String?,
     val scheduleTime: String?,
     val reminderType: String?,
+    val reminderTime: String? = null,
 )
 
 data class HospitalUpcomingResponse(

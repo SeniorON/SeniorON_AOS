@@ -12,7 +12,6 @@ interface HomeServerRepository {
     suspend fun getButtonOptions(seniorId: Long): List<ServerButton>
     suspend fun saveButtons(
         seniorId: Long,
-        musicApp: String?,
         buttons: List<ServerButton>,
     )
     suspend fun updateFontSize(seniorId: Long, fontSize: String)
