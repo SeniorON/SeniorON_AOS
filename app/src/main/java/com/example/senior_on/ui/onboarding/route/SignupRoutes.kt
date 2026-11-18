@@ -52,7 +52,6 @@ fun SignupEntryRoute(
                     viewModel.loginWithKakao(
                         kakaoAccessToken = token,
                         mode = selectedMode,
-                        keepLoggedIn = true,
                         onResult = ::handleSocialResult,
                     )
                 }
@@ -67,7 +66,6 @@ fun SignupEntryRoute(
                     viewModel.loginWithGoogle(
                         firebaseIdToken = token,
                         mode = selectedMode,
-                        keepLoggedIn = true,
                         onResult = ::handleSocialResult,
                     )
                 }

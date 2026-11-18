@@ -21,8 +21,7 @@ import kotlinx.coroutines.withContext
 internal fun SessionRecoveryGate(modifier: Modifier = Modifier): Boolean {
     val context = LocalContext.current
     val sessionStore = remember(context) { PersistedSessionStore(context) }
-    fun requiresRecovery() = sessionStore.getSession()?.role ==
-        com.example.senior_on.data.remote.dto.UserRole.PARENT &&
+    fun requiresRecovery() = sessionStore.getSession() != null &&
         AccessTokenStore.getBearerToken() == null && AccessTokenStore.getRefreshToken() != null
 
     var recovering by remember { mutableStateOf(requiresRecovery()) }

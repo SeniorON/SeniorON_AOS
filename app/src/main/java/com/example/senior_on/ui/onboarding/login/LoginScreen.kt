@@ -71,30 +71,27 @@ fun LoginScreen(
     onLoginRequest: (
         loginId: String,
         password: String,
-        keepLoggedIn: Boolean,
         onResult: (LoginResult?) -> Unit
     ) -> Unit,
-    onLoginClick: (userId: String, keepLoggedIn: Boolean) -> Unit = { _, _ -> },
+    onLoginClick: (userId: String) -> Unit = {},
     onGoToModeSelection: () -> Unit = {},
     onFindIdClick: () -> Unit = {},
     onFindPasswordClick: () -> Unit = {},
     onSignUpClick: () -> Unit = {},
     onKakaoLoginRequest: (
-        keepLoggedIn: Boolean,
         onResult: (SocialLoginResult?) -> Unit,
-    ) -> Unit = { _, _ -> },
+    ) -> Unit = {},
     onGoogleLoginRequest: (
-        keepLoggedIn: Boolean,
         onResult: (SocialLoginResult?) -> Unit,
-    ) -> Unit = { _, _ -> },
+    ) -> Unit = {},
     onSocialSignupRequired: () -> Unit = {},
     hasSocialAccountConflict: () -> Boolean = { false },
+    requestErrorMessage: () -> String? = { null },
     modifier: Modifier = Modifier
 ) {
     var userId by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var keepLoggedIn by rememberSaveable { mutableStateOf(false) }
     var loginError by rememberSaveable { mutableStateOf(LoginFieldError.None) }
     var wrongModeDialogType by rememberSaveable { mutableStateOf<LoginWrongModeDialogType?>(null) }
     var isLoggingIn by remember { mutableStateOf(false) }
@@ -104,7 +101,7 @@ fun LoginScreen(
     val passwordError = loginError != LoginFieldError.None
     val passwordErrorMessage = when (loginError) {
         LoginFieldError.EmptyPassword -> "비밀번호를 입력해주세요"
-        LoginFieldError.InvalidCredentials -> "아이디 또는 비밀번호를 다시 확인해 주세요."
+        LoginFieldError.InvalidCredentials -> requestErrorMessage() ?: "아이디 또는 비밀번호를 다시 확인해 주세요."
         LoginFieldError.PasswordMismatch -> "비밀번호가 일치하지 않아요"
         LoginFieldError.None -> null
     }
@@ -119,7 +116,7 @@ fun LoginScreen(
 
         if (loginError == LoginFieldError.None && !isLoggingIn) {
             isLoggingIn = true
-            onLoginRequest(userId, password, keepLoggedIn) { loginResult ->
+            onLoginRequest(userId, password) { loginResult ->
                 isLoggingIn = false
 
                 if (loginResult == null) {
@@ -130,7 +127,7 @@ fun LoginScreen(
                         AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
                     }
                 } else {
-                    onLoginClick(loginResult.loginId, keepLoggedIn)
+                    onLoginClick(loginResult.loginId)
                 }
             }
         }
@@ -146,7 +143,7 @@ fun LoginScreen(
                     AppUserMode.Child -> LoginWrongModeDialogType.ChildAccount
                 }
             }
-            result.usersId != null -> onLoginClick(result.usersId.toString(), keepLoggedIn)
+            result.usersId != null -> onLoginClick(result.usersId.toString())
             else -> loginError = LoginFieldError.InvalidCredentials
         }
     }
@@ -230,12 +227,7 @@ fun LoginScreen(
             }
         )
 
-        LoginStayLoggedInRow(
-            checked = keepLoggedIn,
-            onCheckedChange = { keepLoggedIn = it }
-        )
-
-        Spacer(modifier = Modifier.height(18.dp)) // 로그인 상태 유지 - 로그인 버튼 간격
+        Spacer(modifier = Modifier.height(18.dp))
 
         Box(
             modifier = Modifier
@@ -286,7 +278,6 @@ fun LoginScreen(
                     .clickable(enabled = !isLoggingIn) {
                         isLoggingIn = true
                         onKakaoLoginRequest(
-                            keepLoggedIn,
                             handleSocialLoginResult,
                         )
                     }
@@ -302,7 +293,6 @@ fun LoginScreen(
                     .clickable(enabled = !isLoggingIn) {
                         isLoggingIn = true
                         onGoogleLoginRequest(
-                            keepLoggedIn,
                             handleSocialLoginResult,
                         )
                     }
@@ -346,42 +336,6 @@ private fun LoginTopBar(
                 tint = SeniorOnColors.Gray800
             )
         }
-    }
-}
-
-@Composable
-private fun LoginStayLoggedInRow(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.clickable { onCheckedChange(!checked) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(
-                id = if (checked) {
-                    R.drawable.ic_check_filled
-                } else {
-                    R.drawable.ic_check_unfilled
-                }
-            ),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = if (checked) {
-                SeniorOnColors.Primary600
-            } else {
-                SeniorOnColors.Gray200
-            }
-        )
-
-        Text(
-            text = "로그인 상태 유지",
-            modifier = Modifier.padding(start = 4.dp),
-            style = SeniorOnTextStyles.BodySMedium,
-            color = SeniorOnColors.Gray800
-        )
     }
 }
 
@@ -619,7 +573,7 @@ private fun LoginScreenDefaultPreview() {
     SENIOR_ONTheme {
         LoginScreen(
             selectedMode = AppUserMode.Child,
-            onLoginRequest = { _, _, _, onResult -> onResult(null) }
+            onLoginRequest = { _, _, onResult -> onResult(null) }
         )
     }
 }
@@ -635,7 +589,7 @@ private fun LoginScreenCompactPreview() {
     SENIOR_ONTheme {
         LoginScreen(
             selectedMode = AppUserMode.Child,
-            onLoginRequest = { _, _, _, onResult -> onResult(null) }
+            onLoginRequest = { _, _, onResult -> onResult(null) }
         )
     }
 }

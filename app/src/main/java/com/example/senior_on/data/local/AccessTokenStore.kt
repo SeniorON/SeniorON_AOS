@@ -13,8 +13,6 @@ object AccessTokenStore : RefreshTokenStore {
     private var refreshToken: String? = null
     @Volatile
     private var deviceIdentifier: String? = null
-    @Volatile
-    private var persistTokens: Boolean = false
     private var preferences: SharedPreferences? = null
     private var tokenCipher: KeystoreTokenCipher? = null
     private var layoutScope: String? = null
@@ -42,8 +40,7 @@ object AccessTokenStore : RefreshTokenStore {
         deviceIdentifier = readSecureValue(DEVICE_IDENTIFIER_KEY) {
             trim().takeIf(String::isNotEmpty)
         }
-        persistTokens = token != null || refreshToken != null
-        layoutScope = if (!persistTokens) null else {
+        layoutScope = if (token == null && refreshToken == null) null else {
             // Upgrade a login saved before cache scopes existed. An empty marker is a child login.
             val marker = preferences?.getString(LAYOUT_SCOPE_KEY, null) ?: newLayoutMarker(
                 PersistedSessionStore(context).getSession()?.role == UserRole.PARENT,
@@ -61,7 +58,6 @@ object AccessTokenStore : RefreshTokenStore {
         writeSecureValues(mapOf(ACCESS_TOKEN_KEY to normalizedToken), marker)
         layoutScope = marker.takeIf(String::isNotEmpty)
         token = normalizedToken
-        persistTokens = true
     }
 
     @Synchronized
@@ -77,12 +73,7 @@ object AccessTokenStore : RefreshTokenStore {
         val normalizedRefreshToken = newRefreshToken?.trim()?.takeIf(String::isNotEmpty)
         val normalizedDeviceIdentifier = newDeviceIdentifier.trim().takeIf(String::isNotEmpty)
 
-        token = normalizedToken
-        refreshToken = normalizedRefreshToken
-        deviceIdentifier = normalizedDeviceIdentifier
-
         val marker = newLayoutMarker(isParent)
-        layoutScope = marker.takeIf(String::isNotEmpty)
         val persisted = runCatching {
             writeSecureValues(
                 mapOf(
@@ -94,32 +85,16 @@ object AccessTokenStore : RefreshTokenStore {
             )
         }.isSuccess
 
-        persistTokens = persisted
         if (!persisted) {
             clearPersistedValues()
+            clearMemoryValues()
+        } else {
+            token = normalizedToken
+            refreshToken = normalizedRefreshToken
+            deviceIdentifier = normalizedDeviceIdentifier
+            layoutScope = marker.takeIf(String::isNotEmpty)
         }
         return persisted
-    }
-
-    @Synchronized
-    fun saveTransientLoginTokens(
-        accessToken: String,
-        newRefreshToken: String?,
-        newDeviceIdentifier: String,
-        isParent: Boolean = false,
-    ) {
-        val normalizedToken = accessToken.removePrefix(BEARER_PREFIX)
-            .trim()
-            .takeIf(String::isNotEmpty)
-        val normalizedRefreshToken = newRefreshToken?.trim()?.takeIf(String::isNotEmpty)
-        val normalizedDeviceIdentifier = newDeviceIdentifier.trim().takeIf(String::isNotEmpty)
-
-        clearPersistedValues()
-        layoutScope = newLayoutMarker(isParent).takeIf(String::isNotEmpty)
-        token = normalizedToken
-        refreshToken = normalizedRefreshToken
-        deviceIdentifier = normalizedDeviceIdentifier
-        persistTokens = false
     }
 
     @Synchronized
@@ -132,19 +107,13 @@ object AccessTokenStore : RefreshTokenStore {
             .takeIf(String::isNotEmpty)
         val normalizedRefreshToken = newRefreshToken.trim().takeIf(String::isNotEmpty)
 
-        if (persistTokens) {
-            val persisted = runCatching {
-                writeSecureValues(
-                    mapOf(
-                        ACCESS_TOKEN_KEY to normalizedToken,
-                        REFRESH_TOKEN_KEY to normalizedRefreshToken,
-                    )
-                )
-            }.isSuccess
-            if (!persisted) {
-                persistTokens = false
-                clearPersistedValues()
-            }
+        try {
+            writeSecureValues(mapOf(
+                ACCESS_TOKEN_KEY to normalizedToken,
+                REFRESH_TOKEN_KEY to normalizedRefreshToken,
+            ))
+        } catch (error: Exception) {
+            throw java.io.IOException("로그인 정보를 저장하지 못했어요. 다시 시도해 주세요.", error)
         }
         token = normalizedToken
         refreshToken = normalizedRefreshToken
@@ -163,7 +132,7 @@ object AccessTokenStore : RefreshTokenStore {
     internal fun invalidateHomeLayout(expected: String?) {
         if (expected == null || layoutScope != expected) return
         val next = newLayoutMarker(true)
-        if (persistTokens) preferences?.edit()?.putString(LAYOUT_SCOPE_KEY, next)?.apply()
+        preferences?.edit()?.putString(LAYOUT_SCOPE_KEY, next)?.apply()
         layoutScope = next
     }
 
@@ -223,7 +192,6 @@ object AccessTokenStore : RefreshTokenStore {
         token = null
         refreshToken = null
         deviceIdentifier = null
-        persistTokens = false
     }
 
     private fun clearPersistedValues() {

@@ -30,10 +30,9 @@ class SeniorOnApplication : Application() {
         super.onCreate()
         AccessTokenStore.initialize(this)
         val sessionStore = com.example.senior_on.data.source.auth.PersistedSessionStore(this)
-        val canRecoverParent = sessionStore.getSession()?.role ==
-            com.example.senior_on.data.remote.dto.UserRole.PARENT &&
+        val canRecoverSession = sessionStore.getSession() != null &&
             AccessTokenStore.getRefreshToken() != null
-        if (AccessTokenStore.getBearerToken() == null && !canRecoverParent) sessionStore.clear()
+        if (AccessTokenStore.getBearerToken() == null && !canRecoverSession) sessionStore.clear()
         com.example.senior_on.data.local.ParentConnectionGate.initialize(
             sessionStore.getSession()?.role ==
                 com.example.senior_on.data.remote.dto.UserRole.PARENT

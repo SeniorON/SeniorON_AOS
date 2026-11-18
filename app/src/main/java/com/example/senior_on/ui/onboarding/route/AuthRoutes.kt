@@ -47,7 +47,7 @@ fun SplashRoute(
 fun LoginRoute(
     appContainer: AppContainer,
     selectedMode: AppUserMode,
-    onLoginSuccess: (userId: String, keepLoggedIn: Boolean) -> Unit,
+    onLoginSuccess: (userId: String) -> Unit,
     onBackClick: () -> Unit,
     onFindIdClick: () -> Unit,
     onFindPasswordClick: () -> Unit,
@@ -60,12 +60,11 @@ fun LoginRoute(
 
     LoginScreen(
         selectedMode = selectedMode,
-        onLoginRequest = { loginId, password, keepLoggedIn, onResult ->
+        onLoginRequest = { loginId, password, onResult ->
             viewModel.login(
                 loginId = loginId,
                 password = password,
                 mode = selectedMode,
-                keepLoggedIn = keepLoggedIn,
                 onResult = onResult,
             )
         },
@@ -74,7 +73,7 @@ fun LoginRoute(
         onFindIdClick = onFindIdClick,
         onFindPasswordClick = onFindPasswordClick,
         onSignUpClick = onSignUpClick,
-        onKakaoLoginRequest = { keepLoggedIn, onResult ->
+        onKakaoLoginRequest = { onResult ->
             scope.launch {
                 runCatching {
                     SocialLoginTokenProvider.getKakaoAccessToken(context)
@@ -83,13 +82,12 @@ fun LoginRoute(
                     viewModel.loginWithKakao(
                         kakaoAccessToken = kakaoAccessToken,
                         mode = selectedMode,
-                        keepLoggedIn = keepLoggedIn,
                         onResult = onResult,
                     )
                 }.onFailure { coroutineContext.ensureActive(); onResult(null) }
             }
         },
-        onGoogleLoginRequest = { keepLoggedIn, onResult ->
+        onGoogleLoginRequest = { onResult ->
             scope.launch {
                 runCatching {
                     SocialLoginTokenProvider.getGoogleFirebaseIdToken(context)
@@ -98,13 +96,13 @@ fun LoginRoute(
                     viewModel.loginWithGoogle(
                         firebaseIdToken = firebaseIdToken,
                         mode = selectedMode,
-                        keepLoggedIn = keepLoggedIn,
                         onResult = onResult,
                     )
                 }.onFailure { coroutineContext.ensureActive(); onResult(null) }
             }
         },
         onSocialSignupRequired = onSocialSignupRequired,
+        requestErrorMessage = { viewModel.uiState.value.errorMessage },
         hasSocialAccountConflict = {
             com.example.senior_on.ui.onboarding.viewmodel.ExistingAccountNotice.fromCode(viewModel.uiState.value.errorCode) != null
         },

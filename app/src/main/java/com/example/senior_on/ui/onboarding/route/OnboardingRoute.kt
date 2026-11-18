@@ -493,11 +493,8 @@ private fun OnboardingContent(
             SeniorOnRoute.Login -> LoginRoute(
                 appContainer = appContainer,
                 selectedMode = selectedUserMode,
-                onLoginSuccess = { userId, keepLoggedIn ->
-                    keepPostLoginSession = shouldKeepPostLoginSession(
-                        mode = selectedUserMode,
-                        requestedByUser = keepLoggedIn,
-                    )
+                onLoginSuccess = { userId ->
+                    keepPostLoginSession = true
                     resolveOnboardingStatus(selectedUserMode, userId)
                 },
                 onBackClick = ::navigateBackInOnboarding,
@@ -752,11 +749,6 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
-
-internal fun shouldKeepPostLoginSession(
-    mode: AppUserMode,
-    requestedByUser: Boolean,
-): Boolean = requestedByUser || mode == AppUserMode.Senior
 
 internal fun resolvePostLoginDestination(
     mode: AppUserMode,

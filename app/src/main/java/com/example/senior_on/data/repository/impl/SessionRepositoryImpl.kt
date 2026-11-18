@@ -9,7 +9,9 @@ import com.example.senior_on.domain.model.auth.AuthSession
 import com.example.senior_on.domain.repository.auth.SessionRepository
 
 class SessionRepositoryImpl(
-    private val dataSource: SessionDataSource
+    private val dataSource: SessionDataSource,
+    private val persistLoginTokens: (String, String?, String, Boolean) -> Boolean =
+        AccessTokenStore::saveLoginTokens,
 ) : SessionRepository {
     override suspend fun validateSavedSession(): AuthSession? {
         val session = dataSource.validateSavedSession() ?: return null
@@ -47,28 +49,14 @@ class SessionRepositoryImpl(
         deviceIdentifier: String,
         userId: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         usersId: Long?,
     ) {
         com.example.senior_on.data.local.ParentConnectionGate.beginSession(mode == AppUserMode.Senior)
-        val persistLogin = keepLoggedIn || mode == AppUserMode.Senior
-        val tokensPersisted = persistLogin && AccessTokenStore.saveLoginTokens(
-            accessToken = accessToken,
-            newRefreshToken = refreshToken,
-            newDeviceIdentifier = deviceIdentifier,
-            isParent = mode == AppUserMode.Senior,
-        )
-
-        if (!tokensPersisted) {
-            AccessTokenStore.saveTransientLoginTokens(
-                accessToken = accessToken,
-                newRefreshToken = refreshToken,
-                newDeviceIdentifier = deviceIdentifier,
-                isParent = mode == AppUserMode.Senior,
-            )
+        if (!persistLoginTokens(accessToken, refreshToken, deviceIdentifier, mode == AppUserMode.Senior)) {
+            dataSource.clearSession()
+            throw java.io.IOException("로그인 정보를 저장하지 못했어요. 다시 시도해 주세요.")
         }
-        // Metadata identifies the account to in-process consumers; it cannot restore
-        // authentication without a token and is cleared on cold start in that case.
+        // Both roles persist credentials before publishing the authenticated account.
         dataSource.saveSession(SavedSession(
             role = if (mode == AppUserMode.Senior) UserRole.PARENT else UserRole.CHILD,
             userId = userId,

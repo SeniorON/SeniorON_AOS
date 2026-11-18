@@ -12,7 +12,6 @@ interface SessionRepository {
         deviceIdentifier: String,
         userId: String,
         mode: AppUserMode,
-        keepLoggedIn: Boolean,
         usersId: Long? = null,
     )
     fun clearSession()
