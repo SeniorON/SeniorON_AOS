@@ -5,11 +5,8 @@ import com.example.senior_on.ui.child.family.viewmodel.FamilyPhotoTargetViewMode
 import com.example.senior_on.ui.child.family.viewmodel.FamilyViewModel
 import com.example.senior_on.ui.child.display.viewmodel.DisplayViewModel
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -40,13 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.data.local.FamilyPhotoUploadPreparer
@@ -162,7 +157,6 @@ fun ChildMainScreen(
     val addressSearchViewModel: AddressSearchViewModel = viewModel(
         factory = AddressSearchViewModel.Factory(addressSearchRepository),
     )
-    RequestNotificationPermissionOnChildEntry()
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     var selectedTab by rememberSaveable { mutableStateOf(ChildMainTab.Screen) }
@@ -528,6 +522,7 @@ fun ChildMainScreen(
             .fillMaxSize()
             .background(SeniorOnColors.Background2)
     ) {
+        ChildNotificationPermissionPrompt(selectedTab == ChildMainTab.Notification)
         if (!seniorManagementUiState.disconnectRefreshPending && !showSeniorManagement && selectedTab == ChildMainTab.Screen &&
             (seniorManagementUiState.managedSeniors.isNotEmpty() || seniorManagementUiState.pendingFamilies.isNotEmpty()) && seniorManagementUiState.listError != null) {
             com.example.senior_on.ui.common.QueryRetryMessage(
@@ -1142,32 +1137,6 @@ private fun ChildMainTabContent(
     }
 }
 
-@Composable
-private fun RequestNotificationPermissionOnChildEntry() {
-    if (
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        LocalInspectionMode.current
-    ) {
-        return
-    }
-
-    val context = LocalContext.current
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = {},
-    )
-
-    LaunchedEffect(Unit) {
-        if (
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-}
 
 private fun createFamilyPhotoCaptureUri(context: Context): Uri {
     val photoDirectory = File(context.cacheDir, "family_photos").apply {
