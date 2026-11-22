@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.child.family
 
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+
 import androidx.compose.runtime.Immutable
 import com.example.senior_on.domain.model.family.FamilyImageSource
 import java.time.Duration
@@ -70,6 +72,7 @@ data class FamilyTabUiState(
     val photoMutationErrorMessage: String? = null,
     val reportingPhotoId: String? = null,
     val reportedPhotoId: String? = null,
+    val duplicateReport: FamilyPhotoReportResult.Duplicate? = null,
     val photoReportErrorMessage: String? = null,
 ) {
     val visibleMembers: List<FamilyMemberUiModel>

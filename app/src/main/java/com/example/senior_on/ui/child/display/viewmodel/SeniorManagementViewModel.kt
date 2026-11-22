@@ -458,7 +458,10 @@ class SeniorManagementViewModel(
     }
 
     fun showPendingWithdrawal(family: PendingSeniorFamily) {
+        if (!family.withdrawn) return
         val id = family.withdrawalNoticeId ?: return
+        val state = _uiState.value
+        if (state.isAcknowledgingWithdrawal || state.withdrawalAcknowledged || state.withdrawalDialog != null) return
         _uiState.update { it.copy(withdrawalDialog = com.example.senior_on.domain.model.senior.SeniorWithdrawalNotice(
             id, family.familyId, null, "등록 중인 시니어", ""), withdrawalError = null) }
     }

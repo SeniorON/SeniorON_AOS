@@ -5,6 +5,8 @@ import com.example.senior_on.data.remote.api.FamilyPhotoStorageApi
 import com.example.senior_on.data.remote.dto.*
 import com.example.senior_on.data.source.requireData
 import com.example.senior_on.data.source.remoteRequest
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+import com.example.senior_on.domain.model.auth.RemoteRequestException
 import okhttp3.RequestBody
 import retrofit2.HttpException
 
@@ -43,11 +45,26 @@ interface RemoteFamilySource {
     suspend fun getAlbums(seniorId: Long): List<FamilyPhotoAlbumResponse>
     suspend fun markViewed(photoId: Long, seniorId: Long)
     suspend fun deletePhoto(photoId: Long)
-    suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) {
+    suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest): FamilyPhotoReportResult {
         error("Family photo reporting is not implemented")
     }
-    suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) {
+    suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest): FamilyPhotoReportResult {
         error("Family photo uploader reporting is not implemented")
+    }
+}
+
+internal suspend fun reportResult(request: suspend () -> ApiResponse<Unit>): FamilyPhotoReportResult {
+    val response = try {
+        remoteRequest(request)
+    } catch (error: RemoteRequestException) {
+        if (error.code !in setOf("FAMILY_PHOTO409_1", "FAMILY_PHOTO409_2")) throw error
+        return FamilyPhotoReportResult.Duplicate(error.message.orEmpty(), hidden = true)
+    }
+    return when (response.code) {
+        "COMMON_200" -> FamilyPhotoReportResult.Created
+        "FAMILY_PHOTO200_1", "FAMILY_PHOTO200_3" -> FamilyPhotoReportResult.Duplicate(response.message, hidden = false)
+        "FAMILY_PHOTO200_2", "FAMILY_PHOTO200_4" -> FamilyPhotoReportResult.Duplicate(response.message, hidden = true)
+        else -> error("신고 결과를 확인하지 못했어요.")
     }
 }
 
@@ -118,16 +135,6 @@ class RemoteFamilyDataSource(
     override suspend fun getAlbums(seniorId: Long) = api.getAlbums(seniorId).requireData()
     override suspend fun markViewed(photoId: Long, seniorId: Long) { api.markViewed(photoId, seniorId) }
     override suspend fun deletePhoto(photoId: Long) { api.deletePhoto(photoId) }
-    override suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) {
-        remoteRequest {
-            api.reportPhoto(photoId, request)
-            Unit
-        }
-    }
-    override suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) {
-        remoteRequest {
-            api.reportUploader(photoId, request)
-            Unit
-        }
-    }
+    override suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) = reportResult { api.reportPhoto(photoId, request) }
+    override suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) = reportResult { api.reportUploader(photoId, request) }
 }

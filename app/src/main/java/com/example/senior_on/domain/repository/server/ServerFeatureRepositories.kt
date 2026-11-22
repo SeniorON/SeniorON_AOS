@@ -1,5 +1,7 @@
 package com.example.senior_on.domain.repository.server
 
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
 import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import com.example.senior_on.domain.model.server.*
@@ -63,7 +65,7 @@ interface FamilyServerRepository {
         detail: String?,
         hide: Boolean,
         seniorId: Long,
-    ) {
+    ): FamilyPhotoReportResult {
         error("Family photo reporting is not implemented")
     }
     suspend fun reportUploader(
@@ -72,7 +74,7 @@ interface FamilyServerRepository {
         detail: String?,
         hide: Boolean,
         seniorId: Long,
-    ) {
+    ): FamilyPhotoReportResult {
         error("Family photo uploader reporting is not implemented")
     }
 }

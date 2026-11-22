@@ -20,7 +20,7 @@ class ParentFamilyPhotoViewModelTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()
         try {
-            for (target in SeniorReportTarget.entries) for (hide in listOf(false, true)) {
+            for (target in SeniorReportTarget.entries) for (hide in listOf(false, true)) for (duplicate in listOf(false, true)) {
                 val reports = mutableListOf<String>()
                 val repository = stub<FamilyServerRepository> { name, args ->
                     when (name) {
@@ -34,11 +34,10 @@ class ParentFamilyPhotoViewModelTest {
                             assertEquals(hide, args[3])
                             assertEquals(42L, args[4])
                             if (reports.size == 1) throw java.io.IOException()
-                            if (reports.size == 2) throw com.example.senior_on.domain.model.auth.RemoteRequestException(
-                                409, if (target == SeniorReportTarget.Photo) "FAMILY_PHOTO409_1" else "FAMILY_PHOTO409_2",
-                                null, "이미 신고했습니다.", IllegalStateException(),
-                            )
-                            Unit
+                            if (reports.size == 2) com.example.senior_on.domain.model.family.FamilyPhotoReportResult.Duplicate(
+                                if (target == SeniorReportTarget.Photo) "이미 신고한 사진이에요." else "이미 신고한 게시자예요.", false,
+                            ) else if (duplicate) com.example.senior_on.domain.model.family.FamilyPhotoReportResult.Duplicate("중복 신고", hide)
+                            else com.example.senior_on.domain.model.family.FamilyPhotoReportResult.Created
                         }
                         else -> error(name)
                     }
@@ -67,10 +66,15 @@ class ParentFamilyPhotoViewModelTest {
                 vm.submitReport(reason, "", hide)
                 vm.submitReport(reason, "", hide)
                 advanceUntilIdle()
-                assertTrue(vm.report.value!!.accepted)
+                assertEquals(!duplicate, vm.report.value!!.accepted)
                 assertEquals(List(3) { if (target == SeniorReportTarget.Photo) "reportPhoto" else "reportUploader" }, reports)
-                assertEquals(2, vm.uiState.value.members.first().photos.size)
-                vm.confirmReport()
+                if (duplicate) {
+                    assertEquals("중복 신고", vm.report.value?.toastMessage)
+                    vm.dismissReport()
+                } else {
+                    assertEquals(2, vm.uiState.value.members.first().photos.size)
+                    vm.confirmReport()
+                }
                 advanceUntilIdle()
                 val members = vm.uiState.value.members
                 assertTrue(members.any { it.memberId == "8" })

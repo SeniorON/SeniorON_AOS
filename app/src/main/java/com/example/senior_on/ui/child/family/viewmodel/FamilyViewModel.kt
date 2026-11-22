@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.child.family.viewmodel
 
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+
 import com.example.senior_on.ui.child.family.SharedFamilyPhotoUiModel
 import com.example.senior_on.ui.child.family.FamilyTabUiState
 import com.example.senior_on.ui.child.family.FamilyMemberUiModel
@@ -667,7 +669,7 @@ class FamilyViewModel(
         hide: Boolean,
         seniorId: Long,
         subject: FamilyReportSubject,
-        submit: suspend (Long, FamilyPhotoReportReason, String?, Boolean, Long) -> Unit,
+        submit: suspend (Long, FamilyPhotoReportReason, String?, Boolean, Long) -> FamilyPhotoReportResult,
     ) {
         val requestSeniorId = activeSeniorId ?: return
         if (requestSeniorId != seniorId) return
@@ -693,12 +695,13 @@ class FamilyViewModel(
             }
             runCatching {
                 submit(serverPhotoId, reason, normalizedDetail, hide, seniorId)
-            }.onSuccess {
+            }.onSuccess { result ->
                 if (!isActiveSenior(requestSeniorId)) return@onSuccess
                 _uiState.update {
                     it.copy(
                         reportingPhotoId = null,
                         reportedPhotoId = photoId,
+                        duplicateReport = result as? FamilyPhotoReportResult.Duplicate,
                         photoReportErrorMessage = null,
                     )
                 }
@@ -730,6 +733,7 @@ class FamilyViewModel(
             state.copy(
                 recentPhotos = visiblePhotos(state.recentPhotos),
                 sharedPhotos = visiblePhotos(state.sharedPhotos),
+                duplicateReport = null,
                 reportedPhotoId = null,
                 photoReportErrorMessage = null,
             )

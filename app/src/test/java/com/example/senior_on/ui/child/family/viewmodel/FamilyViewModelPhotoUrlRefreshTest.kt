@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.child.family.viewmodel
 
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+
 import com.example.senior_on.domain.model.family.FamilyImageSource
 import com.example.senior_on.domain.model.family.FamilyPhotoReportReason
 import com.example.senior_on.domain.model.family.PreparedFamilyPhoto
@@ -743,12 +745,13 @@ private class FakeFamilyServerRepository(
         detail: String?,
         hide: Boolean,
         seniorId: Long,
-    ) {
+    ): FamilyPhotoReportResult {
         reportedPhotoId = photoId
         reportedReason = reason
         reportedDetail = detail
         reportedHide = hide
         reportedSeniorId = seniorId
+        return FamilyPhotoReportResult.Created
     }
 
     override suspend fun reportUploader(
@@ -757,11 +760,12 @@ private class FakeFamilyServerRepository(
         detail: String?,
         hide: Boolean,
         seniorId: Long,
-    ) {
+    ): FamilyPhotoReportResult {
         reportedUploaderPhotoId = photoId
         reportedUploaderReason = reason
         reportedUploaderDetail = detail
         reportedUploaderHide = hide
         reportedUploaderSeniorId = seniorId
+        return FamilyPhotoReportResult.Created
     }
 }

@@ -31,6 +31,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.example.senior_on.ui.child.childNotificationsEnabled
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -195,6 +201,28 @@ internal fun NotificationTopBar(
         Spacer(modifier = Modifier.width(4.dp))
 
         NotificationMoodButton(severity = severity)
+    }
+    NotificationPermissionStatus()
+}
+
+@Composable
+private fun NotificationPermissionStatus() {
+    if (LocalInspectionMode.current) return
+    val context = LocalContext.current
+    var enabled by remember(context) { mutableStateOf(context.childNotificationsEnabled()) }
+    LifecycleResumeEffect(context) {
+        enabled = context.childNotificationsEnabled()
+        onPauseOrDispose {}
+    }
+    if (!enabled) {
+        Text(
+            text = "이 휴대폰의 알림이 꺼져 있어 시니어의 알림을 받을 수 없어요.",
+            style = SeniorOnTextStyles.BodySMedium,
+            color = SeniorOnColors.Gray500,
+            modifier = Modifier.fillMaxWidth()
+                .background(SeniorOnColors.Red100)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 

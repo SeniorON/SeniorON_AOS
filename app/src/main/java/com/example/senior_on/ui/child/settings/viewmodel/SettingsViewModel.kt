@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.settings.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.senior_on.domain.model.auth.RemoteRequestException
 import com.example.senior_on.domain.repository.auth.AuthRepository
 import com.example.senior_on.domain.repository.auth.SessionRepository
 import com.example.senior_on.domain.repository.device.DeviceRegistrationRepository
@@ -92,8 +93,11 @@ class SettingsViewModel(
                 _uiState.update {
                     it.copy(
                         isWithdrawing = false,
-                        withdrawErrorMessage = throwable.message
-                            ?: "회원 탈퇴에 실패했습니다.",
+                        withdrawErrorMessage = when ((throwable as? RemoteRequestException)?.code) {
+                            "USER409_7" -> "보조담당자에게 먼저 가족 연결을 해제해 달라고 요청해 주세요."
+                            "USER409_8" -> "가족에 시니어가 등록되어 있어 탈퇴할 수 없어요. 설정의 ‘연결된 기기’에서 연결 상태를 확인해 주세요."
+                            else -> throwable.message ?: "회원 탈퇴에 실패했습니다."
+                        },
                     )
                 }
             }

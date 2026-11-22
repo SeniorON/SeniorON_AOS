@@ -1,5 +1,7 @@
 package com.example.senior_on.data.repository.impl
 
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+
 import com.example.senior_on.data.remote.dto.FamilyCodeCreateResponse
 import com.example.senior_on.data.remote.dto.FamilyCodeResponse
 import com.example.senior_on.data.remote.dto.FamilyHomeResponse
@@ -538,13 +540,15 @@ private class FakeRemoteFamilySource(
 
     override suspend fun deletePhoto(photoId: Long) = Unit
 
-    override suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest) {
+    override suspend fun reportPhoto(photoId: Long, request: FamilyPhotoReportRequest): FamilyPhotoReportResult {
         reportedPhotoId = photoId
         reportRequest = request
+        return FamilyPhotoReportResult.Created
     }
 
-    override suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest) {
+    override suspend fun reportUploader(photoId: Long, request: FamilyUserReportRequest): FamilyPhotoReportResult {
         reportedUploaderPhotoId = photoId
         uploaderReportRequest = request
+        return FamilyPhotoReportResult.Created
     }
 }
