@@ -50,9 +50,17 @@ fun ParentFamilyPhotoRoute(
         session.toastMessage?.let { message ->
             LaunchedEffect(message) {
                 android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-                viewModel.consumeReportToast()
+                viewModel.dismissReport()
+                if (session.hide) {
+                    selectedPhotoId = null
+                    visiblePhotoId = null
+                    destination = if (viewModel.uiState.value.members.any { it.memberId == selectedMemberId })
+                        ParentPhotoDestination.MemberPhotos else ParentPhotoDestination.FamilyMembers
+                    if (notificationPhotoId != null) onNotificationPhotoClosed()
+                }
             }
         }
+        if (session.toastMessage != null) return
         SeniorPhotoReportForm(
             target = session.target, sending = session.sending, accepted = session.accepted, error = session.error,
             onSubmit = viewModel::submitReport, onBack = viewModel::dismissReport, modifier = modifier,

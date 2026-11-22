@@ -1,5 +1,7 @@
 package com.example.senior_on.ui.parent.photo.viewmodel
 
+import com.example.senior_on.domain.model.family.FamilyPhotoReportResult
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
@@ -109,23 +111,20 @@ class ParentFamilyPhotoViewModel(
                 val id = session.photo.id.toLong()
                 val seniorId = requireOwnSeniorId()
                 val detail = text.trim().takeIf { reason == FamilyPhotoReportReason.Etc && it.isNotEmpty() }
-                when (session.target) {
+                val result = when (session.target) {
                     SeniorReportTarget.Photo -> repository.reportPhoto(id, reason, detail, hide, seniorId)
                     SeniorReportTarget.Author -> repository.reportUploader(id, reason, detail, hide, seniorId)
                 }
-                _report.value = session.copy(accepted = true, hide = hide)
+                when (result) {
+                    FamilyPhotoReportResult.Created -> _report.value = session.copy(accepted = true, hide = hide)
+                    is FamilyPhotoReportResult.Duplicate -> {
+                        if (result.hidden) applyReportHide(session)
+                        _report.value = session.copy(toastMessage = result.message, hide = result.hidden)
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                val duplicateMessage = when ((e as? com.example.senior_on.domain.model.auth.RemoteRequestException)?.code) {
-                    "FAMILY_PHOTO409_1" -> "이미 신고한 사진이에요."
-                    "FAMILY_PHOTO409_2" -> "이미 신고한 게시자예요."
-                    else -> null
-                }
-                if (duplicateMessage != null) {
-                    _report.value = session.copy(toastMessage = duplicateMessage)
-                    return@launch
-                }
                 val message = when (e) {
                     is com.example.senior_on.domain.model.auth.RemoteRequestException -> e.message
                     is java.io.IOException -> "네트워크 연결을 확인한 후 다시 시도해 주세요."
@@ -138,22 +137,24 @@ class ParentFamilyPhotoViewModel(
 
     internal fun confirmReport() {
         val session = _report.value?.takeIf { it.accepted } ?: return
-        if (session.hide) {
-            val photo = session.photo
-            if (session.target == SeniorReportTarget.Author) hiddenAuthors += photo.memberId
-            else hiddenPhotos += photo.id.toLong()
-            _uiState.update { state ->
-                state.copy(members = state.members.mapNotNull { member ->
-                    if (member.memberId != photo.memberId) return@mapNotNull member
-                    if (member.memberId in hiddenAuthors || member.photoCount <= 1) return@mapNotNull null
-                    val kept = member.photos.filterNot { it.id == photo.id }
-                    member.copy(photos = kept, photoCount = member.photoCount - 1,
-                        latestPhotoSource = kept.firstOrNull()?.let { it.thumbnailSource ?: it.imageSource })
-                })
-            }
-            loadAlbumsInternal(background = true)
-        }
+        if (session.hide) applyReportHide(session)
         _report.value = null
+    }
+
+    private fun applyReportHide(session: PhotoReportSession) {
+        val photo = session.photo
+        if (session.target == SeniorReportTarget.Author) hiddenAuthors += photo.memberId
+        else hiddenPhotos += photo.id.toLong()
+        _uiState.update { state ->
+            state.copy(members = state.members.mapNotNull { member ->
+                if (member.memberId != photo.memberId) return@mapNotNull member
+                if (member.memberId in hiddenAuthors || member.photoCount <= 1) return@mapNotNull null
+                val kept = member.photos.filterNot { it.id == photo.id }
+                member.copy(photos = kept, photoCount = member.photoCount - 1,
+                    latestPhotoSource = kept.firstOrNull()?.let { it.thumbnailSource ?: it.imageSource })
+            })
+        }
+        loadAlbumsInternal(background = true)
     }
 
     suspend fun isPhotoMissing(photoId: Long): Boolean = try {

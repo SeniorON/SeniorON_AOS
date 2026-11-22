@@ -87,7 +87,18 @@ fun FamilyPhotoDetailRoute(
             reportTarget = null
             selectedReportReason = null
             reportDetail = ""
-            isReportSuccessVisible = true
+            val duplicate = familyUiState.duplicateReport
+            if (duplicate == null) {
+                isReportSuccessVisible = true
+            } else {
+                android.widget.Toast.makeText(context, duplicate.message, android.widget.Toast.LENGTH_SHORT).show()
+                val uploaderId = completedReportUploaderId.takeIf { completedReportTarget == FamilyPhotoReportTarget.Author }
+                viewModel.clearPhotoReportFeedback(
+                    removeReportedPhoto = duplicate.hidden && uploaderId == null,
+                    hiddenUploaderId = uploaderId.takeIf { duplicate.hidden },
+                )
+                if (duplicate.hidden) onBackClick()
+            }
         }
     }
 
