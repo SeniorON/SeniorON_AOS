@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModelStore
 import com.example.senior_on.domain.model.server.*
 import com.example.senior_on.domain.repository.server.*
 import com.example.senior_on.domain.repository.senior.SeniorRepository
-import com.example.senior_on.domain.model.senior.ManagedSenior
+import com.example.senior_on.domain.model.senior.ManagedFamilyList
 import com.example.senior_on.ui.child.display.viewmodel.SeniorManagementViewModel
 import com.example.senior_on.ui.child.health.viewmodel.HospitalViewModel
 import com.example.senior_on.ui.child.health.viewmodel.MedicationViewModel
@@ -27,10 +27,10 @@ class QueryRetryPolicyTest {
         var seniorReads = 0
         val family = stub<FamilyServerRepository> { _, _ -> error("Unexpected family call") }
         val seniors = stub<SeniorRepository> { method, _ ->
-            check(method == "getManagedSeniors")
+            check(method == SeniorRepository::getManagedFamilies.name)
             seniorReads++
             if (fail) throw IOException()
-            emptyList<ManagedSenior>()
+            ManagedFamilyList(seniors = emptyList())
         }
         val medication = stub<MedicationRepository> { method, args ->
             if (fail) throw IOException()
@@ -63,6 +63,8 @@ class QueryRetryPolicyTest {
             val n = NotificationViewModel(notifications, 3, null, null, null, detailLog = {}).also { store.put("n", it) }
             advanceUntilIdle()
             assertNotNull(s.uiState.value.listError)
+            assertEquals(1, seniorReads)
+            assertFalse(s.uiState.value.hasLoadedFamilyList)
             assertNotNull(m.uiState.value.queryError)
             assertNotNull(h.uiState.value.queryError)
             assertNotNull(n.uiState.value.homeQueryError)
@@ -80,6 +82,7 @@ class QueryRetryPolicyTest {
             advanceUntilIdle()
             assertEquals(2, seniorReads)
             assertNull(s.uiState.value.listError)
+            assertTrue(s.uiState.value.hasLoadedFamilyList)
             assertTrue(s.uiState.value.managedSeniors.isEmpty())
             assertTrue(m.uiState.value.hasLoadedContent)
             assertTrue(h.uiState.value.hasLoadedContent)
