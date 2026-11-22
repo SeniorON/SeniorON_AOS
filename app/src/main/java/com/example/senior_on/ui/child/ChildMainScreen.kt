@@ -344,6 +344,10 @@ fun ChildMainScreen(
     val withdrawnSenior = seniorManagementUiState.managedSeniors.firstOrNull {
         it.seniorId == activeSeniorId && it.withdrawn
     }
+    val selectedWithdrawnFamily = pendingFamily?.takeIf { it.familyId == selectedPendingFamilyId && it.withdrawn }
+    LaunchedEffect(selectedWithdrawnFamily?.familyId, selectedWithdrawnFamily?.withdrawalNoticeId) {
+        selectedWithdrawnFamily?.let(seniorManagementViewModel::showPendingWithdrawal)
+    }
     LaunchedEffect(withdrawnSenior) {
         withdrawnSenior?.let {
             displayViewModel.clearSelection()
