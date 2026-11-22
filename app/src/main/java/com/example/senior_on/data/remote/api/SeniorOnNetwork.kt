@@ -2,7 +2,7 @@ package com.example.senior_on.data.remote.api
 
 import com.example.senior_on.data.local.AccessTokenStore
 import com.example.senior_on.data.remote.interceptor.AccessTokenAuthenticator
-import com.example.senior_on.data.remote.interceptor.HttpLoggingInterceptorFactory
+import com.example.senior_on.data.remote.interceptor.withHttpDiagnostics
 import com.example.senior_on.data.remote.websocket.ParentHomeStompSource
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
@@ -22,9 +22,7 @@ object SeniorOnNetwork {
         configuredClientBuilder()
             .followRedirects(false)
             .followSslRedirects(false)
-            .addInterceptor(
-                HttpLoggingInterceptorFactory.create(tag = "SeniorOnHttp")
-            )
+            .withHttpDiagnostics("SeniorOnHttp")
             .build()
     }
 
@@ -62,9 +60,7 @@ object SeniorOnNetwork {
                 chain.proceed(authenticatedRequest)
             }
             .authenticator(AccessTokenAuthenticator(sessionTokenRefresher))
-            .addInterceptor(
-                HttpLoggingInterceptorFactory.create(tag = "SeniorOnHttp")
-            )
+            .withHttpDiagnostics("SeniorOnHttp")
             .build()
     }
 

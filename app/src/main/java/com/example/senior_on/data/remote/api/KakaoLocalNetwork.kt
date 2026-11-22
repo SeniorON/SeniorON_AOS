@@ -1,6 +1,6 @@
 package com.example.senior_on.data.remote.api
 
-import com.example.senior_on.data.remote.interceptor.HttpLoggingInterceptorFactory
+import com.example.senior_on.data.remote.interceptor.withHttpDiagnostics
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -11,9 +11,7 @@ object KakaoLocalNetwork {
 
     private val okHttpClient by lazy {
         OkHttpClient.Builder()
-            .addInterceptor(
-                HttpLoggingInterceptorFactory.create(tag = "KakaoLocalHttp")
-            )
+            .withHttpDiagnostics("KakaoLocalHttp")
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .callTimeout(15, TimeUnit.SECONDS)
