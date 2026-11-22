@@ -352,7 +352,7 @@ private fun DeviceSettingsCard(device: DisplayDevice?) {
     ) {
         DeviceSettingRow(
             iconResId = R.drawable.ic_device_status_location,
-            label = "위치 권한",
+            label = "시니어On 위치 접근 허용",
             enabled = device?.locationPermissionGranted.takeUnless { valuesHidden },
             unavailableText = unavailableText,
             rowHeight = rowHeight,
@@ -373,8 +373,9 @@ private fun DeviceSettingsCard(device: DisplayDevice?) {
         )
         DeviceSettingRow(
             iconResId = R.drawable.ic_device_status_app_setting,
-            label = "앱 실행 유지 설정",
-            enabled = device?.appExecutionMaintained.takeUnless { valuesHidden },
+            label = "배터리 최적화",
+            enabledText = "켜짐",
+            enabled = device?.appExecutionMaintained?.not().takeUnless { valuesHidden },
             unavailableText = unavailableText,
             rowHeight = rowHeight,
         )
@@ -459,6 +460,7 @@ private fun DeviceSettingRow(
     enabled: Boolean?,
     unavailableText: String,
     rowHeight: Dp,
+    enabledText: String = "허용됨",
 ) {
     DeviceStatusRow(
         iconResId = iconResId,
@@ -472,7 +474,7 @@ private fun DeviceSettingRow(
                 color = SeniorOnColors.Gray300,
             )
         } else {
-            DeviceSettingStatusTag(enabled = enabled)
+            DeviceSettingStatusTag(enabled = enabled, enabledText = enabledText)
         }
     }
 }
@@ -510,7 +512,7 @@ private fun DeviceStatusRow(
 }
 
 @Composable
-private fun DeviceSettingStatusTag(enabled: Boolean) {
+private fun DeviceSettingStatusTag(enabled: Boolean, enabledText: String) {
     Box(
         modifier = Modifier
             .height(25.dp)
@@ -520,7 +522,7 @@ private fun DeviceSettingStatusTag(enabled: Boolean) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = if (enabled) "허용됨" else "꺼짐",
+            text = if (enabled) enabledText else "꺼짐",
             style = SeniorOnTextStyles.CaptionMedium,
             color = if (enabled) SeniorOnColors.Primary700 else SeniorOnColors.Gray500,
         )
