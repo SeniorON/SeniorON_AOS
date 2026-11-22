@@ -90,6 +90,7 @@ fun DisplayTabScreen(
     onSeniorAccountClick: (ManagedSenior) -> Unit = {},
     onAddSeniorAccountClick: () -> Unit = {},
     emptySeniorList: Boolean = false,
+    deviceAnchor: Modifier = Modifier,
     tutorialAnchorModifier: Modifier = Modifier,
     pendingFamilies: List<com.example.senior_on.domain.model.senior.PendingSeniorFamily> = emptyList(),
     onPendingFamilyClick: (com.example.senior_on.domain.model.senior.PendingSeniorFamily) -> Unit = {},
@@ -127,6 +128,7 @@ fun DisplayTabScreen(
             ) {
                 item {
                     DisplaySummarySection(
+                        deviceAnchor = deviceAnchor,
                         parentInfo = displayState.parentInfo,
                         relationshipLabel = displayState.relationshipLabel,
                         device = displayState.device,
@@ -321,6 +323,7 @@ internal fun DisplayTopBar(
 
 @Composable
 private fun DisplaySummarySection(
+    deviceAnchor: Modifier = Modifier,
     emptySeniorList: Boolean,
     parentInfo: ParentInfo?,
     relationshipLabel: String?,
@@ -334,6 +337,7 @@ private fun DisplaySummarySection(
             .padding(horizontal = 16.dp, vertical = 24.dp)
     ) {
         DeviceConnectionBanner(
+            modifier = deviceAnchor,
             device = device,
             relationshipLabel = relationshipLabel,
             onClick = onDeviceClick,
@@ -380,6 +384,7 @@ private fun DisplaySummarySection(
 
 @Composable
 private fun DeviceConnectionBanner(
+    modifier: Modifier = Modifier,
     device: DisplayDevice?,
     relationshipLabel: String?,
     onClick: () -> Unit,
@@ -403,7 +408,7 @@ private fun DeviceConnectionBanner(
     val shape = RoundedCornerShape(50.dp)
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(40.dp)
             .clip(shape)

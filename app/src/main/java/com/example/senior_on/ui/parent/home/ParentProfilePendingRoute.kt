@@ -2,20 +2,12 @@ package com.example.senior_on.ui.parent.home
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -23,7 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.senior_on.di.AppContainer
 import com.example.senior_on.ui.child.settings.viewmodel.SettingsViewModel
-import com.example.senior_on.ui.common.component.SeniorOnActionButton
+import com.example.senior_on.ui.child.display.SeniorRegistrationNoticeDialog
 import com.example.senior_on.ui.parent.launcher.ParentFamilyMembershipLoadingScreen
 import com.example.senior_on.ui.parent.settings.*
 import com.example.senior_on.ui.theme.*
@@ -97,13 +89,13 @@ internal fun ParentProfilePendingRoute(
             modifier = modifier,
         )
     } else {
-        ParentProfilePendingScreen(onRetry, { settingsOpen = true }, exitHome, modifier)
+        ParentProfilePendingScreen(onRetry, { settingsOpen = true }, exitHome, modifier) { type ->
+            openFallbackHomeButton(context, type)
+        }
     }
-    if (showRestriction) AlertDialog(
-        onDismissRequest = { showRestriction = false },
-        title = { Text("정보 등록 후 이용할 수 있어요") },
-        text = { Text("보호자가 시니어 정보를 등록한 후 이용할 수 있어요.") },
-        confirmButton = { TextButton(onClick = { showRestriction = false }) { Text("확인") } },
+    if (showRestriction) SeniorRegistrationNoticeDialog(
+        message = "보호자가 시니어 정보를 등록한 후 이용할 수 있어요.",
+        onConfirm = { showRestriction = false },
     )
     if (confirmWithdrawal) ParentSettingsConfirmDialog(
         ParentSettingsConfirmation.Withdraw,
@@ -118,27 +110,15 @@ internal fun ParentProfilePendingScreen(
     onSettings: () -> Unit,
     onExitHome: () -> Unit,
     modifier: Modifier = Modifier,
+    onButtonClick: (SeniorHomeButtonType) -> Unit = {},
 ) {
-    Column(
-        modifier.fillMaxSize().seniorHomeBackground().safeDrawingPadding()
-            .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Column(
-            Modifier.fillMaxWidth().background(SeniorOnColors.White, RoundedCornerShape(16.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("보호자의 정보 등록을\n기다리고 있어요", style = SeniorOnTextStyles.HeadingM,
-                color = SeniorOnColors.Gray800)
-            Text("보호자가 시니어 정보를 등록하면\n이용할 수 있어요.",
-                style = SeniorOnTextStyles.HeadingXXS, color = SeniorOnColors.Gray600)
-            SeniorOnActionButton("다시 확인", onRetry, Modifier.fillMaxWidth(),
-                minHeight = 59.dp, textStyle = SeniorOnTextStyles.HeadingM)
-        }
-        SeniorOnActionButton("설정", onSettings, Modifier.fillMaxWidth(),
-            minHeight = 59.dp, textStyle = SeniorOnTextStyles.HeadingM)
-        ParentExitHomeButton(onClick = onExitHome)
+    ParentFallbackHome(rememberKoreaDateTime(), onButtonClick, onExitHome, modifier, onSettingsClick = onSettings) {
+        ParentHomeNoticeCard(
+            title = "보호자의 정보 등록을 기다리고 있어요",
+            description = "보호자가 시니어 정보를 등록하면 다시 확인해 주세요.",
+            buttonLabel = "다시 확인",
+            onClick = onRetry,
+        )
     }
 }
 

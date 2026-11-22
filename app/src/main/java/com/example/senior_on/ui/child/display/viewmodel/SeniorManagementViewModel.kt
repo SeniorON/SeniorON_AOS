@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SeniorManagementUiState(
+    val hasLoadedFamilyList: Boolean = false,
     val managedSeniors: List<ManagedSenior> = emptyList(),
     val pendingFamilies: List<PendingSeniorFamily> = emptyList(),
     val resumeProfileFamilyId: Long? = null,
@@ -188,6 +189,7 @@ class SeniorManagementViewModel(
                 val managedSeniors = families.seniors
                 _uiState.update {
                     it.copy(
+                        hasLoadedFamilyList = true,
                         pendingFamilies = families.pendingFamilies.map { family ->
                             it.withdrawalNotices.firstOrNull { notice -> notice.familyId == family.familyId }
                                 ?.let { notice -> family.copy(withdrawn = true, withdrawalNoticeId = notice.withdrawalNoticeId) }

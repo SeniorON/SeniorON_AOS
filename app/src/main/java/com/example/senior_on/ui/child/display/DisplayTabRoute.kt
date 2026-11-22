@@ -17,10 +17,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionOnScreen
-import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.senior_on.domain.model.display.DisplayDeviceConnectionStatus
@@ -89,7 +85,6 @@ fun DisplayTabRoute(
     var selectedAddressLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var showInternetRequiredDialog by remember { mutableStateOf(false) }
     var showLargePreview by rememberSaveable { mutableStateOf(false) }
-    var tutorialAnchor by remember { mutableStateOf<Rect?>(null) }
     val emptySeniorList = seniorAccounts.isEmpty() && expectedSeniorId == null && !isSeniorAccountsLoading
     var buttonEditDraftItems by remember {
         mutableStateOf<List<DisplayHomeButton>>(emptyList())
@@ -254,9 +249,6 @@ fun DisplayTabRoute(
                 onPendingFamilyClick = onPendingFamilyClick,
                         uiState = uiState,
                         emptySeniorList = emptySeniorList,
-                        tutorialAnchorModifier = if (showTutorial) Modifier.onGloballyPositioned {
-                            tutorialAnchor = Rect(it.positionOnScreen(), it.size.toSize())
-                        } else Modifier,
                         canEditScreen = uiState.canEditScreen,
                         showScreenEditActions = uiState.canEditScreen &&
                             !uiState.isEditPermissionLoading &&
@@ -318,12 +310,7 @@ fun DisplayTabRoute(
                             }
                         },
                     )
-                    if (showTutorial) tutorialAnchor?.let { anchor ->
-                        SeniorAddTutorial(anchor, onAdd = {
-                            onFinishSeniorAddTutorial()
-                            onAddSeniorAccountClick()
-                        }, onSkip = onFinishSeniorAddTutorial)
-                    }
+                    if (showTutorial) SeniorAddTutorial(onFinishSeniorAddTutorial)
                 }
             }
 

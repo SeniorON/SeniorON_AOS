@@ -199,10 +199,10 @@ internal fun ParentExitHomeButton(
 }
 
 @Composable
-private fun ParentDateSettingsHeader(
+internal fun ParentDateSettingsHeader(
     now: LocalDateTime,
     interactionEnabled: Boolean,
-    onSettingsClick: () -> Unit,
+    onSettingsClick: (() -> Unit)?,
 ) {
     Box(
         modifier = Modifier
@@ -225,7 +225,7 @@ private fun ParentDateSettingsHeader(
                 maxLines = 1,
             )
         }
-            Row(
+        if (onSettingsClick != null) Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(width = 92.dp, height = 46.dp)

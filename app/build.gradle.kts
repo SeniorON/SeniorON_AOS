@@ -66,7 +66,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
-    implementation(libs.okhttp.logging.interceptor)
+    debugImplementation(libs.okhttp.logging.interceptor)
     implementation(libs.play.services.location)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)

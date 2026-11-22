@@ -17,8 +17,6 @@ import com.example.senior_on.ui.common.component.SeniorOnActionButton
 import com.example.senior_on.ui.parent.home.viewmodel.ParentHomeButtonUiModel
 import com.example.senior_on.ui.theme.*
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** Offline-safe launcher: no account data or authenticated requests are needed. */
 @Composable
@@ -28,17 +26,26 @@ internal fun ParentSessionExpiredScreen(
     onButtonClick: (SeniorHomeButtonType) -> Unit,
     onExitHomeClick: () -> Unit,
     modifier: Modifier = Modifier,
+) = ParentFallbackHome(now, onButtonClick, onExitHomeClick, modifier) {
+    ParentSessionExpiredCard(onLoginClick)
+}
+
+@Composable
+internal fun ParentFallbackHome(
+    now: LocalDateTime,
+    onButtonClick: (SeniorHomeButtonType) -> Unit,
+    onExitHomeClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onSettingsClick: (() -> Unit)? = null,
+    notice: @Composable () -> Unit,
 ) {
     Column(
         modifier.fillMaxSize().seniorHomeBackground().safeDrawingPadding()
             .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 24.dp),
     ) {
-        Text(now.format(DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)),
-            style = SeniorOnTextStyles.HeadingS, color = SeniorOnColors.Gray600)
-        Text(now.format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
-            style = SeniorOnTextStyles.Display, color = SeniorOnColors.Gray800)
+        ParentDateSettingsHeader(now, interactionEnabled = true, onSettingsClick = onSettingsClick)
         Spacer(Modifier.height(8.dp))
-        ParentSessionExpiredCard(onLoginClick)
+        notice()
         Spacer(Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             fallbackHomeButtons.chunked(2).forEach { buttons ->
@@ -64,22 +71,26 @@ internal fun ParentSessionExpiredScreen(
 
 internal val fallbackHomeButtons = listOf(
     SeniorHomeButtonType.Call to "전화", SeniorHomeButtonType.Message to "메시지",
-    SeniorHomeButtonType.ChatBuddy to "말벗", SeniorHomeButtonType.Medication to "복약",
+    SeniorHomeButtonType.Camera to "카메라", SeniorHomeButtonType.Calculator to "계산기",
     SeniorHomeButtonType.YouTube to "유튜브", SeniorHomeButtonType.Photo to "사진",
-    SeniorHomeButtonType.Schedule to "일정", SeniorHomeButtonType.Emergency to "긴급전화",
+    SeniorHomeButtonType.Alarm to "알람", SeniorHomeButtonType.Emergency to "긴급전화",
 )
 
 @Composable
-internal fun ParentSessionExpiredCard(onLoginClick: () -> Unit) {
+internal fun ParentSessionExpiredCard(onLoginClick: () -> Unit) =
+    ParentHomeNoticeCard("로그인이 필요해요", "오랫동안 사용하지 않아\n자동으로 로그아웃되었어요", "로그인하기", onLoginClick)
+
+@Composable
+internal fun ParentHomeNoticeCard(title: String, description: String, buttonLabel: String, onClick: () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Column(Modifier.fillMaxWidth().background(SeniorOnColors.Red50, shape)
         .border(1.dp, SeniorOnColors.Red100, shape).padding(14.dp)) {
-        Text("로그인이 필요해요", style = SeniorOnTextStyles.HeadingM, color = SeniorOnColors.Red400)
+        Text(title, style = SeniorOnTextStyles.HeadingM, color = SeniorOnColors.Red400)
         Spacer(Modifier.height(6.dp))
-        Text("오랫동안 사용하지 않아\n자동으로 로그아웃되었어요",
+        Text(description,
             style = SeniorOnTextStyles.HeadingXXS.copy(lineHeight = 24.sp), color = SeniorOnColors.Gray600)
         Spacer(Modifier.height(12.dp))
-        SeniorOnActionButton("로그인하기", onLoginClick, Modifier.fillMaxWidth(),
+        SeniorOnActionButton(buttonLabel, onClick, Modifier.fillMaxWidth(),
             minHeight = 59.dp, textStyle = SeniorOnTextStyles.HeadingM, shape = RoundedCornerShape(12.dp))
     }
 }

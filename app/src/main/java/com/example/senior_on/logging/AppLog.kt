@@ -10,10 +10,10 @@ object AppLog {
     }
     fun i(tag: String, message: String) = d(tag, message)
     fun w(tag: String, message: String, error: Throwable? = null) {
-        Log.w(tag, diagnosticMessage(message, error, BuildConfig.DEBUG))
+        if (BuildConfig.DEBUG) Log.w(tag, diagnosticMessage(message, error, true))
     }
     fun e(tag: String, message: String, error: Throwable? = null) {
-        Log.e(tag, diagnosticMessage(message, error, BuildConfig.DEBUG))
+        if (BuildConfig.DEBUG) Log.e(tag, diagnosticMessage(message, error, true))
     }
 }
 

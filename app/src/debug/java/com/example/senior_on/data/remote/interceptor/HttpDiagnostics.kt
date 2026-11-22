@@ -1,21 +1,18 @@
 package com.example.senior_on.data.remote.interceptor
 
-import com.example.senior_on.BuildConfig
 import com.example.senior_on.logging.AppLog
+import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 
-object HttpLoggingInterceptorFactory {
-    fun create(tag: String): HttpLoggingInterceptor = HttpLoggingInterceptor { message ->
+internal fun OkHttpClient.Builder.withHttpDiagnostics(tag: String): OkHttpClient.Builder =
+    addInterceptor(HttpLoggingInterceptor { message ->
         AppLog.d(tag, debugHttpMessage(message))
     }.apply {
-        // Development body inspection only; release never records HTTP traffic.
-        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-        else HttpLoggingInterceptor.Level.NONE
+        level = HttpLoggingInterceptor.Level.BODY
         redactHeader("Authorization")
         redactHeader("Cookie")
         redactHeader("Set-Cookie")
-    }
-}
+    })
 
 internal fun debugHttpMessage(message: String): String {
     if (message.contains("Content-Disposition: form-data", ignoreCase = true)) {

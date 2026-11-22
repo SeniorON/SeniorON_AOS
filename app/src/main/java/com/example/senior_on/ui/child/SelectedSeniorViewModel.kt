@@ -15,6 +15,7 @@ data class SelectedSeniorState(
     val seniorId: Long? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val pendingFamilyId: Long? = null,
 )
 
 /** Account-scoped durable selection, validated against a successfully loaded server list. */
@@ -26,16 +27,19 @@ class SelectedSeniorViewModel(
     private val _state = MutableStateFlow(SelectedSeniorState())
     val state = _state.asStateFlow()
     private var replacingSelection = false
+    private var pendingSelectionChanged = false
 
     init {
         viewModelScope.launch {
             try {
+                val restored = repository.readPendingFamily(accountId)
+                if (!pendingSelectionChanged) _state.value = _state.value.copy(pendingFamilyId = restored)
                 combine(repository.observe(accountId), availableIds) { saved, ids -> saved to ids }
                     .collect { (saved, ids) ->
                         if (ids != null && !replacingSelection) {
                             val selected = saved?.takeIf { it in ids } ?: ids.firstOrNull()
                             if (saved != selected) repository.select(accountId, selected)
-                            _state.value = SelectedSeniorState(selected, isLoading = false)
+                            _state.value = _state.value.copy(seniorId = selected, isLoading = false, error = null)
                         }
                     }
             } catch (e: CancellationException) {
@@ -48,6 +52,21 @@ class SelectedSeniorViewModel(
 
     fun reconcile(ids: List<Long>) { availableIds.value = ids.filter { it > 0 }.distinct() }
 
+    fun selectPendingFamily(id: Long?) {
+        pendingSelectionChanged = true
+        if (_state.value.pendingFamilyId == id && !_state.value.isLoading) return
+        _state.value = _state.value.copy(pendingFamilyId = id)
+        viewModelScope.launch {
+            try {
+                repository.selectPendingFamily(accountId, id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.value = _state.value.copy(error = "가족 선택을 저장하지 못했어요.")
+            }
+        }
+    }
+
     suspend fun replaceAfterDisconnect(ids: List<Long>) = replaceSelection(ids, false)
 
     suspend fun replaceAfterWithdrawal(ids: List<Long>) = replaceSelection(ids, true)
@@ -58,6 +77,7 @@ class SelectedSeniorViewModel(
             val validIds = ids.filter { it > 0 }.distinct()
             val first = _state.value.seniorId?.takeIf { preserveCurrent && it in validIds } ?: validIds.firstOrNull()
             repository.select(accountId, first)
+            repository.selectPendingFamily(accountId, null)
             availableIds.value = validIds
             _state.value = SelectedSeniorState(first, isLoading = false)
         } finally {

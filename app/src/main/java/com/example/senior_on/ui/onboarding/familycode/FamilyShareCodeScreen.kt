@@ -62,9 +62,11 @@ fun FamilyShareCodeScreen(
 }
 
 @Composable
-private fun FamilyShareCodeScreenContent(
+internal fun FamilyShareCodeScreenContent(
     topBarTitle: String = "로그인",
     selectedOption: FamilyShareCodeOption?,
+    optionAnchor: Modifier = Modifier,
+    nextAnchor: Modifier = Modifier,
     onOptionSelected: (FamilyShareCodeOption) -> Unit,
     onBackClick: () -> Unit,
     onNextClick: () -> Unit,
@@ -99,6 +101,7 @@ private fun FamilyShareCodeScreenContent(
             Spacer(modifier = Modifier.height(8.dp))
             FamilyShareCodeOptionButton(
                 text = "아직 없어요",
+                modifier = optionAnchor,
                 selected = selectedOption == FamilyShareCodeOption.NoCode,
                 onClick = {
                     onOptionSelected(FamilyShareCodeOption.NoCode)
@@ -110,7 +113,8 @@ private fun FamilyShareCodeScreenContent(
             text = "다음",
             enabled = selectedOption != null,
             onClick = onNextClick,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp),
+            buttonAnchor = nextAnchor,
         )
     }
 }

@@ -67,6 +67,7 @@ fun FamilyShareCodeInputScreen(
     onFamilyShareCodeChange: () -> Unit = {},
     topBarTitle: String = "로그인",
     submitLabel: String = "로그인",
+    codeAnchor: Modifier = Modifier,
 ) {
     var familyShareCode by rememberSaveable { mutableStateOf("") }
     val isLoginEnabled =
@@ -100,6 +101,7 @@ fun FamilyShareCodeInputScreen(
             Spacer(modifier = Modifier.height(45.dp))
             FamilyShareCodeTextField(
                 value = familyShareCode,
+                modifier = codeAnchor,
                 onValueChange = {
                     familyShareCode = normalizeFamilyShareCode(it)
                     onFamilyShareCodeChange()

@@ -197,7 +197,7 @@ fun ChildMainScreen(
         factory = SelectedSeniorViewModel.factory(authenticatedUserId, selectionRepository),
     )
     val selectionState by selectionViewModel.state.collectAsStateWithLifecycle()
-    var selectedPendingFamilyId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val selectedPendingFamilyId = selectionState.pendingFamilyId
     val activeSeniorId = selectionState.seniorId.takeUnless { selectionState.isLoading || selectedPendingFamilyId != null }
 
     var familyDestination by rememberSaveable(activeSeniorId) {
@@ -279,10 +279,10 @@ fun ChildMainScreen(
                 !selectionState.isLoading && activeSeniorId == null && !showSeniorManagement
         }
     LaunchedEffect(pendingFamily?.familyId) {
-        if (pendingFamily != null && selectedPendingFamilyId == null) selectedPendingFamilyId = pendingFamily.familyId
+        if (pendingFamily != null && selectedPendingFamilyId == null) selectionViewModel.selectPendingFamily(pendingFamily.familyId)
     }
     fun selectPendingFamily(family: com.example.senior_on.domain.model.senior.PendingSeniorFamily) {
-        selectedPendingFamilyId = family.familyId
+        selectionViewModel.selectPendingFamily(family.familyId)
         selectedTab = ChildMainTab.Screen
         displayViewModel.clearSelection()
         if (family.withdrawn) seniorManagementViewModel.showPendingWithdrawal(family)
@@ -293,11 +293,11 @@ fun ChildMainScreen(
         seniorManagementViewModel.startFreshAddition()
         showSeniorManagement = true
     }
-    LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.pendingFamilies, seniorManagementUiState.managedSeniors) {
-        if (!seniorManagementUiState.isLoading && seniorManagementUiState.listError == null) {
+    LaunchedEffect(selectedPendingFamilyId, selectionState.isLoading, seniorManagementUiState.isLoading, seniorManagementUiState.pendingFamilies, seniorManagementUiState.managedSeniors) {
+        if (!selectionState.isLoading && seniorManagementUiState.hasLoadedFamilyList && !seniorManagementUiState.isLoading && seniorManagementUiState.listError == null) {
             selectedPendingFamilyId?.let { familyId ->
                 if (seniorManagementUiState.pendingFamilies.none { it.familyId == familyId }) {
-                    selectedPendingFamilyId = null
+                    selectionViewModel.selectPendingFamily(null)
                     seniorManagementUiState.managedSeniors.firstOrNull { it.familyId == familyId && !it.withdrawn }
                         ?.let { senior -> seniorManagementViewModel.finishPendingRegistration(senior,
                             onRelationship = { showSeniorManagement = true },
@@ -319,7 +319,7 @@ fun ChildMainScreen(
             confirmButton = { androidx.compose.material3.TextButton(onClick = {
                 confirmPendingDisconnect = false
                 seniorManagementViewModel.disconnectPendingFamily(pendingFamily.familyId,
-                    onSuccess = { selectedPendingFamilyId = null }, onMessage = { pendingMessage = it })
+                    onSuccess = { selectionViewModel.selectPendingFamily(null) }, onMessage = { pendingMessage = it })
             }) { androidx.compose.material3.Text("연결 해제") } },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmPendingDisconnect = false }) {
                 androidx.compose.material3.Text("취소") } })
@@ -361,7 +361,7 @@ fun ChildMainScreen(
                         displayViewModel.clearSelection()
                         selectedTab = ChildMainTab.Screen
                         showSeniorManagement = false
-                        selectedPendingFamilyId = null
+                        selectionViewModel.selectPendingFamily(null)
                     },
                 )
             },
@@ -369,7 +369,7 @@ fun ChildMainScreen(
     }
 
     LaunchedEffect(seniorManagementUiState.isLoading, seniorManagementUiState.managedSeniors, seniorManagementUiState.errorMessage, withdrawalBusy) {
-        if (!withdrawalBusy && !seniorManagementUiState.isLoading && seniorManagementUiState.errorMessage == null) {
+        if (seniorManagementUiState.hasLoadedFamilyList && seniorManagementUiState.listError == null && !withdrawalBusy && !seniorManagementUiState.isLoading && seniorManagementUiState.errorMessage == null) {
             selectionViewModel.reconcile(seniorManagementUiState.managedSeniors.map { it.seniorId })
         }
     }
@@ -414,10 +414,10 @@ fun ChildMainScreen(
                 android.widget.Toast.makeText(context, "현재 관리 중인 시니어의 알림이 아니에요.", android.widget.Toast.LENGTH_LONG).show()
                 onNotificationNavigationConsumed()
             } else if (selectionState.seniorId != notificationTargetSeniorId) {
-                selectedPendingFamilyId = null
+                selectionViewModel.selectPendingFamily(null)
                 selectionViewModel.select(notificationTargetSeniorId)
             } else {
-                selectedPendingFamilyId = null
+                selectionViewModel.selectPendingFamily(null)
             }
         }
     }
@@ -541,7 +541,7 @@ fun ChildMainScreen(
                 family = pendingFamily,
                 accounts = seniorManagementUiState.managedSeniors,
                 pendingFamilies = seniorManagementUiState.pendingFamilies,
-                onAccountClick = { selectedPendingFamilyId = null; selectionViewModel.select(it.seniorId) },
+                onAccountClick = { selectionViewModel.selectPendingFamily(null); selectionViewModel.select(it.seniorId) },
                 onPendingClick = ::selectPendingFamily,
                 onAdd = ::startNewSenior,
                 onEdit = {
@@ -584,9 +584,9 @@ fun ChildMainScreen(
                 viewModel = seniorManagementViewModel,
                 addressSearchViewModel = addressSearchViewModel,
                 onClose = { showSeniorManagement = false; seniorManagementViewModel.refreshSeniors() },
-                onPendingFamilyJoined = { selectedPendingFamilyId = it },
+                onPendingFamilyJoined = { selectionViewModel.selectPendingFamily(it) },
                 onSeniorCreated = { senior ->
-                    selectedPendingFamilyId = null
+                    selectionViewModel.selectPendingFamily(null)
                     selectionViewModel.reconcile((seniorManagementUiState.managedSeniors.map { it.seniorId } + senior.seniorId).distinct())
                     selectionViewModel.select(senior.seniorId)
                 },
@@ -708,7 +708,7 @@ fun ChildMainScreen(
                 listRefreshFailed = seniorManagementUiState.listError != null,
                 onRefreshEmptyList = seniorManagementViewModel::refreshEmptyList,
                 onSeniorAccountClick = { senior ->
-                    selectedPendingFamilyId = null
+                    selectionViewModel.selectPendingFamily(null)
                     if (senior.withdrawn) seniorManagementViewModel.showWithdrawal(senior)
                     else selectionViewModel.select(senior.seniorId)
                 },

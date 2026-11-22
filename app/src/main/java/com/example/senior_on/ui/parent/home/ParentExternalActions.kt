@@ -6,8 +6,23 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
+import android.widget.Toast
 import com.example.senior_on.domain.model.display.SeniorHomeButtonType
 import com.example.senior_on.ui.common.homebutton.startDefaultHomeButtonAction
+
+internal fun openFallbackHomeButton(context: Context, type: SeniorHomeButtonType) {
+    when (type) {
+        SeniorHomeButtonType.Photo -> openSystemGallery(context)
+        SeniorHomeButtonType.Emergency -> openSeniorHomeButton(context, SeniorHomeButtonType.Call)
+        SeniorHomeButtonType.Calculator, SeniorHomeButtonType.Alarm -> {
+            val action = if (type == SeniorHomeButtonType.Calculator) "CALCULATOR" else "ALARM"
+            if (!startDefaultHomeButtonAction(context, action)) {
+                Toast.makeText(context, "이 기능을 실행할 앱이 없어요.", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else -> openSeniorHomeButton(context, type)
+    }
+}
 
 internal fun openSeniorHomeButton(
     context: Context,

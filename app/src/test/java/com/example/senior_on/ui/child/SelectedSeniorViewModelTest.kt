@@ -10,14 +10,43 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SelectedSeniorViewModelTest {
+    private class SelectionStore(private val saved: MutableStateFlow<Long?>) : SelectedSeniorRepository {
+        private val pending = mutableMapOf<String, Long?>()
+        override fun observe(accountId: String) = saved
+        override suspend fun select(accountId: String, seniorId: Long?) { saved.value = seniorId }
+        override suspend fun readPendingFamily(accountId: String) = pending[accountId]
+        override suspend fun selectPendingFamily(accountId: String, familyId: Long?) { pending[accountId] = familyId }
+    }
+
+    @Test fun pendingFamilySurvivesReentryUntilWithdrawalIsConfirmed() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            val repo = SelectionStore(MutableStateFlow(25L))
+            fun open() = SelectedSeniorViewModel("account", repo).also { store.put("selection", it) }
+            val first = open()
+            first.reconcile(listOf(25L))
+            advanceUntilIdle()
+            first.selectPendingFamily(53L)
+            advanceUntilIdle()
+            val restored = open()
+            advanceUntilIdle()
+            assertTrue(restored.state.value.isLoading)
+            restored.reconcile(listOf(25L))
+            advanceUntilIdle()
+            assertEquals(53L, restored.state.value.pendingFamilyId)
+            restored.replaceAfterWithdrawal(listOf(25L))
+            advanceUntilIdle()
+            assertNull(repo.readPendingFamily("account"))
+            assertNull(restored.state.value.pendingFamilyId)
+            assertEquals(25L, restored.state.value.seniorId)
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
     @Test fun withdrawalPreservesOtherSelectionAndFallsBackToFirstOrEmpty() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()
         val saved = MutableStateFlow<Long?>(77)
-        val repo = object : SelectedSeniorRepository {
-            override fun observe(accountId: String) = saved
-            override suspend fun select(accountId: String, seniorId: Long?) { saved.value = seniorId }
-        }
+        val repo = SelectionStore(saved)
         try {
             val vm = SelectedSeniorViewModel("account", repo).also { store.put("selection", it) }
             vm.reconcile(listOf(42, 77, 99))
@@ -37,10 +66,7 @@ class SelectedSeniorViewModelTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val store = ViewModelStore()
         val saved = MutableStateFlow<Long?>(77)
-        val repo = object : SelectedSeniorRepository {
-            override fun observe(accountId: String) = saved
-            override suspend fun select(accountId: String, seniorId: Long?) { saved.value = seniorId }
-        }
+        val repo = SelectionStore(saved)
         try {
             val vm = SelectedSeniorViewModel("account", repo).also { store.put("selection", it) }
             advanceUntilIdle()
