@@ -464,6 +464,7 @@ internal fun RelationshipSelector(
 
 @Composable
 internal fun SeniorInfoBottomActions(
+    saveAnchor: Modifier = Modifier,
     onSkipClick: () -> Unit,
     onSaveClick: () -> Unit,
     isSaveEnabled: Boolean,
@@ -509,7 +510,7 @@ internal fun SeniorInfoBottomActions(
             SeniorInfoActionButton(
                 text = "저장 후 시작",
                 onClick = onSaveClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).then(saveAnchor),
                 style = SeniorInfoButtonStyle.Filled,
                 enabled = isSaveEnabled,
                 isLoading = isSubmitting,

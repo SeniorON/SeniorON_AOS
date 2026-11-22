@@ -75,6 +75,7 @@ internal fun FamilyShareCodeBottomButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    buttonAnchor: Modifier = Modifier,
 ) {
     val backgroundColor = if (enabled || isLoading) {
         SeniorOnColors.Primary600
@@ -92,6 +93,7 @@ internal fun FamilyShareCodeBottomButton(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
+                .then(buttonAnchor)
                 .clip(RoundedCornerShape(SeniorOnRadius.Small))
                 .background(backgroundColor)
                 .clickable(

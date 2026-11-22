@@ -76,6 +76,7 @@ fun ParentInfoInputScreen(
     selectedAddressLatitude: Double? = null,
     selectedAddressLongitude: Double? = null,
     isSubmitting: Boolean = false,
+    saveAnchor: Modifier = Modifier,
     errorMessage: String? = null,
     onBackClick: () -> Unit = {},
     onSkipClick: () -> Unit = {},
@@ -292,6 +293,7 @@ fun ParentInfoInputScreen(
                     showSkipNotice = true
                 },
                 onSaveClick = saveParentInfo,
+                saveAnchor = saveAnchor,
                 isSaveEnabled = isSaveEnabled,
                 errorMessage = errorMessage,
                 isSubmitting = isSubmitting,

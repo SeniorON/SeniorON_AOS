@@ -55,6 +55,7 @@ fun FamilyShareCodeCreatedScreen(
     errorMessage: String? = null,
     onRetryClick: () -> Unit = {},
     showNextButton: Boolean = true,
+    codeAnchor: Modifier = Modifier,
     topBarTitle: String = "로그인",
 ) {
     var isCopied by rememberSaveable { mutableStateOf(false) }
@@ -109,6 +110,7 @@ fun FamilyShareCodeCreatedScreen(
             } else {
                 FamilyShareCodeBox(
                 code = familyShareCode,
+                modifier = codeAnchor,
                 onCopyClick = {
                     copyFamilyShareCode(
                         context = context,

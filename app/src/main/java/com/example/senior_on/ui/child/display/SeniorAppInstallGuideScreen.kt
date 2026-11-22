@@ -45,6 +45,7 @@ fun SeniorAppInstallGuideScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onKakaoSendClick: () -> Unit = {},
+    sendAnchor: Modifier = Modifier,
     onAppInstallMethodClick: () -> Unit = {},
 ) {
     Column(
@@ -105,6 +106,7 @@ fun SeniorAppInstallGuideScreen(
 
             KakaoInstallLinkButton(
                 onClick = onKakaoSendClick,
+                modifier = sendAnchor,
             )
 
             Spacer(modifier = Modifier.height(103.dp))
@@ -121,9 +123,10 @@ fun SeniorAppInstallGuideScreen(
 @Composable
 private fun KakaoInstallLinkButton(
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(SeniorOnRadius.Large))
