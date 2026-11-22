@@ -5,4 +5,6 @@ import kotlinx.coroutines.flow.Flow
 interface SelectedSeniorRepository {
     fun observe(accountId: String): Flow<Long?>
     suspend fun select(accountId: String, seniorId: Long?)
+    suspend fun readPendingFamily(accountId: String): Long?
+    suspend fun selectPendingFamily(accountId: String, familyId: Long?)
 }
