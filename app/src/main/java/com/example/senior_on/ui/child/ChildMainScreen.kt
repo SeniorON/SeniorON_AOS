@@ -615,16 +615,16 @@ fun ChildMainScreen(
                 },
             ) {}
         } else if (selectedTab == ChildMainTab.Family && activeSeniorId == null) {
-            if (selectionState.isLoading) {
+            if (selectionState.isLoading || !seniorManagementUiState.hasLoadedFamilyList) {
                 Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
                     com.example.senior_on.ui.common.component.SeniorOnLoadingIndicator()
                 }
             } else {
-                com.example.senior_on.ui.child.family.PendingFamilyCodeRoute(
-                    repository = familyServerRepository,
-                    sessionKey = childSessionViewModelKey,
-                    onBackClick = { selectedTab = ChildMainTab.Screen },
+                ChildFamilySeniorRequiredContent(
                     modifier = Modifier.weight(1f).fillMaxSize(),
+                    message = if (seniorManagementUiState.managedSeniors.isEmpty() &&
+                        seniorManagementUiState.pendingFamilies.isEmpty()
+                    ) "연결된 시니어가 없어요." else "관리할 시니어를 먼저 선택해 주세요.",
                 )
             }
         } else {
@@ -1177,7 +1177,10 @@ private fun ChildMainPreviewFrame(
 }
 
 @Composable
-private fun ChildFamilySeniorRequiredContent(modifier: Modifier = Modifier) {
+private fun ChildFamilySeniorRequiredContent(
+    modifier: Modifier = Modifier,
+    message: String = "관리할 시니어를 먼저 선택해 주세요.",
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -1186,7 +1189,7 @@ private fun ChildFamilySeniorRequiredContent(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "관리할 시니어를 먼저 선택해 주세요.",
+            text = message,
             style = SeniorOnTextStyles.BodyMMedium,
             color = SeniorOnColors.Gray500,
             textAlign = TextAlign.Center,
