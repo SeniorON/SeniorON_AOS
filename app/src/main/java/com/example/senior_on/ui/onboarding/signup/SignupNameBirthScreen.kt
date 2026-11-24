@@ -46,6 +46,9 @@ import com.example.senior_on.ui.theme.SeniorOnColors
 import com.example.senior_on.ui.theme.SeniorOnRadius
 import com.example.senior_on.ui.theme.SeniorOnTextStyles
 import java.time.LocalDate
+import com.example.senior_on.core.time.koreaToday
+import com.example.senior_on.domain.model.auth.SignupAgePolicy
+import java.util.Locale
 
 @Composable
 fun SignupNameBirthScreen(
@@ -58,7 +61,8 @@ fun SignupNameBirthScreen(
     var isBirthSheetVisible by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val canGoNext = name.isNotBlank() && birthDate.isNotBlank()
+    var birthError by rememberSaveable { mutableStateOf<String?>(null) }
+    val canSubmit = name.isNotBlank() && birthDate.isNotBlank()
 
     SignupStepScaffold(
         progress = 1 / 4f,
@@ -93,11 +97,19 @@ fun SignupNameBirthScreen(
             }
         )
 
+        birthError?.let { message ->
+            Text(message, modifier = Modifier.padding(top = 6.dp),
+                style = SeniorOnTextStyles.BodyMMedium, color = SeniorOnColors.Red400)
+        }
         Spacer(modifier = Modifier.weight(1f))
 
         SignupNextButton(
-            enabled = canGoNext,
-            onClick = { onNextClick(name.trim(), birthDate) }
+            enabled = canSubmit,
+            onClick = {
+                val error = SignupAgePolicy.error(birthDate)
+                birthError = error
+                if (error == null) onNextClick(name.trim(), birthDate)
+            }
         )
 
         Spacer(modifier = Modifier.height(22.5.dp))
@@ -109,6 +121,7 @@ fun SignupNameBirthScreen(
             onDismiss = { isBirthSheetVisible = false },
             onConfirm = { selectedBirthDate ->
                 birthDate = selectedBirthDate
+                birthError = null
                 isBirthSheetVisible = false
             }
         )
@@ -157,7 +170,7 @@ internal fun SignupBirthDateModalBottomSheet(
                     selectedDay = initialDate.dayOfMonth,
                     onCloseClick = onDismiss,
                     onConfirmClick = { year, month, day ->
-                        onConfirm("%04d.%02d.%02d".format(year, month, day))
+                        onConfirm("%04d.%02d.%02d".format(Locale.ROOT, year, month, day))
                     },
                 )
             }
@@ -219,7 +232,8 @@ private fun SignupBirthDateBottomSheet(
     onCloseClick: () -> Unit,
     onConfirmClick: (year: Int, month: Int, day: Int) -> Unit
 ) {
-    val years = remember { (1900..2026).toList() }
+    val currentYear = koreaToday().year
+    val years = remember(currentYear) { (1900..currentYear).toList() }
     val months = remember { (1..12).toList() }
     val days = remember { (1..31).toList() }
     val yearState = rememberLazyListState(
@@ -231,7 +245,7 @@ private fun SignupBirthDateBottomSheet(
     val dayState = rememberLazyListState(
         initialFirstVisibleItemIndex = days.indexOf(selectedDay).coerceAtLeast(0)
     )
-    val pickedYear by remember {
+    val pickedYear by remember(years) {
         derivedStateOf {
             years[yearState.firstVisibleItemIndex.coerceIn(years.indices)]
         }

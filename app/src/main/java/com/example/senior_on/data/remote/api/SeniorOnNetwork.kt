@@ -148,6 +148,7 @@ object SeniorOnNetwork {
     val userApi: UserApi by lazy {
         retrofit.create(UserApi::class.java)
     }
+    internal val healthConsentApi: HealthConsentApi by lazy { retrofit.create(HealthConsentApi::class.java) }
 
     val accountRecoveryApi: AccountRecoveryApi by lazy {
         retrofit.create(AccountRecoveryApi::class.java)

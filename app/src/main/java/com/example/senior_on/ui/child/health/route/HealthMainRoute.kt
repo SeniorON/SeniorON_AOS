@@ -42,6 +42,7 @@ import java.time.LocalDate
 
 @Composable
 fun HealthMainRoute(
+    scopedOwner: androidx.lifecycle.ViewModelStoreOwner,
     tabReselectionToken: Int = 0,
     seniorId: Long? = null,
     sessionKey: String = "",
@@ -54,7 +55,6 @@ fun HealthMainRoute(
     onSavingChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val scopedOwner = com.example.senior_on.ui.child.rememberSeniorScopedViewModelStoreOwner("health:$sessionKey:$seniorId")
     val medicationViewModel: MedicationViewModel = viewModel(
         viewModelStoreOwner = scopedOwner,
         key = "medication:$sessionKey:$seniorId",

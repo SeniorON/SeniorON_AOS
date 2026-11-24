@@ -145,6 +145,7 @@ fun ParentSettingsRoute(
         },
     ) {
     when (destination) {
+        ParentSettingsDestination.HealthConsent -> com.example.senior_on.ui.consent.SeniorHealthGate(settings = true, back = ::back)
         ParentSettingsDestination.DetectionQa -> {
             if (com.example.senior_on.device.DetectionQa.enabled) {
                 DetectionQaScreen(onBackClick = ::back, modifier = modifier)

@@ -77,6 +77,13 @@ private fun ParentPermissionConfirmationCard(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    ParentWarningConfirmationCard(confirmation.title, confirmation.description, confirmation.confirmLabel, onDismiss, onConfirm)
+}
+
+@Composable
+internal fun ParentWarningConfirmationCard(
+    title: String, description: String, confirmLabel: String, onDismiss: () -> Unit, onConfirm: () -> Unit,
+) {
         Column(
             Modifier.widthIn(max = 263.dp).fillMaxWidth().background(SeniorOnColors.White, RoundedCornerShape(SeniorOnRadius.XLarge)).padding(horizontal = 16.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -88,11 +95,11 @@ private fun ParentPermissionConfirmationCard(
                 tint = SeniorOnColors.Red400,
             )
             Spacer(Modifier.height(12.dp))
-            Text(confirmation.title, style = SeniorOnTextStyles.HeadingXXL.copy(fontWeight = FontWeight.ExtraBold), color = SeniorOnColors.Gray800, textAlign = TextAlign.Center)
+            Text(title, style = SeniorOnTextStyles.HeadingXXL.copy(fontWeight = FontWeight.ExtraBold), color = SeniorOnColors.Gray800, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
-            Text(confirmation.description, style = SeniorOnTextStyles.HeadingXXS, color = SeniorOnColors.Gray600, textAlign = TextAlign.Center)
+            Text(description, style = SeniorOnTextStyles.HeadingXXS, color = SeniorOnColors.Gray600, textAlign = TextAlign.Center)
             Spacer(Modifier.height(38.dp))
-            SeniorOnActionButton(confirmation.confirmLabel, onConfirm, Modifier.fillMaxWidth(), containerColor = SeniorOnColors.Red400, minHeight = 64.dp, textStyle = SeniorOnTextStyles.HeadingS)
+            SeniorOnActionButton(confirmLabel, onConfirm, Modifier.fillMaxWidth(), containerColor = SeniorOnColors.Red400, minHeight = 64.dp, textStyle = SeniorOnTextStyles.HeadingS)
             Spacer(Modifier.height(6.dp))
             SeniorOnActionButton("취소", onDismiss, Modifier.fillMaxWidth(), containerColor = SeniorOnColors.White,
                 contentColor = SeniorOnColors.Gray700, minHeight = 64.dp, textStyle = SeniorOnTextStyles.HeadingS, border = androidx.compose.foundation.BorderStroke(1.5.dp, SeniorOnColors.Gray200))

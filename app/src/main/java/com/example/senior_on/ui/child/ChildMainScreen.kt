@@ -943,21 +943,27 @@ private fun ChildMainTabContent(
             hospitalRepository != null &&
             hospitalSpecialtyRepository != null
         ) {
-            HealthMainRoute(
-                onSavingChanged = onHealthSavingChanged,
-                tabReselectionToken = tabReselectionToken,
-                seniorId = selectedSeniorId,
-                sessionKey = settingsSessionKey,
-                medicationRepository = medicationRepository,
-                hospitalRepository = hospitalRepository,
-                familyRepository = familyServerRepository,
-                hospitalSpecialtyRepository = hospitalSpecialtyRepository,
-                navigationEvent = notificationNavigationEvent,
-                onNavigationEventConsumed = onNotificationNavigationConsumed,
-                modifier = modifier,
-            )
+            com.example.senior_on.ui.consent.GuardianHealthGate(settingsSessionKey, selectedSeniorId,
+                seniorAccounts.firstOrNull { it.seniorId == selectedSeniorId }?.parentUserId, modifier) { owner ->
+                HealthMainRoute(
+                    scopedOwner = owner,
+                    onSavingChanged = onHealthSavingChanged,
+                    tabReselectionToken = tabReselectionToken,
+                    seniorId = selectedSeniorId,
+                    sessionKey = settingsSessionKey,
+                    medicationRepository = medicationRepository,
+                    hospitalRepository = hospitalRepository,
+                    familyRepository = familyServerRepository,
+                    hospitalSpecialtyRepository = hospitalSpecialtyRepository,
+                    navigationEvent = notificationNavigationEvent,
+                    onNavigationEventConsumed = onNotificationNavigationConsumed,
+                    modifier = modifier,
+                )
+            }
         } else {
-            HealthMainScreen(modifier = modifier)
+            androidx.compose.foundation.layout.Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Text("건강정보를 불러올 수 없어요.")
+            }
         }
         return
     }

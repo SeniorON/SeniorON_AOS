@@ -165,6 +165,7 @@ fun SignupTermsRoute(
     val viewModel = onboardingAuthViewModel(appContainer)
 
     SignupTermsAgreementScreen(
+        isSenior = selectedMode == AppUserMode.Senior,
         onBackClick = {
             onBackClick(viewModel.hasPendingSocialSignup())
         },

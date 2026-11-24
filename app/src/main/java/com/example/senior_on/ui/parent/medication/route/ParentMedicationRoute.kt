@@ -25,6 +25,14 @@ fun ParentMedicationRoute(
     highlightedMedicationLogId: Long? = null,
     modifier: Modifier = Modifier,
 ) {
+    com.example.senior_on.ui.consent.SeniorHealthGate(settings = false, back = onBackClick) {
+        MedicationContent(repository, updatesRepository, onBackClick, highlightedMedicationLogId, modifier)
+    }
+}
+
+@Composable
+private fun MedicationContent(repository: MedicationRepository, updatesRepository: ParentHomeUpdatesRepository,
+    onBackClick: () -> Unit, highlightedMedicationLogId: Long?, modifier: Modifier) {
     val viewModel: ParentMedicationViewModel = viewModel(
         factory = ParentMedicationViewModel.factory(repository, updatesRepository)
     )

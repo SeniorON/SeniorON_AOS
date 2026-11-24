@@ -48,7 +48,10 @@ data class SignupAgreements(
     val serviceTerms: Boolean,
     val privacyPolicy: Boolean,
     val ageOver14: Boolean,
-    val marketing: Boolean
+    val marketing: Boolean,
+    val agreeHealthInfo: Boolean = false,
+    val agreeLocationInfo: Boolean = false,
+    val agreeFamilyInfoProvision: Boolean = false,
 )
 
 private data class PendingSocialSignup(
@@ -219,6 +222,7 @@ class AuthViewModel(
         launchRequest(
             onFailure = { _ -> onResult(false) }
         ) {
+            com.example.senior_on.domain.model.auth.SignupAgePolicy.error(signupDraft.birth)?.let { error(it) }
             pendingSocialSignup?.let { pendingSocial ->
                 completeSocialSignup(
                     pendingSocial = pendingSocial,
@@ -243,7 +247,10 @@ class AuthViewModel(
                     agreeServiceTerms = agreements.serviceTerms,
                     agreePrivacyPolicy = agreements.privacyPolicy,
                     agreeAgeOver14 = agreements.ageOver14,
-                    agreeMarketing = agreements.marketing
+                    agreeMarketing = agreements.marketing,
+                    agreeHealthInfo = agreements.agreeHealthInfo,
+                    agreeLocationInfo = agreements.agreeLocationInfo,
+                    agreeFamilyInfoProvision = agreements.agreeFamilyInfoProvision,
                 )
             )
             currentCoroutineContext().ensureActive()
@@ -288,6 +295,9 @@ class AuthViewModel(
                 privacyPolicyAgreed = agreements.privacyPolicy,
                 ageOver14Agreed = agreements.ageOver14,
                 marketingAgreed = agreements.marketing,
+                agreeHealthInfo = agreements.agreeHealthInfo,
+                agreeLocationInfo = agreements.agreeLocationInfo,
+                agreeFamilyInfoProvision = agreements.agreeFamilyInfoProvision,
                 fcmToken = deviceRegistration.fcmToken,
                 deviceIdentifier = deviceRegistration.deviceIdentifier,
             )
