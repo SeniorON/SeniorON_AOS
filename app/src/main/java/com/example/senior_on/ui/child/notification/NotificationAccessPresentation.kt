@@ -31,7 +31,7 @@ internal fun NotificationScreenUiState.accessWarningPanel(): NotificationFooterP
         disabledSettings.isNotEmpty() -> NotificationFooterPanelUiState(
             tone = NotificationFooterTone.Warning,
             title = "${senior} 폰에서 꺼진 설정이 있어요.",
-            description = disabledSettings.joinToString("\n") { "· $it" },
+            description = disabledSettings.mapIndexed { index, setting -> "${index + 1}. $setting" }.joinToString("\n"),
         )
         !sharingStatusKnown -> NotificationFooterPanelUiState(
             tone = NotificationFooterTone.Warning,

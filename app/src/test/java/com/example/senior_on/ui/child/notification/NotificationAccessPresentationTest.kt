@@ -72,7 +72,7 @@ class NotificationAccessPresentationTest {
             seniorDisplayName = "어머니").accessWarningPanel()!!
         assertEquals(NotificationFooterTone.Warning, panel.tone)
         assertEquals("어머니 폰에서 꺼진 설정이 있어요.", panel.title)
-        assertEquals("· 앱 내 위치 정보 공유\n· 앱 내 무활동 감지 공유", panel.description)
+        assertEquals("1. 앱 내 위치 정보 공유\n2. 앱 내 무활동 감지 공유", panel.description)
     }
 
     @Test fun reportedSettingsOnlyMaskTheirOwnToggleAndListExactReasons() {
@@ -82,7 +82,7 @@ class NotificationAccessPresentationTest {
             val state = NotificationScreenUiState(emptyList(), gpsEnabled = on(0),
                 locationPermissionGranted = on(1), locationSharingEnabled = on(2), inactivitySharingEnabled = on(3))
             val reasons = labels.filterIndexed { i, _ -> !on(i) }
-            assertEquals(reasons.takeIf { it.isNotEmpty() }?.joinToString("\n") { "· $it" },
+            assertEquals(reasons.takeIf { it.isNotEmpty() }?.mapIndexed { i, reason -> "${i + 1}. $reason" }?.joinToString("\n"),
                 state.accessWarningPanel()?.description)
             for (saved in listOf(true, false)) {
                 fun displayed(category: NotificationCategory) =
