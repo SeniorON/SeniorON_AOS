@@ -10,7 +10,7 @@ class FamilyInvitationShareContentTest {
 
         assertEquals(
             """
-            SeniorON 가족으로 초대했어요.
+            시니어On 가족으로 초대했어요.
             시니어 코드: 40B6-4571
             앱에서 코드를 입력해 가족을 연결해주세요.
             """.trimIndent(),

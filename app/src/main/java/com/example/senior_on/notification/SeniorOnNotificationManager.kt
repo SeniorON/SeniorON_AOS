@@ -21,7 +21,7 @@ import com.google.firebase.messaging.RemoteMessage
 
 object SeniorOnNotificationManager {
     private const val AlertChannelId = "senior_on_alerts"
-    private const val DefaultTitle = "SeniorON 알림"
+    private const val DefaultTitle = "시니어On 알림"
     private const val DefaultBody = "새로운 알림이 도착했습니다."
     private val SingleVibrationPattern = longArrayOf(0L, 500L)
 

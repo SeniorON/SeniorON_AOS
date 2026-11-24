@@ -116,9 +116,9 @@ private fun GuardianConnectionGuideContent(
 
             ConnectionGuideStep(
                 step = 1,
-                title = "시니어ON(보호자) 회원가입",
+                title = "시니어On(보호자) 회원가입",
                 imageResId = R.drawable.img_guardian_step01,
-                imageDescription = "시니어ON 회원가입 모드 선택 화면",
+                imageDescription = "시니어On 회원가입 모드 선택 화면",
                 description = "앱 실행 후 자녀모드를 선택합니다.\n" +
                     "이후 이름, 이메일, 비밀번호 등을 입력하여 회원가입을 진행합니다.",
             )
@@ -259,9 +259,9 @@ private fun SeniorConnectionGuideContent(
 
         ConnectionGuideStep(
             step = 1,
-            title = "시니어ON 실행 후 ‘시니어’ 모드 선택",
+            title = "시니어On 실행 후 ‘시니어’ 모드 선택",
             imageResId = R.drawable.img_senior_step01,
-            imageDescription = "시니어ON 시니어 모드 선택 화면",
+            imageDescription = "시니어On 시니어 모드 선택 화면",
             description = "앱을 처음 실행하면 역할 선택 화면이 나타납니다.\n" +
                 "반드시 ‘시니어’ 모드를 선택해야 합니다.",
             reference = "‘보호자’ 모드를 선택하지 않도록 주의해 주세요. " +
@@ -272,7 +272,7 @@ private fun SeniorConnectionGuideContent(
 
         ConnectionGuideStep(
             step = 2,
-            title = "시니어ON (시니어용) 회원가입",
+            title = "시니어On (시니어용) 회원가입",
             imageResId = R.drawable.img_senior_step02,
             imageDescription = "시니어용 회원가입 정보 입력 화면",
             description = "시니어 모드로 진입 후, 이름, 전화번호(또는 이메일) 등 기본 정보를 " +
@@ -354,7 +354,7 @@ private fun ConnectionGuideTopBar(
 
             Image(
                 painter = painterResource(id = R.drawable.ic_senior_on_logo),
-                contentDescription = "시니어ON",
+                contentDescription = "시니어On",
                 modifier = Modifier.size(width = 96.dp, height = 24.dp),
                 contentScale = ContentScale.Fit,
             )
