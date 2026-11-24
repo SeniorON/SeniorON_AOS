@@ -82,7 +82,8 @@ class HomeServerRepositoryImpl(
         DeviceInfo(
             it.deviceName.orEmpty(), it.connected == true, it.connectionStatus.orEmpty(),
             it.batteryLevel, it.networkConnected == true, it.lastConnectedAt,
-            it.lastLocationUpdatedAt
+            it.lastLocationUpdatedAt, gpsEnabled = it.gpsEnabled,
+            locationPermissionGranted = it.locationPermissionGranted,
         )
     }
     override suspend fun getButtonOptions(seniorId: Long) = source.getButtonOptions(seniorId).map {
