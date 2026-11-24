@@ -775,7 +775,7 @@ private fun OneOnOneInquiryHistoryContent(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "시니어 ON에 궁금한 부분이 있다면\n 문의를 남겨주세요",
+                    text = "시니어On에 궁금한 부분이 있다면\n 문의를 남겨주세요",
                     style = SeniorOnTextStyles.BodySMedium,
                     color = SeniorOnColors.Gray500,
                     textAlign = TextAlign.Center
