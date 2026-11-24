@@ -3,6 +3,7 @@ package com.example.senior_on.ui.child.notification.viewmodel
 import com.example.senior_on.logging.AppLog as Log
 import com.example.senior_on.data.remote.api.SeniorPermissionSettings
 import com.example.senior_on.ui.child.notification.canAccess
+import com.example.senior_on.ui.child.notification.canUseToggle
 import com.example.senior_on.ui.child.notification.enforceAccess
 import com.example.senior_on.ui.child.notification.visibleMessage
 import androidx.lifecycle.ViewModel
@@ -162,6 +163,8 @@ class NotificationViewModel(
                     }
                     _uiState.update { current ->
                         val access = current.home.copy(
+                            gpsEnabled = device?.gpsEnabled,
+                            locationPermissionGranted = device?.locationPermissionGranted,
                             isParentPhoneRegistered = true,
                             sharingStatusKnown = permissionsLoader == null || permissions != null,
                             locationSharingEnabled = permissions?.locationEnabled ?: (permissionsLoader == null),
@@ -203,6 +206,8 @@ class NotificationViewModel(
                                     ?.isNotBlank()
                                     ?: true,
                             ).copy(
+                                gpsEnabled = device?.gpsEnabled,
+                                locationPermissionGranted = device?.locationPermissionGranted,
                                 sharingStatusKnown = permissionsLoader == null || permissions != null,
                                 locationSharingEnabled = permissions?.locationEnabled ?: (permissionsLoader == null),
                                 inactivitySharingEnabled = permissions?.inactivityDetectionEnabled ?: (permissionsLoader == null),
@@ -340,6 +345,7 @@ class NotificationViewModel(
                 check(_uiState.value.home.sharingStatusKnown) { "공유 상태를 확인하지 못했어요. 다시 시도해 주세요." }
                 check(allowed) { "해당 정보의 공유가 중단되었거나 기기가 연결되지 않았어요." }
                 val home = _uiState.value.home
+                if (!home.canUseToggle(category)) return@launch
                 check(home.isParentPhoneInternetConnected) { "시니어 기기의 인터넷 연결을 확인해 주세요." }
                 if (category == NotificationCategory.Outing && enabled && !home.hasHomeAddress) {
                     _uiState.update { it.copy(toggleToastMessage = com.example.senior_on.ui.child.notification.HomeLocationMissingMessage) }

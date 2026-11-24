@@ -8,23 +8,31 @@ import org.junit.Test
 class DeviceStatusChangesTest {
     @Test fun recoveryIncludesNetworkButRepeatedCallbacksDoNot() {
         val changes = DeviceStatusChanges()
-        assertEquals(NETWORK_RECOVERED, changes.observe(50, false, true))
-        assertEquals(0, changes.observe(50, false, true))
+        assertEquals(NETWORK_RECOVERED, changes.observe(50, false, true, true))
+        assertEquals(0, changes.observe(50, false, true, true))
     }
 
     @Test fun changesCanBeCombined() {
         val changes = DeviceStatusChanges()
-        changes.observe(50, false, true)
-        assertEquals(BATTERY_CHANGED or CHARGING_CHANGED, changes.observe(51, true, true))
-        assertEquals(CHARGING_CHANGED, changes.observe(51, false, true))
+        changes.observe(50, false, true, true)
+        assertEquals(BATTERY_CHANGED or CHARGING_CHANGED, changes.observe(51, true, true, true))
+        assertEquals(CHARGING_CHANGED, changes.observe(51, false, true, true))
     }
 
     @Test fun offlineChangesAreDiscardedAndRecoveryRequestsLatestSnapshot() {
         val changes = DeviceStatusChanges()
-        changes.observe(50, false, true)
-        assertEquals(0, changes.observe(49, false, false))
-        assertEquals(0, changes.observe(48, true, false))
-        assertEquals(NETWORK_RECOVERED, changes.observe(48, true, true))
+        changes.observe(50, false, true, true)
+        assertEquals(0, changes.observe(49, false, false, true))
+        assertEquals(0, changes.observe(48, true, false, true))
+        assertEquals(NETWORK_RECOVERED, changes.observe(48, true, true, true))
+    }
+
+    @Test fun gpsTogglesAreDetectedButRepeatedCallbacksAreNot() {
+        val changes = DeviceStatusChanges()
+        changes.observe(50, false, true, true)
+        assertEquals(GPS_CHANGED, changes.observe(50, false, true, false))
+        assertEquals(0, changes.observe(50, false, true, false))
+        assertEquals(GPS_CHANGED, changes.observe(50, false, true, true))
     }
 
     @Test fun partialJsonOmitsUnspecifiedFieldsButKeepsFalseAndZero() {

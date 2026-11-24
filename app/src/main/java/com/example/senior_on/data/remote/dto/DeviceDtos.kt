@@ -6,6 +6,7 @@ data class DeviceStatusPatchRequest(
     val batteryLevel: Int? = null,
     val charging: Boolean? = null,
     val networkConnected: Boolean? = null,
+    val gpsEnabled: Boolean? = null,
 )
 
 data class DeviceStatusUpdateRequest(

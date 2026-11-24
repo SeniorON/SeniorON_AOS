@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -81,13 +82,7 @@ fun NotificationScreen(
     // Filter before layout/summary calculation so it occupies no space (View.GONE).
     val sections = uiState.sections.filterNot {
         it.category == NotificationCategory.RiskLink
-    }.map { section ->
-        when {
-            !uiState.canAccess(section.category) -> section.copy(enabled = false, messages = emptyList(), detectionStandardTime = null)
-            section.category == NotificationCategory.Sos -> section.copy(enabled = true)
-            else -> section
-        }
-    }
+    }.map(uiState::displaySection)
     val context = androidx.compose.ui.platform.LocalContext.current
     var showParentPhoneInternetRequiredDialog by remember { mutableStateOf(false) }
     val enabledSections = sections.filter { section -> section.enabled }
@@ -157,8 +152,9 @@ fun NotificationScreen(
                         showDetailArrow = uiState.canAccess(section.category) && section.enabled,
                         showToggle = section.category != NotificationCategory.Sos,
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        textMuted = !uiState.canAccess(section.category),
-                        onClick = { if (uiState.canAccess(section.category)) onSectionClick(section.category) },
+                        textMuted = !uiState.canUseToggle(section.category),
+                        toggleAvailable = !uiState.isParentPhoneRegistered || uiState.canUseToggle(section.category),
+                        onClick = { if (uiState.canUseToggle(section.category)) onSectionClick(section.category) },
                         onMessageClick = { message ->
                             if (uiState.canAccess(section.category)) onNotificationClick(section.category, message)
                         },
@@ -227,7 +223,7 @@ fun NotificationScreen(
                                 uiState = panel,
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
-                                    .height(200.dp)
+                                    .heightIn(min = 200.dp)
                             )
                         }
                     }

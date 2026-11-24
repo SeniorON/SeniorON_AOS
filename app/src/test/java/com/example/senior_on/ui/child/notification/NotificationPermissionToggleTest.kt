@@ -53,7 +53,10 @@ class NotificationPermissionToggleTest {
                 vm.updateSetting(category, true)
                 advanceUntilIdle()
                 assertEquals(1, writes)
-                assertFalse(vm.uiState.value.home.sections.first { it.category == category }.enabled)
+                val home = vm.uiState.value.home
+                val saved = home.sections.first { it.category == category }
+                assertTrue(saved.enabled)
+                assertFalse(home.displaySection(saved).enabled)
                 fail = true
                 vm.updateSetting(category, true)
                 advanceUntilIdle()

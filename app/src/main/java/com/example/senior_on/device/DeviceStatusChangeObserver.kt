@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -18,20 +19,24 @@ import com.example.senior_on.data.source.device.AndroidDeviceStatusDataSource
 internal const val BATTERY_CHANGED = 1
 internal const val CHARGING_CHANGED = 2
 internal const val NETWORK_RECOVERED = 4
+internal const val GPS_CHANGED = 8
 
 /** Only field names are buffered, never historical battery/network values. */
 internal class DeviceStatusChanges {
     private var battery: Int? = null
     private var charging: Boolean? = null
+    private var gps: Boolean? = null
     private var online = false
 
-    fun observe(level: Int, isCharging: Boolean, isOnline: Boolean): Int {
+    fun observe(level: Int, isCharging: Boolean, isOnline: Boolean, gpsEnabled: Boolean): Int {
         var fields = 0
         if (isOnline) {
             if (!online) fields = NETWORK_RECOVERED
+            if (gps != null && gps != gpsEnabled) fields = fields or GPS_CHANGED
             if (battery != null && battery != level) fields = fields or BATTERY_CHANGED
             if (charging != null && charging != isCharging) fields = fields or CHARGING_CHANGED
         }
+        gps = gpsEnabled
         battery = level
         charging = isCharging
         online = isOnline
@@ -64,7 +69,7 @@ object DeviceStatusChangeObserver {
         fun observe() {
             handler.post {
                 val snapshot = source.getStatusSnapshot()
-                val changed = changes.observe(snapshot.batteryLevel, snapshot.charging, snapshot.networkConnected)
+                val changed = changes.observe(snapshot.batteryLevel, snapshot.charging, snapshot.networkConnected, snapshot.gpsEnabled)
                 val session = PersistedSessionStore(app).getSession()
                 if (!snapshot.networkConnected || session?.role != UserRole.PARENT ||
                     AccessTokenStore.getBearerToken() == null || !ParentConnectionGate.isReady()) {
@@ -77,13 +82,18 @@ object DeviceStatusChangeObserver {
                     val first = fields == 0
                     fields = fields or changed
                     // Fixed five-second window: continuous events cannot postpone indefinitely.
-                    if (first) handler.postDelayed(flush, 5_000L)
+                    if (changed and GPS_CHANGED != 0) {
+                        handler.removeCallbacks(flush)
+                        flush.run()
+                    } else if (first) handler.postDelayed(flush, 5_000L)
                 }
             }
         }
         app.registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) = observe()
-        }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        }, IntentFilter(Intent.ACTION_BATTERY_CHANGED).apply {
+            addAction(LocationManager.MODE_CHANGED_ACTION)
+        })
         app.getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(
             object : ConnectivityManager.NetworkCallback() {
                 override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = observe()

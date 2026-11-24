@@ -41,7 +41,8 @@ data class TodayHospitalSchedule(
 data class DeviceInfo(
     val name: String, val connected: Boolean, val status: String,
     val batteryLevel: Int?, val networkConnected: Boolean,
-    val lastConnectedAt: String?, val lastLocationUpdatedAt: String?
+    val lastConnectedAt: String?, val lastLocationUpdatedAt: String?,
+    val gpsEnabled: Boolean? = null, val locationPermissionGranted: Boolean? = null,
 )
 data class DeviceLocation(
     val latitude: Double,

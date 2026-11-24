@@ -26,7 +26,10 @@ class DeviceRepositoryImplTest {
         assertEquals(listOf(50, 30), remote.patches.map { it.batteryLevel })
         assertTrue(remote.patches.all { it.charging == null && it.networkConnected == null })
         repository.patchStatus(false, false, true) { true }
-        assertEquals(com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest("test", 30, true, true), remote.patches.last())
+        assertEquals(com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest("test", 30, true, true, gpsEnabled = true), remote.patches.last())
+        local.snapshot = local.snapshot.copy(gpsEnabled = false)
+        repository.patchStatus(false, false, false, gps = true) { true }
+        assertEquals(com.example.senior_on.data.remote.dto.DeviceStatusPatchRequest("test", gpsEnabled = false), remote.patches.last())
     }
 
     @Test fun offlineOrInvalidSessionDoesNotSendPatch() = runBlocking {

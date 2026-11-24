@@ -145,6 +145,8 @@ data class NotificationScreenUiState(
     val inactivitySharingEnabled: Boolean = true,
     val isSeniorSharingRevoked: Boolean = false,
     val seniorDisplayName: String = "시니어",
+    val gpsEnabled: Boolean? = null,
+    val locationPermissionGranted: Boolean? = null,
 )
 
 enum class NotificationFooterTone {
@@ -289,6 +291,7 @@ internal fun NotificationSectionCard(
     showToggle: Boolean = true,
     modifier: Modifier = Modifier,
     textMuted: Boolean = false,
+    toggleAvailable: Boolean = true,
     onClick: () -> Unit = {},
     onMessageClick: (NotificationMessageUiState) -> Unit = {},
     onToggleClick: () -> Unit = {},
@@ -421,6 +424,7 @@ internal fun NotificationSectionCard(
 
         if (showToggle) {
             NotificationSwitch(
+                enabled = toggleAvailable,
                 checked = section.enabled,
                 severity = if (section.category == NotificationCategory.Sos) {
                     NotificationSeverity.Danger
@@ -495,12 +499,14 @@ private fun NotificationDetectionStandardTime(
 
 @Composable
 private fun NotificationSwitch(
+    enabled: Boolean,
     checked: Boolean,
     severity: NotificationSeverity,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SeniorOnSwitch(
+        enabled = enabled,
         checked = checked,
         onCheckedChange = { onClick() },
         modifier = modifier,

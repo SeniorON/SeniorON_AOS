@@ -82,7 +82,8 @@ class HomeServerRepositoryImpl(
         DeviceInfo(
             it.deviceName.orEmpty(), it.connected == true, it.connectionStatus.orEmpty(),
             it.batteryLevel, it.networkConnected == true, it.lastConnectedAt,
-            it.lastLocationUpdatedAt
+            it.lastLocationUpdatedAt, gpsEnabled = it.gpsEnabled,
+            locationPermissionGranted = it.locationPermissionGranted,
         )
     }
     override suspend fun getButtonOptions(seniorId: Long) = source.getButtonOptions(seniorId).map {
@@ -857,7 +858,7 @@ class DeviceRepositoryImpl(
 ) : DeviceRepository {
     private val statusMutex = Mutex()
 
-    override suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, canSend: () -> Boolean): Boolean = statusMutex.withLock {
+    override suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, gps: Boolean, canSend: () -> Boolean): Boolean = statusMutex.withLock {
         if (!canSend()) return@withLock false
         val status = localStatusSource.getStatusSnapshot()
         if (!status.networkConnected) return@withLock false
@@ -866,6 +867,7 @@ class DeviceRepositoryImpl(
             batteryLevel = status.batteryLevel.takeIf { battery || network },
             charging = status.charging.takeIf { charging || network },
             networkConnected = true.takeIf { network },
+            gpsEnabled = status.gpsEnabled.takeIf { gps || network },
         ))
     }
 

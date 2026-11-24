@@ -29,7 +29,7 @@ class NotificationAccessPresentationTest {
         assertFalse(state.canAccess(NotificationCategory.Outing))
         assertTrue(state.canAccess(NotificationCategory.Inactivity))
         assertTrue(state.canAccess(NotificationCategory.Sos))
-        assertFalse(state.accessWarningPanel()!!.description.contains("무응답 감지"))
+        assertFalse(state.accessWarningPanel()!!.description.contains("무활동 감지"))
     }
 
     @Test fun inactivityRevocationDoesNotDisableLocation() {
@@ -71,8 +71,27 @@ class NotificationAccessPresentationTest {
         val panel = NotificationScreenUiState(emptyList(), isSeniorSharingRevoked = true,
             seniorDisplayName = "어머니").accessWarningPanel()!!
         assertEquals(NotificationFooterTone.Warning, panel.tone)
-        assertEquals("어머니가 권한을 해제했어요.", panel.title)
-        assertTrue(panel.description.contains("권한을 다시 켜달라고"))
+        assertEquals("어머니 폰에서 꺼진 설정이 있어요.", panel.title)
+        assertEquals("1. 앱 내 위치 정보 공유\n2. 앱 내 무활동 감지 공유", panel.description)
+    }
+
+    @Test fun reportedSettingsOnlyMaskTheirOwnToggleAndListExactReasons() {
+        val labels = listOf("휴대폰 위치 기능(GPS)", "시니어On 위치 접근 권한", "앱 내 위치 정보 공유", "앱 내 무활동 감지 공유")
+        for (mask in 0..15) {
+            fun on(bit: Int) = mask and (1 shl bit) == 0
+            val state = NotificationScreenUiState(emptyList(), gpsEnabled = on(0),
+                locationPermissionGranted = on(1), locationSharingEnabled = on(2), inactivitySharingEnabled = on(3))
+            val reasons = labels.filterIndexed { i, _ -> !on(i) }
+            assertEquals(reasons.takeIf { it.isNotEmpty() }?.mapIndexed { i, reason -> "${i + 1}. $reason" }?.joinToString("\n"),
+                state.accessWarningPanel()?.description)
+            for (saved in listOf(true, false)) {
+                fun displayed(category: NotificationCategory) =
+                    state.displaySection(NotificationSectionUiState(category = category, enabled = saved)).enabled
+                assertEquals(saved && on(0) && on(1) && on(2), displayed(NotificationCategory.Outing))
+                assertEquals(saved && on(3), displayed(NotificationCategory.Inactivity))
+                assertTrue(displayed(NotificationCategory.Sos))
+            }
+        }
     }
 
     @Test fun disconnectedStateTakesPriorityOverRevocation() {
