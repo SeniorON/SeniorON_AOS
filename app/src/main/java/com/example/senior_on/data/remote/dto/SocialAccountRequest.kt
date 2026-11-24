@@ -24,4 +24,7 @@ data class SocialSignupRequest(
     val marketingAgreed: Boolean,
     val fcmToken: String,
     val deviceIdentifier: String,
+    val agreeHealthInfo: Boolean = false,
+    val agreeLocationInfo: Boolean = false,
+    val agreeFamilyInfoProvision: Boolean = false,
 )

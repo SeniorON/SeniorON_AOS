@@ -29,6 +29,7 @@ fun ParentSettingsScreen(
                 ParentSettingsMenuRow("내 계정", { onNavigate(ParentSettingsDestination.Account) }, isSectionItem = true)
                 ParentSettingsMenuRow("시니어 코드 확인", { onNavigate(ParentSettingsDestination.ShareCode) }, isSectionItem = true)
                 ParentSettingsMenuRow("자녀와 연결 해제", { onConfirmAction(ParentSettingsConfirmation.Disconnect) }, isSectionItem = true)
+                ParentSettingsMenuRow("건강정보 동의 관리", { onNavigate(ParentSettingsDestination.HealthConsent) }, isSectionItem = true)
                 ParentSettingsMenuRow("권한 해제", { onNavigate(ParentSettingsDestination.PermissionControl) }, isSectionItem = true)
             }
             Spacer(Modifier.height(16.dp))

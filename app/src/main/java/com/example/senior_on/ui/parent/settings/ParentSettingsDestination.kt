@@ -1,7 +1,7 @@
 package com.example.senior_on.ui.parent.settings
 
 enum class ParentSettingsDestination {
-    Main, Account, ChangeName, ChangePassword, ShareCode, PermissionControl, DetectionQa;
+    Main, Account, ChangeName, ChangePassword, ShareCode, PermissionControl, HealthConsent, DetectionQa;
 
     fun back(): ParentSettingsDestination = when (this) {
         ChangeName, ChangePassword -> Account

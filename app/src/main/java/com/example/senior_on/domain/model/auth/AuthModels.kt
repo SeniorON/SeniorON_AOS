@@ -11,7 +11,10 @@ data class SignupCredentials(
     val agreeServiceTerms: Boolean,
     val agreePrivacyPolicy: Boolean,
     val agreeAgeOver14: Boolean,
-    val agreeMarketing: Boolean
+    val agreeMarketing: Boolean,
+    val agreeHealthInfo: Boolean = false,
+    val agreeLocationInfo: Boolean = false,
+    val agreeFamilyInfoProvision: Boolean = false,
 )
 
 data class SignupResult(

@@ -77,6 +77,9 @@ class SocialAuthRepositoryImpl(
                 privacyPolicyAgreed = credentials.privacyPolicyAgreed,
                 ageOver14Agreed = credentials.ageOver14Agreed,
                 marketingAgreed = credentials.marketingAgreed,
+                agreeHealthInfo = credentials.agreeHealthInfo,
+                agreeLocationInfo = credentials.agreeLocationInfo,
+                agreeFamilyInfoProvision = credentials.agreeFamilyInfoProvision,
                 fcmToken = credentials.fcmToken,
                 deviceIdentifier = credentials.deviceIdentifier,
             )

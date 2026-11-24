@@ -74,7 +74,10 @@ class AuthRepositoryImpl(
                 agreeServiceTerms = credentials.agreeServiceTerms,
                 agreePrivacyPolicy = credentials.agreePrivacyPolicy,
                 agreeAgeOver14 = credentials.agreeAgeOver14,
-                agreeMarketing = credentials.agreeMarketing
+                agreeMarketing = credentials.agreeMarketing,
+                agreeHealthInfo = credentials.agreeHealthInfo,
+                agreeLocationInfo = credentials.agreeLocationInfo,
+                agreeFamilyInfoProvision = credentials.agreeFamilyInfoProvision,
             )
         )
         if (response.role == UserRole.CHILD && response.usersId > 0) onChildSignup(response.usersId)
