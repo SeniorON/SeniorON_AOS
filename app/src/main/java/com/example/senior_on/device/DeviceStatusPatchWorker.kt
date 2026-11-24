@@ -40,6 +40,7 @@ class DeviceStatusPatchWorker(context: Context, params: WorkerParameters) : Coro
                 battery = fields and BATTERY_CHANGED != 0,
                 charging = fields and CHARGING_CHANGED != 0,
                 network = fields and NETWORK_RECOVERED != 0,
+                gps = fields and GPS_CHANGED != 0,
                 canSend = { sessionMatches() && ParentConnectionGate.isReady() },
             )
             AppLog.d("SeniorOnDeviceStatus", "Partial device status sync completed; updated=$updated")

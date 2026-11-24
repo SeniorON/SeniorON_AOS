@@ -858,7 +858,7 @@ class DeviceRepositoryImpl(
 ) : DeviceRepository {
     private val statusMutex = Mutex()
 
-    override suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, canSend: () -> Boolean): Boolean = statusMutex.withLock {
+    override suspend fun patchStatus(battery: Boolean, charging: Boolean, network: Boolean, gps: Boolean, canSend: () -> Boolean): Boolean = statusMutex.withLock {
         if (!canSend()) return@withLock false
         val status = localStatusSource.getStatusSnapshot()
         if (!status.networkConnected) return@withLock false
@@ -867,6 +867,7 @@ class DeviceRepositoryImpl(
             batteryLevel = status.batteryLevel.takeIf { battery || network },
             charging = status.charging.takeIf { charging || network },
             networkConnected = true.takeIf { network },
+            gpsEnabled = status.gpsEnabled.takeIf { gps || network },
         ))
     }
 
