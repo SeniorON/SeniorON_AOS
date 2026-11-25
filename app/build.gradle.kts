@@ -20,7 +20,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.example.senior_on"
+        applicationId = "site.senioron.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

@@ -198,7 +198,7 @@
         <!-- 유해링크 감지는 비활성화했습니다. 검사 코드는 보존하지만 Activity를 등록하지 않습니다. -->
 
         <activity-alias
-            android:name=".ui.parent.launcher.ParentHomeAlias"
+            android:name="${applicationId}.ui.parent.launcher.ParentHomeAlias"
             android:enabled="false"
             android:exported="true"
             android:targetActivity=".ui.parent.launcher.ParentLauncherActivity">
